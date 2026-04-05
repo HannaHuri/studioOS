@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
 import {
   Card,
   CardAction,
@@ -12,13 +11,12 @@ interface StatCardProps {
   title: string
   value: string
   change: string
-  trend: "up" | "down"
   icon: LucideIcon
 }
 
-export function StatCard({ title, value, change, trend, icon: Icon }: StatCardProps) {
+export function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   return (
-    <Card>
+    <Card className="transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <CardAction>
@@ -27,7 +25,7 @@ export function StatCard({ title, value, change, trend, icon: Icon }: StatCardPr
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-bold">{value}</p>
-        <p className={cn("text-xs", trend === "up" ? "text-emerald-500" : "text-destructive")}>
+        <p className="text-xs text-primary">
           {change}
         </p>
       </CardContent>

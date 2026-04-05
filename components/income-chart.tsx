@@ -27,18 +27,18 @@ import {
 } from "@/components/ui/select"
 
 const chartData = [
-  { month: "Jan", thisYear: 4800, lastYear: 2400 },
-  { month: "Feb", thisYear: 7200, lastYear: 5800 },
-  { month: "Mar", thisYear: 6400, lastYear: 3600 },
-  { month: "Apr", thisYear: 2800, lastYear: 5200 },
-  { month: "May", thisYear: 5600, lastYear: 4200 },
-  { month: "Jun", thisYear: 5800, lastYear: 4600 },
-  { month: "Jul", thisYear: 4200, lastYear: 3800 },
-  { month: "Aug", thisYear: 6100, lastYear: 4900 },
-  { month: "Sep", thisYear: 5400, lastYear: 3200 },
-  { month: "Oct", thisYear: 4700, lastYear: 5100 },
-  { month: "Nov", thisYear: 6800, lastYear: 4400 },
-  { month: "Dec", thisYear: 7500, lastYear: 5600 },
+  { month: "Jan", thisYear: 8200, lastYear: 6100 },
+  { month: "Feb", thisYear: 9400, lastYear: 7300 },
+  { month: "Mar", thisYear: 7800, lastYear: 6800 },
+  { month: "Apr", thisYear: 10200, lastYear: 7500 },
+  { month: "May", thisYear: 11500, lastYear: 8200 },
+  { month: "Jun", thisYear: 9800, lastYear: 7900 },
+  { month: "Jul", thisYear: 8600, lastYear: 6400 },
+  { month: "Aug", thisYear: 10800, lastYear: 8100 },
+  { month: "Sep", thisYear: 12200, lastYear: 9300 },
+  { month: "Oct", thisYear: 11000, lastYear: 8700 },
+  { month: "Nov", thisYear: 13500, lastYear: 9800 },
+  { month: "Dec", thisYear: 14200, lastYear: 10500 },
 ]
 
 const chartConfig = {
@@ -61,11 +61,11 @@ export function IncomeChart() {
   )
 
   return (
-    <Card>
+    <Card className="transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader>
-        <CardTitle>Income</CardTitle>
+        <CardTitle>Your Income</CardTitle>
         <CardDescription>
-          Monthly income comparison — this year vs last year
+          Monthly income — this year vs last year
         </CardDescription>
         <CardAction>
           <Select value={period} onValueChange={setPeriod}>

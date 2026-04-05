@@ -59,11 +59,17 @@ export function Header() {
       {/* Theme toggle */}
       <ThemeToggle />
 
-      {/* User avatar */}
-      <Avatar size="sm">
-        <AvatarImage src="" alt="User" />
-        <AvatarFallback className="font-bold">U</AvatarFallback>
-      </Avatar>
+      {/* User */}
+      <div className="flex items-center gap-2">
+        <div className="hidden sm:flex flex-col items-end leading-tight">
+          <span className="text-sm font-medium">Hani Buskila</span>
+          <span className="text-xs text-muted-foreground">Product Designer</span>
+        </div>
+        <Avatar size="sm">
+          <AvatarImage src="" alt="Hani Buskila" />
+          <AvatarFallback className="font-bold">HB</AvatarFallback>
+        </Avatar>
+      </div>
     </header>
   )
 }
