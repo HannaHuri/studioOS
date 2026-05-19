@@ -238,26 +238,127 @@ function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
   );
 }
 
+// ── Dislike feedback modal ─────────────────────────────────────────────────
+const REASONS = ["תשובה לא נכונה", "תשובה חסרה", "לא מה ששאלתי", "אחר"];
+
+function FeedbackModal({ onClose }: { onClose: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [text, setText] = useState("");
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center"
+      style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-xl flex flex-col gap-5 shadow-2xl relative"
+        style={{ backgroundColor: "white", padding: "24px", width: "480px", maxWidth: "calc(100vw - 32px)", direction: "rtl" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* X — absolute top-left corner */}
+        <button
+          onClick={onClose}
+          className="absolute size-8 flex items-center justify-center rounded-md hover:bg-[#f5f6f8] transition-colors"
+          style={{ color: c.iconGray, top: "12px", left: "12px" }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+
+        {/* Header */}
+        <div>
+          <span style={{ fontSize: "16px", fontWeight: 600, color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            מה לא היה מדויק בתשובה?
+          </span>
+        </div>
+
+        {/* Reason tags */}
+        <div className="flex flex-wrap gap-2">
+          {REASONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => setSelected(selected === r ? null : r)}
+              className="h-8 px-3.5 rounded-full text-[13px] transition-all"
+              style={{
+                fontFamily: "Noto Sans Hebrew, sans-serif",
+                border: `1.5px solid ${selected === r ? c.primary : c.border}`,
+                backgroundColor: selected === r ? c.primaryLight : "transparent",
+                color: selected === r ? c.primary : c.text,
+                fontWeight: selected === r ? 500 : 400,
+              }}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          rows={3}
+          placeholder="הסבר נוסף (לא חובה)"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full rounded-lg resize-none outline-none text-[14px] p-3"
+          style={{
+            border: `1.5px solid ${c.inputBorder}`, direction: "rtl",
+            fontFamily: "Noto Sans Hebrew, sans-serif", color: c.text,
+          }}
+          onFocus={(e) => (e.target.style.borderColor = c.primary)}
+          onBlur={(e) => (e.target.style.borderColor = c.inputBorder)}
+        />
+
+        {/* Footer */}
+        <div className="flex items-center gap-2" dir="ltr">
+          <button
+            onClick={onClose}
+            className="h-9 rounded-md text-[14px] transition-opacity hover:opacity-90"
+            style={{
+              fontFamily: "Noto Sans Hebrew, sans-serif", width: "88px",
+              backgroundColor: c.primary, color: "white",
+            }}
+          >
+            שליחה
+          </button>
+          <button
+            onClick={onClose}
+            className="h-9 rounded-md text-[14px] hover:bg-[#f5f6f8] transition-colors"
+            style={{ fontFamily: "Noto Sans Hebrew, sans-serif", width: "88px", border: `1.5px solid ${c.border}`, color: c.text }}
+          >
+            ביטול
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Message action bar ─────────────────────────────────────────────────────
 function MessageActions({ isDark, showBadges, onToggleBadges }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
 }) {
-  return (
-    <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
-      <VibeBtn title="העתק"><Copy size={18} /></VibeBtn>
-      <VibeBtn title="מועיל"><ThumbsUp size={18} /></VibeBtn>
-      <VibeBtn title="לא מועיל"><ThumbsDown size={18} /></VibeBtn>
-      <VibeBtn title="המשך בשיחה חדשה">
-        <Split size={18} style={{ transform: "rotate(90deg)" }} />
-      </VibeBtn>
-      <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
-      <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} active={!showBadges} onClick={onToggleBadges}>
-        {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
-      </VibeBtn>
+  const [showFeedback, setShowFeedback] = useState(false);
 
-      {/* מקורות — icon + label */}
-      <SourcesBtn isDark={isDark} />
-    </div>
+  return (
+    <>
+      <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
+        <VibeBtn title="העתק"><Copy size={18} /></VibeBtn>
+        <VibeBtn title="מועיל"><ThumbsUp size={18} /></VibeBtn>
+        <VibeBtn title="לא מועיל" onClick={() => setShowFeedback(true)}>
+          <ThumbsDown size={18} />
+        </VibeBtn>
+        <VibeBtn title="המשך בשיחה חדשה">
+          <Split size={18} style={{ transform: "rotate(90deg)" }} />
+        </VibeBtn>
+        <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
+        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} active={!showBadges} onClick={onToggleBadges}>
+          {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
+        </VibeBtn>
+        <SourcesBtn isDark={isDark} />
+      </div>
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+    </>
   );
 }
 
