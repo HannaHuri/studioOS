@@ -242,63 +242,43 @@ function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
 function MessageActions({ isDark, showBadges, onToggleBadges }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
 }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showMenu) return;
-    const close = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [showMenu]);
-
   return (
-    <div className="flex items-center gap-0.5 mt-3" dir="ltr">
+    <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
       <VibeBtn title="העתק"><Copy size={18} /></VibeBtn>
       <VibeBtn title="מועיל"><ThumbsUp size={18} /></VibeBtn>
       <VibeBtn title="לא מועיל"><ThumbsDown size={18} /></VibeBtn>
-
-      {/* Eye — toggles badge visibility, shows EyeClosed when hidden */}
+      <VibeBtn title="המשך בשיחה חדשה">
+        <Split size={18} style={{ transform: "rotate(90deg)" }} />
+      </VibeBtn>
+      <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
       <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} active={!showBadges} onClick={onToggleBadges}>
         {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
       </VibeBtn>
 
-      <VibeBtn title="לבדיקת מקורות התשובה"><Link size={18} /></VibeBtn>
-
-      {/* 3-dot dropdown */}
-      <div className="relative" ref={menuRef}>
-        <VibeBtn title="עוד אפשרויות" onClick={() => setShowMenu((v) => !v)}>
-          <MoreHorizontal size={18} />
-        </VibeBtn>
-        {showMenu && (
-          <div
-            className="absolute bottom-full mb-1 left-0 z-50 rounded-lg border shadow-lg overflow-hidden"
-            style={{ backgroundColor: "white", borderColor: c.border, minWidth: "190px", boxShadow: "0 4px 24px rgba(0,0,0,0.12)" }}
-            dir="rtl"
-          >
-            <button
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-right text-[14px] hover:bg-[#f5f6f8] transition-colors"
-              style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-              onClick={() => setShowMenu(false)}
-            >
-              {/* Split icon rotated -90° = branch going sideways */}
-              <Split size={16} className="flex-shrink-0" style={{ color: c.iconGray, transform: "rotate(-90deg)" }} />
-              המשך בשיחה חדשה
-            </button>
-            <button
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-right text-[14px] hover:bg-[#f5f6f8] transition-colors"
-              style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-              onClick={() => setShowMenu(false)}
-            >
-              <RotateCw size={16} className="flex-shrink-0" style={{ color: c.iconGray }} />
-              נסה שוב
-            </button>
-          </div>
-        )}
-      </div>
+      {/* מקורות — icon + label */}
+      <SourcesBtn isDark={isDark} />
     </div>
+  );
+}
+
+function SourcesBtn({ isDark }: { isDark: boolean }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      title="לבדיקת מקורות התשובה"
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="flex items-center gap-1.5 h-8 px-2.5 rounded-md transition-colors"
+      style={{
+        color: c.iconGray,
+        backgroundColor: hov ? c.hoverBg : "transparent",
+        fontFamily: "Noto Sans Hebrew, sans-serif",
+        fontSize: "13px",
+      }}
+    >
+      <Link size={18} />
+      <span>מקורות</span>
+    </button>
   );
 }
 
