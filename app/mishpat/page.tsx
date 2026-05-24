@@ -241,9 +241,12 @@ function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
 // ── Dislike feedback modal ─────────────────────────────────────────────────
 const REASONS = ["תשובה לא נכונה", "תשובה חסרה", "לא מה ששאלתי", "אחר"];
 
+const MAX_CHARS = 500;
+
 function FeedbackModal({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const isOverLimit = text.length > MAX_CHARS;
 
   return (
     <div
@@ -295,28 +298,52 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Textarea */}
-        <textarea
-          rows={3}
-          placeholder="הסבר נוסף (לא חובה)"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="w-full rounded-lg resize-none outline-none text-[14px] p-3"
-          style={{
-            border: `1.5px solid ${c.inputBorder}`, direction: "rtl",
-            fontFamily: "Noto Sans Hebrew, sans-serif", color: c.text,
-          }}
-          onFocus={(e) => (e.target.style.borderColor = c.primary)}
-          onBlur={(e) => (e.target.style.borderColor = c.inputBorder)}
-        />
+        <div className="flex flex-col gap-1">
+          <textarea
+            rows={3}
+            placeholder="הסבר נוסף (לא חובה)"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="w-full rounded-lg resize-none outline-none text-[14px] p-3"
+            style={{
+              border: `1.5px solid ${isOverLimit ? "#d83a52" : c.inputBorder}`,
+              direction: "rtl",
+              fontFamily: "Noto Sans Hebrew, sans-serif",
+              color: c.text,
+              transition: "border-color 0.15s ease",
+            }}
+            onFocus={(e) => { if (!isOverLimit) e.target.style.borderColor = c.primary; }}
+            onBlur={(e) => { if (!isOverLimit) e.target.style.borderColor = c.inputBorder; }}
+          />
+          <div className="flex items-center justify-between" dir="rtl">
+            {isOverLimit ? (
+              <span style={{ fontSize: "12px", color: "#d83a52", fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                חרגת ממגבלת {MAX_CHARS} התווים
+              </span>
+            ) : (
+              <span />
+            )}
+            <span style={{
+              fontSize: "12px",
+              fontFamily: "Noto Sans Hebrew, sans-serif",
+              color: isOverLimit ? "#d83a52" : c.iconGray,
+            }}>
+              {text.length}/{MAX_CHARS}
+            </span>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="flex items-center gap-2" dir="ltr">
           <button
             onClick={onClose}
-            className="h-9 rounded-md text-[14px] transition-opacity hover:opacity-90"
+            disabled={isOverLimit}
+            className="h-9 rounded-md text-[14px] transition-opacity hover:opacity-90 disabled:cursor-not-allowed"
             style={{
               fontFamily: "Noto Sans Hebrew, sans-serif", width: "88px",
-              backgroundColor: c.primary, color: "white",
+              backgroundColor: isOverLimit ? c.border : c.primary,
+              color: "white",
+              opacity: isOverLimit ? 1 : undefined,
             }}
           >
             שליחה
