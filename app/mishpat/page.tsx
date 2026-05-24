@@ -241,7 +241,7 @@ function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
 // ── Dislike feedback modal ─────────────────────────────────────────────────
 const REASONS = ["תשובה לא נכונה", "תשובה חסרה", "לא מה ששאלתי", "אחר"];
 
-const MAX_CHARS = 500;
+const MAX_CHARS = 250;
 
 function FeedbackModal({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -318,7 +318,7 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between" dir="rtl">
             {isOverLimit ? (
               <span style={{ fontSize: "12px", color: "#d83a52", fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                חרגת ממגבלת {MAX_CHARS} התווים
+                ניתן להזין עד {MAX_CHARS} תווים
               </span>
             ) : (
               <span />
