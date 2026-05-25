@@ -239,7 +239,15 @@ function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
 }
 
 // ── Dislike feedback modal ─────────────────────────────────────────────────
-const REASONS = ["תשובה לא נכונה", "תשובה חסרה", "לא מה ששאלתי", "אחר"];
+const REASONS = [
+  "תשובה כוללת המצאות",
+  "בלבול בין עיקר לטפל",
+  "בלבול בין טענות לעובדות",
+  "תשובה לא תואמת דוגמא",
+  "תשובה חסרה",
+  "לא מה ששאלתי",
+  "אחר",
+];
 
 const MAX_CHARS = 250;
 
@@ -256,7 +264,7 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
     >
       <div
         className="rounded-xl flex flex-col gap-5 shadow-2xl relative"
-        style={{ backgroundColor: "white", padding: "24px", width: "480px", maxWidth: "calc(100vw - 32px)", direction: "rtl" }}
+        style={{ backgroundColor: "white", padding: "24px", width: "560px", maxWidth: "calc(100vw - 32px)", direction: "rtl" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* X — absolute top-left corner */}
