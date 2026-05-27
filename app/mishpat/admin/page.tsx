@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Edit2, X, Shield, ChevronDown } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Edit2, X, Shield, ChevronDown, Zap, Lock, Globe, Check } from "lucide-react";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const c = {
@@ -45,10 +45,13 @@ const MOCK_BETAS: Beta[] = [
 const CURRENT_ADMIN = { initials: "דד", name: "דניאל דמביץ" };
 
 // ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<BetaStatus, { label: string; bg: string; text: string; border: string }> = {
-  active: { label: "פעילה",        bg: "#dbeafe", text: "#1d4ed8", border: "#93c5fd" },
-  closed: { label: "סגורה",        bg: "#fde8eb", text: "#d83a52", border: "#f9a8a8" },
-  open:   { label: "פתוחה לכולם", bg: "#dcfce7", text: "#15803d", border: "#86efac" },
+const STATUS_CONFIG: Record<BetaStatus, {
+  label: string; bg: string; text: string; border: string;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+}> = {
+  active: { label: "פעילה",        bg: "#dbeafe", text: "#1d4ed8", border: "#93c5fd", Icon: Zap   },
+  closed: { label: "סגורה",        bg: "#fde8eb", text: "#d83a52", border: "#f9a8a8", Icon: Lock  },
+  open:   { label: "פתוחה לכולם", bg: "#dcfce7", text: "#15803d", border: "#86efac", Icon: Globe },
 };
 
 // ── Confirmation copy per target status ───────────────────────────────────────
@@ -98,47 +101,60 @@ function FormField({ label, hint, error, children }: {
   );
 }
 
-// ── Status menu button (in-table, opens dropdown) ─────────────────────────────
+// ── Status menu button ────────────────────────────────────────────────────────
+// Dropdown rendered at a fixed position to escape table overflow:hidden
 function StatusMenuButton({
-  beta,
-  isOpen,
-  onToggle,
-  onSelect,
+  beta, isOpen, onToggle, onSelect,
 }: {
-  beta: Beta;
-  isOpen: boolean;
-  onToggle: () => void;
-  onSelect: (s: BetaStatus) => void;
+  beta: Beta; isOpen: boolean; onToggle: () => void; onSelect: (s: BetaStatus) => void;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; right: number } | null>(null);
+
+  function handleToggle() {
+    if (!isOpen && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropPos({
+        top:   r.bottom + 4,
+        right: window.innerWidth - r.right,
+      });
+    }
+    onToggle();
+  }
+
   return (
-    <div className="relative inline-block">
+    <>
       <button
-        onClick={onToggle}
+        ref={btnRef}
+        onClick={handleToggle}
         className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
         style={{
           height: "32px",
           border: `1px solid ${c.border}`,
           color: c.text,
-          backgroundColor: "transparent",
+          backgroundColor: isOpen ? c.hoverBg : "transparent",
           borderRadius: "4px",
           cursor: "pointer",
           whiteSpace: "nowrap",
         }}
       >
         סטטוס
-        <ChevronDown size={12} />
+        <ChevronDown size={12} style={{ transition: "transform 0.15s", transform: isOpen ? "rotate(180deg)" : "none" }} />
       </button>
 
-      {isOpen && (
+      {isOpen && dropPos && (
         <div
-          className="absolute top-full mt-1.5 z-30 rounded-lg py-1"
           style={{
+            position: "fixed",
+            top: dropPos.top,
+            right: dropPos.right,
+            zIndex: 200,
             backgroundColor: "white",
             border: `1px solid ${c.border}`,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-            minWidth: "160px",
-            // align to right edge of button in RTL
-            right: 0,
+            borderRadius: "8px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+            minWidth: "176px",
+            padding: "4px 0",
           }}
         >
           {(Object.entries(STATUS_CONFIG) as [BetaStatus, typeof STATUS_CONFIG[BetaStatus]][]).map(([status, s]) => {
@@ -147,30 +163,26 @@ function StatusMenuButton({
               <button
                 key={status}
                 onClick={() => onSelect(status)}
-                className="w-full flex items-center justify-between px-3 py-2 text-[13px]"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px]"
                 style={{
-                  backgroundColor: isCurrent ? c.hoverBg : "transparent",
+                  backgroundColor: "transparent",
+                  color: isCurrent ? c.textGray : c.text,
                   cursor: isCurrent ? "default" : "pointer",
                   textAlign: "right",
+                  direction: "rtl",
                 }}
                 onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-                onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = "transparent"; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                <span
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
-                  style={{ backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}` }}
-                >
-                  {s.label}
-                </span>
-                {isCurrent && (
-                  <span className="text-[11px]" style={{ color: c.textLight }}>נוכחי</span>
-                )}
+                <s.Icon size={14} color={s.text} />
+                <span style={{ flex: 1 }}>{s.label}</span>
+                {isCurrent && <Check size={13} color={c.textLight} />}
               </button>
             );
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
