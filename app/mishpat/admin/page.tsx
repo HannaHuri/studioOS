@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Plus, Edit2, X, Shield, ChevronDown, ArrowRight, Lock, LockOpen,
+  Plus, Edit2, X, Shield, ChevronDown, Lock, LockOpen,
 } from "lucide-react";
 
 // ── Design tokens (same as main page) ────────────────────────────────────────
@@ -230,19 +230,14 @@ export default function AdminPage() {
             </span>
           </div>
 
-          {/* Back to app */}
-          <a
-            href="/studioOS/mishpat"
-            className="flex items-center gap-1.5 text-[12px] rounded-md px-3 h-7 mr-2 transition-colors hover:opacity-80"
-            style={{ backgroundColor: c.border, color: c.text }}
-          >
-            <ArrowRight size={13} />
-            חזרה לאפליקציה
-          </a>
         </div>
 
-        {/* Right: logo + name */}
-        <div className="flex items-center gap-2">
+        {/* Right: logo + name — click to go home */}
+        <a
+          href="/studioOS/mishpat"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          style={{ textDecoration: "none" }}
+        >
           <Logo />
           <span
             className="font-medium text-[20px] whitespace-nowrap"
@@ -250,7 +245,7 @@ export default function AdminPage() {
           >
             נט המשפט
           </span>
-        </div>
+        </a>
       </header>
 
       {/* ── Main ── */}
@@ -466,58 +461,52 @@ export default function AdminPage() {
                     {/* Actions */}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2 justify-end">
-                        <button
-                          onClick={() => openEdit(beta)}
-                          className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
-                          style={{
+                        {/* shared style for all three action buttons */}
+                        {(() => {
+                          const btn: React.CSSProperties = {
                             height: "32px",
-                            border: `1px solid ${c.border}`,
-                            color: c.text,
-                            backgroundColor: "transparent",
+                            width: "88px",
                             borderRadius: "4px",
                             cursor: "pointer",
+                            fontSize: "12px",
+                            fontWeight: 500,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            backgroundColor: "transparent",
                             whiteSpace: "nowrap",
-                          }}
-                        >
-                          <Edit2 size={12} />
-                          עריכה
-                        </button>
+                          };
+                          return (
+                            <>
+                              <button
+                                onClick={() => openEdit(beta)}
+                                style={{ ...btn, border: `1px solid ${c.border}`, color: c.text }}
+                              >
+                                <Edit2 size={12} />
+                                עריכה
+                              </button>
 
-                        {beta.status !== "closed" ? (
-                          <button
-                            onClick={() => setConfirmClose(beta)}
-                            className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
-                            style={{
-                              height: "32px",
-                              border: `1px solid ${c.error}`,
-                              color: c.error,
-                              backgroundColor: "transparent",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            <Lock size={12} />
-                            סגירה
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmOpen(beta)}
-                            className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
-                            style={{
-                              height: "32px",
-                              border: `1px solid ${c.primary}`,
-                              color: c.primary,
-                              backgroundColor: "transparent",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            <LockOpen size={12} />
-                            פתיחה
-                          </button>
-                        )}
+                              {beta.status !== "closed" ? (
+                                <button
+                                  onClick={() => setConfirmClose(beta)}
+                                  style={{ ...btn, border: `1px solid ${c.error}`, color: c.error }}
+                                >
+                                  <Lock size={12} />
+                                  סגירה
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmOpen(beta)}
+                                  style={{ ...btn, border: `1px solid ${c.primary}`, color: c.primary }}
+                                >
+                                  <LockOpen size={12} />
+                                  פתיחה
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>
