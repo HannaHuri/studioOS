@@ -110,21 +110,23 @@ function StatusMenuButton({
   onToggle: () => void;
   onSelect: (s: BetaStatus) => void;
 }) {
-  const cfg = STATUS_CONFIG[beta.status];
   return (
     <div className="relative inline-block">
       <button
         onClick={onToggle}
-        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap"
+        className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
         style={{
-          backgroundColor: cfg.bg,
-          color: cfg.text,
-          border: `1px solid ${cfg.border}`,
+          height: "32px",
+          border: `1px solid ${c.border}`,
+          color: c.text,
+          backgroundColor: "transparent",
+          borderRadius: "4px",
           cursor: "pointer",
+          whiteSpace: "nowrap",
         }}
       >
-        {cfg.label}
-        <ChevronDown size={11} style={{ opacity: 0.7 }} />
+        סטטוס
+        <ChevronDown size={12} />
       </button>
 
       {isOpen && (
@@ -416,7 +418,7 @@ export default function AdminPage() {
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "160px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
-                <th className="px-5 py-3" style={{ width: "100px" }} />
+                <th className="px-5 py-3" style={{ width: "190px" }} />
               </tr>
             </thead>
             <tbody>
@@ -443,17 +445,18 @@ export default function AdminPage() {
                     </span>
                   </td>
 
-                  {/* Status — clickable menu button */}
+                  {/* Status — static badge */}
                   <td className="px-5 py-3">
-                    <StatusMenuButton
-                      beta={beta}
-                      isOpen={openStatusMenu === beta.id}
-                      onToggle={() => setOpenStatusMenu(openStatusMenu === beta.id ? null : beta.id)}
-                      onSelect={newStatus => {
-                        setOpenStatusMenu(null);
-                        requestStatusChange(beta, newStatus);
+                    <span
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap"
+                      style={{
+                        backgroundColor: STATUS_CONFIG[beta.status].bg,
+                        color: STATUS_CONFIG[beta.status].text,
+                        border: `1px solid ${STATUS_CONFIG[beta.status].border}`,
                       }}
-                    />
+                    >
+                      {STATUS_CONFIG[beta.status].label}
+                    </span>
                   </td>
 
                   {/* Authorized users */}
@@ -485,7 +488,7 @@ export default function AdminPage() {
 
                   {/* Actions */}
                   <td className="px-5 py-3">
-                    <div className="flex justify-end">
+                    <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(beta)}
                         className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
@@ -496,11 +499,22 @@ export default function AdminPage() {
                           backgroundColor: "transparent",
                           borderRadius: "4px",
                           cursor: "pointer",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         <Edit2 size={12} />
                         עריכה
                       </button>
+
+                      <StatusMenuButton
+                        beta={beta}
+                        isOpen={openStatusMenu === beta.id}
+                        onToggle={() => setOpenStatusMenu(openStatusMenu === beta.id ? null : beta.id)}
+                        onSelect={newStatus => {
+                          setOpenStatusMenu(null);
+                          requestStatusChange(beta, newStatus);
+                        }}
+                      />
                     </div>
                   </td>
                 </tr>
