@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Plus, Edit2, X, Check, Shield, ChevronDown, Lock, ArrowRight,
+  Plus, Edit2, X, Check, Shield, ChevronDown, ArrowRight,
 } from "lucide-react";
 
 // ── Design tokens (same as main page) ────────────────────────────────────────
@@ -44,7 +44,7 @@ const MOCK_BETAS: Beta[] = [
     id: "1",
     name: "v2-ai-search",
     status: "active",
-    users: ["dani.d", "sarah.k", "ron.l"],
+    users: ["daniD", "sarahK", "ronL"],
     updatedAt: "27.05.2026",
   },
   {
@@ -100,10 +100,10 @@ function FormField({
 }) {
   return (
     <div>
-      <label className="block text-[13px] font-medium mb-1.5" style={{ color: c.text }}>
-        {label}
-        {hint && <span className="font-normal text-[12px] mr-1" style={{ color: c.textLight }}>{hint}</span>}
-      </label>
+      <div className="mb-1.5">
+        <span className="text-[13px] font-medium" style={{ color: c.text }}>{label}</span>
+        {hint && <span className="block text-[11px] mt-0.5" style={{ color: c.textLight }}>{hint}</span>}
+      </div>
       {children}
       {error && <p className="text-[12px] mt-1" style={{ color: c.error }}>{error}</p>}
     </div>
@@ -117,9 +117,6 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm]         = useState<BetaFormState>(EMPTY_FORM);
   const [errors, setErrors]     = useState<Partial<Record<keyof BetaFormState, string>>>({});
-
-  // When any form is open, all other edit/toggle actions are disabled
-  const isLocked = showForm;
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -262,145 +259,135 @@ export default function AdminPage() {
           <h1 className="text-[22px] font-semibold" style={{ color: c.text }}>ניהול בטאות</h1>
           <button
             onClick={openCreate}
-            disabled={isLocked}
-            className="flex items-center gap-2 px-4 h-9 rounded-md text-[14px] font-medium transition-opacity"
-            style={{
-              backgroundColor: isLocked ? c.border : c.primary,
-              color: "white",
-              cursor: isLocked ? "not-allowed" : "pointer",
-              opacity: isLocked ? 0.6 : 1,
-            }}
+            className="flex items-center gap-2 px-4 h-9 rounded-md text-[14px] font-medium"
+            style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
           >
             <Plus size={16} />
             בטא חדשה
           </button>
         </div>
 
-        {/* ── Create / Edit form ── */}
+        {/* ── Modal: Create / Edit form ── */}
         {showForm && (
           <div
-            className="mb-5 rounded-xl p-5"
-            style={{
-              backgroundColor: "white",
-              border: `1.5px solid ${c.primary}`,
-              boxShadow: "0 4px 16px rgba(0,115,234,0.08)",
-            }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onClick={closeForm}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold" style={{ color: c.text }}>
-                {editingId ? "עריכת בטא" : "יצירת בטא חדשה"}
-              </h2>
-              <button
-                onClick={closeForm}
-                className="size-7 flex items-center justify-center rounded-md transition-colors"
-                style={{ color: c.iconGray }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <div
+              className="rounded-xl p-6 w-[520px] max-w-[calc(100vw-32px)]"
+              style={{
+                backgroundColor: "white",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[16px] font-semibold" style={{ color: c.text }}>
+                  {editingId ? "עריכת בטא" : "יצירת בטא חדשה"}
+                </h2>
+                <button
+                  onClick={closeForm}
+                  className="size-7 flex items-center justify-center rounded-md transition-colors"
+                  style={{ color: c.iconGray }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Name */}
-              <FormField label="שם הבטא" hint="(אותיות לטיניות, מספרים, מקף)" error={errors.name}>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="לדוגמה: v2-ai-search"
-                  className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
-                  style={{
-                    border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
-                    color: c.text,
-                    direction: "ltr",
-                    textAlign: "left",
-                    fontFamily: "monospace",
-                  }}
-                />
-              </FormField>
-
-              {/* Status */}
-              <FormField label="סטטוס">
-                <div className="relative">
-                  <select
-                    value={form.status}
-                    onChange={e => setForm(f => ({ ...f, status: e.target.value as BetaStatus }))}
-                    className="w-full h-9 rounded-md px-3 text-[13px] outline-none appearance-none"
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Name */}
+                <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="v2-ai-search"
+                    className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
                     style={{
-                      border: `1px solid ${c.inputBorder}`,
+                      border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
                       color: c.text,
-                      backgroundColor: "white",
-                      paddingLeft: "32px",
+                      direction: "ltr",
+                      textAlign: "left",
+                      fontFamily: "monospace",
                     }}
-                  >
-                    <option value="active">פעילה</option>
-                    <option value="closed">סגורה</option>
-                    <option value="open">פתוחה לכולם</option>
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
-                    style={{ left: "10px", color: c.iconGray }}
                   />
-                </div>
-              </FormField>
+                </FormField>
 
-              {/* Authorized users — only when status = active */}
-              {form.status === "active" && (
-                <div className="md:col-span-2">
-                  <FormField
-                    label="משתמשים מורשים"
-                    hint="(מופרדים בפסיק)"
-                    error={errors.users}
-                  >
-                    <input
-                      type="text"
-                      value={form.users}
-                      onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
-                      placeholder="dani.d, sarah.k, ron.l"
-                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                {/* Status */}
+                <FormField label="סטטוס">
+                  <div className="relative">
+                    <select
+                      value={form.status}
+                      onChange={e => setForm(f => ({ ...f, status: e.target.value as BetaStatus }))}
+                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none appearance-none"
                       style={{
-                        border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
+                        border: `1px solid ${c.inputBorder}`,
                         color: c.text,
-                        direction: "ltr",
-                        textAlign: "left",
+                        backgroundColor: "white",
+                        paddingLeft: "32px",
                       }}
+                    >
+                      <option value="active">פעילה</option>
+                      <option value="closed">סגורה</option>
+                      <option value="open">פתוחה לכולם</option>
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+                      style={{ left: "10px", color: c.iconGray }}
                     />
-                  </FormField>
-                </div>
-              )}
-            </div>
+                  </div>
+                </FormField>
 
-            {/* Form actions */}
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={save}
-                className="flex items-center gap-1.5 px-4 h-9 rounded-md text-[13px] font-medium"
-                style={{ backgroundColor: c.primary, color: "white" }}
-              >
-                <Check size={14} />
-                שמור
-              </button>
-              <button
-                onClick={closeForm}
-                className="px-4 h-9 rounded-md text-[13px]"
-                style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent" }}
-              >
-                ביטול
-              </button>
-            </div>
-          </div>
-        )}
+                {/* Authorized users — only when status = active */}
+                {form.status === "active" && (
+                  <div className="md:col-span-2">
+                    <FormField
+                      label="משתמשים מורשים"
+                      hint="מופרדים בפסיק"
+                      error={errors.users}
+                    >
+                      <input
+                        type="text"
+                        value={form.users}
+                        onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
+                        placeholder="daniD, sarahK, ronL"
+                        className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                        style={{
+                          border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
+                          color: c.text,
+                          direction: "ltr",
+                          textAlign: "left",
+                        }}
+                      />
+                    </FormField>
+                  </div>
+                )}
+              </div>
 
-        {/* ── Lock notice (concurrent editing prevention) ── */}
-        {isLocked && (
-          <div
-            className="mb-4 flex items-center gap-2 px-3 py-2.5 rounded-md text-[12px]"
-            style={{ backgroundColor: "#fff8e6", border: "1px solid #ffe082", color: "#7c5700" }}
-          >
-            <Lock size={13} className="flex-shrink-0" />
-            הרשימה נעולה לעריכה כל עוד הטופס פתוח. סיים את הפעולה הנוכחית כדי לבצע שינויים נוספים.
+              {/* Actions — justified to the left, שמור leftmost */}
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  onClick={closeForm}
+                  className="px-4 h-9 rounded-md text-[13px]"
+                  style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent" }}
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={save}
+                  className="flex items-center gap-1.5 px-4 h-9 rounded-md text-[13px] font-medium"
+                  style={{ backgroundColor: c.primary, color: "white" }}
+                >
+                  <Check size={14} />
+                  שמור
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -429,15 +416,10 @@ export default function AdminPage() {
               )}
 
               {betas.map((beta, idx) => {
-                const dimmed = isLocked && editingId !== beta.id;
                 return (
                   <tr
                     key={beta.id}
-                    style={{
-                      borderTop: idx > 0 ? `1px solid ${c.border}` : "none",
-                      opacity: dimmed ? 0.45 : 1,
-                      transition: "opacity 0.15s",
-                    }}
+                    style={{ borderTop: idx > 0 ? `1px solid ${c.border}` : "none" }}
                   >
                     {/* Name */}
                     <td className="px-5 py-3">
@@ -485,14 +467,13 @@ export default function AdminPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1.5 justify-end">
                         <button
-                          onClick={() => !dimmed && openEdit(beta)}
-                          disabled={dimmed}
+                          onClick={() => openEdit(beta)}
                           className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
                           style={{
                             border: `1px solid ${c.border}`,
-                            color: dimmed ? c.textLight : c.text,
+                            color: c.text,
                             backgroundColor: "transparent",
-                            cursor: dimmed ? "not-allowed" : "pointer",
+                            cursor: "pointer",
                           }}
                         >
                           <Edit2 size={11} />
@@ -501,28 +482,26 @@ export default function AdminPage() {
 
                         {beta.status !== "closed" ? (
                           <button
-                            onClick={() => !dimmed && toggleStatus(beta)}
-                            disabled={dimmed}
+                            onClick={() => toggleStatus(beta)}
                             className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
                             style={{
-                              backgroundColor: dimmed ? "#fce8ea" : "#fff0f1",
+                              backgroundColor: "#fff0f1",
                               border: "1px solid #f9a8a8",
-                              color: dimmed ? "#f9a8a8" : c.error,
-                              cursor: dimmed ? "not-allowed" : "pointer",
+                              color: c.error,
+                              cursor: "pointer",
                             }}
                           >
                             סגור
                           </button>
                         ) : (
                           <button
-                            onClick={() => !dimmed && toggleStatus(beta)}
-                            disabled={dimmed}
+                            onClick={() => toggleStatus(beta)}
                             className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
                             style={{
-                              backgroundColor: dimmed ? c.hoverBg : c.primaryLight,
-                              border: `1px solid ${dimmed ? c.border : "#93c5fd"}`,
-                              color: dimmed ? c.textLight : c.primary,
-                              cursor: dimmed ? "not-allowed" : "pointer",
+                              backgroundColor: c.primaryLight,
+                              border: "1px solid #93c5fd",
+                              color: c.primary,
+                              cursor: "pointer",
                             }}
                           >
                             פתח
