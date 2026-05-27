@@ -211,6 +211,7 @@ export default function AdminPage() {
     >
       {/* ── Header ── */}
       <header
+        dir="ltr"
         className="h-16 flex items-center justify-between px-8 sticky top-0 z-10"
         style={{ backgroundColor: c.headerBg, borderBottom: `1px solid ${c.border}` }}
       >
