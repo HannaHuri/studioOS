@@ -117,6 +117,7 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm]         = useState<BetaFormState>(EMPTY_FORM);
   const [errors, setErrors]     = useState<Partial<Record<keyof BetaFormState, string>>>({});
+  const [confirmClose, setConfirmClose] = useState<Beta | null>(null);
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -298,8 +299,8 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4">
-                {/* Name */}
+              {/* Name + Status side by side, inputs bottom-aligned */}
+              <div className="grid grid-cols-2 gap-4 items-end">
                 <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
                   <input
                     type="text"
@@ -317,7 +318,6 @@ export default function AdminPage() {
                   />
                 </FormField>
 
-                {/* Status */}
                 <FormField label="סטטוס">
                   <div className="relative">
                     <select
@@ -342,9 +342,11 @@ export default function AdminPage() {
                     />
                   </div>
                 </FormField>
+              </div>
 
-                {/* Authorized users — only when status = active */}
-                {form.status === "active" && (
+              {/* Authorized users — full width, only when status = active */}
+              {form.status === "active" && (
+                <div className="mt-4">
                   <FormField
                     label="משתמשים מורשים"
                     hint="מופרדים בפסיק"
@@ -364,8 +366,8 @@ export default function AdminPage() {
                       }}
                     />
                   </FormField>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Actions — justified to the left, שמור leftmost */}
               <div className="flex justify-end gap-2 mt-6">
@@ -462,25 +464,28 @@ export default function AdminPage() {
 
                     {/* Actions */}
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5 justify-end">
+                      <div className="flex items-center gap-2 justify-end">
                         <button
                           onClick={() => openEdit(beta)}
-                          className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
+                          className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
                           style={{
+                            height: "32px",
                             border: `1px solid ${c.border}`,
                             color: c.text,
                             backgroundColor: "transparent",
+                            borderRadius: "4px",
                             cursor: "pointer",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          <Edit2 size={11} />
+                          <Edit2 size={12} />
                           עריכה
                         </button>
 
                         {beta.status !== "closed" ? (
                           <button
-                            onClick={() => toggleStatus(beta)}
-                            className="px-2.5 text-[12px] font-medium"
+                            onClick={() => setConfirmClose(beta)}
+                            className="px-3 text-[12px] font-medium"
                             style={{
                               height: "32px",
                               border: `1px solid ${c.error}`,
@@ -491,12 +496,12 @@ export default function AdminPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            סגירת בטא
+                            סגור
                           </button>
                         ) : (
                           <button
                             onClick={() => toggleStatus(beta)}
-                            className="px-2.5 text-[12px] font-medium"
+                            className="px-3 text-[12px] font-medium"
                             style={{
                               height: "32px",
                               border: `1px solid ${c.primary}`,
@@ -507,7 +512,7 @@ export default function AdminPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            פתיחת בטא
+                            פתח
                           </button>
                         )}
                       </div>
@@ -520,6 +525,51 @@ export default function AdminPage() {
         </div>
 
       </main>
+
+      {/* ── Confirm close dialog ── */}
+      {confirmClose && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          onClick={() => setConfirmClose(null)}
+        >
+          <div
+            className="rounded-xl p-6 w-[380px] max-w-[calc(100vw-32px)]"
+            style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
+              סגירת בטא
+            </h2>
+            <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
+              לסגור את הבטא{" "}
+              <span
+                className="font-medium"
+                style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline" }}
+              >
+                {confirmClose.name}
+              </span>
+              ?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmClose(null)}
+                className="px-4 h-9 rounded-md text-[13px]"
+                style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => { toggleStatus(confirmClose); setConfirmClose(null); }}
+                className="px-4 h-9 rounded-md text-[13px] font-medium"
+                style={{ backgroundColor: c.error, color: "white", cursor: "pointer", borderRadius: "6px" }}
+              >
+                סגור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
