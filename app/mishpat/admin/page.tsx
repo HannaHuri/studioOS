@@ -1,24 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-  Plus, Edit2, X, Shield, ChevronDown,
-} from "lucide-react";
+import { useState } from "react";
+import { Plus, Edit2, X, Shield, ChevronDown } from "lucide-react";
 
-// ── Design tokens (same as main page) ────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 const c = {
-  primary:      "#0073ea",
-  primaryLight: "#cce5ff",
-  headerBg:     "#ecedf5",
-  darkBlue:     "#00376d",
-  text:         "#323338",
-  textGray:     "#707070",
-  textLight:    "#8596af",
-  iconGray:     "#676879",
-  border:       "#c5c7d0",
-  inputBorder:  "#dcdfec",
-  hoverBg:      "#f5f6f8",
-  error:        "#d83a52",
+  primary:     "#0073ea",
+  headerBg:    "#ecedf5",
+  darkBlue:    "#00376d",
+  text:        "#323338",
+  textGray:    "#707070",
+  textLight:   "#8596af",
+  iconGray:    "#676879",
+  border:      "#c5c7d0",
+  inputBorder: "#dcdfec",
+  hoverBg:     "#f5f6f8",
+  error:       "#d83a52",
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,42 +25,23 @@ interface Beta {
   id: string;
   name: string;
   status: BetaStatus;
-  users: string[];       // authorized usernames
+  users: string[];
   updatedAt: string;
 }
 
+// Form no longer includes status — managed via the status menu button
 interface BetaFormState {
   name: string;
-  status: BetaStatus;
-  users: string;         // comma-separated string (as typed)
+  users: string; // comma-separated
 }
 
-// ── Mock data (dev team: replace with API calls) ──────────────────────────────
+// ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_BETAS: Beta[] = [
-  {
-    id: "1",
-    name: "v2-ai-search",
-    status: "active",
-    users: ["daniD", "sarahK", "ronL"],
-    updatedAt: "27.05.2026",
-  },
-  {
-    id: "2",
-    name: "v3-dark-mode",
-    status: "closed",
-    users: [],
-    updatedAt: "20.05.2026",
-  },
-  {
-    id: "3",
-    name: "v1-new-sidebar",
-    status: "open",
-    users: [],
-    updatedAt: "15.05.2026",
-  },
+  { id: "1", name: "v2-ai-search",   status: "active", users: ["daniD", "sarahK", "ronL"], updatedAt: "27.05.2026" },
+  { id: "2", name: "v3-dark-mode",   status: "closed", users: [],                          updatedAt: "20.05.2026" },
+  { id: "3", name: "v1-new-sidebar", status: "open",   users: [],                          updatedAt: "15.05.2026" },
 ];
 
-// ── Mock current admin user (dev team: replace with real auth) ────────────────
 const CURRENT_ADMIN = { initials: "דד", name: "דניאל דמביץ" };
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -73,7 +51,23 @@ const STATUS_CONFIG: Record<BetaStatus, { label: string; bg: string; text: strin
   open:   { label: "פתוחה לכולם", bg: "#dcfce7", text: "#15803d", border: "#86efac" },
 };
 
-const EMPTY_FORM: BetaFormState = { name: "", status: "active", users: "" };
+// ── Confirmation copy per target status ───────────────────────────────────────
+const CONFIRM_COPY: Record<BetaStatus, { title: string; body: (name: string) => React.ReactNode }> = {
+  active: {
+    title: "פתיחת בטא",
+    body:  name => <>לפתוח את בטא <BetaName>{name}</BetaName> למשתמשים המורשים?</>,
+  },
+  closed: {
+    title: "סגירת בטא",
+    body:  name => <>לסגור את בטא <BetaName>{name}</BetaName>?</>,
+  },
+  open: {
+    title: "פתיחה לכולם",
+    body:  name => <>לפתוח את בטא <BetaName>{name}</BetaName> לכלל המשתמשים?</>,
+  },
+};
+
+const EMPTY_FORM: BetaFormState = { name: "", users: "" };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function Logo() {
@@ -81,21 +75,15 @@ function Logo() {
   return <img src="/studioOS/logo.png" alt="לוגו" className="h-[30px] w-auto" />;
 }
 
-function StatusBadge({ status }: { status: BetaStatus }) {
-  const s = STATUS_CONFIG[status];
+function BetaName({ children }: { children: React.ReactNode }) {
   return (
-    <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap"
-      style={{ backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}` }}
-    >
-      {s.label}
+    <span style={{ color: "#323338", fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
+      {children}
     </span>
   );
 }
 
-function FormField({
-  label, hint, error, children,
-}: {
+function FormField({ label, hint, error, children }: {
   label: string; hint?: string; error?: string; children: React.ReactNode;
 }) {
   return (
@@ -110,6 +98,80 @@ function FormField({
   );
 }
 
+// ── Status menu button (in-table, opens dropdown) ─────────────────────────────
+function StatusMenuButton({
+  beta,
+  isOpen,
+  onToggle,
+  onSelect,
+}: {
+  beta: Beta;
+  isOpen: boolean;
+  onToggle: () => void;
+  onSelect: (s: BetaStatus) => void;
+}) {
+  const cfg = STATUS_CONFIG[beta.status];
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={onToggle}
+        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap"
+        style={{
+          backgroundColor: cfg.bg,
+          color: cfg.text,
+          border: `1px solid ${cfg.border}`,
+          cursor: "pointer",
+        }}
+      >
+        {cfg.label}
+        <ChevronDown size={11} style={{ opacity: 0.7 }} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute top-full mt-1.5 z-30 rounded-lg py-1"
+          style={{
+            backgroundColor: "white",
+            border: `1px solid ${c.border}`,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            minWidth: "160px",
+            // align to right edge of button in RTL
+            right: 0,
+          }}
+        >
+          {(Object.entries(STATUS_CONFIG) as [BetaStatus, typeof STATUS_CONFIG[BetaStatus]][]).map(([status, s]) => {
+            const isCurrent = status === beta.status;
+            return (
+              <button
+                key={status}
+                onClick={() => onSelect(status)}
+                className="w-full flex items-center justify-between px-3 py-2 text-[13px]"
+                style={{
+                  backgroundColor: isCurrent ? c.hoverBg : "transparent",
+                  cursor: isCurrent ? "default" : "pointer",
+                  textAlign: "right",
+                }}
+                onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+                onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+                  style={{ backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}` }}
+                >
+                  {s.label}
+                </span>
+                {isCurrent && (
+                  <span className="text-[11px]" style={{ color: c.textLight }}>נוכחי</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [betas, setBetas]         = useState<Beta[]>(MOCK_BETAS);
@@ -117,8 +179,8 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm]           = useState<BetaFormState>(EMPTY_FORM);
   const [errors, setErrors]       = useState<Partial<Record<keyof BetaFormState, string>>>({});
-  // Pending save awaiting close-confirmation
-  const [pendingClose, setPendingClose] = useState<{ betaName: string; commit: () => void } | null>(null);
+  const [openStatusMenu, setOpenStatusMenu] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus]   = useState<{ beta: Beta; newStatus: BetaStatus } | null>(null);
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -129,7 +191,7 @@ export default function AdminPage() {
   }
 
   function openEdit(beta: Beta) {
-    setForm({ name: beta.name, status: beta.status, users: beta.users.join(", ") });
+    setForm({ name: beta.name, users: beta.users.join(", ") });
     setEditingId(beta.id);
     setErrors({});
     setShowForm(true);
@@ -148,50 +210,51 @@ export default function AdminPage() {
     } else if (!/^[a-zA-Z0-9_-]+$/.test(form.name.trim())) {
       e.name = "שם יכול להכיל אותיות לטיניות, מספרים, מקף ומקף תחתון בלבד";
     }
-    if (form.status === "active" && !form.users.trim()) {
-      e.users = "בטא פעילה דורשת לפחות משתמש מורשה אחד";
-    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function save() {
     if (!validate()) return;
-
     const today    = new Date().toLocaleDateString("he-IL");
-    const userList = form.status === "active"
-      ? form.users.split(",").map(u => u.trim()).filter(Boolean)
-      : [];
+    const userList = form.users.split(",").map(u => u.trim()).filter(Boolean);
 
-    const commit = () => {
-      if (editingId) {
-        setBetas(prev =>
-          prev.map(b =>
-            b.id === editingId
-              ? { ...b, name: form.name.trim(), status: form.status, users: userList, updatedAt: today }
-              : b
-          )
-        );
-      } else {
-        const newBeta: Beta = {
-          id: Date.now().toString(),
-          name: form.name.trim(),
-          status: form.status,
-          users: userList,
-          updatedAt: today,
-        };
-        setBetas(prev => [newBeta, ...prev]);
-      }
-      closeForm();
-    };
-
-    // If editing an open beta and setting it to closed → ask for confirmation first
-    const original = editingId ? betas.find(b => b.id === editingId) : null;
-    if (original && original.status !== "closed" && form.status === "closed") {
-      setPendingClose({ betaName: form.name.trim(), commit });
+    if (editingId) {
+      // Keep existing status — only the name and user list are edited here
+      setBetas(prev =>
+        prev.map(b =>
+          b.id === editingId
+            ? { ...b, name: form.name.trim(), users: userList, updatedAt: today }
+            : b
+        )
+      );
     } else {
-      commit();
+      // New betas default to "active"
+      setBetas(prev => [{
+        id: Date.now().toString(),
+        name: form.name.trim(),
+        status: "active",
+        users: userList,
+        updatedAt: today,
+      }, ...prev]);
     }
+    closeForm();
+  }
+
+  // ── Status change (via menu button) ─────────────────────────────────────────
+  function requestStatusChange(beta: Beta, newStatus: BetaStatus) {
+    if (newStatus === beta.status) return; // no-op for current status
+    setPendingStatus({ beta, newStatus });
+  }
+
+  function confirmStatusChange() {
+    if (!pendingStatus) return;
+    const { beta, newStatus } = pendingStatus;
+    const today = new Date().toLocaleDateString("he-IL");
+    setBetas(prev =>
+      prev.map(b => b.id === beta.id ? { ...b, status: newStatus, updatedAt: today } : b)
+    );
+    setPendingStatus(null);
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -207,7 +270,6 @@ export default function AdminPage() {
         className="h-16 flex items-center justify-between px-8 sticky top-0 z-10"
         style={{ backgroundColor: c.headerBg, borderBottom: `1px solid ${c.border}` }}
       >
-        {/* Left: avatar + name + role */}
         <div className="flex items-center gap-3">
           <div
             className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none"
@@ -222,10 +284,8 @@ export default function AdminPage() {
               אדמין
             </span>
           </div>
-
         </div>
 
-        {/* Right: logo + name — click to go home */}
         <a
           href="/studioOS/mishpat"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -257,7 +317,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* ── Modal: Create / Edit form ── */}
+        {/* ── Edit / Create modal ── */}
         {showForm && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center"
@@ -265,21 +325,17 @@ export default function AdminPage() {
             onClick={closeForm}
           >
             <div
-              className="rounded-xl p-6 w-[520px] max-w-[calc(100vw-32px)]"
-              style={{
-                backgroundColor: "white",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-              }}
+              className="rounded-xl p-6 w-[480px] max-w-[calc(100vw-32px)]"
+              style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Modal header */}
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-[16px] font-semibold" style={{ color: c.text }}>
                   {editingId ? "עריכת בטא" : "יצירת בטא חדשה"}
                 </h2>
                 <button
                   onClick={closeForm}
-                  className="size-7 flex items-center justify-center rounded-md transition-colors"
+                  className="size-7 flex items-center justify-center rounded-md"
                   style={{ color: c.iconGray }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
@@ -288,8 +344,7 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Name + Status side by side, inputs bottom-aligned */}
-              <div className="grid grid-cols-2 gap-4 items-end">
+              <div className="flex flex-col gap-4">
                 <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
                   <input
                     type="text"
@@ -307,76 +362,46 @@ export default function AdminPage() {
                   />
                 </FormField>
 
-                <FormField label="סטטוס">
-                  <div className="relative">
-                    <select
-                      value={form.status}
-                      onChange={e => setForm(f => ({ ...f, status: e.target.value as BetaStatus }))}
-                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none appearance-none"
-                      style={{
-                        border: `1px solid ${c.inputBorder}`,
-                        color: c.text,
-                        backgroundColor: "white",
-                        paddingLeft: "32px",
-                      }}
-                    >
-                      <option value="active">פעילה</option>
-                      <option value="closed">סגורה</option>
-                      <option value="open">פתוחה לכולם</option>
-                    </select>
-                    <ChevronDown
-                      size={14}
-                      className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ left: "10px", color: c.iconGray }}
-                    />
-                  </div>
+                <FormField label="משתמשים מורשים" hint="מופרדים בפסיק" error={errors.users}>
+                  <input
+                    type="text"
+                    value={form.users}
+                    onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
+                    placeholder="daniD, sarahK, ronL"
+                    className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                    style={{
+                      border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
+                      color: c.text,
+                      direction: "ltr",
+                      textAlign: "left",
+                    }}
+                  />
                 </FormField>
               </div>
 
-              {/* Authorized users — full width, only when status = active */}
-              {form.status === "active" && (
-                <div className="mt-4">
-                  <FormField
-                    label="משתמשים מורשים"
-                    hint="מופרדים בפסיק"
-                    error={errors.users}
-                  >
-                    <input
-                      type="text"
-                      value={form.users}
-                      onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
-                      placeholder="daniD, sarahK, ronL"
-                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
-                      style={{
-                        border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
-                        color: c.text,
-                        direction: "ltr",
-                        textAlign: "left",
-                      }}
-                    />
-                  </FormField>
-                </div>
-              )}
-
-              {/* Actions — justified to the left, שמור leftmost */}
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   onClick={closeForm}
                   className="px-4 h-9 rounded-md text-[13px]"
-                  style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent" }}
+                  style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
                 >
                   ביטול
                 </button>
                 <button
                   onClick={save}
                   className="px-4 h-9 rounded-md text-[13px] font-medium"
-                  style={{ backgroundColor: c.primary, color: "white" }}
+                  style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
                 >
                   שמירה
                 </button>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Transparent overlay to close any open status menu */}
+        {openStatusMenu && (
+          <div className="fixed inset-0 z-20" onClick={() => setOpenStatusMenu(null)} />
         )}
 
         {/* ── Betas table ── */}
@@ -388,7 +413,7 @@ export default function AdminPage() {
             <thead>
               <tr style={{ backgroundColor: c.hoverBg, borderBottom: `1px solid ${c.border}` }}>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "200px" }}>שם</th>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "140px" }}>סטטוס</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "160px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
                 <th className="px-5 py-3" style={{ width: "100px" }} />
@@ -403,124 +428,129 @@ export default function AdminPage() {
                 </tr>
               )}
 
-              {betas.map((beta, idx) => {
-                return (
-                  <tr
-                    key={beta.id}
-                    style={{ borderTop: idx > 0 ? `1px solid ${c.border}` : "none" }}
-                  >
-                    {/* Name */}
-                    <td className="px-5 py-3">
-                      <span
-                        className="font-medium text-[13px]"
-                        style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline-block" }}
-                      >
-                        {beta.name}
-                      </span>
-                    </td>
+              {betas.map((beta, idx) => (
+                <tr
+                  key={beta.id}
+                  style={{ borderTop: idx > 0 ? `1px solid ${c.border}` : "none" }}
+                >
+                  {/* Name */}
+                  <td className="px-5 py-3">
+                    <span
+                      className="font-medium text-[13px]"
+                      style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline-block" }}
+                    >
+                      {beta.name}
+                    </span>
+                  </td>
 
-                    {/* Status */}
-                    <td className="px-5 py-3">
-                      <StatusBadge status={beta.status} />
-                    </td>
+                  {/* Status — clickable menu button */}
+                  <td className="px-5 py-3">
+                    <StatusMenuButton
+                      beta={beta}
+                      isOpen={openStatusMenu === beta.id}
+                      onToggle={() => setOpenStatusMenu(openStatusMenu === beta.id ? null : beta.id)}
+                      onSelect={newStatus => {
+                        setOpenStatusMenu(null);
+                        requestStatusChange(beta, newStatus);
+                      }}
+                    />
+                  </td>
 
-                    {/* Authorized users */}
-                    <td className="px-5 py-3">
-                      {beta.users.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {beta.users.map(u => (
-                            <span
-                              key={u}
-                              className="px-2 py-0.5 rounded text-[11px]"
-                              style={{
-                                backgroundColor: c.hoverBg,
-                                color: c.textGray,
-                                border: `1px solid ${c.inputBorder}`,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {u}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span style={{ color: c.textLight }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-5 py-3" style={{ color: c.textGray }}>{beta.updatedAt}</td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-3">
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => openEdit(beta)}
-                          className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
-                          style={{
-                            height: "32px",
-                            border: `1px solid ${c.border}`,
-                            color: c.text,
-                            backgroundColor: "transparent",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <Edit2 size={12} />
-                          עריכה
-                        </button>
+                  {/* Authorized users */}
+                  <td className="px-5 py-3">
+                    {beta.users.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {beta.users.map(u => (
+                          <span
+                            key={u}
+                            className="px-2 py-0.5 rounded text-[11px]"
+                            style={{
+                              backgroundColor: c.hoverBg,
+                              color: c.textGray,
+                              border: `1px solid ${c.inputBorder}`,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {u}
+                          </span>
+                        ))}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                    ) : (
+                      <span style={{ color: c.textLight }}>—</span>
+                    )}
+                  </td>
+
+                  {/* Date */}
+                  <td className="px-5 py-3" style={{ color: c.textGray }}>{beta.updatedAt}</td>
+
+                  {/* Actions */}
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => openEdit(beta)}
+                        className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
+                        style={{
+                          height: "32px",
+                          border: `1px solid ${c.border}`,
+                          color: c.text,
+                          backgroundColor: "transparent",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Edit2 size={12} />
+                        עריכה
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
       </main>
 
-      {/* ── Confirm close (triggered from save when status → closed) ── */}
-      {pendingClose && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          onClick={() => setPendingClose(null)}
-        >
+      {/* ── Status-change confirmation dialog ── */}
+      {pendingStatus && (() => {
+        const copy = CONFIRM_COPY[pendingStatus.newStatus];
+        return (
           <div
-            className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
-            style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
-            onClick={e => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onClick={() => setPendingStatus(null)}
           >
-            <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
-              סגירת בטא
-            </h2>
-            <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
-              לסגור את בטא{" "}
-              <span style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
-                {pendingClose.betaName}
-              </span>
-              ?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setPendingClose(null)}
-                className="px-4 h-9 rounded-md text-[13px]"
-                style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
-              >
-                ביטול
-              </button>
-              <button
-                onClick={() => { pendingClose.commit(); setPendingClose(null); }}
-                className="px-4 h-9 rounded-md text-[13px] font-medium"
-                style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", borderRadius: "6px" }}
-              >
-                אישור
-              </button>
+            <div
+              className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
+              style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
+                {copy.title}
+              </h2>
+              <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
+                {copy.body(pendingStatus.beta.name)}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setPendingStatus(null)}
+                  className="px-4 h-9 rounded-md text-[13px]"
+                  style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  className="px-4 h-9 rounded-md text-[13px] font-medium"
+                  style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
+                >
+                  אישור
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );
