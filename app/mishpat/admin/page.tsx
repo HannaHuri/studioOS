@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Edit2, X, Shield, ChevronDown, Zap, Lock, Globe, Check, CheckCircle2 } from "lucide-react";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -195,6 +195,17 @@ export default function AdminPage() {
   const [form, setForm]           = useState<BetaFormState>(EMPTY_FORM);
   const [errors, setErrors]       = useState<Partial<Record<keyof BetaFormState, string>>>({});
   const [openStatusMenu, setOpenStatusMenu] = useState<string | null>(null);
+  const usersRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the users textarea whenever content changes
+  useEffect(() => {
+    const el = usersRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const capped = Math.min(el.scrollHeight, 120);
+    el.style.height = capped + "px";
+    el.style.overflowY = el.scrollHeight > 120 ? "auto" : "hidden";
+  }, [form.users]);
   const [pendingStatus, setPendingStatus]   = useState<{ beta: Beta; newStatus: BetaStatus } | null>(null);
   const [toast, setToast]                   = useState<string | null>(null);
 
@@ -397,17 +408,25 @@ export default function AdminPage() {
                 )}
 
                 <FormField label="משתמשים מורשים" hint="מופרדים בפסיק" error={errors.users}>
-                  <input
-                    type="text"
+                  <textarea
+                    ref={usersRef}
                     value={form.users}
                     onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
                     placeholder="daniD, sarahK, ronL"
-                    className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                    rows={1}
+                    className="w-full rounded-md px-3 text-[13px] outline-none"
                     style={{
                       border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
                       color: c.text,
                       direction: "ltr",
                       textAlign: "left",
+                      resize: "none",
+                      overflowY: "hidden",
+                      lineHeight: "1.6",
+                      paddingTop: "7px",
+                      paddingBottom: "7px",
+                      minHeight: "36px",
+                      fontFamily: "inherit",
                     }}
                   />
                 </FormField>
