@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Plus, Edit2, X, Shield, ChevronDown, Lock, LockOpen,
+  Plus, Edit2, X, Shield, ChevronDown,
 } from "lucide-react";
 
 // ── Design tokens (same as main page) ────────────────────────────────────────
@@ -69,7 +69,7 @@ const CURRENT_ADMIN = { initials: "דד", name: "דניאל דמביץ" };
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<BetaStatus, { label: string; bg: string; text: string; border: string }> = {
   active: { label: "פעילה",        bg: "#dbeafe", text: "#1d4ed8", border: "#93c5fd" },
-  closed: { label: "סגורה",        bg: "#f3f4f6", text: "#6b7280", border: "#d1d5db" },
+  closed: { label: "סגורה",        bg: "#fde8eb", text: "#d83a52", border: "#f9a8a8" },
   open:   { label: "פתוחה לכולם", bg: "#dcfce7", text: "#15803d", border: "#86efac" },
 };
 
@@ -112,13 +112,13 @@ function FormField({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const [betas, setBetas]       = useState<Beta[]>(MOCK_BETAS);
-  const [showForm, setShowForm] = useState(false);
+  const [betas, setBetas]         = useState<Beta[]>(MOCK_BETAS);
+  const [showForm, setShowForm]   = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm]         = useState<BetaFormState>(EMPTY_FORM);
-  const [errors, setErrors]     = useState<Partial<Record<keyof BetaFormState, string>>>({});
-  const [confirmClose, setConfirmClose] = useState<Beta | null>(null);
-  const [confirmOpen,  setConfirmOpen]  = useState<Beta | null>(null);
+  const [form, setForm]           = useState<BetaFormState>(EMPTY_FORM);
+  const [errors, setErrors]       = useState<Partial<Record<keyof BetaFormState, string>>>({});
+  // Pending save awaiting close-confirmation
+  const [pendingClose, setPendingClose] = useState<{ betaName: string; commit: () => void } | null>(null);
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -158,47 +158,40 @@ export default function AdminPage() {
   function save() {
     if (!validate()) return;
 
-    const today = new Date().toLocaleDateString("he-IL");
+    const today    = new Date().toLocaleDateString("he-IL");
     const userList = form.status === "active"
       ? form.users.split(",").map(u => u.trim()).filter(Boolean)
       : [];
 
-    if (editingId) {
-      setBetas(prev =>
-        prev.map(b =>
-          b.id === editingId
-            ? { ...b, name: form.name.trim(), status: form.status, users: userList, updatedAt: today }
-            : b
-        )
-      );
-    } else {
-      const newBeta: Beta = {
-        id: Date.now().toString(),
-        name: form.name.trim(),
-        status: form.status,
-        users: userList,
-        updatedAt: today,
-      };
-      setBetas(prev => [newBeta, ...prev]);
-    }
-    closeForm();
-  }
+    const commit = () => {
+      if (editingId) {
+        setBetas(prev =>
+          prev.map(b =>
+            b.id === editingId
+              ? { ...b, name: form.name.trim(), status: form.status, users: userList, updatedAt: today }
+              : b
+          )
+        );
+      } else {
+        const newBeta: Beta = {
+          id: Date.now().toString(),
+          name: form.name.trim(),
+          status: form.status,
+          users: userList,
+          updatedAt: today,
+        };
+        setBetas(prev => [newBeta, ...prev]);
+      }
+      closeForm();
+    };
 
-  function toggleStatus(beta: Beta) {
-    // Closing → just flip to closed
-    if (beta.status !== "closed") {
-      const today = new Date().toLocaleDateString("he-IL");
-      setBetas(prev => prev.map(b => b.id === beta.id ? { ...b, status: "closed", updatedAt: today } : b));
-      return;
+    // If editing an open beta and setting it to closed → ask for confirmation first
+    const original = editingId ? betas.find(b => b.id === editingId) : null;
+    if (original && original.status !== "closed" && form.status === "closed") {
+      setPendingClose({ betaName: form.name.trim(), commit });
+    } else {
+      commit();
     }
-    // Opening a closed beta with no users → must go through form to set users
-    if (beta.users.length === 0) {
-      openEdit(beta);
-      return;
-    }
-    // Opening a closed beta that already has users
-    const today = new Date().toLocaleDateString("he-IL");
-    setBetas(prev => prev.map(b => b.id === beta.id ? { ...b, status: "active", updatedAt: today } : b));
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -398,7 +391,7 @@ export default function AdminPage() {
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "140px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
-                <th className="px-5 py-3" style={{ width: "200px" }} />
+                <th className="px-5 py-3" style={{ width: "100px" }} />
               </tr>
             </thead>
             <tbody>
@@ -460,53 +453,22 @@ export default function AdminPage() {
 
                     {/* Actions */}
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2 justify-end">
-                        {/* shared style for all three action buttons */}
-                        {(() => {
-                          const btn: React.CSSProperties = {
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => openEdit(beta)}
+                          className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
+                          style={{
                             height: "32px",
-                            width: "88px",
+                            border: `1px solid ${c.border}`,
+                            color: c.text,
+                            backgroundColor: "transparent",
                             borderRadius: "4px",
                             cursor: "pointer",
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "5px",
-                            backgroundColor: "transparent",
-                            whiteSpace: "nowrap",
-                          };
-                          return (
-                            <>
-                              <button
-                                onClick={() => openEdit(beta)}
-                                style={{ ...btn, border: `1px solid ${c.border}`, color: c.text }}
-                              >
-                                <Edit2 size={12} />
-                                עריכה
-                              </button>
-
-                              {beta.status !== "closed" ? (
-                                <button
-                                  onClick={() => setConfirmClose(beta)}
-                                  style={{ ...btn, border: `1px solid ${c.error}`, color: c.error }}
-                                >
-                                  <Lock size={12} />
-                                  סגירה
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => setConfirmOpen(beta)}
-                                  style={{ ...btn, border: `1px solid ${c.primary}`, color: c.primary }}
-                                >
-                                  <LockOpen size={12} />
-                                  פתיחה
-                                </button>
-                              )}
-                            </>
-                          );
-                        })()}
+                          }}
+                        >
+                          <Edit2 size={12} />
+                          עריכה
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -518,12 +480,12 @@ export default function AdminPage() {
 
       </main>
 
-      {/* ── Confirm close dialog ── */}
-      {confirmClose && (
+      {/* ── Confirm close (triggered from save when status → closed) ── */}
+      {pendingClose && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          onClick={() => setConfirmClose(null)}
+          onClick={() => setPendingClose(null)}
         >
           <div
             className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
@@ -536,20 +498,20 @@ export default function AdminPage() {
             <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
               לסגור את בטא{" "}
               <span style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
-                {confirmClose.name}
+                {pendingClose.betaName}
               </span>
               ?
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setConfirmClose(null)}
+                onClick={() => setPendingClose(null)}
                 className="px-4 h-9 rounded-md text-[13px]"
                 style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
               >
                 ביטול
               </button>
               <button
-                onClick={() => { toggleStatus(confirmClose); setConfirmClose(null); }}
+                onClick={() => { pendingClose.commit(); setPendingClose(null); }}
                 className="px-4 h-9 rounded-md text-[13px] font-medium"
                 style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", borderRadius: "6px" }}
               >
@@ -560,47 +522,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── Confirm open dialog ── */}
-      {confirmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          onClick={() => setConfirmOpen(null)}
-        >
-          <div
-            className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
-            style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
-              פתיחת בטא
-            </h2>
-            <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
-              לפתוח את בטא{" "}
-              <span style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
-                {confirmOpen.name}
-              </span>
-              {" "}לכלל המשתמשים?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmOpen(null)}
-                className="px-4 h-9 rounded-md text-[13px]"
-                style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
-              >
-                ביטול
-              </button>
-              <button
-                onClick={() => { toggleStatus(confirmOpen); setConfirmOpen(null); }}
-                className="px-4 h-9 rounded-md text-[13px] font-medium"
-                style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", borderRadius: "6px" }}
-              >
-                אישור
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
