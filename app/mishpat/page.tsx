@@ -5,7 +5,7 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Link, MessageSquare, Minimize2, Moon, MoreHorizontal,
-  Paperclip, Plus, Quote, RotateCw, Search, Split, Sun,
+  Paperclip, Plus, Quote, RotateCw, Search, Shield, Split, Sun,
   ThumbsDown, ThumbsUp,
 } from "lucide-react";
 
@@ -609,17 +609,94 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
 }
 
 // ── Header ─────────────────────────────────────────────────────────────────
+// Mock: set isAdmin = true to simulate an admin user (dev team: wire to real auth)
+const IS_ADMIN = true;
+
 function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-8 z-10" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
       <div className="flex items-center gap-3">
-        <div className="size-8 rounded-full flex items-center justify-center text-white text-[15px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>דד</div>
-        <span className="text-[14px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}>דניאל דמביץ</span>
+
+        {/* User avatar + name — clickable for admin */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
+            style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
+          >
+            <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>דד</div>
+            <div className="flex flex-col leading-tight text-right">
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דניאל דמביץ</span>
+              {IS_ADMIN && (
+                <span className="text-[11px] flex items-center gap-0.5 justify-end" style={{ color: c.primary }}>
+                  <Shield size={9} />
+                  אדמין
+                </span>
+              )}
+            </div>
+          </button>
+
+          {/* Dropdown menu */}
+          {menuOpen && (
+            <div
+              className="absolute top-full mt-1 right-0 rounded-lg py-1 z-50"
+              style={{
+                minWidth: "180px",
+                backgroundColor: isDark ? dk.surface : "white",
+                border: `1px solid ${isDark ? dk.border : c.border}`,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              }}
+            >
+              {IS_ADMIN && (
+                <a
+                  href="/studioOS/mishpat/admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors"
+                  style={{ color: isDark ? dk.text : c.text, direction: "rtl" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <Shield size={14} style={{ color: c.primary }} />
+                  ניהול מערכת
+                </a>
+              )}
+              <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "4px 0" }} />
+              {/* Placeholder for future personal settings */}
+              <button
+                disabled
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-right"
+                style={{ color: isDark ? dk.textMuted : c.textLight, cursor: "not-allowed", direction: "rtl" }}
+              >
+                הגדרות אישיות
+                <span className="text-[10px] mr-auto px-1.5 py-0.5 rounded" style={{ backgroundColor: c.hoverBg, color: c.textLight }}>בקרוב</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Dark mode toggle */}
         <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-7 px-2 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
           {isDark ? <Sun size={14} style={{ color: "#FCD34D" }} /> : <Moon size={14} style={{ color: "#4A5568" }} />}
           <div className="size-[18px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
         </button>
       </div>
+
       <div className="flex items-center gap-2" dir="rtl">
         <Logo />
         <span className="font-medium text-[20px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: "1" }}>נט המשפט</span>
