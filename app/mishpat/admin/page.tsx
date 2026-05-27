@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Plus, Edit2, X, Check, Shield, ChevronDown, ArrowRight,
+  Plus, Edit2, X, Shield, ChevronDown, ArrowRight,
 } from "lucide-react";
 
 // ── Design tokens (same as main page) ────────────────────────────────────────
@@ -298,7 +298,7 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 {/* Name */}
                 <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
                   <input
@@ -345,27 +345,25 @@ export default function AdminPage() {
 
                 {/* Authorized users — only when status = active */}
                 {form.status === "active" && (
-                  <div className="md:col-span-2">
-                    <FormField
-                      label="משתמשים מורשים"
-                      hint="מופרדים בפסיק"
-                      error={errors.users}
-                    >
-                      <input
-                        type="text"
-                        value={form.users}
-                        onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
-                        placeholder="daniD, sarahK, ronL"
-                        className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
-                        style={{
-                          border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
-                          color: c.text,
-                          direction: "ltr",
-                          textAlign: "left",
-                        }}
-                      />
-                    </FormField>
-                  </div>
+                  <FormField
+                    label="משתמשים מורשים"
+                    hint="מופרדים בפסיק"
+                    error={errors.users}
+                  >
+                    <input
+                      type="text"
+                      value={form.users}
+                      onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
+                      placeholder="daniD, sarahK, ronL"
+                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                      style={{
+                        border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
+                        color: c.text,
+                        direction: "ltr",
+                        textAlign: "left",
+                      }}
+                    />
+                  </FormField>
                 )}
               </div>
 
@@ -380,11 +378,10 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={save}
-                  className="flex items-center gap-1.5 px-4 h-9 rounded-md text-[13px] font-medium"
+                  className="px-4 h-9 rounded-md text-[13px] font-medium"
                   style={{ backgroundColor: c.primary, color: "white" }}
                 >
-                  <Check size={14} />
-                  שמור
+                  שמירה
                 </button>
               </div>
             </div>
@@ -403,7 +400,7 @@ export default function AdminPage() {
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "140px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
-                <th className="px-5 py-3" style={{ width: "130px" }} />
+                <th className="px-5 py-3" style={{ width: "200px" }} />
               </tr>
             </thead>
             <tbody>
@@ -483,28 +480,34 @@ export default function AdminPage() {
                         {beta.status !== "closed" ? (
                           <button
                             onClick={() => toggleStatus(beta)}
-                            className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
+                            className="px-2.5 text-[12px] font-medium"
                             style={{
-                              backgroundColor: "#fff0f1",
-                              border: "1px solid #f9a8a8",
+                              height: "32px",
+                              border: `1px solid ${c.error}`,
                               color: c.error,
+                              backgroundColor: "transparent",
+                              borderRadius: "4px",
                               cursor: "pointer",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            סגור
+                            סגירת בטא
                           </button>
                         ) : (
                           <button
                             onClick={() => toggleStatus(beta)}
-                            className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px]"
+                            className="px-2.5 text-[12px] font-medium"
                             style={{
-                              backgroundColor: c.primaryLight,
-                              border: "1px solid #93c5fd",
+                              height: "32px",
+                              border: `1px solid ${c.primary}`,
                               color: c.primary,
+                              backgroundColor: "transparent",
+                              borderRadius: "4px",
                               cursor: "pointer",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            פתח
+                            פתיחת בטא
                           </button>
                         )}
                       </div>
@@ -516,10 +519,6 @@ export default function AdminPage() {
           </table>
         </div>
 
-        {/* Footer note */}
-        <p className="text-[12px] mt-3" style={{ color: c.textLight }}>
-          * תכולת הבטא נקבעת בצד הלקוח — שם הבטא הוא המפתח המקשר בין הדף לבטא
-        </p>
       </main>
     </div>
   );
