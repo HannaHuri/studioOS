@@ -174,7 +174,7 @@ function StatusMenuButton({
                 onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = c.hoverBg; }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                <s.Icon size={14} color={s.text} />
+                <s.Icon size={14} color={c.iconGray} />
                 <span style={{ flex: 1 }}>{s.label}</span>
                 {isCurrent && <Check size={13} color={c.textLight} />}
               </button>
