@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Edit2, X, Shield, ChevronDown, Zap, Lock, Globe, Check } from "lucide-react";
+import { Plus, Edit2, X, Shield, ChevronDown, Zap, Lock, Globe, Check, CheckCircle2 } from "lucide-react";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const c = {
@@ -165,18 +165,19 @@ function StatusMenuButton({
                 onClick={() => onSelect(status)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px]"
                 style={{
-                  backgroundColor: "transparent",
-                  color: isCurrent ? c.textGray : c.text,
+                  backgroundColor: isCurrent ? "#eff4ff" : "transparent",
+                  color: isCurrent ? c.primary : c.text,
                   cursor: isCurrent ? "default" : "pointer",
                   textAlign: "right",
                   direction: "rtl",
+                  fontWeight: isCurrent ? 600 : 400,
                 }}
                 onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = isCurrent ? "#eff4ff" : "transparent"; }}
               >
-                <s.Icon size={14} color={c.iconGray} />
+                <s.Icon size={14} color={isCurrent ? c.primary : c.iconGray} />
                 <span style={{ flex: 1 }}>{s.label}</span>
-                {isCurrent && <Check size={13} color={c.textLight} />}
+                {isCurrent && <Check size={13} color={c.primary} />}
               </button>
             );
           })}
@@ -195,6 +196,12 @@ export default function AdminPage() {
   const [errors, setErrors]       = useState<Partial<Record<keyof BetaFormState, string>>>({});
   const [openStatusMenu, setOpenStatusMenu] = useState<string | null>(null);
   const [pendingStatus, setPendingStatus]   = useState<{ beta: Beta; newStatus: BetaStatus } | null>(null);
+  const [toast, setToast]                   = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -219,10 +226,13 @@ export default function AdminPage() {
 
   function validate(): boolean {
     const e: Partial<Record<keyof BetaFormState, string>> = {};
-    if (!form.name.trim()) {
-      e.name = "שם הבטא נדרש";
-    } else if (!/^[a-zA-Z0-9_-]+$/.test(form.name.trim())) {
-      e.name = "שם יכול להכיל אותיות לטיניות, מספרים, מקף ומקף תחתון בלבד";
+    // Name only validated on create — cannot be changed after creation
+    if (!editingId) {
+      if (!form.name.trim()) {
+        e.name = "שם הבטא נדרש";
+      } else if (!/^[a-zA-Z0-9_-]+$/.test(form.name.trim())) {
+        e.name = "שם יכול להכיל אותיות לטיניות, מספרים, מקף ומקף תחתון בלבד";
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -234,23 +244,23 @@ export default function AdminPage() {
     const userList = form.users.split(",").map(u => u.trim()).filter(Boolean);
 
     if (editingId) {
-      // Keep existing status — only the name and user list are edited here
+      // Editing: only users list changes — name is immutable
+      const betaName = betas.find(b => b.id === editingId)?.name ?? "";
       setBetas(prev =>
-        prev.map(b =>
-          b.id === editingId
-            ? { ...b, name: form.name.trim(), users: userList, updatedAt: today }
-            : b
-        )
+        prev.map(b => b.id === editingId ? { ...b, users: userList, updatedAt: today } : b)
       );
+      showToast(`רשימת המשתמשים של ${betaName} עודכנה`);
     } else {
-      // New betas default to "active"
+      // Creating: new beta defaults to "active"
+      const name = form.name.trim();
       setBetas(prev => [{
         id: Date.now().toString(),
-        name: form.name.trim(),
+        name,
         status: "active",
         users: userList,
         updatedAt: today,
       }, ...prev]);
+      showToast(`בטא ${name} נוצרה בהצלחה`);
     }
     closeForm();
   }
@@ -268,6 +278,7 @@ export default function AdminPage() {
     setBetas(prev =>
       prev.map(b => b.id === beta.id ? { ...b, status: newStatus, updatedAt: today } : b)
     );
+    showToast(`סטטוס "${beta.name}" שונה ל${STATUS_CONFIG[newStatus].label}`);
     setPendingStatus(null);
   }
 
@@ -344,9 +355,16 @@ export default function AdminPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[16px] font-semibold" style={{ color: c.text }}>
-                  {editingId ? "עריכת בטא" : "יצירת בטא חדשה"}
-                </h2>
+                <div>
+                  <h2 className="text-[16px] font-semibold" style={{ color: c.text }}>
+                    {editingId ? "עריכת משתמשים" : "יצירת בטא חדשה"}
+                  </h2>
+                  {editingId && (
+                    <span className="text-[12px] font-mono mt-0.5 block" style={{ color: c.textLight }}>
+                      {form.name}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={closeForm}
                   className="size-7 flex items-center justify-center rounded-md"
@@ -359,22 +377,24 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="v2-ai-search"
-                    className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
-                    style={{
-                      border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
-                      color: c.text,
-                      direction: "ltr",
-                      textAlign: "left",
-                      fontFamily: "monospace",
-                    }}
-                  />
-                </FormField>
+                {!editingId && (
+                  <FormField label="שם הבטא" hint="אותיות לטיניות, מספרים, מקף" error={errors.name}>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="v2-ai-search"
+                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                      style={{
+                        border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
+                        color: c.text,
+                        direction: "ltr",
+                        textAlign: "left",
+                        fontFamily: "monospace",
+                      }}
+                    />
+                  </FormField>
+                )}
 
                 <FormField label="משתמשים מורשים" hint="מופרדים בפסיק" error={errors.users}>
                   <input
@@ -430,7 +450,7 @@ export default function AdminPage() {
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "160px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
-                <th className="px-5 py-3" style={{ width: "190px" }} />
+                <th className="px-5 py-3" style={{ width: "230px" }} />
               </tr>
             </thead>
             <tbody>
@@ -515,7 +535,7 @@ export default function AdminPage() {
                         }}
                       >
                         <Edit2 size={12} />
-                        עריכה
+                        עריכת משתמשים
                       </button>
 
                       <StatusMenuButton
@@ -577,6 +597,34 @@ export default function AdminPage() {
           </div>
         );
       })()}
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "28px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 300,
+            backgroundColor: "white",
+            border: "1px solid #86efac",
+            borderRadius: "8px",
+            padding: "10px 16px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "13px",
+            color: c.text,
+            whiteSpace: "nowrap",
+            direction: "rtl",
+          }}
+        >
+          <CheckCircle2 size={16} color="#15803d" />
+          {toast}
+        </div>
+      )}
 
     </div>
   );
