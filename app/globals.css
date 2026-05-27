@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

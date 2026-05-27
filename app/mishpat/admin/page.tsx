@@ -598,7 +598,7 @@ export default function AdminPage() {
         );
       })()}
 
-      {/* ── Toast ── */}
+      {/* ── Toast (Vibe-style: solid bg, white text, slide-in) ── */}
       {toast && (
         <div
           style={{
@@ -607,22 +607,42 @@ export default function AdminPage() {
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 300,
-            backgroundColor: "white",
-            border: "1px solid #86efac",
-            borderRadius: "8px",
-            padding: "10px 16px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            backgroundColor: "#00c875",   // Vibe --positive-color
+            borderRadius: "4px",           // Vibe --border-radius-small
+            boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            fontSize: "13px",
-            color: c.text,
+            padding: "8px 8px 8px 16px",
+            fontSize: "14px",
+            fontWeight: 400,
+            color: "white",
             whiteSpace: "nowrap",
             direction: "rtl",
+            animation: "toastSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both",
+            WebkitFontSmoothing: "antialiased",
           }}
         >
-          <CheckCircle2 size={16} color="#15803d" />
-          {toast}
+          <CheckCircle2 size={20} color="white" strokeWidth={2} />
+          <span style={{ flex: 1 }}>{toast}</span>
+          <button
+            onClick={() => setToast(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              padding: "4px",
+              opacity: 0.8,
+              marginInlineStart: "8px",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={e => (e.currentTarget.style.opacity = "0.8")}
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
