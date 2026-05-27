@@ -626,7 +626,7 @@ export default function AdminPage() {
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 300,
-            backgroundColor: "#258750",   // Vibe --positive-color
+            backgroundColor: c.primary,
             borderRadius: "4px",           // Vibe --border-radius-small
             boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
             display: "flex",
