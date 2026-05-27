@@ -628,7 +628,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
   }, []);
 
   return (
-    <header className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-8 z-10" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
+    <header className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
       <div className="flex items-center gap-3">
 
         {/* User avatar + name — clickable for admin */}
@@ -653,7 +653,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
           {/* Dropdown menu */}
           {menuOpen && (
             <div
-              className="absolute top-full mt-1 right-0 rounded-lg py-1 z-50"
+              className="absolute top-full mt-1 left-0 rounded-lg py-1 z-50"
               style={{
                 minWidth: "180px",
                 backgroundColor: isDark ? dk.surface : "white",
@@ -744,7 +744,7 @@ export default function MishpatPage() {
           <button
             onClick={() => setIsPanelOpen((v) => !v)}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "32px", right: "-12px" }}
+            style={{ border: `1px solid ${c.border}`, top: "88px", right: "-12px" }}
             title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
           >
             {isPanelOpen
