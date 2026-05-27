@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Plus, Edit2, X, Shield, ChevronDown, ArrowRight,
+  Plus, Edit2, X, Shield, ChevronDown, ArrowRight, Lock, LockOpen,
 } from "lucide-react";
 
 // ── Design tokens (same as main page) ────────────────────────────────────────
@@ -118,6 +118,7 @@ export default function AdminPage() {
   const [form, setForm]         = useState<BetaFormState>(EMPTY_FORM);
   const [errors, setErrors]     = useState<Partial<Record<keyof BetaFormState, string>>>({});
   const [confirmClose, setConfirmClose] = useState<Beta | null>(null);
+  const [confirmOpen,  setConfirmOpen]  = useState<Beta | null>(null);
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function openCreate() {
@@ -485,7 +486,7 @@ export default function AdminPage() {
                         {beta.status !== "closed" ? (
                           <button
                             onClick={() => setConfirmClose(beta)}
-                            className="px-3 text-[12px] font-medium"
+                            className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
                             style={{
                               height: "32px",
                               border: `1px solid ${c.error}`,
@@ -496,12 +497,13 @@ export default function AdminPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            סגור
+                            <Lock size={12} />
+                            סגירה
                           </button>
                         ) : (
                           <button
-                            onClick={() => toggleStatus(beta)}
-                            className="px-3 text-[12px] font-medium"
+                            onClick={() => setConfirmOpen(beta)}
+                            className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
                             style={{
                               height: "32px",
                               border: `1px solid ${c.primary}`,
@@ -512,7 +514,8 @@ export default function AdminPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            פתח
+                            <LockOpen size={12} />
+                            פתיחה
                           </button>
                         )}
                       </div>
@@ -534,7 +537,7 @@ export default function AdminPage() {
           onClick={() => setConfirmClose(null)}
         >
           <div
-            className="rounded-xl p-6 w-[380px] max-w-[calc(100vw-32px)]"
+            className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
             style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
             onClick={e => e.stopPropagation()}
           >
@@ -542,11 +545,8 @@ export default function AdminPage() {
               סגירת בטא
             </h2>
             <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
-              לסגור את הבטא{" "}
-              <span
-                className="font-medium"
-                style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline" }}
-              >
+              לסגור את בטא{" "}
+              <span style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
                 {confirmClose.name}
               </span>
               ?
@@ -562,9 +562,51 @@ export default function AdminPage() {
               <button
                 onClick={() => { toggleStatus(confirmClose); setConfirmClose(null); }}
                 className="px-4 h-9 rounded-md text-[13px] font-medium"
-                style={{ backgroundColor: c.error, color: "white", cursor: "pointer", borderRadius: "6px" }}
+                style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", borderRadius: "6px" }}
               >
-                סגור
+                אישור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm open dialog ── */}
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          onClick={() => setConfirmOpen(null)}
+        >
+          <div
+            className="rounded-xl p-6 w-[400px] max-w-[calc(100vw-32px)]"
+            style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
+              פתיחת בטא
+            </h2>
+            <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
+              לפתוח את בטא{" "}
+              <span style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
+                {confirmOpen.name}
+              </span>
+              {" "}לכלל המשתמשים?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmOpen(null)}
+                className="px-4 h-9 rounded-md text-[13px]"
+                style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => { toggleStatus(confirmOpen); setConfirmOpen(null); }}
+                className="px-4 h-9 rounded-md text-[13px] font-medium"
+                style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", borderRadius: "6px" }}
+              >
+                אישור
               </button>
             </div>
           </div>
