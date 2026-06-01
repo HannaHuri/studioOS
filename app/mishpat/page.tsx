@@ -502,14 +502,12 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
-          {/* Send button — borderless icon, no visual noise */}
+          {/* Send button */}
           <button
             onClick={handleSend}
-            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{ color: c.iconGray, backgroundColor: "transparent" }}
+            className="size-8 flex items-center justify-center rounded border flex-shrink-0 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: isDark ? dk.border : c.border, color: c.iconGray }}
             title="שלח"
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
             <ArrowUp size={15} />
           </button>
@@ -616,10 +614,9 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             right: scopePos.right,
             zIndex: 200,
             backgroundColor: "white",
-            border: `1px solid ${c.border}`,
             borderRadius: "12px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
-            width: "284px",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+            width: "310px",
             overflow: "hidden",
           }}
           dir="rtl"
