@@ -95,7 +95,7 @@ const SCOPE_CONFIG: Record<ScopeOption, string> = {
   "מורחב":  "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",
   "מקיף":   "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי",
 };
-const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
+const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה, ככל שההיקף קטן יותר, התשובה מהירה יותר";
 
 const initialDocs = [
   { name: "כתב תביעה", count: "320K", checked: false },
@@ -525,8 +525,8 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               fontFamily: "Noto Sans Hebrew, sans-serif",
               cursor: "pointer",
             }}
-            onMouseEnter={e => (e.currentTarget.style.color = isDark ? dk.text : c.text)}
-            onMouseLeave={e => (e.currentTarget.style.color = isDark ? dk.textMuted : c.textGray)}
+            onMouseEnter={e => { e.currentTarget.style.color = isDark ? dk.text : c.text; e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.color = isDark ? dk.textMuted : c.textGray; e.currentTarget.style.backgroundColor = "transparent"; }}
           >
             {scope}
             <ChevronDown
@@ -622,7 +622,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           dir="rtl"
         >
           {/* Tooltip header */}
-          <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
+          <div className="px-5 pt-4 pb-3.5" style={{ borderBottom: `1px solid ${c.border}` }}>
             <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
@@ -634,7 +634,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               <button
                 key={opt}
                 onClick={() => { setScope(opt); setScopeOpen(false); }}
-                className="w-full flex items-start justify-between px-4 py-3 text-right"
+                className="w-full flex items-start justify-between px-5 py-3.5 text-right"
                 style={{ backgroundColor: "transparent", cursor: "pointer" }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
