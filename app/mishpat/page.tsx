@@ -92,7 +92,7 @@ type ScopeOption = "תמציתי" | "מורחב" | "מקיף";
 const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
 const SCOPE_CONFIG: Record<ScopeOption, string> = {
   "תמציתי": "היקף ממוקד, מענה מהיר לרוב השאלות",
-  "מורחב":  "היקף רחב יותר, מתאים לשאלות הדורשות הקשר נוסף",
+  "מורחב":  "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",
   "מקיף":   "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי",
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
@@ -622,7 +622,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           dir="rtl"
         >
           {/* Tooltip header */}
-          <div className="px-3 pt-3 pb-2.5" style={{ borderBottom: `1px solid ${c.border}` }}>
+          <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
             <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
@@ -634,7 +634,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               <button
                 key={opt}
                 onClick={() => { setScope(opt); setScopeOpen(false); }}
-                className="w-full flex items-start justify-between px-3 py-2.5 text-right"
+                className="w-full flex items-start justify-between px-4 py-3 text-right"
                 style={{ backgroundColor: "transparent", cursor: "pointer" }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
