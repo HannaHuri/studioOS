@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
-  HelpCircle, Link, MessageSquare, Minimize2, Moon, MoreHorizontal,
+  HelpCircle, Info, Link, MessageSquare, Minimize2, Moon, MoreHorizontal,
   Paperclip, Plus, Quote, RotateCw, Search, Shield, Split, Sun,
   ThumbsDown, ThumbsUp,
 } from "lucide-react";
@@ -86,6 +86,16 @@ function VibeBtn({ onClick, title, active, children }: {
 // ── Auto tooltip text ──────────────────────────────────────────────────────
 const AUTO_TIP = `כאשר אפשרות בחירת מסמכים אוטומטית מופעלת, צ'ט המשפט בוחר באופן אוטומטי במסמכים המתאימים ביותר למענה על השאלה שלך.
 אם הבחירה האוטומטית לא מתאימה לך מכל סיבה שהיא, תוכל לכבות אותה בכל שלב ולבחור את המסמכים באופן ידני.`;
+
+// ── Scope selector ────────────────────────────────────────────────────────
+type ScopeOption = "תמציתי" | "מורחב" | "מקיף";
+const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
+const SCOPE_CONFIG: Record<ScopeOption, string> = {
+  "תמציתי": "היקף ממוקד, מענה מהיר לרוב השאלות (ברירת מחדל)",
+  "מורחב":  "היקף רחב יותר, מתאים לשאלות הדורשות הקשר נוסף",
+  "מקיף":   "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי",
+};
+const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
 const initialDocs = [
   { name: "כתב תביעה", count: "320K", checked: false },
@@ -429,6 +439,18 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [messages, setMessages] = useState<Message[]>([
     { q: "מהי מוכנות התיק לדיון הקרוב?", isFirst: true },
   ]);
+  const [scope, setScope]         = useState<ScopeOption>("תמציתי");
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeBtnRef = useRef<HTMLButtonElement>(null);
+  const [scopePos, setScopePos]   = useState<{ bottom: number; left: number } | null>(null);
+
+  function handleScopeToggle() {
+    if (!scopeOpen && scopeBtnRef.current) {
+      const r = scopeBtnRef.current.getBoundingClientRect();
+      setScopePos({ bottom: window.innerHeight - r.top + 6, left: r.left });
+    }
+    setScopeOpen(v => !v);
+  }
 
   useEffect(() => {
     setShowCitations(true);
@@ -473,7 +495,8 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           placeholder={isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
-        <div className="flex items-center gap-2" dir="ltr">
+        <div className="flex items-center gap-1.5" dir="ltr">
+          {/* Send button */}
           <button
             onClick={handleSend}
             className="size-8 flex items-center justify-center rounded border flex-shrink-0 hover:bg-gray-50 transition-colors"
@@ -482,29 +505,40 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <ArrowUp size={15} />
           </button>
-          <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden" dir="rtl">
+
+          {/* Scope selector: label + chevron, chevron to the LEFT of label (RTL) */}
+          <button
+            ref={scopeBtnRef}
+            onClick={handleScopeToggle}
+            dir="rtl"
+            className="flex items-center gap-1 h-7 px-2 rounded flex-shrink-0 text-[13px]"
+            style={{
+              color: isDark ? dk.textMuted : c.textGray,
+              backgroundColor: scopeOpen ? c.hoverBg : "transparent",
+              border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
+              fontFamily: "Noto Sans Hebrew, sans-serif",
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = scopeOpen ? c.hoverBg : "transparent")}
+          >
+            {scope}
+            <ChevronDown
+              size={11}
+              style={{ transition: "transform 0.15s", transform: scopeOpen ? "rotate(180deg)" : "none" }}
+            />
+          </button>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Case info — aligned to the right */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%]" dir="rtl">
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
               59198-67-89 • יוסי כהן נ&apos; משה כהן לוי ובניו ב...
             </span>
             <span className="flex-shrink-0 text-[13px]" style={{ color: "#0068f5" }}>+2</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => setShowCitations((v) => !v)}
-              className="size-6 flex items-center justify-center rounded transition-colors"
-              style={{ backgroundColor: showCitations ? c.primary : c.primaryLight, color: showCitations ? "white" : c.text }}
-              title={showCitations ? "כבה ציטוטים" : "הפעל ציטוטים"}
-            >
-              <Quote size={12} />
-            </button>
-            <button
-              className="size-6 flex items-center justify-center rounded hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: c.primaryLight }}
-              title="צרף קובץ"
-            >
-              <Paperclip size={12} style={{ color: c.text }} />
-            </button>
           </div>
         </div>
       </div>
@@ -559,52 +593,130 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     );
   }
 
-  // ── Empty state (new conversation) ────────────────────────────────────
+  // ── Scope dropdown (portal-like, fixed position) ──────────────────────
+  function renderScopeDropdown() {
+    if (!scopeOpen || !scopePos) return null;
+    return (
+      <>
+        {/* Overlay */}
+        <div className="fixed inset-0 z-[190]" onClick={() => setScopeOpen(false)} />
+        {/* Dropdown */}
+        <div
+          style={{
+            position: "fixed",
+            bottom: scopePos.bottom,
+            left: scopePos.left,
+            zIndex: 200,
+            backgroundColor: "white",
+            border: `1px solid ${c.border}`,
+            borderRadius: "8px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
+            minWidth: "272px",
+            overflow: "hidden",
+          }}
+          dir="rtl"
+        >
+          {/* Tooltip header */}
+          <div className="px-3 py-2.5 flex items-start gap-2" style={{ borderBottom: `1px solid ${c.border}`, backgroundColor: c.hoverBg }}>
+            <Info size={13} style={{ color: c.textLight, flexShrink: 0, marginTop: 2 }} />
+            <span className="text-[12px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {SCOPE_TOOLTIP}
+            </span>
+          </div>
+          {/* Options */}
+          {SCOPE_ORDER.map(opt => {
+            const isCurrent = opt === scope;
+            return (
+              <button
+                key={opt}
+                onClick={() => { setScope(opt); setScopeOpen(false); }}
+                className="w-full flex items-start justify-between px-3 py-2.5 text-right"
+                style={{ backgroundColor: "transparent", cursor: "pointer" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span
+                    className="text-[13px]"
+                    style={{
+                      fontWeight: isCurrent ? 600 : 400,
+                      color: isCurrent ? c.primary : c.text,
+                      fontFamily: "Noto Sans Hebrew, sans-serif",
+                    }}
+                  >
+                    {opt}
+                  </span>
+                  <span className="text-[12px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                    {SCOPE_CONFIG[opt]}
+                  </span>
+                </div>
+                {isCurrent && (
+                  <div className="flex-shrink-0 mt-0.5">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M2 7L5.5 10.5L12 3.5" stroke={c.primary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  // ── Empty state ────────────────────────────────────────────────────────
   if (isEmpty) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6" style={{ backgroundColor: bg }}>
-        <div className="w-full max-w-[768px] flex flex-col gap-4">
-          <p
-            className="text-right text-[22px] font-medium mb-2"
-            style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
-          >
-            שלום, דניאל. במה אוכל לעזור?
-          </p>
-          {renderInput()}
-          {renderDisclaimer()}
+      <>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6" style={{ backgroundColor: bg }}>
+          <div className="w-full max-w-[768px] flex flex-col gap-4">
+            <p
+              className="text-right text-[22px] font-medium mb-2"
+              style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+            >
+              שלום, דניאל. במה אוכל לעזור?
+            </p>
+            {renderInput()}
+            {renderDisclaimer()}
+          </div>
         </div>
-      </div>
+        {renderScopeDropdown()}
+      </>
     );
   }
 
   // ── Normal state ───────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: bg }}>
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-4 flex flex-col items-center gap-4">
-          {messages.map((msg, i) => (
-            <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
-              <div className="rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
-              </div>
-              <div>
-                <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
-                  {msg.isFirst ? renderFirstAnswer() : <p>מעבד את שאלתך...</p>}
+    <>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: bg }}>
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-4 flex flex-col items-center gap-4">
+            {messages.map((msg, i) => (
+              <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
+                <div className="rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
+                  <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
                 </div>
-                <MessageActions isDark={isDark} showBadges={showBadges} onToggleBadges={() => setShowBadges((v) => !v)} />
+                <div>
+                  <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
+                    {msg.isFirst ? renderFirstAnswer() : <p>מעבד את שאלתך...</p>}
+                  </div>
+                  <MessageActions isDark={isDark} showBadges={showBadges} onToggleBadges={() => setShowBadges((v) => !v)} />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="px-6 pb-4 pt-2 flex flex-col items-center">
-        <div className="w-full max-w-[768px]">
-          {renderInput()}
-          {renderDisclaimer()}
+        <div className="px-6 pb-4 pt-2 flex flex-col items-center">
+          <div className="w-full max-w-[768px]">
+            {renderInput()}
+            {renderDisclaimer()}
+          </div>
         </div>
       </div>
-    </div>
+      {renderScopeDropdown()}
+    </>
   );
 }
 
