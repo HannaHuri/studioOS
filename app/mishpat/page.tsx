@@ -91,7 +91,7 @@ const AUTO_TIP = `כאשר אפשרות בחירת מסמכים אוטומטית
 type ScopeOption = "תמציתי" | "מורחב" | "מקיף";
 const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
 const SCOPE_CONFIG: Record<ScopeOption, string> = {
-  "תמציתי": "היקף ממוקד, מענה מהיר לרוב השאלות (ברירת מחדל)",
+  "תמציתי": "היקף ממוקד, מענה מהיר לרוב השאלות",
   "מורחב":  "היקף רחב יותר, מתאים לשאלות הדורשות הקשר נוסף",
   "מקיף":   "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי",
 };
@@ -502,12 +502,14 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
-          {/* Send button */}
+          {/* Send button — borderless icon, no visual noise */}
           <button
             onClick={handleSend}
-            className="size-8 flex items-center justify-center rounded border flex-shrink-0 hover:bg-gray-50 transition-colors"
-            style={{ borderColor: isDark ? dk.border : c.border, color: c.iconGray }}
+            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            style={{ color: c.iconGray, backgroundColor: "transparent" }}
             title="שלח"
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
             <ArrowUp size={15} />
           </button>
@@ -617,7 +619,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             border: `1px solid ${c.border}`,
             borderRadius: "12px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
-            width: "256px",
+            width: "284px",
             overflow: "hidden",
           }}
           dir="rtl"
