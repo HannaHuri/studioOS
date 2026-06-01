@@ -517,7 +517,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             ref={scopeBtnRef}
             onClick={handleScopeToggle}
             dir="rtl"
-            className="flex items-center gap-0.5 h-7 px-1 rounded flex-shrink-0 text-[13px]"
+            className="flex items-center gap-0.5 h-8 pl-1 pr-2 rounded flex-shrink-0 text-[13px]"
             style={{
               color: isDark ? dk.textMuted : c.textGray,
               backgroundColor: "transparent",
@@ -541,10 +541,10 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Case info — aligned to the right */}
           <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%]" dir="rtl">
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-            <span className="truncate text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+            <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
               59198-67-89 • יוסי כהן נ&apos; משה כהן לוי ובניו ב...
             </span>
-            <span className="flex-shrink-0 text-[13px]" style={{ color: "#0068f5" }}>+2</span>
+            <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+2</span>
           </div>
         </div>
       </div>
@@ -622,7 +622,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           dir="rtl"
         >
           {/* Tooltip header */}
-          <div className="px-5 pt-4 pb-3.5" style={{ borderBottom: `1px solid ${c.border}` }}>
+          <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
             <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
@@ -634,7 +634,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               <button
                 key={opt}
                 onClick={() => { setScope(opt); setScopeOpen(false); }}
-                className="w-full flex items-start justify-between px-5 py-3.5 text-right"
+                className="w-full flex items-start justify-between px-4 py-3 text-right"
                 style={{ backgroundColor: "transparent", cursor: "pointer" }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
