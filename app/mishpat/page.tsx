@@ -443,6 +443,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [scopeOpen, setScopeOpen] = useState(false);
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [sendPressed, setSendPressed] = useState(false);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -502,12 +503,20 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
-          {/* Send button */}
+          {/* Send button — default / hover / press states */}
           <button
             onClick={handleSend}
-            className="size-8 flex items-center justify-center rounded border flex-shrink-0 hover:bg-gray-50 transition-colors"
-            style={{ borderColor: isDark ? dk.border : c.border, color: c.iconGray }}
+            className="size-8 flex items-center justify-center rounded border flex-shrink-0 transition-colors"
+            style={{
+              borderColor: sendPressed ? c.primary : (isDark ? dk.border : c.border),
+              backgroundColor: "transparent",
+              color: c.iconGray,
+            }}
             title="שלח"
+            onMouseEnter={e => { if (!sendPressed) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setSendPressed(false); }}
+            onMouseDown={() => { setSendPressed(true); }}
+            onMouseUp={() => setSendPressed(false)}
           >
             <ArrowUp size={15} />
           </button>
@@ -538,14 +547,20 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Case info — aligned to the right */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%]" dir="rtl">
+          {/* Case info — aligned to the right, hoverable */}
+          <button
+            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 px-2 rounded transition-colors"
+            dir="rtl"
+            style={{ backgroundColor: "transparent" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
               59198-67-89 • יוסי כהן נ&apos; משה כהן לוי ובניו ב...
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+2</span>
-          </div>
+          </button>
         </div>
       </div>
     );
