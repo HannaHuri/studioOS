@@ -442,12 +442,18 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [scope, setScope]         = useState<ScopeOption>("תמציתי");
   const [scopeOpen, setScopeOpen] = useState(false);
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
-  const [scopePos, setScopePos]   = useState<{ bottom: number; left: number } | null>(null);
+  const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
       const r = scopeBtnRef.current.getBoundingClientRect();
-      setScopePos({ bottom: window.innerHeight - r.top + 6, left: r.left });
+      const rightEdge = window.innerWidth - r.right;
+      // Empty state (input in center) → open downward; normal state (input at bottom) → open upward
+      if (isEmpty) {
+        setScopePos({ top: r.bottom + 4, right: rightEdge });
+      } else {
+        setScopePos({ bottom: window.innerHeight - r.top + 4, right: rightEdge });
+      }
     }
     setScopeOpen(v => !v);
   }
@@ -506,21 +512,21 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <ArrowUp size={15} />
           </button>
 
-          {/* Scope selector: label + chevron, chevron to the LEFT of label (RTL) */}
+          {/* Scope selector — plain text + chevron, no frame */}
           <button
             ref={scopeBtnRef}
             onClick={handleScopeToggle}
             dir="rtl"
-            className="flex items-center gap-1 h-7 px-2 rounded flex-shrink-0 text-[13px]"
+            className="flex items-center gap-0.5 h-7 px-1 rounded flex-shrink-0 text-[13px]"
             style={{
               color: isDark ? dk.textMuted : c.textGray,
-              backgroundColor: scopeOpen ? c.hoverBg : "transparent",
-              border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
+              backgroundColor: "transparent",
+              border: "none",
               fontFamily: "Noto Sans Hebrew, sans-serif",
               cursor: "pointer",
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = scopeOpen ? c.hoverBg : "transparent")}
+            onMouseEnter={e => (e.currentTarget.style.color = isDark ? dk.text : c.text)}
+            onMouseLeave={e => (e.currentTarget.style.color = isDark ? dk.textMuted : c.textGray)}
           >
             {scope}
             <ChevronDown
@@ -604,22 +610,22 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         <div
           style={{
             position: "fixed",
-            bottom: scopePos.bottom,
-            left: scopePos.left,
+            ...(scopePos.top !== undefined ? { top: scopePos.top } : { bottom: scopePos.bottom }),
+            right: scopePos.right,
             zIndex: 200,
             backgroundColor: "white",
             border: `1px solid ${c.border}`,
-            borderRadius: "8px",
+            borderRadius: "12px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
-            minWidth: "272px",
+            width: "230px",
             overflow: "hidden",
           }}
           dir="rtl"
         >
-          {/* Tooltip header */}
-          <div className="px-3 py-2.5 flex items-start gap-2" style={{ borderBottom: `1px solid ${c.border}`, backgroundColor: c.hoverBg }}>
+          {/* Tooltip header — plain white, no gray bg */}
+          <div className="px-3 pt-3 pb-2.5 flex items-start gap-2" style={{ borderBottom: `1px solid ${c.border}` }}>
             <Info size={13} style={{ color: c.textLight, flexShrink: 0, marginTop: 2 }} />
-            <span className="text-[12px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
           </div>
@@ -637,7 +643,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               >
                 <div className="flex flex-col gap-0.5">
                   <span
-                    className="text-[13px]"
+                    className="text-[14px]"
                     style={{
                       fontWeight: isCurrent ? 600 : 400,
                       color: isCurrent ? c.primary : c.text,
@@ -646,7 +652,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   >
                     {opt}
                   </span>
-                  <span className="text-[12px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                  <span className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                     {SCOPE_CONFIG[opt]}
                   </span>
                 </div>
