@@ -517,7 +517,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             ref={scopeBtnRef}
             onClick={handleScopeToggle}
             dir="rtl"
-            className="flex items-center gap-0.5 h-8 pl-1 pr-2 rounded flex-shrink-0 text-[13px]"
+            className="flex items-center gap-0.5 h-8 pl-1 pr-2 rounded flex-shrink-0 text-[14px]"
             style={{
               color: isDark ? dk.textMuted : c.textGray,
               backgroundColor: "transparent",
@@ -554,7 +554,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   function renderDisclaimer() {
     return (
       <p
-        className="text-[13px] mt-2"
+        className="text-[14px] mt-2"
         style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", textAlign: "center" }}
       >
         תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
@@ -616,14 +616,14 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             backgroundColor: "white",
             borderRadius: "12px",
             boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-            width: "310px",
+            width: "330px",
             overflow: "hidden",
           }}
           dir="rtl"
         >
           {/* Tooltip header */}
           <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
-            <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="text-[14px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
           </div>
@@ -650,7 +650,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   >
                     {opt}
                   </span>
-                  <span className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                  <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                     {SCOPE_CONFIG[opt]}
                   </span>
                 </div>
@@ -783,7 +783,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2 text-[14px] transition-colors"
                   style={{ color: isDark ? dk.text : c.text, direction: "rtl" }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
@@ -796,7 +796,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
               {/* Placeholder for future personal settings */}
               <button
                 disabled
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-right"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right"
                 style={{ color: isDark ? dk.textMuted : c.textLight, cursor: "not-allowed", direction: "rtl" }}
               >
                 הגדרות אישיות
