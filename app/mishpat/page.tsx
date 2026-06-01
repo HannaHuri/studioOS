@@ -617,14 +617,13 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             border: `1px solid ${c.border}`,
             borderRadius: "12px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
-            width: "230px",
+            width: "256px",
             overflow: "hidden",
           }}
           dir="rtl"
         >
-          {/* Tooltip header — plain white, no gray bg */}
-          <div className="px-3 pt-3 pb-2.5 flex items-start gap-2" style={{ borderBottom: `1px solid ${c.border}` }}>
-            <Info size={13} style={{ color: c.textLight, flexShrink: 0, marginTop: 2 }} />
+          {/* Tooltip header */}
+          <div className="px-3 pt-3 pb-2.5" style={{ borderBottom: `1px solid ${c.border}` }}>
             <span className="text-[13px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
