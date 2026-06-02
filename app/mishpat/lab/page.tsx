@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink,
+  Calendar, ExternalLink, Check,
   type LucideIcon,
 } from "lucide-react";
 
@@ -179,6 +179,88 @@ const CASE_DOCS: CaseDoc[] = [
   },
 ];
 
+// ── Filter options ──────────────────────────────────────────────────────────
+const TYPE_OPTIONS = DOC_TYPE_TOTALS.map((t) => t.type);
+const SUBMITTER_OPTIONS = ["הכל", "התובע", "הנתבעת", "בית המשפט"];
+const DATE_OPTIONS = ["הכל", "היום", "השבוע", "החודש", "ישן יותר"];
+const DATE_TO_BUCKET: Record<string, DocBucket> = {
+  "היום": "today", "השבוע": "week", "החודש": "month", "ישן יותר": "older",
+};
+
+// ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
+function FilterDropdown({
+  label, value, options, onChange, searchable = false,
+}: {
+  label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const shown = searchable && q.trim() ? options.filter((o) => o.includes(q.trim())) : options;
+  const isFiltered = value !== "הכל";
+
+  return (
+    <div className="relative" dir="rtl">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
+        style={{
+          border: `1px solid ${isFiltered ? c.primary : c.border}`,
+          color: isFiltered ? c.primary : c.textGray,
+          backgroundColor: isFiltered ? "#eff4ff" : "white",
+          fontFamily: "Noto Sans Hebrew, sans-serif",
+        }}
+      >
+        <span>{isFiltered ? value : label}</span>
+        <ChevronDown size={13} style={{ transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => { setOpen(false); setQ(""); }} />
+          <div
+            className="absolute z-40 mt-1 rounded-lg py-1"
+            style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+          >
+            {searchable && (
+              <div className="px-2 pt-1 pb-1.5">
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="הקלידו סוג..."
+                  className="w-full h-8 rounded text-[13px] outline-none px-2"
+                  style={{ border: `1px solid ${c.inputBorder}`, color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                />
+              </div>
+            )}
+            <div className="max-h-[240px] overflow-y-auto">
+              {shown.map((opt) => {
+                const sel = opt === value;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => { onChange(opt); setOpen(false); setQ(""); }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-[13px] text-right"
+                    style={{ backgroundColor: sel ? "#eff4ff" : "transparent", color: sel ? c.primary : c.text, fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                    onMouseEnter={(e) => { if (!sel) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = sel ? "#eff4ff" : "transparent"; }}
+                  >
+                    <span>{opt}</span>
+                    {sel && <Check size={13} style={{ color: c.primary }} />}
+                  </button>
+                );
+              })}
+              {shown.length === 0 && (
+                <div className="px-3 py-2 text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>אין תוצאות</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Document row (shared between chrono & type grouping) ─────────────────────
 function DocRow({
   doc, level, onToggleCheck, onSetLevel,
@@ -284,6 +366,8 @@ function DocRow({
 function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
+  const [activeSubmitter, setActiveSubmitter] = useState("הכל");
+  const [activeDate, setActiveDate] = useState("הכל");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [docs, setDocs]           = useState<CaseDoc[]>(CASE_DOCS);
   const [expand, setExpand]       = useState<Record<string, number>>({});
@@ -305,6 +389,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   // Filtering
   const filtered = docs.filter((d) =>
     (activeType === "הכל" || d.type === activeType) &&
+    (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
+    (activeDate === "הכל" || d.bucket === DATE_TO_BUCKET[activeDate]) &&
     (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()))
   );
 
@@ -313,13 +399,31 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
       {/* Header */}
-      <div className="px-3 pt-3 pb-2 flex flex-col gap-2.5 border-b" style={{ borderColor: c.border }} dir="rtl">
+      <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5 border-b" style={{ borderColor: c.border }} dir="rtl">
+        {/* Row 1: title + grouping toggle */}
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכי התיק</span>
-          <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>12345-67-89</span>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
+            {([["chrono", "כרונולוגי"], ["type", "לפי סוג"]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setGrouping(key)}
+                className="px-2.5 h-7 rounded text-[12px] transition-colors"
+                style={{
+                  backgroundColor: grouping === key ? "white" : "transparent",
+                  color: grouping === key ? c.primary : c.textGray,
+                  fontWeight: grouping === key ? 600 : 400,
+                  boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                  fontFamily: "Noto Sans Hebrew, sans-serif",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Search */}
+        {/* Row 2: search */}
         <div className="relative">
           <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
           <input
@@ -331,47 +435,11 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           />
         </div>
 
-        {/* Grouping toggle */}
-        <div className="flex items-center gap-1 p-0.5 rounded-md self-start" style={{ backgroundColor: c.hoverBg }}>
-          {([["chrono", "כרונולוגי"], ["type", "לפי סוג"]] as const).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setGrouping(key)}
-              className="px-3 h-7 rounded text-[13px] transition-colors"
-              style={{
-                backgroundColor: grouping === key ? "white" : "transparent",
-                color: grouping === key ? c.primary : c.textGray,
-                fontWeight: grouping === key ? 600 : 400,
-                boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                fontFamily: "Noto Sans Hebrew, sans-serif",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Type filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
-          {DOC_TYPE_TOTALS.map(({ type, words }) => {
-            const on = activeType === type;
-            return (
-              <button
-                key={type}
-                onClick={() => setActiveType(type)}
-                className="flex-shrink-0 flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] transition-colors"
-                style={{
-                  backgroundColor: on ? c.primary : "transparent",
-                  color: on ? "white" : c.textGray,
-                  border: `1px solid ${on ? c.primary : c.border}`,
-                  fontFamily: "Noto Sans Hebrew, sans-serif",
-                }}
-              >
-                {type}
-                <span style={{ opacity: 0.75, fontFamily: "Figtree, sans-serif" }}>{words}</span>
-              </button>
-            );
-          })}
+        {/* Row 3: filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <FilterDropdown label="סוג מסמך" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
+          <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
+          <FilterDropdown label="תאריך" value={activeDate} options={DATE_OPTIONS} onChange={setActiveDate} />
         </div>
       </div>
 
