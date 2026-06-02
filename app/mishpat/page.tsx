@@ -545,27 +545,27 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             />
           </button>
 
-          {/* Citations toggle */}
-          <button
-            onClick={() => setShowCitations((v) => !v)}
-            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{
-              color: showCitations ? c.primary : c.iconGray,
-              backgroundColor: showCitations ? c.primaryLight : "transparent",
-            }}
-            title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { if (!showCitations) e.currentTarget.style.backgroundColor = "transparent"; }}
-          >
-            <Quote size={15} />
-          </button>
-
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Case info — aligned to the right (folder flush with placeholder), hoverable */}
+          {/* Citations toggle — left of case info */}
           <button
-            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 pl-2 pr-0 rounded transition-colors"
+            onClick={() => setShowCitations((v) => !v)}
+            className="size-8 flex items-center justify-center rounded-lg flex-shrink-0 transition-colors"
+            style={{
+              backgroundColor: showCitations ? c.primary : c.primaryLight,
+              color: showCitations ? "white" : c.iconGray,
+            }}
+            title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = showCitations ? "#0060c7" : "#e6e8ed"; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primary : c.primaryLight; }}
+          >
+            <Quote size={16} strokeWidth={2} />
+          </button>
+
+          {/* Case info — aligned to the right, hoverable */}
+          <button
+            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 px-2 rounded transition-colors"
             dir="rtl"
             style={{ backgroundColor: "transparent" }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
