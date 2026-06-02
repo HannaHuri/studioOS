@@ -639,7 +639,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         >
           {/* Tooltip header */}
           <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
-            <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", lineHeight: 1.1 }}>
+            <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", lineHeight: 1.0 }}>
               {SCOPE_TOOLTIP}
             </span>
           </div>
