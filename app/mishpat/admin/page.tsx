@@ -397,7 +397,7 @@ export default function AdminPage() {
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="v2-ai-search"
-                      className="w-full h-9 rounded-md px-3 text-[13px] outline-none"
+                      className="w-full h-10 rounded-md px-3 text-[15px] outline-none"
                       style={{
                         border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
                         color: c.text,
@@ -416,7 +416,7 @@ export default function AdminPage() {
                     onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
                     placeholder="daniD, sarahK, ronL"
                     rows={1}
-                    className="w-full rounded-md px-3 text-[13px] outline-none"
+                    className="w-full rounded-md px-3 text-[15px] outline-none"
                     style={{
                       border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
                       color: c.text,
@@ -425,9 +425,9 @@ export default function AdminPage() {
                       resize: "none",
                       overflowY: "hidden",
                       lineHeight: "1.6",
-                      paddingTop: "7px",
-                      paddingBottom: "7px",
-                      minHeight: "36px",
+                      paddingTop: "9px",
+                      paddingBottom: "9px",
+                      minHeight: "40px",
                       fontFamily: "inherit",
                     }}
                   />
@@ -519,7 +519,7 @@ export default function AdminPage() {
                         {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
                           <span
                             key={u}
-                            className="px-2 py-0.5 rounded text-[11px]"
+                            className="px-2 py-0.5 rounded text-[13px]"
                             style={{
                               backgroundColor: c.hoverBg,
                               color: c.textGray,
