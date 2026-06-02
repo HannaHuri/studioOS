@@ -96,7 +96,7 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
   "מורחב":  { desc: "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",  Icon: Layers },
   "מקיף":   { desc: "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי", Icon: Microscope },
 };
-const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה ככל שההיקף קטן יותר, התשובה מהירה יותר";
+const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר";
 
 const initialDocs = [
   { name: "כתב תביעה", count: "320K", checked: false },
@@ -639,7 +639,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         >
           {/* Tooltip header */}
           <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}` }}>
-            <span className="text-[14px] leading-relaxed" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {SCOPE_TOOLTIP}
             </span>
           </div>
