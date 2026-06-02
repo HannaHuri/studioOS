@@ -365,11 +365,22 @@ export default function AdminPage() {
             onClick={closeForm}
           >
             <div
-              className="rounded-xl p-6 w-[640px] max-w-[calc(100vw-32px)]"
+              className="rounded-xl p-6 w-[816px] max-w-[calc(100vw-32px)] relative"
               style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-5">
+              {/* Close — top-left corner */}
+              <button
+                onClick={closeForm}
+                className="absolute size-7 flex items-center justify-center rounded-md"
+                style={{ color: c.iconGray, top: "12px", left: "12px" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <X size={16} />
+              </button>
+
+              <div className="mb-5">
                 <div>
                   <h2 className="text-[18px] font-semibold" style={{ color: c.text }}>
                     {editingId ? "עריכת משתמשים" : "יצירת בטא חדשה"}
@@ -380,15 +391,6 @@ export default function AdminPage() {
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={closeForm}
-                  className="size-7 flex items-center justify-center rounded-md"
-                  style={{ color: c.iconGray }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <X size={16} />
-                </button>
               </div>
 
               <div className="flex flex-col gap-4">
