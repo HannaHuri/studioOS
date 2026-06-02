@@ -321,7 +321,7 @@ export default function AdminPage() {
             {CURRENT_ADMIN.initials}
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-[15px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
+            <span className="text-[14px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
           </div>
         </div>
 
