@@ -349,7 +349,7 @@ export default function AdminPage() {
           <h1 className="text-[22px] font-semibold" style={{ color: c.text }}>ניהול בטאות</h1>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 h-9 rounded-md text-[16px] font-medium"
+            className="flex items-center gap-2 px-4 h-9 rounded-md text-[14px] font-medium"
             style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
           >
             <Plus size={16} style={{ flexShrink: 0 }} />
