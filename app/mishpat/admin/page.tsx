@@ -468,11 +468,11 @@ export default function AdminPage() {
           <table className="w-full text-[15px]" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: c.hoverBg, borderBottom: `1px solid ${c.border}` }}>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "170px" }}>שם</th>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "120px" }}>סטטוס</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "150px" }}>שם</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "110px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "120px" }}>עדכון אחרון</th>
-                <th className="px-5 py-3" style={{ width: "230px" }} />
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "110px" }}>עדכון אחרון</th>
+                <th className="px-5 py-3" style={{ width: "210px" }} />
               </tr>
             </thead>
             <tbody>
@@ -517,13 +517,6 @@ export default function AdminPage() {
                   <td className="px-5 py-3">
                     {beta.users.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-1">
-                        <span
-                          className="flex-shrink-0 text-[15px] ml-1"
-                          style={{ color: c.text }}
-                          title={`${beta.users.length} משתמשים מורשים`}
-                        >
-                          ({beta.users.length})
-                        </span>
                         {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
                           <span
                             key={u}
@@ -538,6 +531,13 @@ export default function AdminPage() {
                             {u}
                           </span>
                         ))}
+                        <span
+                          className="flex-shrink-0 text-[15px] mr-1"
+                          style={{ color: c.text }}
+                          title={`${beta.users.length} משתמשים מורשים`}
+                        >
+                          ({beta.users.length})
+                        </span>
                       </div>
                     ) : (
                       <span style={{ color: c.textLight }}>—</span>
