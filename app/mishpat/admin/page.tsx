@@ -203,15 +203,16 @@ export default function AdminPage() {
   const [openStatusMenu, setOpenStatusMenu] = useState<string | null>(null);
   const usersRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-grow the users textarea whenever content changes
+  // Auto-grow the users textarea whenever content changes (or the form opens)
   useEffect(() => {
     const el = usersRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const capped = Math.min(el.scrollHeight, 120);
+    const MAX = 240; // grow up to ~10 lines before scrolling
+    const capped = Math.min(el.scrollHeight, MAX);
     el.style.height = capped + "px";
-    el.style.overflowY = el.scrollHeight > 120 ? "auto" : "hidden";
-  }, [form.users]);
+    el.style.overflowY = el.scrollHeight > MAX ? "auto" : "hidden";
+  }, [form.users, showForm]);
   const [pendingStatus, setPendingStatus]   = useState<{ beta: Beta; newStatus: BetaStatus } | null>(null);
   const [toast, setToast]                   = useState<string | null>(null);
 
@@ -363,7 +364,7 @@ export default function AdminPage() {
             onClick={closeForm}
           >
             <div
-              className="rounded-xl p-6 w-[480px] max-w-[calc(100vw-32px)]"
+              className="rounded-xl p-6 w-[640px] max-w-[calc(100vw-32px)]"
               style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
@@ -519,12 +520,11 @@ export default function AdminPage() {
                         {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
                           <span
                             key={u}
-                            className="px-2 py-0.5 rounded text-[13px]"
+                            className="px-2 py-0.5 rounded text-[15px]"
                             style={{
                               backgroundColor: c.hoverBg,
                               color: c.textGray,
                               border: `1px solid ${c.inputBorder}`,
-                              fontFamily: "monospace",
                             }}
                           >
                             {u}
