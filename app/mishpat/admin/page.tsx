@@ -327,6 +327,7 @@ export default function AdminPage() {
 
         <a
           href="/studioOS/mishpat"
+          dir="rtl"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           style={{ textDecoration: "none" }}
         >
