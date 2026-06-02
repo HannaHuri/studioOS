@@ -1071,33 +1071,8 @@ export default function MishpatPage() {
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
       <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
-        {/* Panel wrapper */}
-        <div
-          className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen ? "380px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
-        >
-          <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
-          </div>
-
-          {/* Toggle button — size-6, arrow-16, top-36 */}
-          <button
-            onClick={() => setIsPanelOpen((v) => !v)}
-            className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "88px", right: "-12px" }}
-            title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
-          >
-            {isPanelOpen
-              ? <ChevronLeft size={16} style={{ color: c.iconGray }} />
-              : <ChevronRight size={16} style={{ color: c.iconGray }} />}
-          </button>
-        </div>
-
-        {/* Chat */}
-        <ChatArea isDark={isDark} conversationKey={convKey} />
-
-        {/* Right icon bar */}
-        <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
+        {/* Left icon bar */}
+        <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-r" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
             onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
@@ -1122,6 +1097,31 @@ export default function MishpatPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Chat */}
+        <ChatArea isDark={isDark} conversationKey={convKey} />
+
+        {/* Panel wrapper — right side */}
+        <div
+          className="relative flex-shrink-0 transition-all duration-300"
+          style={{ width: isPanelOpen ? "380px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+        >
+          <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
+            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+          </div>
+
+          {/* Toggle button — pokes out on the LEFT edge (panel is on the right) */}
+          <button
+            onClick={() => setIsPanelOpen((v) => !v)}
+            className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
+            style={{ border: `1px solid ${c.border}`, top: "88px", left: "-12px" }}
+            title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
+          >
+            {isPanelOpen
+              ? <ChevronRight size={16} style={{ color: c.iconGray }} />
+              : <ChevronLeft size={16} style={{ color: c.iconGray }} />}
+          </button>
         </div>
       </div>
     </div>
