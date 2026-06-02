@@ -545,12 +545,27 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             />
           </button>
 
+          {/* Citations toggle */}
+          <button
+            onClick={() => setShowCitations((v) => !v)}
+            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            style={{
+              color: showCitations ? c.primary : c.iconGray,
+              backgroundColor: showCitations ? c.primaryLight : "transparent",
+            }}
+            title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
+            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { if (!showCitations) e.currentTarget.style.backgroundColor = "transparent"; }}
+          >
+            <Quote size={15} />
+          </button>
+
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Case info — aligned to the right, hoverable */}
+          {/* Case info — aligned to the right (folder flush with placeholder), hoverable */}
           <button
-            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 px-2 rounded transition-colors"
+            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 pl-2 pr-0 rounded transition-colors"
             dir="rtl"
             style={{ backgroundColor: "transparent" }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
