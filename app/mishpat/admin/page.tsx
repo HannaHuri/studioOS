@@ -98,11 +98,11 @@ function FormField({ label, hint, error, children }: {
   return (
     <div>
       <div className="mb-1.5">
-        <span className="text-[13px] font-medium" style={{ color: c.text }}>{label}</span>
-        {hint && <span className="block text-[11px] mt-0.5" style={{ color: c.textLight }}>{hint}</span>}
+        <span className="text-[15px] font-medium" style={{ color: c.text }}>{label}</span>
+        {hint && <span className="block text-[13px] mt-0.5" style={{ color: c.textLight }}>{hint}</span>}
       </div>
       {children}
-      {error && <p className="text-[12px] mt-1" style={{ color: c.error }}>{error}</p>}
+      {error && <p className="text-[14px] mt-1" style={{ color: c.error }}>{error}</p>}
     </div>
   );
 }
@@ -133,7 +133,7 @@ function StatusMenuButton({
       <button
         ref={btnRef}
         onClick={handleToggle}
-        className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
+        className="flex items-center gap-1.5 px-3 text-[14px] font-medium"
         style={{
           height: "32px",
           border: `1px solid ${c.border}`,
@@ -169,7 +169,7 @@ function StatusMenuButton({
               <button
                 key={status}
                 onClick={() => onSelect(status)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px]"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[15px]"
                 style={{
                   backgroundColor: isCurrent ? "#eff4ff" : "transparent",
                   color: isCurrent ? c.primary : c.text,
@@ -315,13 +315,13 @@ export default function AdminPage() {
       >
         <div className="flex items-center gap-3">
           <div
-            className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none"
+            className="size-8 rounded-full flex items-center justify-center text-white text-[16px] flex-shrink-0 select-none"
             style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}
           >
             {CURRENT_ADMIN.initials}
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-[13px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
+            <span className="text-[15px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
           </div>
         </div>
 
@@ -348,7 +348,7 @@ export default function AdminPage() {
           <h1 className="text-[22px] font-semibold" style={{ color: c.text }}>ניהול בטאות</h1>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 h-9 rounded-md text-[14px] font-medium"
+            className="flex items-center gap-2 px-4 h-9 rounded-md text-[16px] font-medium"
             style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
           >
             <Plus size={16} style={{ flexShrink: 0 }} />
@@ -370,11 +370,11 @@ export default function AdminPage() {
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-[16px] font-semibold" style={{ color: c.text }}>
+                  <h2 className="text-[18px] font-semibold" style={{ color: c.text }}>
                     {editingId ? "עריכת משתמשים" : "יצירת בטא חדשה"}
                   </h2>
                   {editingId && (
-                    <span className="text-[12px] font-mono mt-0.5 block" style={{ color: c.textLight }}>
+                    <span className="text-[14px] font-mono mt-0.5 block" style={{ color: c.textLight }}>
                       {form.name}
                     </span>
                   )}
@@ -398,7 +398,7 @@ export default function AdminPage() {
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="v2-ai-search"
-                      className="w-full h-10 rounded-md px-3 text-[15px] outline-none"
+                      className="w-full h-10 rounded-md px-3 text-[16px] outline-none"
                       style={{
                         border: `1px solid ${errors.name ? c.error : c.inputBorder}`,
                         color: c.text,
@@ -417,7 +417,7 @@ export default function AdminPage() {
                     onChange={e => setForm(f => ({ ...f, users: e.target.value }))}
                     placeholder="daniD, sarahK, ronL"
                     rows={1}
-                    className="w-full rounded-md px-3 text-[15px] outline-none"
+                    className="w-full rounded-md px-3 text-[16px] outline-none"
                     style={{
                       border: `1px solid ${errors.users ? c.error : c.inputBorder}`,
                       color: c.text,
@@ -429,7 +429,7 @@ export default function AdminPage() {
                       paddingTop: "9px",
                       paddingBottom: "9px",
                       minHeight: "40px",
-                      fontFamily: "inherit",
+                      fontFamily: "monospace",
                     }}
                   />
                 </FormField>
@@ -438,14 +438,14 @@ export default function AdminPage() {
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   onClick={closeForm}
-                  className="px-4 h-9 rounded-md text-[13px]"
+                  className="px-4 h-9 rounded-md text-[15px]"
                   style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
                 >
                   ביטול
                 </button>
                 <button
                   onClick={save}
-                  className="px-4 h-9 rounded-md text-[13px] font-medium"
+                  className="px-4 h-9 rounded-md text-[15px] font-medium"
                   style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
                 >
                   שמירה
@@ -465,7 +465,7 @@ export default function AdminPage() {
           className="rounded-xl overflow-hidden"
           style={{ border: `1px solid ${c.border}`, backgroundColor: "white" }}
         >
-          <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+          <table className="w-full text-[15px]" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: c.hoverBg, borderBottom: `1px solid ${c.border}` }}>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "170px" }}>שם</th>
@@ -478,7 +478,7 @@ export default function AdminPage() {
             <tbody>
               {betas.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-14 text-[13px]" style={{ color: c.textLight }}>
+                  <td colSpan={5} className="text-center py-14 text-[15px]" style={{ color: c.textLight }}>
                     אין בטאות עדיין — לחץ על &quot;בטא חדשה&quot; כדי להתחיל
                   </td>
                 </tr>
@@ -492,7 +492,7 @@ export default function AdminPage() {
                   {/* Name */}
                   <td className="px-5 py-3">
                     <span
-                      className="font-medium text-[13px]"
+                      className="font-medium text-[15px]"
                       style={{ color: c.text, fontFamily: "monospace", direction: "ltr", display: "inline-block" }}
                     >
                       {beta.name}
@@ -502,7 +502,7 @@ export default function AdminPage() {
                   {/* Status — static badge */}
                   <td className="px-5 py-3">
                     <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap"
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[14px] font-medium whitespace-nowrap"
                       style={{
                         backgroundColor: STATUS_CONFIG[beta.status].bg,
                         color: STATUS_CONFIG[beta.status].text,
@@ -520,18 +520,20 @@ export default function AdminPage() {
                         {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
                           <span
                             key={u}
-                            className="px-2 py-0.5 rounded text-[15px]"
+                            className="px-2 py-0.5 rounded text-[16px]"
                             style={{
                               backgroundColor: c.hoverBg,
                               color: c.textGray,
                               border: `1px solid ${c.inputBorder}`,
+                              fontFamily: "monospace",
                             }}
                           >
                             {u}
                           </span>
+
                         ))}
                         <span
-                          className="flex-shrink-0 text-[13px] mr-1"
+                          className="flex-shrink-0 text-[15px] mr-1"
                           style={{ color: c.text }}
                           title={`${beta.users.length} משתמשים מורשים`}
                         >
@@ -551,7 +553,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(beta)}
-                        className="flex items-center gap-1.5 px-3 text-[12px] font-medium"
+                        className="flex items-center gap-1.5 px-3 text-[14px] font-medium"
                         style={{
                           height: "32px",
                           border: `1px solid ${c.border}`,
@@ -599,23 +601,23 @@ export default function AdminPage() {
               style={{ backgroundColor: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
-              <h2 className="text-[16px] font-semibold mb-2" style={{ color: c.text }}>
+              <h2 className="text-[18px] font-semibold mb-2" style={{ color: c.text }}>
                 {copy.title}
               </h2>
-              <p className="text-[13px] mb-6" style={{ color: c.textGray }}>
+              <p className="text-[15px] mb-6" style={{ color: c.textGray }}>
                 {copy.body(pendingStatus.beta.name)}
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setPendingStatus(null)}
-                  className="px-4 h-9 rounded-md text-[13px]"
+                  className="px-4 h-9 rounded-md text-[15px]"
                   style={{ border: `1px solid ${c.border}`, color: c.text, backgroundColor: "transparent", cursor: "pointer" }}
                 >
                   ביטול
                 </button>
                 <button
                   onClick={confirmStatusChange}
-                  className="px-4 h-9 rounded-md text-[13px] font-medium"
+                  className="px-4 h-9 rounded-md text-[15px] font-medium"
                   style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
                 >
                   אישור
@@ -642,7 +644,7 @@ export default function AdminPage() {
             alignItems: "center",
             gap: "8px",
             padding: "8px 8px 8px 16px",
-            fontSize: "14px",
+            fontSize: "16px",
             fontWeight: 400,
             color: "white",
             whiteSpace: "nowrap",
