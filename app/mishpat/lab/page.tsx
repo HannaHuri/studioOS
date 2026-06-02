@@ -7,6 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
+  Calendar, ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 
@@ -84,10 +85,6 @@ function VibeBtn({ onClick, title, active, children }: {
   );
 }
 
-// ── Auto tooltip text ──────────────────────────────────────────────────────
-const AUTO_TIP = `כאשר אפשרות בחירת מסמכים אוטומטית מופעלת, צ'ט המשפט בוחר באופן אוטומטי במסמכים המתאימים ביותר למענה על השאלה שלך.
-אם הבחירה האוטומטית לא מתאימה לך מכל סיבה שהיא, תוכל לכבות אותה בכל שלב ולבחור את המסמכים באופן ידני.`;
-
 // ── Scope selector ────────────────────────────────────────────────────────
 type ScopeOption = "תמציתי" | "מורחב" | "מקיף";
 const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
@@ -98,141 +95,340 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
-const initialDocs = [
-  { name: "כתב תביעה", count: "320K", checked: false },
-  { name: "כתב הגנה", count: "200K", checked: false },
-  { name: "תצהיר", count: "12.2K", checked: true },
-  { name: "פרוטוקול", count: "761", checked: false },
-  { name: "עתירה", count: "654", checked: true },
-  { name: "בקשה", count: "940", checked: false },
-  { name: "חוות דעת", count: "9K", checked: false },
+// ── Documents data (chronological model) ────────────────────────────────────
+type DocBucket = "today" | "week" | "month" | "older";
+const BUCKET_LABELS: Record<DocBucket, string> = {
+  today: "היום", week: "השבוע", month: "החודש", older: "ישן יותר",
+};
+const BUCKET_ORDER: DocBucket[] = ["today", "week", "month", "older"];
+
+interface CaseDoc {
+  id: string;
+  name: string;
+  type: string;          // doc type — tag + filter
+  submitter: string;     // צד מגיש
+  date: string;          // display date
+  bucket: DocBucket;
+  words: string;         // word count
+  summary: string;       // עיקרי הדברים
+  related: string[];     // related document names
+  checked: boolean;      // selected for chat
+}
+
+// Type filter chips with aggregate word counts (real case data)
+const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
+  { type: "הכל",                       words: "237K" },
+  { type: "תצהיר",                     words: "113.5K" },
+  { type: "כתב הגנה",                  words: "76.8K" },
+  { type: "כתב תביעה",                 words: "15.7K" },
+  { type: "פרוטוקול",                  words: "14.6K" },
+  { type: "פסק דין",                   words: "10.9K" },
+  { type: "החלטה",                     words: "1.3K" },
+  { type: "בקשה בתיק",                 words: "1.1K" },
 ];
 
-// ── Document panel (open) ──────────────────────────────────────────────────
-function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
-  const [isCaseOpen, setIsCaseOpen] = useState(true);
-  const [isAuto, setIsAuto] = useState(true);
-  const [allChecked, setAllChecked] = useState(true);
-  const [docs, setDocs] = useState(initialDocs);
-  const [showTip, setShowTip] = useState(false);
-  const autoRef = useRef<HTMLButtonElement>(null);
-  const caseCardRef = useRef<HTMLDivElement>(null);
-  const [tipPos, setTipPos] = useState({ top: 0 });
+// Mock documents (dev team: replace with real API data)
+const CASE_DOCS: CaseDoc[] = [
+  {
+    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "הנתבעת",
+    date: "02.06.26", bucket: "today", words: "1.1K",
+    summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
+    related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
+  },
+  {
+    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "התובע",
+    date: "31.05.26", bucket: "week", words: "8.4K",
+    summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
+    related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true,
+  },
+  {
+    id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "התובע",
+    date: "29.05.26", bucket: "week", words: "640",
+    summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
+    related: ["בקשה לדחיית מועד דיון"], checked: false,
+  },
+  {
+    id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
+    date: "18.05.26", bucket: "month", words: "4.2K",
+    summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
+    related: ["החלטה על מינוי מומחה"], checked: false,
+  },
+  {
+    id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "הנתבעת",
+    date: "10.05.26", bucket: "month", words: "12.1K",
+    summary: "הנתבעת דוחה את כל טענות הרשלנות, טוענת להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
+    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+  },
+  {
+    id: "d6", name: "החלטה על מינוי מומחה", type: "החלטה", submitter: "בית המשפט",
+    date: "05.05.26", bucket: "month", words: "820",
+    summary: "בית המשפט ממנה את פרופ׳ כהן כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
+    related: ["פרוטוקול דיון מקדמי"], checked: false,
+  },
+  {
+    id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "התובע",
+    date: "12.02.26", bucket: "older", words: "15.7K",
+    summary: "התובע, מר משה כהן, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
+    related: ["כתב הגנה מתוקן"], checked: false,
+  },
+  {
+    id: "d8", name: "חוות דעת אקטוארית", type: "תצהיר", submitter: "התובע",
+    date: "20.01.26", bucket: "older", words: "3.6K",
+    summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+  },
+];
 
-  const bg = isDark ? dk.surface : "white";
-  const panelBg = isDark ? dk.bg : (isAuto ? c.panelBg : "white");
-  const borderCol = isDark ? dk.border : c.border;
-  const titleCol = isDark ? dk.textMuted : c.textLight;
-  const grayCol = isDark ? dk.textMuted : c.iconGray;
-
-  function toggleDoc(name: string) {
-    setDocs((p) => p.map((d) => (d.name === name ? { ...d, checked: !d.checked } : d)));
-  }
-  function toggleAll() {
-    const next = !allChecked;
-    setAllChecked(next);
-    setDocs((p) => p.map((d) => ({ ...d, checked: next })));
-  }
-
-  function handleAutoEnter() {
-    if (caseCardRef.current) {
-      const r = caseCardRef.current.getBoundingClientRect();
-      setTipPos({ top: r.top });
-    }
-    setShowTip(true);
-  }
-
+// ── Document row (shared between chrono & type grouping) ─────────────────────
+function DocRow({
+  doc, level, onToggleCheck, onSetLevel,
+}: {
+  doc: CaseDoc; level: number;
+  onToggleCheck: () => void; onSetLevel: (lvl: number) => void;
+}) {
   return (
-    <div className="h-full flex flex-col overflow-y-auto" style={{ backgroundColor: bg }}>
-      {/* Header: title | אוטו' | RotateCw | Search */}
-      <div className="flex items-center gap-1 px-3 pt-3 pb-2" dir="rtl">
-        <span className="text-[17px] leading-[1.25] flex-1" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          מסמכים
-        </span>
-
-        {/* Auto button */}
+    <div
+      className="rounded-lg border transition-colors"
+      style={{
+        borderColor: level > 0 ? c.primary : c.inputBorder,
+        backgroundColor: level > 0 ? "#f7faff" : "white",
+      }}
+      dir="rtl"
+    >
+      {/* Identity line */}
+      <div className="flex items-start gap-2 px-3 pt-2.5">
+        <div className="pt-0.5"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></div>
         <button
-          ref={autoRef}
-          onClick={() => setIsAuto((v) => !v)}
-          onMouseEnter={handleAutoEnter}
-          onMouseLeave={() => setShowTip(false)}
-          className="h-7 px-3 rounded-full text-[13px] leading-none flex-shrink-0 transition-all hover:opacity-90"
-          style={{
-            backgroundColor: isAuto ? c.primary : "transparent",
-            color: isAuto ? "white" : c.iconGray,
-            border: `1.5px solid ${isAuto ? c.primary : c.border}`,
-            fontFamily: "Noto Sans Hebrew, sans-serif",
-          }}
+          className="flex-1 min-w-0 text-right"
+          onClick={() => onSetLevel(level > 0 ? 0 : 1)}
         >
-          אוטו&apos;
-        </button>
-
-        {/* Tooltip — fixed, aligned to left edge of panel */}
-        {showTip && (
-          <div
-            className="rounded-lg border text-right text-[13px] leading-relaxed whitespace-pre-line"
-            style={{
-              position: "fixed", left: "12px", top: tipPos.top, zIndex: 1000,
-              width: "276px", padding: "16px 28px 20px", direction: "rtl",
-              backgroundColor: "white", borderColor: c.border, color: c.text,
-              fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
-            }}
-          >
-            {AUTO_TIP}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[14px] font-medium truncate" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {doc.name}
+            </span>
+            <span className="flex-shrink-0 rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>
+              {doc.words}
+            </span>
           </div>
-        )}
-
-        <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="רענון">
-          <RotateCw size={14} style={{ color: c.iconGray }} />
-        </button>
-        <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="חיפוש">
-          <Search size={14} style={{ color: c.iconGray }} />
+          {/* Meta line */}
+          <div className="flex items-center gap-1.5 mt-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <Calendar size={12} style={{ color: c.iconGray, flexShrink: 0 }} />
+            <span>{doc.date}</span>
+            <span style={{ color: c.border }}>·</span>
+            <span className="rounded px-1.5 py-px" style={{ backgroundColor: "#eef1f8", color: c.iconGray }}>{doc.type}</span>
+            <span style={{ color: c.border }}>·</span>
+            <span className="truncate">{doc.submitter}</span>
+          </div>
         </button>
       </div>
 
-      {/* Case box */}
-      <div className="mx-3 mb-3" ref={caseCardRef}>
-        <div className="rounded-md border overflow-hidden transition-colors" style={{ backgroundColor: panelBg, borderColor: borderCol }}>
-          <button className="w-full px-3 py-2.5 text-center relative hover:bg-black/5 transition-colors" dir="rtl" onClick={() => setIsCaseOpen((v) => !v)}>
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: grayCol }}>
-              {isCaseOpen ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
-            </span>
-            <p className="text-[15px] leading-[18px]" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>12345-67-89</p>
-            <p className="text-[14px] leading-[17px] mx-auto" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", maxWidth: "180px" }}>
-              משה כהן ובניו בע&quot;מ נגד משה לוי ובניו בע&quot;מ
-            </p>
-          </button>
+      {/* Preview / expandable summary */}
+      <button className="w-full text-right px-3 pb-2.5 pt-1.5" onClick={() => onSetLevel(level > 0 ? 0 : 1)} dir="rtl">
+        <div className="flex items-start gap-1.5">
+          <ChevronDown
+            size={14}
+            className="flex-shrink-0 mt-0.5"
+            style={{ color: c.iconGray, transition: "transform 0.15s", transform: level > 0 ? "rotate(180deg)" : "none" }}
+          />
+          <span
+            className={level > 0 ? "text-[13px] leading-snug" : "text-[13px] leading-snug truncate"}
+            style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", display: level > 0 ? "block" : "-webkit-box", WebkitLineClamp: level > 0 ? "unset" : 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+          >
+            <span style={{ color: c.textLight }}>עיקרי הדברים: </span>{doc.summary}
+          </span>
+        </div>
+      </button>
 
-          {isCaseOpen && (
-            <div className="pb-3">
-              {/* כל המסמכים */}
-              <div className="flex items-center justify-between py-1.5" style={{ paddingRight: "12px", paddingLeft: "12px" }} dir="rtl">
-                <div className="flex items-center gap-2">
-                  <CheckboxBlue checked={allChecked} onToggle={toggleAll} />
-                  <span className="text-[14px] whitespace-nowrap" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>כל המסמכים</span>
-                </div>
-                <div className="bg-white rounded-full px-2 py-px text-[12px]" style={{ color: c.text, fontFamily: "Figtree, sans-serif" }}>855.7K</div>
-              </div>
+      {/* Level 1 actions + level 2 toggle */}
+      {level > 0 && (
+        <div className="px-3 pb-3 flex flex-col gap-2.5" dir="rtl">
+          <div className="flex items-center gap-2">
+            <button
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            >
+              <ExternalLink size={14} />
+              פתח מסמך
+            </button>
+            <button
+              className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
+              style={{ border: `1px solid ${c.border}`, color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              onClick={() => onSetLevel(level === 2 ? 1 : 2)}
+            >
+              מסמכים קשורים
+              <ChevronDown size={13} style={{ transition: "transform 0.15s", transform: level === 2 ? "rotate(180deg)" : "none" }} />
+            </button>
+          </div>
 
-              {/* Individual rows — indented both sides */}
-              <div className="mt-1 flex flex-col gap-2.5" dir="rtl">
-                {docs.map((doc) => (
-                  <div key={doc.name} className="flex items-center justify-between" style={{ paddingRight: "20px", paddingLeft: "20px" }}>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <CheckboxBlue checked={doc.checked} onToggle={() => toggleDoc(doc.name)} />
-                      <span className="text-[14px] whitespace-nowrap" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <ChevronDown size={14} style={{ color: grayCol }} />
-                      <div className="bg-white rounded-full px-2 py-px text-[12px] whitespace-nowrap" style={{ color: c.text, fontFamily: "Figtree, sans-serif" }}>{doc.count}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {level === 2 && (
+            <div className="flex flex-wrap gap-1.5">
+              {doc.related.map((r) => (
+                <span
+                  key={r}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-[12px] cursor-pointer hover:opacity-80"
+                  style={{ backgroundColor: c.hoverBg, color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                >
+                  <FileText size={12} style={{ color: c.iconGray }} />
+                  {r}
+                </span>
+              ))}
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Document panel (open) — chronological browser ────────────────────────────
+function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
+  const [search, setSearch]       = useState("");
+  const [activeType, setActiveType] = useState("הכל");
+  const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
+  const [docs, setDocs]           = useState<CaseDoc[]>(CASE_DOCS);
+  const [expand, setExpand]       = useState<Record<string, number>>({});
+  const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: true, week: true, month: false, older: false });
+  const [openTypes, setOpenTypes] = useState<Record<string, boolean>>({});
+
+  const bg = isDark ? dk.surface : "white";
+
+  function toggleDoc(id: string) {
+    setDocs((p) => p.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)));
+  }
+  function setLevel(id: string, lvl: number) {
+    setExpand((p) => ({ ...p, [id]: lvl }));
+  }
+  function toggleTypeAll(type: string, next: boolean) {
+    setDocs((p) => p.map((d) => (d.type === type ? { ...d, checked: next } : d)));
+  }
+
+  // Filtering
+  const filtered = docs.filter((d) =>
+    (activeType === "הכל" || d.type === activeType) &&
+    (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()))
+  );
+
+  const typesInData = Array.from(new Set(filtered.map((d) => d.type)));
+
+  return (
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
+      {/* Header */}
+      <div className="px-3 pt-3 pb-2 flex flex-col gap-2.5 border-b" style={{ borderColor: c.border }} dir="rtl">
+        <div className="flex items-center justify-between">
+          <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכי התיק</span>
+          <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>12345-67-89</span>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="חיפוש במסמכי התיק..."
+            className="w-full h-9 rounded-md text-[13px] outline-none"
+            style={{ border: `1px solid ${c.inputBorder}`, color: c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          />
+        </div>
+
+        {/* Grouping toggle */}
+        <div className="flex items-center gap-1 p-0.5 rounded-md self-start" style={{ backgroundColor: c.hoverBg }}>
+          {([["chrono", "כרונולוגי"], ["type", "לפי סוג"]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setGrouping(key)}
+              className="px-3 h-7 rounded text-[13px] transition-colors"
+              style={{
+                backgroundColor: grouping === key ? "white" : "transparent",
+                color: grouping === key ? c.primary : c.textGray,
+                fontWeight: grouping === key ? 600 : 400,
+                boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                fontFamily: "Noto Sans Hebrew, sans-serif",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Type filter chips */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
+          {DOC_TYPE_TOTALS.map(({ type, words }) => {
+            const on = activeType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => setActiveType(type)}
+                className="flex-shrink-0 flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] transition-colors"
+                style={{
+                  backgroundColor: on ? c.primary : "transparent",
+                  color: on ? "white" : c.textGray,
+                  border: `1px solid ${on ? c.primary : c.border}`,
+                  fontFamily: "Noto Sans Hebrew, sans-serif",
+                }}
+              >
+                {type}
+                <span style={{ opacity: 0.75, fontFamily: "Figtree, sans-serif" }}>{words}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3" dir="rtl">
+        {filtered.length === 0 && (
+          <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            לא נמצאו מסמכים תואמים
+          </div>
+        )}
+
+        {/* Chronological grouping */}
+        {grouping === "chrono" && filtered.length > 0 && BUCKET_ORDER.map((bucket) => {
+          const bucketDocs = filtered.filter((d) => d.bucket === bucket);
+          if (bucketDocs.length === 0) return null;
+          const open = openBuckets[bucket];
+          return (
+            <div key={bucket} className="flex flex-col gap-2">
+              <button
+                className="flex items-center gap-1.5 text-right"
+                onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
+              >
+                <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "none" : "rotate(-90deg)" }} />
+                <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
+                <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+              </button>
+              {open && bucketDocs.map((doc) => (
+                <DocRow key={doc.id} doc={doc} level={expand[doc.id] ?? 0} onToggleCheck={() => toggleDoc(doc.id)} onSetLevel={(lvl) => setLevel(doc.id, lvl)} />
+              ))}
+            </div>
+          );
+        })}
+
+        {/* Type grouping */}
+        {grouping === "type" && filtered.length > 0 && typesInData.map((type) => {
+          const typeDocs = filtered.filter((d) => d.type === type);
+          const open = openTypes[type] ?? true;
+          const allOn = typeDocs.every((d) => d.checked);
+          return (
+            <div key={type} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
+                <button
+                  className="flex items-center gap-1.5 flex-1 text-right"
+                  onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
+                >
+                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "none" : "rotate(-90deg)" }} />
+                  <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                  <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                </button>
+              </div>
+              {open && typeDocs.map((doc) => (
+                <DocRow key={doc.id} doc={doc} level={expand[doc.id] ?? 0} onToggleCheck={() => toggleDoc(doc.id)} onSetLevel={(lvl) => setLevel(doc.id, lvl)} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -851,7 +1047,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 
 // ── Page ───────────────────────────────────────────────────────────────────
 export default function MishpatPage() {
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
 
@@ -878,7 +1074,7 @@ export default function MishpatPage() {
         {/* Panel wrapper */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          style={{ width: isPanelOpen ? "380px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
             {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
