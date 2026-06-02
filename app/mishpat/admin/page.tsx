@@ -351,7 +351,7 @@ export default function AdminPage() {
             style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
           >
             <Plus size={16} style={{ flexShrink: 0 }} />
-            <span style={{ lineHeight: 1, display: "inline-flex", alignItems: "center", transform: "translateY(-2px)" }}>בטא חדשה</span>
+            <span style={{ lineHeight: 1, display: "inline-flex", alignItems: "center" }}>בטא חדשה</span>
           </button>
         </div>
 
@@ -531,7 +531,7 @@ export default function AdminPage() {
                           </span>
                         ))}
                         <span
-                          className="flex-shrink-0 text-[13px] font-bold mr-1"
+                          className="flex-shrink-0 text-[13px] mr-1"
                           style={{ color: c.text }}
                           title={`${beta.users.length} משתמשים מורשים`}
                         >
