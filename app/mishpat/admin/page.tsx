@@ -315,13 +315,13 @@ export default function AdminPage() {
       >
         <div className="flex items-center gap-3">
           <div
-            className="size-8 rounded-full flex items-center justify-center text-white text-[16px] flex-shrink-0 select-none"
+            className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none"
             style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}
           >
             {CURRENT_ADMIN.initials}
           </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-[14px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
+          <div className="flex flex-col leading-tight text-right">
+            <span className="text-[13px] whitespace-nowrap" style={{ color: c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{CURRENT_ADMIN.name}</span>
           </div>
         </div>
 
