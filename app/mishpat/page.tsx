@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
-  HelpCircle, Info, Link, MessageSquare, Minimize2, Moon, MoreHorizontal,
-  Paperclip, Plus, Quote, RotateCw, Search, Shield, Split, Sun,
-  ThumbsDown, ThumbsUp,
+  HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
+  Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
+  Split, Sun, ThumbsDown, ThumbsUp, Zap,
+  type LucideIcon,
 } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -90,10 +91,10 @@ const AUTO_TIP = `כאשר אפשרות בחירת מסמכים אוטומטית
 // ── Scope selector ────────────────────────────────────────────────────────
 type ScopeOption = "תמציתי" | "מורחב" | "מקיף";
 const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
-const SCOPE_CONFIG: Record<ScopeOption, string> = {
-  "תמציתי": "היקף ממוקד, מענה מהיר לרוב השאלות",
-  "מורחב":  "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",
-  "מקיף":   "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי",
+const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
+  "תמציתי": { desc: "היקף ממוקד, מענה מהיר לרוב השאלות",       Icon: Zap },
+  "מורחב":  { desc: "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",  Icon: Layers },
+  "מקיף":   { desc: "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי", Icon: Microscope },
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה ככל שההיקף קטן יותר, התשובה מהירה יותר";
 
@@ -656,17 +657,18 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               >
                 <div className="flex flex-col gap-0.5">
                   <span
-                    className="text-[14px]"
+                    className="flex items-center gap-1.5 text-[14px]"
                     style={{
                       fontWeight: isCurrent ? 600 : 400,
                       color: isCurrent ? c.primary : c.text,
                       fontFamily: "Noto Sans Hebrew, sans-serif",
                     }}
                   >
+                    {(() => { const I = SCOPE_CONFIG[opt].Icon; return <I size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0 }} />; })()}
                     {opt}
                   </span>
                   <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                    {SCOPE_CONFIG[opt]}
+                    {SCOPE_CONFIG[opt].desc}
                   </span>
                 </div>
                 {isCurrent && (
