@@ -517,6 +517,13 @@ export default function AdminPage() {
                   <td className="px-5 py-3">
                     {beta.users.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-1">
+                        <span
+                          className="flex-shrink-0 text-[15px] ml-1"
+                          style={{ color: c.text }}
+                          title={`${beta.users.length} משתמשים מורשים`}
+                        >
+                          ({beta.users.length})
+                        </span>
                         {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
                           <span
                             key={u}
@@ -530,15 +537,7 @@ export default function AdminPage() {
                           >
                             {u}
                           </span>
-
                         ))}
-                        <span
-                          className="flex-shrink-0 text-[15px] mr-1"
-                          style={{ color: c.text }}
-                          title={`${beta.users.length} משתמשים מורשים`}
-                        >
-                          ({beta.users.length})
-                        </span>
                       </div>
                     ) : (
                       <span style={{ color: c.textLight }}>—</span>
