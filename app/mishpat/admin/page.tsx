@@ -37,7 +37,13 @@ interface BetaFormState {
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_BETAS: Beta[] = [
-  { id: "1", name: "v2-ai-search",   status: "active", users: ["daniD", "sarahK", "ronL"], updatedAt: "27.05.2026" },
+  {
+    id: "1",
+    name: "v2-ai-search",
+    status: "active",
+    users: ["daniD", "sarahK", "ronL", "miriF", "avivG", "noaT", "yaelB", "oferM", "tamarK", "eladP"],
+    updatedAt: "27.05.2026",
+  },
   { id: "2", name: "v3-dark-mode",   status: "closed", users: [],                          updatedAt: "20.05.2026" },
   { id: "3", name: "v1-new-sidebar", status: "open",   users: [],                          updatedAt: "15.05.2026" },
 ];
@@ -338,7 +344,7 @@ export default function AdminPage() {
       </header>
 
       {/* ── Main ── */}
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-8">
 
         {/* Page title + create button */}
         <div className="flex items-center justify-between mb-6">
@@ -346,10 +352,10 @@ export default function AdminPage() {
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-4 h-9 rounded-md text-[14px] font-medium"
-            style={{ backgroundColor: c.primary, color: "white", cursor: "pointer" }}
+            style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
           >
-            <Plus size={16} />
-            בטא חדשה
+            <Plus size={16} style={{ flexShrink: 0 }} />
+            <span style={{ lineHeight: 1, display: "inline-flex", alignItems: "center" }}>בטא חדשה</span>
           </button>
         </div>
 
@@ -465,10 +471,10 @@ export default function AdminPage() {
           <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: c.hoverBg, borderBottom: `1px solid ${c.border}` }}>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "200px" }}>שם</th>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "160px" }}>סטטוס</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "170px" }}>שם</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "120px" }}>סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray }}>משתמשים מורשים</th>
-                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "130px" }}>עדכון אחרון</th>
+                <th className="text-right px-5 py-3 font-medium" style={{ color: c.textGray, width: "120px" }}>עדכון אחרון</th>
                 <th className="px-5 py-3" style={{ width: "230px" }} />
               </tr>
             </thead>
@@ -510,24 +516,33 @@ export default function AdminPage() {
                     </span>
                   </td>
 
-                  {/* Authorized users */}
+                  {/* Authorized users — count + alphabetically sorted chips */}
                   <td className="px-5 py-3">
                     {beta.users.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {beta.users.map(u => (
-                          <span
-                            key={u}
-                            className="px-2 py-0.5 rounded text-[11px]"
-                            style={{
-                              backgroundColor: c.hoverBg,
-                              color: c.textGray,
-                              border: `1px solid ${c.inputBorder}`,
-                              fontFamily: "monospace",
-                            }}
-                          >
-                            {u}
-                          </span>
-                        ))}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="flex-shrink-0 text-[12px] font-medium px-1.5 py-0.5 rounded"
+                          style={{ color: c.primary, backgroundColor: "#eff4ff" }}
+                          title={`${beta.users.length} משתמשים מורשים`}
+                        >
+                          {beta.users.length}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
+                            <span
+                              key={u}
+                              className="px-2 py-0.5 rounded text-[11px]"
+                              style={{
+                                backgroundColor: c.hoverBg,
+                                color: c.textGray,
+                                border: `1px solid ${c.inputBorder}`,
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              {u}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <span style={{ color: c.textLight }}>—</span>

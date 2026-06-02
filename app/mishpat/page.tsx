@@ -774,12 +774,6 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>דד</div>
             <div className="flex flex-col leading-tight text-right">
               <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דניאל דמביץ</span>
-              {IS_ADMIN && (
-                <span className="text-[11px] flex items-center gap-0.5 justify-end" style={{ color: c.primary }}>
-                  <Shield size={9} />
-                  אדמין
-                </span>
-              )}
             </div>
           </button>
 
@@ -794,23 +788,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
                 boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
               }}
             >
-              {IS_ADMIN && (
-                <a
-                  href="/studioOS/mishpat/admin"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-[14px] transition-colors"
-                  style={{ color: isDark ? dk.text : c.text, direction: "rtl" }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <Shield size={14} style={{ color: c.primary }} />
-                  ניהול מערכת
-                </a>
-              )}
-              <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "4px 0" }} />
-              {/* Placeholder for future personal settings */}
+              {/* Personal settings — primary need for most users, shown first */}
               <button
                 disabled
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right"
@@ -819,6 +797,24 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
                 הגדרות אישיות
                 <span className="text-[10px] mr-auto px-1.5 py-0.5 rounded" style={{ backgroundColor: c.hoverBg, color: c.textLight }}>בקרוב</span>
               </button>
+              {IS_ADMIN && (
+                <>
+                  <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "4px 0" }} />
+                  <a
+                    href="/studioOS/mishpat/admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-[14px] transition-colors"
+                    style={{ color: isDark ? dk.text : c.text, direction: "rtl" }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <Shield size={14} style={{ color: c.primary }} />
+                    ניהול מערכת
+                  </a>
+                </>
+              )}
             </div>
           )}
         </div>
