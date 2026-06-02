@@ -519,7 +519,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             onMouseDown={() => { setSendPressed(true); }}
             onMouseUp={() => setSendPressed(false)}
           >
-            <ArrowUp size={15} />
+            <ArrowUp size={17} />
           </button>
 
           {/* Scope selector — plain text + chevron, no frame */}
@@ -551,7 +551,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Citations toggle — left of case info */}
           <button
             onClick={() => setShowCitations((v) => !v)}
-            className="size-8 flex items-center justify-center rounded-lg flex-shrink-0 transition-colors"
+            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
               backgroundColor: showCitations ? c.primary : c.primaryLight,
               color: showCitations ? "white" : c.iconGray,
@@ -560,7 +560,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = showCitations ? "#0060c7" : "#e6e8ed"; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primary : c.primaryLight; }}
           >
-            <Quote size={16} strokeWidth={2} />
+            <Quote size={18} strokeWidth={2} />
           </button>
 
           {/* Case info — aligned to the right, hoverable */}
