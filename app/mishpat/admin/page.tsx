@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Edit2, X, Shield, ChevronDown, Zap, Lock, Globe, Check, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, X, ChevronDown, Zap, Lock, Globe, Check, CheckCircle2 } from "lucide-react";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const c = {
@@ -321,10 +321,6 @@ export default function AdminPage() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-[13px]" style={{ color: c.darkBlue }}>{CURRENT_ADMIN.name}</span>
-            <span className="text-[11px] flex items-center gap-1" style={{ color: c.primary }}>
-              <Shield size={10} />
-              אדמין
-            </span>
           </div>
         </div>
 
@@ -355,7 +351,7 @@ export default function AdminPage() {
             style={{ backgroundColor: c.primary, color: "white", cursor: "pointer", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
           >
             <Plus size={16} style={{ flexShrink: 0 }} />
-            <span style={{ lineHeight: 1, display: "inline-flex", alignItems: "center" }}>בטא חדשה</span>
+            <span style={{ lineHeight: 1, display: "inline-flex", alignItems: "center", transform: "translateY(-2px)" }}>בטא חדשה</span>
           </button>
         </div>
 
@@ -519,30 +515,28 @@ export default function AdminPage() {
                   {/* Authorized users — count + alphabetically sorted chips */}
                   <td className="px-5 py-3">
                     {beta.users.length > 0 ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
+                          <span
+                            key={u}
+                            className="px-2 py-0.5 rounded text-[11px]"
+                            style={{
+                              backgroundColor: c.hoverBg,
+                              color: c.textGray,
+                              border: `1px solid ${c.inputBorder}`,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {u}
+                          </span>
+                        ))}
                         <span
-                          className="flex-shrink-0 text-[12px] font-medium px-1.5 py-0.5 rounded"
-                          style={{ color: c.primary, backgroundColor: "#eff4ff" }}
+                          className="flex-shrink-0 text-[13px] font-bold mr-1"
+                          style={{ color: c.text }}
                           title={`${beta.users.length} משתמשים מורשים`}
                         >
-                          {beta.users.length}
+                          ({beta.users.length})
                         </span>
-                        <div className="flex flex-wrap gap-1">
-                          {[...beta.users].sort((a, b) => a.localeCompare(b)).map(u => (
-                            <span
-                              key={u}
-                              className="px-2 py-0.5 rounded text-[11px]"
-                              style={{
-                                backgroundColor: c.hoverBg,
-                                color: c.textGray,
-                                border: `1px solid ${c.inputBorder}`,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {u}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                     ) : (
                       <span style={{ color: c.textLight }}>—</span>
