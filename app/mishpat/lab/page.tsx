@@ -507,7 +507,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + grouping toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכי התיק</span>
+          <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
           <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
@@ -543,7 +543,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
         {/* Row 3: filters */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <FilterDropdown label="סוג מסמך" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
+          <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
           <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
           <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         </div>
@@ -564,7 +564,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           if (bucketDocs.length === 0) return null;
           const open = openBuckets[bucket];
           return (
-            <div key={bucket} className="flex flex-col gap-2">
+            <div key={bucket} className="flex flex-col gap-1">
               <div className="rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <button
                   className="flex items-center justify-between w-full"
@@ -598,7 +598,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const open = openTypes[type] ?? true;
           const allOn = typeDocs.every((d) => d.checked);
           return (
-            <div key={type} className="flex flex-col gap-2">
+            <div key={type} className="flex flex-col gap-1">
               <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
@@ -606,7 +606,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
                 >
                   <span className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                    <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </span>
                   <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
