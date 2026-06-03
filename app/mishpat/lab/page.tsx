@@ -116,6 +116,7 @@ interface CaseDoc {
   checked: boolean;      // selected for chat
   used?: boolean;        // referenced by the chat's answer
   missing?: boolean;     // document has no text / not processed (0 words)
+  caseId?: string;       // which case this document belongs to
 }
 
 // Type filter chips with aggregate word counts (real case data)
@@ -264,6 +265,24 @@ const CASE_DOCS: CaseDoc[] = [
     summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבעת.",
     related: ["הודעה על הגשת ראיות נוספות"], checked: false,
   },
+];
+
+// Second case (mock) — documents for a different file
+const CASE_DOCS_2: CaseDoc[] = [
+  { id: "e1", name: "כתב תביעה", type: "כתב תביעה", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
+    summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false },
+  { id: "e2", name: "בקשה לסעד זמני", type: "בקשה בתיק", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
+    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק.", related: [], checked: false },
+  { id: "e3", name: "כתב הגנה", type: "כתב הגנה", submitter: "נתבעת", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
+    summary: "הנתבעת טוענת לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false },
+  { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטה", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
+    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true },
+];
+
+// Case metadata (number + parties)
+const CASES_META = [
+  { id: "c1", number: "12345-67-89", parties: "משה כהן ובניו בע״מ נ׳ משה לוי ובניו בע״מ" },
+  { id: "c2", number: "59198-67-89", parties: "יוסי כהן נ׳ חברת הבנייה הגדולה בע״מ" },
 ];
 
 // ── Filter options ──────────────────────────────────────────────────────────
@@ -466,7 +485,7 @@ function DocRow({
       {/* Expanded: summary · related */}
       {expanded && (
         <div className="px-3 pb-3 pt-2 flex flex-col gap-2.5 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
-          <p className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+          <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
           {doc.related.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <span className="text-[14px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
@@ -501,9 +520,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
-  const [docs, setDocs]           = useState<CaseDoc[]>(() => CASE_DOCS.map((d) => ({ ...d, checked: true })));
+  const [docs, setDocs]           = useState<CaseDoc[]>(() => [
+    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true })),
+    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
+  ]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId]   = useState<string | null>(null);
+  const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: true, week: true, month: false, older: false });
   const [openTypes, setOpenTypes] = useState<Record<string, boolean>>({});
 
@@ -521,9 +544,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   function toggleBucketAll(bucket: DocBucket, next: boolean) {
     setDocs((p) => p.map((d) => (d.bucket === bucket ? { ...d, checked: next } : d)));
   }
+  function toggleCaseAll(caseId: string, next: boolean) {
+    setDocs((p) => p.map((d) => (d.caseId === caseId ? { ...d, checked: next } : d)));
+  }
 
-  // Filtering
+  // Filtering — scoped to the currently open case
   const filtered = docs.filter((d) =>
+    d.caseId === openCaseId &&
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
     (!dateFrom || d.iso >= dateFrom) &&
@@ -618,7 +645,31 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
       {/* List — outer ltr puts scrollbar on the right; inner rtl keeps content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-       <div className="px-3 pt-1 pb-3 flex flex-col gap-3" dir="rtl">
+       <div className="px-3 pt-1 pb-3 flex flex-col gap-2" dir="rtl">
+        {CASES_META.map((cf) => {
+          const caseDocs = docs.filter((d) => d.caseId === cf.id);
+          const caseOpen = openCaseId === cf.id;
+          const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
+          const caseUsed = caseDocs.some((d) => d.used);
+          return (
+            <div key={cf.id} className="flex flex-col gap-2">
+              {/* Case header */}
+              <div className="flex items-center gap-2 rounded-md px-2.5 py-2" style={{ backgroundColor: "#dbe9fb", border: "1px solid #c2dbf7" }}>
+                <span onClick={(e) => e.stopPropagation()}>
+                  <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
+                </span>
+                <button className="flex items-center justify-between flex-1 text-right min-w-0" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0 }} />
+                    <span className="text-[13px] font-medium truncate" style={{ color: c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.number} · {cf.parties}</span>
+                    {!caseOpen && caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                  </span>
+                  <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                </button>
+              </div>
+
+              {caseOpen && (
+                <div className="flex flex-col gap-3 pb-1">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
@@ -715,6 +766,11 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
                 />
               ))}
+            </div>
+          );
+        })}
+                </div>
+              )}
             </div>
           );
         })}
