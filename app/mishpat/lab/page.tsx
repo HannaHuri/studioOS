@@ -650,7 +650,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <div
               key={cf.id}
               className="flex flex-col rounded-lg overflow-hidden"
-              style={caseOpen ? { border: "1px solid #c2d8f2" } : undefined}
+              style={caseOpen ? { boxShadow: "0 0 0 1px #c2d8f2" } : undefined}
             >
               {/* Case header */}
               <div
@@ -1413,7 +1413,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 
 // ── Page ───────────────────────────────────────────────────────────────────
 export default function MishpatPage() {
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
 
