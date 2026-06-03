@@ -406,19 +406,19 @@ function DocRow({
   const lit = expanded || highlighted;
   return (
     <div
-      className="rounded-lg border transition-colors cursor-pointer"
+      className="relative rounded-lg border transition-colors cursor-pointer"
       style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : highlighted ? c.hoverBg : "white" }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
       onClick={onTogglePin}
     >
+      {doc.used && <span className="absolute size-2 rounded-full" style={{ backgroundColor: c.primary, left: "12px", bottom: "10px" }} title="שימש בתשובת הצ׳אט" />}
       {/* Top: checkbox · name (opens doc) · count · open */}
       <div className="flex items-center gap-2 px-3 pt-2.5">
         <span onClick={(e) => e.stopPropagation()}>
           <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         </span>
-        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
         <button
           className="flex-1 min-w-0 text-right"
           title="פתיחת המסמך"
@@ -531,7 +531,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <span className="text-[16px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
             <button
               onClick={() => setIsAuto((v) => !v)}
-              className="h-6 px-2.5 rounded-full text-[12px] leading-none transition-colors"
+              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors"
               style={{
                 backgroundColor: isAuto ? c.primary : "transparent",
                 color: isAuto ? "white" : c.iconGray,
@@ -548,7 +548,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               <button
                 key={key}
                 onClick={() => setGrouping(key)}
-                className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px] transition-colors"
+                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors"
                 style={{
                   backgroundColor: grouping === key ? "white" : "transparent",
                   color: grouping === key ? c.primary : c.textGray,
