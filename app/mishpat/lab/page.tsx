@@ -440,7 +440,7 @@ function DocRow({
   return (
     <div
       className="relative rounded-lg border transition-colors cursor-pointer"
-      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : highlighted ? c.hoverBg : "white" }}
+      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: highlighted ? c.hoverBg : "white" }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -527,7 +527,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId]   = useState<string | null>(null);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
-  const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: true, week: true, month: false, older: false });
+  const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: false, week: false, month: false, older: false });
   const [openTypes, setOpenTypes] = useState<Record<string, boolean>>({});
 
   const bg = isDark ? dk.surface : "white";
@@ -657,15 +657,15 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <div
               key={cf.id}
               className="flex flex-col rounded-lg overflow-hidden"
-              style={caseOpen ? { border: `1px solid ${c.border}` } : undefined}
+              style={caseOpen ? { border: "1px solid #edf0f5" } : undefined}
             >
               {/* Case header */}
               <div
                 className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "" : "rounded-md"}`}
                 style={{
-                  backgroundColor: "#f5f9ff",
+                  backgroundColor: caseOpen ? "white" : "#f5f9ff",
                   border: caseOpen ? undefined : "1px solid #e2ebf6",
-                  borderBottom: caseOpen ? "1px solid #e2ebf6" : undefined,
+                  borderBottom: caseOpen ? "1px solid #edf0f5" : undefined,
                 }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
@@ -675,11 +675,11 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[13px] font-medium leading-snug" style={{ color: c.darkBlue, fontFamily: "Figtree, sans-serif" }}>
+                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: c.darkBlue, fontFamily: "Figtree, sans-serif" }}>
                         {cf.number}
                         {!caseOpen && caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       </span>
-                      <span className="text-[12px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
+                      <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
                   <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
@@ -745,7 +745,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         {/* Type grouping */}
         {grouping === "type" && filtered.length > 0 && typesInData.map((type) => {
           const typeDocs = filtered.filter((d) => d.type === type);
-          const open = openTypes[type] ?? true;
+          const open = openTypes[type] ?? false;
           const allOn = typeDocs.every((d) => d.checked);
           const catMissing = typeDocs.some((d) => d.missing);
           return (
@@ -754,7 +754,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
-                  onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
+                  onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? false) }))}
                 >
                   <span className="flex items-center gap-1">
                     <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
