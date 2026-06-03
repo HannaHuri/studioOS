@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+.docs-scroll { scrollbar-width: thin; scrollbar-color: #dde1ea transparent; }
+.docs-scroll::-webkit-scrollbar { width: 8px; }
+.docs-scroll::-webkit-scrollbar-thumb { background: #dde1ea; border-radius: 4px; }
+.docs-scroll::-webkit-scrollbar-thumb:hover { background: #cfd4df; }
+.docs-scroll::-webkit-scrollbar-track { background: transparent; }
+
 @keyframes toastSlideIn {
   from { opacity: 0; transform: translateX(-50%) translateY(16px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }

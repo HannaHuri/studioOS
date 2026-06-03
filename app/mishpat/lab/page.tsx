@@ -178,10 +178,97 @@ const CASE_DOCS: CaseDoc[] = [
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
+  {
+    id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשה בתיק", submitter: "התובע",
+    date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "420",
+    summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים.",
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+  },
+  {
+    id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "הנתבעת",
+    date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "510",
+    summary: "הנתבעת מבקשת לזמן עד נוסף שלא נכלל ברשימת העדים המקורית, לאור התפתחויות בתיק.",
+    related: [], checked: false,
+  },
+  {
+    id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "הנתבעת",
+    date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
+    summary: "תצהיר עדה מטעם הנתבעת בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
+    related: ["כתב הגנה מתוקן"], checked: false,
+  },
+  {
+    id: "d12", name: "החלטה בבקשת ארכה", type: "החלטה", submitter: "בית המשפט",
+    date: "27.05.26", iso: "2026-05-27", bucket: "week", words: "390",
+    summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
+    related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false,
+  },
+  {
+    id: "d13", name: "פרוטוקול ישיבת קדם משפט", type: "פרוטוקול", submitter: "בית המשפט",
+    date: "15.05.26", iso: "2026-05-15", bucket: "month", words: "5.8K",
+    summary: "תיעוד ישיבת קדם המשפט, לרבות עמדות הצדדים והחלטות ביניים בנוגע לגילוי מסמכים.",
+    related: ["פרוטוקול דיון מקדמי"], checked: false,
+  },
+  {
+    id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשה בתיק", submitter: "התובע",
+    date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
+    summary: "התובע מבקש לחייב את הנתבעת בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים.",
+    related: ["כתב תביעה"], checked: false,
+  },
+  {
+    id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשה בתיק", submitter: "הנתבעת",
+    date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
+    summary: "הנתבעת מתנגדת חלקית לגילוי וטוענת לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
+    related: ["בקשה לגילוי מסמכים"], checked: false,
+  },
+  {
+    id: "d16", name: "חוות דעת מומחה מטעם בית המשפט", type: "תצהיר", submitter: "בית המשפט",
+    date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
+    summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
+    related: ["החלטה על מינוי מומחה"], checked: false,
+  },
+  {
+    id: "d17", name: "כתב תביעה שכנגד", type: "כתב תביעה", submitter: "הנתבעת",
+    date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
+    summary: "הנתבעת מגישה תביעה שכנגד בטענה להוצאות שנגרמו לה עקב הגשת התביעה בחוסר תום לב.",
+    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false,
+  },
+  {
+    id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתב הגנה", submitter: "התובע",
+    date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
+    summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
+    related: ["כתב תביעה שכנגד"], checked: false,
+  },
+  {
+    id: "d19", name: "החלטה על איחוד דיון", type: "החלטה", submitter: "בית המשפט",
+    date: "25.03.26", iso: "2026-03-25", bucket: "older", words: "640",
+    summary: "בית המשפט מורה על איחוד הדיון בתביעה ובתביעה שכנגד לשם יעילות דיונית.",
+    related: ["כתב תביעה שכנגד"], checked: false,
+  },
+  {
+    id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקול", submitter: "בית המשפט",
+    date: "10.04.26", iso: "2026-04-10", bucket: "older", words: "11.2K",
+    summary: "תיעוד דיון ההוכחות הראשון, לרבות חקירת התובע ועד מטעמו וטענות הצדדים.",
+    related: ["פרוטוקול ישיבת קדם משפט"], checked: false,
+  },
+  {
+    id: "d21", name: "סיכומי התובע", type: "כתב תביעה", submitter: "התובע",
+    date: "18.04.26", iso: "2026-04-18", bucket: "older", words: "7.3K",
+    summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבעת לנזקים שנגרמו.",
+    related: [], checked: false,
+  },
+  {
+    id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטה", submitter: "בית המשפט",
+    date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "300",
+    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבעת.",
+    related: ["הודעה על הגשת ראיות נוספות"], checked: false,
+  },
 ];
 
 // ── Filter options ──────────────────────────────────────────────────────────
-const TYPE_OPTIONS = DOC_TYPE_TOTALS.map((t) => t.type);
+const TYPE_OPTIONS = [
+  "הכל",
+  ...DOC_TYPE_TOTALS.filter((t) => t.type !== "הכל").map((t) => t.type).sort((a, b) => a.localeCompare(b, "he")),
+];
 const SUBMITTER_OPTIONS = ["הכל", "התובע", "הנתבעת", "בית המשפט"];
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
@@ -284,15 +371,15 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", right: 0, minWidth: "210px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", left: 0, width: "176px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
-              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="w-full box-border h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
             </label>
             <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               עד תאריך
-              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="w-full box-border h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
             </label>
             {active && (
               <button onClick={() => onChange("", "")} className="text-[12px] self-start" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>נקה טווח</button>
@@ -340,8 +427,8 @@ function DocRow({
 
       {/* Meta: date (under checkbox, right) · submitter chip */}
       <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
-        <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
         <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+        <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       </div>
 
       {/* Expanded (hover / pinned): summary · type · related */}
@@ -454,8 +541,9 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3" dir="rtl">
+      {/* List — outer ltr puts scrollbar on the right; inner rtl keeps content */}
+      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+       <div className="px-3 py-3 flex flex-col gap-3" dir="rtl">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
@@ -504,7 +592,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   className="flex items-center gap-1.5 flex-1 text-right"
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
                 >
-                  <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                  <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                   <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
@@ -522,6 +610,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             </div>
           );
         })}
+       </div>
       </div>
     </div>
   );
