@@ -413,7 +413,6 @@ function DocRow({
       onMouseLeave={onLeave}
       onClick={onTogglePin}
     >
-      {doc.used && <span className="absolute size-2 rounded-full" style={{ backgroundColor: c.primary, left: "12px", bottom: "10px" }} title="שימש בתשובת הצ׳אט" />}
       {/* Top: checkbox · name (opens doc) · count · open */}
       <div className="flex items-center gap-2 px-3 pt-2.5">
         <span onClick={(e) => e.stopPropagation()}>
@@ -447,6 +446,7 @@ function DocRow({
       <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
         <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
         <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+        {doc.used && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
       </div>
 
       {/* Expanded: summary · related */}
