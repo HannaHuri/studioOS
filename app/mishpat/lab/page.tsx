@@ -439,8 +439,12 @@ function DocRow({
   const lit = expanded || highlighted;
   return (
     <div
-      className="transition-colors cursor-pointer"
-      style={{ borderBottom: "1px solid #f0f2f6", backgroundColor: highlighted ? c.hoverBg : (expanded ? "#f6f7f9" : "white") }}
+      className="rounded-lg border transition-all cursor-pointer"
+      style={{
+        borderColor: expanded ? c.primary : "#e6e9ef",
+        backgroundColor: "white",
+        boxShadow: expanded ? "0 2px 8px rgba(0,115,234,0.10)" : highlighted ? "0 1px 4px rgba(0,0,0,0.08)" : "0 1px 2px rgba(0,0,0,0.04)",
+      }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -688,7 +692,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 p-2.5">
+                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "#f5f6f8" }}>
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
@@ -729,7 +733,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               {open && (
-                <div className="flex flex-col" style={{ marginInlineStart: "8px", borderInlineStart: "2px solid #eef1f6", paddingInlineStart: "6px" }}>
+                <div className="flex flex-col gap-2" style={{ marginInlineStart: "6px" }}>
                   {bucketDocs.map((doc) => (
                     <DocRow
                       key={doc.id} doc={doc}
@@ -779,7 +783,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               {open && (
-                <div className="flex flex-col" style={{ marginInlineStart: "8px", borderInlineStart: "2px solid #eef1f6", paddingInlineStart: "6px" }}>
+                <div className="flex flex-col gap-2" style={{ marginInlineStart: "6px" }}>
                   {typeDocs.map((doc) => (
                     <DocRow
                       key={doc.id} doc={doc}
