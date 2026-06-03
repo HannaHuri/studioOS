@@ -105,12 +105,13 @@ const BUCKET_ORDER: DocBucket[] = ["today", "week", "month", "older"];
 interface CaseDoc {
   id: string;
   name: string;
-  type: string;          // doc type — tag + filter
+  type: string;          // doc type — chip + filter
   submitter: string;     // צד מגיש
   date: string;          // display date
+  iso: string;           // ISO date (for range filtering)
   bucket: DocBucket;
   words: string;         // word count
-  summary: string;       // עיקרי הדברים
+  summary: string;       // תקציר
   related: string[];     // related document names
   checked: boolean;      // selected for chat
 }
@@ -131,49 +132,49 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 const CASE_DOCS: CaseDoc[] = [
   {
     id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "הנתבעת",
-    date: "02.06.26", bucket: "today", words: "1.1K",
+    date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "התובע",
-    date: "31.05.26", bucket: "week", words: "8.4K",
+    date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true,
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "התובע",
-    date: "29.05.26", bucket: "week", words: "640",
+    date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
     related: ["בקשה לדחיית מועד דיון"], checked: false,
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
-    date: "18.05.26", bucket: "month", words: "4.2K",
+    date: "18.05.26", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
     related: ["החלטה על מינוי מומחה"], checked: false,
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "הנתבעת",
-    date: "10.05.26", bucket: "month", words: "12.1K",
+    date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבעת דוחה את כל טענות הרשלנות, טוענת להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
     related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטה", submitter: "בית המשפט",
-    date: "05.05.26", bucket: "month", words: "820",
+    date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ כהן כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
     related: ["פרוטוקול דיון מקדמי"], checked: false,
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "התובע",
-    date: "12.02.26", bucket: "older", words: "15.7K",
+    date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר משה כהן, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
     id: "d8", name: "חוות דעת אקטוארית", type: "תצהיר", submitter: "התובע",
-    date: "20.01.26", bucket: "older", words: "3.6K",
+    date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
@@ -182,10 +183,6 @@ const CASE_DOCS: CaseDoc[] = [
 // ── Filter options ──────────────────────────────────────────────────────────
 const TYPE_OPTIONS = DOC_TYPE_TOTALS.map((t) => t.type);
 const SUBMITTER_OPTIONS = ["הכל", "התובע", "הנתבעת", "בית המשפט"];
-const DATE_OPTIONS = ["הכל", "היום", "השבוע", "החודש", "ישן יותר"];
-const DATE_TO_BUCKET: Record<string, DocBucket> = {
-  "היום": "today", "השבוע": "week", "החודש": "month", "ישן יותר": "older",
-};
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
@@ -261,99 +258,112 @@ function FilterDropdown({
   );
 }
 
-// ── Document row (shared between chrono & type grouping) ─────────────────────
-function DocRow({
-  doc, level, onToggleCheck, onSetLevel,
+// ── Date range filter (from / to) ────────────────────────────────────────────
+function DateRangeFilter({
+  from, to, onChange,
 }: {
-  doc: CaseDoc; level: number;
-  onToggleCheck: () => void; onSetLevel: (lvl: number) => void;
+  from: string; to: string; onChange: (from: string, to: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = !!(from || to);
+  const fmt = (iso: string) => (iso ? iso.split("-").reverse().join(".").slice(0, 8) : "…");
+  const label = active ? `${fmt(from)} – ${fmt(to)}` : "תאריך";
+  return (
+    <div className="relative" dir="rtl">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
+        style={{ border: `1px solid ${active ? c.primary : c.border}`, color: active ? c.primary : c.textGray, backgroundColor: active ? "#eff4ff" : "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+      >
+        <Calendar size={13} />
+        <span>{label}</span>
+        <ChevronDown size={13} style={{ transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div
+            className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
+            style={{ top: "100%", right: 0, minWidth: "210px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+          >
+            <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              מתאריך
+              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+            </label>
+            <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              עד תאריך
+              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+            </label>
+            {active && (
+              <button onClick={() => onChange("", "")} className="text-[12px] self-start" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>נקה טווח</button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Document row — lean by default, expands on hover (or click to pin) ───────
+function DocRow({
+  doc, expanded, onToggleCheck, onHover, onLeave, onTogglePin,
+}: {
+  doc: CaseDoc; expanded: boolean;
+  onToggleCheck: () => void; onHover: () => void; onLeave: () => void; onTogglePin: () => void;
 }) {
   return (
     <div
       className="rounded-lg border transition-colors"
-      style={{
-        borderColor: level > 0 ? c.primary : c.inputBorder,
-        backgroundColor: level > 0 ? "#f7faff" : "white",
-      }}
+      style={{ borderColor: expanded ? c.primary : c.inputBorder, backgroundColor: expanded ? "#f7faff" : "white" }}
       dir="rtl"
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
     >
-      {/* Identity line */}
-      <div className="flex items-start gap-2 px-3 pt-2.5">
-        <div className="pt-0.5"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></div>
-        <button
-          className="flex-1 min-w-0 text-right"
-          onClick={() => onSetLevel(level > 0 ? 0 : 1)}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[14px] font-medium truncate" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-              {doc.name}
-            </span>
-            <span className="flex-shrink-0 rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>
-              {doc.words}
-            </span>
-          </div>
-          {/* Meta line */}
-          <div className="flex items-center gap-1.5 mt-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-            <Calendar size={12} style={{ color: c.iconGray, flexShrink: 0 }} />
-            <span>{doc.date}</span>
-            <span style={{ color: c.border }}>·</span>
-            <span className="rounded px-1.5 py-px" style={{ backgroundColor: "#eef1f8", color: c.iconGray }}>{doc.type}</span>
-            <span style={{ color: c.border }}>·</span>
-            <span className="truncate">{doc.submitter}</span>
-          </div>
+      {/* Top: checkbox · name (link) · count · open */}
+      <div className="flex items-center gap-2 px-3 pt-2.5">
+        <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
+        <button className="flex-1 min-w-0 text-right" onClick={onTogglePin}>
+          <span
+            className="block text-[14px] font-medium truncate"
+            style={{ color: expanded ? c.primary : c.text, textDecoration: expanded ? "underline" : "none", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            {doc.name}
+          </span>
         </button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>{doc.words}</span>
+          <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
+            <ExternalLink size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* Preview / expandable summary */}
-      <button className="w-full text-right px-3 pb-2.5 pt-1.5" onClick={() => onSetLevel(level > 0 ? 0 : 1)} dir="rtl">
-        <div className="flex items-start gap-1.5">
-          <ChevronDown
-            size={14}
-            className="flex-shrink-0 mt-0.5"
-            style={{ color: c.iconGray, transition: "transform 0.15s", transform: level > 0 ? "rotate(180deg)" : "none" }}
-          />
-          <span
-            className={level > 0 ? "text-[13px] leading-snug" : "text-[13px] leading-snug truncate"}
-            style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", display: level > 0 ? "block" : "-webkit-box", WebkitLineClamp: level > 0 ? "unset" : 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}
-          >
-            <span style={{ color: c.textLight }}>עיקרי הדברים: </span>{doc.summary}
-          </span>
-        </div>
-      </button>
+      {/* Meta: submitter chip (right) · date (left) */}
+      <div className="flex items-center justify-between px-3 pt-1.5 pb-2.5">
+        <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+        <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+      </div>
 
-      {/* Level 1 actions + level 2 toggle */}
-      {level > 0 && (
-        <div className="px-3 pb-3 flex flex-col gap-2.5" dir="rtl">
-          <div className="flex items-center gap-2">
-            <button
-              className="flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium transition-opacity hover:opacity-90"
-              style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}
-            >
-              <ExternalLink size={14} />
-              פתח מסמך
-            </button>
-            <button
-              className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
-              style={{ border: `1px solid ${c.border}`, color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-              onClick={() => onSetLevel(level === 2 ? 1 : 2)}
-            >
-              מסמכים קשורים
-              <ChevronDown size={13} style={{ transition: "transform 0.15s", transform: level === 2 ? "rotate(180deg)" : "none" }} />
-            </button>
-          </div>
-
-          {level === 2 && (
-            <div className="flex flex-wrap gap-1.5">
-              {doc.related.map((r) => (
-                <span
-                  key={r}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-[12px] cursor-pointer hover:opacity-80"
-                  style={{ backgroundColor: c.hoverBg, color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                >
-                  <FileText size={12} style={{ color: c.iconGray }} />
-                  {r}
-                </span>
-              ))}
+      {/* Expanded (hover / pinned): type · summary · related */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
+          <span className="self-start rounded px-1.5 py-px text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
+          <p className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+          {doc.related.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
+              <div className="flex flex-wrap gap-1.5">
+                {doc.related.map((r) => (
+                  <span
+                    key={r}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[12px] cursor-pointer hover:opacity-80"
+                    style={{ backgroundColor: "white", color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  >
+                    <FileText size={12} style={{ color: c.iconGray }} />
+                    {r}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -367,10 +377,12 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
-  const [activeDate, setActiveDate] = useState("הכל");
+  const [dateFrom, setDateFrom]   = useState("");
+  const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [docs, setDocs]           = useState<CaseDoc[]>(CASE_DOCS);
-  const [expand, setExpand]       = useState<Record<string, number>>({});
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [pinnedId, setPinnedId]   = useState<string | null>(null);
   const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: true, week: true, month: false, older: false });
   const [openTypes, setOpenTypes] = useState<Record<string, boolean>>({});
 
@@ -378,9 +390,6 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
   function toggleDoc(id: string) {
     setDocs((p) => p.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)));
-  }
-  function setLevel(id: string, lvl: number) {
-    setExpand((p) => ({ ...p, [id]: lvl }));
   }
   function toggleTypeAll(type: string, next: boolean) {
     setDocs((p) => p.map((d) => (d.type === type ? { ...d, checked: next } : d)));
@@ -390,7 +399,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const filtered = docs.filter((d) =>
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
-    (activeDate === "הכל" || d.bucket === DATE_TO_BUCKET[activeDate]) &&
+    (!dateFrom || d.iso >= dateFrom) &&
+    (!dateTo || d.iso <= dateTo) &&
     (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()))
   );
 
@@ -404,11 +414,11 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכי התיק</span>
           <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
-            {([["chrono", "כרונולוגי"], ["type", "לפי סוג"]] as const).map(([key, label]) => (
+            {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
                 key={key}
                 onClick={() => setGrouping(key)}
-                className="px-2.5 h-7 rounded text-[12px] transition-colors"
+                className="flex items-center gap-1 px-2.5 h-7 rounded text-[12px] transition-colors"
                 style={{
                   backgroundColor: grouping === key ? "white" : "transparent",
                   color: grouping === key ? c.primary : c.textGray,
@@ -417,6 +427,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   fontFamily: "Noto Sans Hebrew, sans-serif",
                 }}
               >
+                <Ico size={13} />
                 {label}
               </button>
             ))}
@@ -439,7 +450,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <FilterDropdown label="סוג מסמך" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
           <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
-          <FilterDropdown label="תאריך" value={activeDate} options={DATE_OPTIONS} onChange={setActiveDate} />
+          <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         </div>
       </div>
 
@@ -467,7 +478,14 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
               </button>
               {open && bucketDocs.map((doc) => (
-                <DocRow key={doc.id} doc={doc} level={expand[doc.id] ?? 0} onToggleCheck={() => toggleDoc(doc.id)} onSetLevel={(lvl) => setLevel(doc.id, lvl)} />
+                <DocRow
+                  key={doc.id} doc={doc}
+                  expanded={hoveredId === doc.id || pinnedId === doc.id}
+                  onToggleCheck={() => toggleDoc(doc.id)}
+                  onHover={() => setHoveredId(doc.id)}
+                  onLeave={() => setHoveredId(null)}
+                  onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
+                />
               ))}
             </div>
           );
@@ -492,7 +510,14 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               {open && typeDocs.map((doc) => (
-                <DocRow key={doc.id} doc={doc} level={expand[doc.id] ?? 0} onToggleCheck={() => toggleDoc(doc.id)} onSetLevel={(lvl) => setLevel(doc.id, lvl)} />
+                <DocRow
+                  key={doc.id} doc={doc}
+                  expanded={hoveredId === doc.id || pinnedId === doc.id}
+                  onToggleCheck={() => toggleDoc(doc.id)}
+                  onHover={() => setHoveredId(doc.id)}
+                  onLeave={() => setHoveredId(null)}
+                  onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
+                />
               ))}
             </div>
           );
