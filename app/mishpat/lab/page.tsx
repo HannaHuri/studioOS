@@ -331,24 +331,24 @@ function DocRow({
           </span>
         </button>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>{doc.words}</span>
           <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
           </button>
+          <span className="rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>{doc.words}</span>
         </div>
       </div>
 
-      {/* Meta: submitter chip (right) · date (left) */}
-      <div className="flex items-center justify-between px-3 pt-1.5 pb-2.5">
-        <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+      {/* Meta: date (under checkbox, right) · submitter chip */}
+      <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
         <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+        <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
       </div>
 
-      {/* Expanded (hover / pinned): type · summary · related */}
+      {/* Expanded (hover / pinned): summary · type · related */}
       {expanded && (
         <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
-          <span className="self-start rounded px-1.5 py-px text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
           <p className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+          <span className="self-start rounded px-1.5 py-px text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
           {doc.related.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
@@ -409,7 +409,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
       {/* Header */}
-      <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5 border-b" style={{ borderColor: c.border }} dir="rtl">
+      <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + grouping toggle */}
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכי התיק</span>
@@ -473,9 +473,9 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 className="flex items-center gap-1.5 text-right"
                 onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
               >
-                <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "none" : "rotate(-90deg)" }} />
-                <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
+                <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
                 <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
               </button>
               {open && bucketDocs.map((doc) => (
                 <DocRow
@@ -504,9 +504,9 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   className="flex items-center gap-1.5 flex-1 text-right"
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
                 >
-                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "none" : "rotate(-90deg)" }} />
-                  <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                  <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                   <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
               {open && typeDocs.map((doc) => (
@@ -1208,7 +1208,7 @@ export default function MishpatPage() {
           <button
             onClick={() => setIsPanelOpen((v) => !v)}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "88px", left: "-12px" }}
+            style={{ border: `1px solid ${c.border}`, top: "58px", left: "-12px" }}
             title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
           >
             {isPanelOpen
