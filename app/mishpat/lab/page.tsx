@@ -473,6 +473,7 @@ function DocRow({
             title={doc.missing ? "המסמך ללא תוכן" : undefined}
           >{doc.words}</span>
         </div>
+        <ChevronDown size={15} className="flex-shrink-0" style={{ color: c.iconGray, transition: "transform 0.15s", transform: expanded ? "rotate(180deg)" : "none" }} />
       </div>
 
       {/* Meta: submitter chip (right) · date */}
@@ -711,8 +712,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
                 >
                   <span className="flex items-center gap-1">
-                    <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
-                    <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                    <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
+                    <span className="text-[13px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
                     {!open && bucketDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                   </span>
                   <span className="flex items-center gap-2">
@@ -728,7 +729,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               {open && (
-                <div className="flex flex-col">
+                <div className="flex flex-col" style={{ marginInlineStart: "8px", borderInlineStart: "2px solid #eef1f6", paddingInlineStart: "6px" }}>
                   {bucketDocs.map((doc) => (
                     <DocRow
                       key={doc.id} doc={doc}
@@ -761,8 +762,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? false) }))}
                 >
                   <span className="flex items-center gap-1">
-                    <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                    <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                    <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                    <span className="text-[13px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                     {!open && typeDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                   </span>
                   <span className="flex items-center gap-2">
@@ -778,7 +779,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 </button>
               </div>
               {open && (
-                <div className="flex flex-col">
+                <div className="flex flex-col" style={{ marginInlineStart: "8px", borderInlineStart: "2px solid #eef1f6", paddingInlineStart: "6px" }}>
                   {typeDocs.map((doc) => (
                     <DocRow
                       key={doc.id} doc={doc}
