@@ -692,7 +692,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "#e9f1fc" }}>
+                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "#f5f9ff" }}>
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
