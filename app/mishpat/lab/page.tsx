@@ -131,19 +131,19 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
-    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "הנתבעת",
+    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת",
     date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
   },
   {
-    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "התובע",
+    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
     date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true,
   },
   {
-    id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "התובע",
+    id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "תובע",
     date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
     related: ["בקשה לדחיית מועד דיון"], checked: false,
@@ -155,7 +155,7 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["החלטה על מינוי מומחה"], checked: false,
   },
   {
-    id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "הנתבעת",
+    id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "נתבעת",
     date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבעת דוחה את כל טענות הרשלנות, טוענת להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
     related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false,
@@ -167,31 +167,31 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["פרוטוקול דיון מקדמי"], checked: false,
   },
   {
-    id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "התובע",
+    id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "תובע",
     date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר משה כהן, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
-    id: "d8", name: "חוות דעת אקטוארית", type: "תצהיר", submitter: "התובע",
+    id: "d8", name: "חוות דעת אקטוארית", type: "תצהיר", submitter: "תובע",
     date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
-    id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשה בתיק", submitter: "התובע",
+    id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשה בתיק", submitter: "תובע",
     date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "420",
     summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
-    id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "הנתבעת",
+    id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "נתבעת",
     date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "510",
     summary: "הנתבעת מבקשת לזמן עד נוסף שלא נכלל ברשימת העדים המקורית, לאור התפתחויות בתיק.",
     related: [], checked: false,
   },
   {
-    id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "הנתבעת",
+    id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "נתבעת",
     date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
     summary: "תצהיר עדה מטעם הנתבעת בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
     related: ["כתב הגנה מתוקן"], checked: false,
@@ -209,13 +209,13 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["פרוטוקול דיון מקדמי"], checked: false,
   },
   {
-    id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשה בתיק", submitter: "התובע",
+    id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשה בתיק", submitter: "תובע",
     date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
     summary: "התובע מבקש לחייב את הנתבעת בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים.",
     related: ["כתב תביעה"], checked: false,
   },
   {
-    id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשה בתיק", submitter: "הנתבעת",
+    id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשה בתיק", submitter: "נתבעת",
     date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
     summary: "הנתבעת מתנגדת חלקית לגילוי וטוענת לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
     related: ["בקשה לגילוי מסמכים"], checked: false,
@@ -227,13 +227,13 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["החלטה על מינוי מומחה"], checked: false,
   },
   {
-    id: "d17", name: "כתב תביעה שכנגד", type: "כתב תביעה", submitter: "הנתבעת",
+    id: "d17", name: "כתב תביעה שכנגד", type: "כתב תביעה", submitter: "נתבעת",
     date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבעת מגישה תביעה שכנגד בטענה להוצאות שנגרמו לה עקב הגשת התביעה בחוסר תום לב.",
     related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false,
   },
   {
-    id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתב הגנה", submitter: "התובע",
+    id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתב הגנה", submitter: "תובע",
     date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
     summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
     related: ["כתב תביעה שכנגד"], checked: false,
@@ -251,7 +251,7 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["פרוטוקול ישיבת קדם משפט"], checked: false,
   },
   {
-    id: "d21", name: "סיכומי התובע", type: "כתב תביעה", submitter: "התובע",
+    id: "d21", name: "סיכומי התובע", type: "כתב תביעה", submitter: "תובע",
     date: "18.04.26", iso: "2026-04-18", bucket: "older", words: "7.3K",
     summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבעת לנזקים שנגרמו.",
     related: [], checked: false,
@@ -269,7 +269,7 @@ const TYPE_OPTIONS = [
   "הכל",
   ...DOC_TYPE_TOTALS.filter((t) => t.type !== "הכל").map((t) => t.type).sort((a, b) => a.localeCompare(b, "he")),
 ];
-const SUBMITTER_OPTIONS = ["הכל", "התובע", "הנתבעת", "בית המשפט"];
+const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפט"];
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
@@ -306,23 +306,24 @@ function FilterDropdown({
             style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             {searchable && (
-              <div className="px-2 pt-1 pb-1.5">
+              <div className="px-3 pt-2 pb-2" style={{ borderBottom: "1px solid #eef1f4" }}>
                 <input
                   autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="הקלידו סוג..."
-                  className="w-full h-8 rounded text-[13px] outline-none px-2"
-                  style={{ border: `1px solid ${c.inputBorder}`, color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  className="w-full h-7 text-[13px] outline-none"
+                  style={{ border: "none", background: "transparent", color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 />
               </div>
             )}
-            <div className="max-h-[240px] overflow-y-auto">
+            <div className="max-h-[240px] overflow-y-auto docs-scroll" dir="ltr">
               {shown.map((opt) => {
                 const sel = opt === value;
                 return (
                   <button
                     key={opt}
+                    dir="rtl"
                     onClick={() => { onChange(opt); setOpen(false); setQ(""); }}
                     className="w-full flex items-center justify-between px-3 py-2 text-[13px] text-right"
                     style={{ backgroundColor: sel ? "#eff4ff" : "transparent", color: sel ? c.primary : c.text, fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
@@ -371,15 +372,15 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", right: 0, width: "172px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", right: 0, width: "190px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
-            <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
-              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="w-full box-border h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
             </label>
-            <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               עד תאריך
-              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="w-full box-border h-8 rounded px-2 text-[13px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
             </label>
             {active && (
               <button onClick={() => onChange("", "")} className="text-[12px] self-start" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>נקה טווח</button>
