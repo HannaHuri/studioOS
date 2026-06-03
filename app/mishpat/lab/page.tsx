@@ -704,7 +704,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const bucketWords = formatWords(bucketDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
           return (
             <div key={bucket} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#f5f9ff" }}>
                 <CheckboxBlue checked={allBucketOn} onToggle={() => toggleBucketAll(bucket, !allBucketOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
@@ -750,7 +750,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const catMissing = typeDocs.some((d) => d.missing);
           return (
             <div key={type} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#f5f9ff" }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
