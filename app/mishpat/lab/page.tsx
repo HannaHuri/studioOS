@@ -680,12 +680,12 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: c.textGray }}>
+                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {!caseOpen && caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       </span>
-                      <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
+                      <span className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
                   <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
