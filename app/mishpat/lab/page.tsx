@@ -635,11 +635,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
-          <div className="flex items-center gap-1 text-[13px]">
-            <button onClick={() => setAllGroups(true)} style={{ color: c.primary }} className="hover:underline">פתח הכל</button>
-            <span style={{ color: c.border }}>|</span>
-            <button onClick={() => setAllGroups(false)} style={{ color: c.primary }} className="hover:underline">כווץ הכל</button>
-          </div>
+          {openCaseId && (
+            <div className="flex items-center gap-1 text-[13px]">
+              <button onClick={() => setAllGroups(true)} style={{ color: c.primary }} className="hover:underline">פתח הכל</button>
+              <span style={{ color: c.border }}>|</span>
+              <button onClick={() => setAllGroups(false)} style={{ color: c.primary }} className="hover:underline">כווץ הכל</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -652,24 +654,37 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
           return (
-            <div key={cf.id} className="flex flex-col gap-2">
+            <div
+              key={cf.id}
+              className="flex flex-col rounded-lg overflow-hidden"
+              style={caseOpen ? { border: `1px solid ${c.border}` } : undefined}
+            >
               {/* Case header */}
-              <div className="flex items-center gap-2 rounded-md px-2.5 py-2" style={{ backgroundColor: "#dbe9fb", border: "1px solid #c2dbf7" }}>
-                <span onClick={(e) => e.stopPropagation()}>
+              <div
+                className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "" : "rounded-md"}`}
+                style={{
+                  backgroundColor: "#dbe9fb",
+                  border: caseOpen ? undefined : "1px solid #c2dbf7",
+                  borderBottom: caseOpen ? "1px solid #c2dbf7" : undefined,
+                }}
+              >
+                <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex items-center justify-between flex-1 text-right min-w-0" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0 }} />
-                    <span className="text-[13px] font-medium truncate" style={{ color: c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.number} · {cf.parties}</span>
-                    {!caseOpen && caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                  <span className="flex items-start gap-1.5 min-w-0">
+                    <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
+                    <span className="text-[13px] font-medium leading-snug" style={{ color: c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                      {cf.number} · {cf.parties}
+                      {!caseOpen && caseUsed && <span className="inline-block align-middle mr-1.5 size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                    </span>
                   </span>
-                  <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                  <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 pb-1">
+                <div className="flex flex-col gap-3 p-2.5">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
