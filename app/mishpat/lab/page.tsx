@@ -490,6 +490,9 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   function toggleTypeAll(type: string, next: boolean) {
     setDocs((p) => p.map((d) => (d.type === type ? { ...d, checked: next } : d)));
   }
+  function toggleAllDocs(next: boolean) {
+    setDocs((p) => p.map((d) => ({ ...d, checked: next })));
+  }
 
   // Filtering
   const filtered = docs.filter((d) =>
@@ -501,6 +504,12 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   );
 
   const typesInData = Array.from(new Set(filtered.map((d) => d.type)));
+  const allChecked = docs.length > 0 && docs.every((d) => d.checked);
+
+  function setAllGroups(open: boolean) {
+    if (grouping === "chrono") setOpenBuckets({ today: open, week: open, month: open, older: open });
+    else setOpenTypes(Object.fromEntries(typesInData.map((t) => [t, open])));
+  }
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
@@ -508,7 +517,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + grouping toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-[16px] font-semibold" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
+          <span className="text-[16px] font-semibold" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
           <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
@@ -542,11 +551,22 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           />
         </div>
 
-        {/* Row 3: filters */}
+        {/* Row 3: select-all + filters */}
         <div className="flex items-center gap-1.5 flex-wrap">
+          <button className="flex items-center gap-1.5 h-8 px-1" onClick={() => toggleAllDocs(!allChecked)}>
+            <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
+            <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>כל המסמכים</span>
+          </button>
           <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
           <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
           <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
+        </div>
+
+        {/* Row 4: expand / collapse all (left) */}
+        <div className="flex justify-end items-center gap-2 text-[12px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <button onClick={() => setAllGroups(true)} style={{ color: c.primary }} className="hover:underline">פתח הכל</button>
+          <span style={{ color: c.border }}>|</span>
+          <button onClick={() => setAllGroups(false)} style={{ color: c.primary }} className="hover:underline">כווץ הכל</button>
         </div>
       </div>
 
