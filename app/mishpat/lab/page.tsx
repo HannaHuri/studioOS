@@ -564,7 +564,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
-          <div className="flex items-center gap-1 text-[14px]">
+          <div className="flex items-center gap-1 text-[13px]">
             <button onClick={() => setAllGroups(true)} style={{ color: c.primary }} className="hover:underline">פתח הכל</button>
             <span style={{ color: c.border }}>|</span>
             <button onClick={() => setAllGroups(false)} style={{ color: c.primary }} className="hover:underline">כווץ הכל</button>
