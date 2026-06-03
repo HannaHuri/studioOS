@@ -224,7 +224,7 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["בקשה לגילוי מסמכים"], checked: false,
   },
   {
-    id: "d16", name: "חוות דעת מומחה מטעם בית המשפט", type: "תצהיר", submitter: "בית המשפט",
+    id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "תצהיר", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
     related: ["החלטה על מינוי מומחה"], checked: false,
@@ -451,7 +451,7 @@ function DocRow({
       onClick={onTogglePin}
     >
       {/* Top: checkbox · name (opens doc) · count · open */}
-      <div className="flex items-center gap-2 px-3 pt-2.5">
+      <div className="flex items-start gap-2 px-3 pt-2.5">
         <span onClick={(e) => e.stopPropagation()}>
           <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         </span>
@@ -461,7 +461,7 @@ function DocRow({
           onClick={(e) => { e.stopPropagation(); /* open document */ }}
         >
           <span
-            className="block text-[14px] font-medium truncate hover:underline"
+            className="text-[14px] font-medium hover:underline line-clamp-2"
             style={{ color: lit ? c.primary : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
@@ -473,7 +473,7 @@ function DocRow({
           </button>
           <span
             className="rounded-full px-2 py-px text-[12px]"
-            style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : c.hoverBg, fontFamily: "Figtree, sans-serif" }}
+            style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : "white", fontFamily: "Figtree, sans-serif" }}
             title={doc.missing ? "המסמך ללא תוכן" : undefined}
           >{doc.words}</span>
         </div>
@@ -725,7 +725,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                       className="rounded-full px-2 py-px text-[12px]"
                       style={bucketMissing
                         ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
-                        : { color: c.text, backgroundColor: "white", fontFamily: "Figtree, sans-serif" }}
+                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
                       title={bucketMissing ? "כולל מסמך ללא תוכן" : undefined}
                     >{bucketWords}</span>
                     <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
@@ -775,7 +775,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                       className="rounded-full px-2 py-px text-[12px]"
                       style={catMissing
                         ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
-                        : { color: c.text, backgroundColor: "white", fontFamily: "Figtree, sans-serif" }}
+                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
                       title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : undefined}
                     >{CAT_WORDS[type] ?? "—"}</span>
                     <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
