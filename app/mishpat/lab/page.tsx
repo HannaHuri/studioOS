@@ -551,7 +551,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
       {/* List — outer ltr puts scrollbar on the right; inner rtl keeps content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-       <div className="px-3 py-3 flex flex-col gap-3" dir="rtl">
+       <div className="px-3 pt-1 pb-3 flex flex-col gap-3" dir="rtl">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
@@ -564,13 +564,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           if (bucketDocs.length === 0) return null;
           const open = openBuckets[bucket];
           return (
-            <div key={bucket} className="flex flex-col gap-1">
-              <div className="rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+            <div key={bucket} className="flex flex-col gap-2">
+              <div className="rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <button
                   className="flex items-center justify-between w-full"
                   onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
                 >
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1">
                     <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
                   </span>
@@ -598,14 +598,14 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const open = openTypes[type] ?? true;
           const allOn = typeDocs.every((d) => d.checked);
           return (
-            <div key={type} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+            <div key={type} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
                 >
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1">
                     <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </span>
