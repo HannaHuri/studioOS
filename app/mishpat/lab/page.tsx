@@ -567,11 +567,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <div key={bucket} className="flex flex-col gap-2">
               <div className="rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <button
-                  className="flex items-center gap-1.5 text-right w-full"
+                  className="flex items-center justify-between w-full"
                   onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
                 >
-                  <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
-                  <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
+                    <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                  </span>
                   <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
@@ -600,11 +602,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
-                  className="flex items-center gap-1.5 flex-1 text-right"
+                  className="flex items-center justify-between flex-1"
                   onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? true) }))}
                 >
-                  <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                  <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-semibold" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                    <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                  </span>
                   <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
