@@ -114,6 +114,8 @@ interface CaseDoc {
   summary: string;       // תקציר
   related: string[];     // related document names
   checked: boolean;      // selected for chat
+  used?: boolean;        // referenced by the chat's answer
+  missing?: boolean;     // document has no text / not processed (0 words)
 }
 
 // Type filter chips with aggregate word counts (real case data)
@@ -140,7 +142,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
     date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
-    related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true,
+    related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true, used: true,
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "תובע",
@@ -152,7 +154,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
     date: "18.05.26", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
-    related: ["החלטה על מינוי מומחה"], checked: false,
+    related: ["החלטה על מינוי מומחה"], checked: false, used: true,
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "נתבעת",
@@ -186,9 +188,9 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "נתבעת",
-    date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "510",
-    summary: "הנתבעת מבקשת לזמן עד נוסף שלא נכלל ברשימת העדים המקורית, לאור התפתחויות בתיק.",
-    related: [], checked: false,
+    date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "0",
+    summary: "המסמך טרם עובד — אין תקציר זמין.",
+    related: [], checked: false, missing: true,
   },
   {
     id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "נתבעת",
@@ -269,6 +271,8 @@ const TYPE_OPTIONS = [
   "הכל",
   ...DOC_TYPE_TOTALS.filter((t) => t.type !== "הכל").map((t) => t.type).sort((a, b) => a.localeCompare(b, "he")),
 ];
+// Aggregate word count per type (for the "by type" category tags)
+const CAT_WORDS: Record<string, string> = Object.fromEntries(DOC_TYPE_TOTALS.map((t) => [t.type, t.words]));
 const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפט"];
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
@@ -414,6 +418,7 @@ function DocRow({
         <span onClick={(e) => e.stopPropagation()}>
           <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         </span>
+        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
         <button
           className="flex-1 min-w-0 text-right"
           title="פתיחת המסמך"
@@ -430,7 +435,11 @@ function DocRow({
           <button title="פתיחה בחלון חדש" onClick={(e) => e.stopPropagation()} className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
           </button>
-          <span className="rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>{doc.words}</span>
+          <span
+            className="rounded-full px-2 py-px text-[12px]"
+            style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : c.hoverBg, fontFamily: "Figtree, sans-serif" }}
+            title={doc.missing ? "המסמך ללא תוכן" : undefined}
+          >{doc.words}</span>
         </div>
       </div>
 
@@ -476,6 +485,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
+  const [isAuto, setIsAuto]       = useState(true);
   const [docs, setDocs]           = useState<CaseDoc[]>(CASE_DOCS);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId]   = useState<string | null>(null);
@@ -515,9 +525,24 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
     <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
-        {/* Row 1: title + grouping toggle */}
+        {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
         <div className="flex items-center justify-between">
-          <span className="text-[16px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[16px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
+            <button
+              onClick={() => setIsAuto((v) => !v)}
+              className="h-6 px-2.5 rounded-full text-[12px] leading-none transition-colors"
+              style={{
+                backgroundColor: isAuto ? c.primary : "transparent",
+                color: isAuto ? "white" : c.iconGray,
+                border: `1.5px solid ${isAuto ? c.primary : c.border}`,
+                fontFamily: "Noto Sans Hebrew, sans-serif",
+              }}
+              title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
+            >
+              {isAuto ? "אוטו׳" : "ידני"}
+            </button>
+          </div>
           <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
@@ -596,6 +621,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   <span className="flex items-center gap-1">
                     <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                    {!open && bucketDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                   </span>
                   <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
@@ -620,6 +646,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const typeDocs = filtered.filter((d) => d.type === type);
           const open = openTypes[type] ?? true;
           const allOn = typeDocs.every((d) => d.checked);
+          const catMissing = typeDocs.some((d) => d.missing);
           return (
             <div key={type} className="flex flex-col gap-2">
               <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
@@ -631,8 +658,18 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   <span className="flex items-center gap-1">
                     <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                    {!open && typeDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                   </span>
-                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="rounded-full px-2 py-px text-[12px]"
+                      style={catMissing
+                        ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
+                        : { color: c.text, backgroundColor: "white", fontFamily: "Figtree, sans-serif" }}
+                      title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : undefined}
+                    >{CAT_WORDS[type] ?? "—"}</span>
+                    <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                  </span>
                 </button>
               </div>
               {open && typeDocs.map((doc) => (
