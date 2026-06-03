@@ -401,53 +401,60 @@ function DocRow({
   const lit = expanded || highlighted;
   return (
     <div
-      className="rounded-lg border transition-colors"
+      className="rounded-lg border transition-colors cursor-pointer"
       style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : highlighted ? c.hoverBg : "white" }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
+      onClick={onTogglePin}
     >
-      {/* Top: checkbox · name (link) · count · open */}
+      {/* Top: checkbox · name (opens doc) · count · open */}
       <div className="flex items-center gap-2 px-3 pt-2.5">
-        <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
-        <button className="flex-1 min-w-0 text-right" onClick={onTogglePin}>
+        <span onClick={(e) => e.stopPropagation()}>
+          <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
+        </span>
+        <button
+          className="flex-1 min-w-0 text-right"
+          title="פתיחת המסמך"
+          onClick={(e) => { e.stopPropagation(); /* open document */ }}
+        >
           <span
-            className="block text-[14px] font-medium truncate"
-            style={{ color: lit ? c.primary : c.text, textDecoration: lit ? "underline" : "none", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            className="block text-[14px] font-medium truncate hover:underline"
+            style={{ color: lit ? c.primary : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
           </span>
         </button>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
+          <button title="פתיחה בחלון חדש" onClick={(e) => e.stopPropagation()} className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
           </button>
           <span className="rounded-full px-2 py-px text-[12px]" style={{ color: c.text, backgroundColor: c.hoverBg, fontFamily: "Figtree, sans-serif" }}>{doc.words}</span>
         </div>
       </div>
 
-      {/* Meta: date (under checkbox, right) · submitter chip */}
+      {/* Meta: submitter chip (right) · date */}
       <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
         <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
         <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       </div>
 
-      {/* Expanded (hover / pinned): summary · type · related */}
+      {/* Expanded: summary · related */}
       {expanded && (
-        <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
+        <div className="px-3 pb-3 pt-2 flex flex-col gap-2.5 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
           <p className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
-          <span className="self-start rounded px-1.5 py-px text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
           {doc.related.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
+              <span className="text-[14px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
               <div className="flex flex-wrap gap-1.5">
                 {doc.related.map((r) => (
                   <span
                     key={r}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-[12px] cursor-pointer hover:opacity-80"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[13px] cursor-pointer hover:opacity-80"
                     style={{ backgroundColor: "white", color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                   >
-                    <FileText size={12} style={{ color: c.iconGray }} />
+                    <FileText size={13} style={{ color: c.iconGray }} />
                     {r}
                   </span>
                 ))}
