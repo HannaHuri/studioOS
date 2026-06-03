@@ -393,15 +393,16 @@ function DateRangeFilter({
 
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
 function DocRow({
-  doc, expanded, onToggleCheck, onHover, onLeave, onTogglePin,
+  doc, expanded, highlighted, onToggleCheck, onHover, onLeave, onTogglePin,
 }: {
-  doc: CaseDoc; expanded: boolean;
+  doc: CaseDoc; expanded: boolean; highlighted: boolean;
   onToggleCheck: () => void; onHover: () => void; onLeave: () => void; onTogglePin: () => void;
 }) {
+  const lit = expanded || highlighted;
   return (
     <div
       className="rounded-lg border transition-colors"
-      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : "white" }}
+      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : highlighted ? c.hoverBg : "white" }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -412,7 +413,7 @@ function DocRow({
         <button className="flex-1 min-w-0 text-right" onClick={onTogglePin}>
           <span
             className="block text-[14px] font-medium truncate"
-            style={{ color: expanded ? c.primary : c.text, textDecoration: expanded ? "underline" : "none", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            style={{ color: lit ? c.primary : c.text, textDecoration: lit ? "underline" : "none", fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
           </span>
@@ -434,7 +435,7 @@ function DocRow({
       {/* Expanded (hover / pinned): summary · type · related */}
       {expanded && (
         <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
-          <p className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+          <p className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
           <span className="self-start rounded px-1.5 py-px text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
           {doc.related.length > 0 && (
             <div className="flex flex-col gap-1.5">
@@ -557,7 +558,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const open = openBuckets[bucket];
           return (
             <div key={bucket} className="flex flex-col gap-2">
-              <div className="pb-1.5" style={{ borderBottom: `1.5px solid ${c.primaryLight}` }}>
+              <div className="rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <button
                   className="flex items-center gap-1.5 text-right w-full"
                   onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
@@ -570,7 +571,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               {open && bucketDocs.map((doc) => (
                 <DocRow
                   key={doc.id} doc={doc}
-                  expanded={hoveredId === doc.id || pinnedId === doc.id}
+                  expanded={pinnedId === doc.id}
+                  highlighted={hoveredId === doc.id}
                   onToggleCheck={() => toggleDoc(doc.id)}
                   onHover={() => setHoveredId(doc.id)}
                   onLeave={() => setHoveredId(null)}
@@ -588,7 +590,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const allOn = typeDocs.every((d) => d.checked);
           return (
             <div key={type} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 pb-1.5" style={{ borderBottom: `1.5px solid ${c.primaryLight}` }}>
+              <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center gap-1.5 flex-1 text-right"
@@ -602,7 +604,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               {open && typeDocs.map((doc) => (
                 <DocRow
                   key={doc.id} doc={doc}
-                  expanded={hoveredId === doc.id || pinnedId === doc.id}
+                  expanded={pinnedId === doc.id}
+                  highlighted={hoveredId === doc.id}
                   onToggleCheck={() => toggleDoc(doc.id)}
                   onHover={() => setHoveredId(doc.id)}
                   onLeave={() => setHoveredId(null)}
@@ -1299,7 +1302,7 @@ export default function MishpatPage() {
           <button
             onClick={() => setIsPanelOpen((v) => !v)}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "42px", left: "-12px" }}
+            style={{ border: `1px solid ${c.border}`, top: "34px", left: "-12px" }}
             title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
           >
             {isPanelOpen
