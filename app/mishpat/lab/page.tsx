@@ -545,7 +545,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="חיפוש במסמכי התיק..."
+            placeholder="חיפוש שם מסמך או תקציר"
             className="w-full h-9 rounded-md text-[13px] outline-none"
             style={{ border: `1px solid ${c.inputBorder}`, color: c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
           />
