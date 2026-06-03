@@ -649,12 +649,12 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           return (
             <div
               key={cf.id}
-              className="flex flex-col rounded-lg overflow-hidden"
-              style={caseOpen ? { boxShadow: "0 0 0 1px #c2d8f2" } : undefined}
+              className="flex flex-col rounded-lg"
+              style={caseOpen ? { border: "1px solid #c2d8f2" } : undefined}
             >
               {/* Case header */}
               <div
-                className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "" : "rounded-md"}`}
+                className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "rounded-t-lg" : "rounded-md"}`}
                 style={{
                   backgroundColor: "white",
                   border: caseOpen ? undefined : "1px solid #c2d8f2",
@@ -681,7 +681,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "white" }}>
+                <div className="flex flex-col gap-3 p-2.5 rounded-b-lg" style={{ backgroundColor: "white" }}>
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
