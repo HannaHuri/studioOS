@@ -441,9 +441,9 @@ function DocRow({
     <div
       className="rounded-lg border transition-all cursor-pointer"
       style={{
-        borderColor: expanded ? c.primary : "#e6e9ef",
-        backgroundColor: "white",
-        boxShadow: expanded ? "0 2px 8px rgba(0,115,234,0.10)" : highlighted ? "0 1px 4px rgba(0,0,0,0.08)" : "0 1px 2px rgba(0,0,0,0.04)",
+        borderColor: expanded ? c.primary : "#dce8f6",
+        backgroundColor: highlighted ? "#eaf2fc" : "#f5f9ff",
+        boxShadow: expanded ? "0 2px 8px rgba(0,115,234,0.10)" : "none",
       }}
       dir="rtl"
       onMouseEnter={onHover}
@@ -692,7 +692,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "#f5f9ff" }}>
+                <div className="flex flex-col gap-3 p-2.5" style={{ backgroundColor: "white" }}>
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
