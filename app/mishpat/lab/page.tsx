@@ -486,7 +486,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [isAuto, setIsAuto]       = useState(true);
-  const [docs, setDocs]           = useState<CaseDoc[]>(CASE_DOCS);
+  // Auto mode is the default → all documents start selected
+  const [docs, setDocs]           = useState<CaseDoc[]>(() => CASE_DOCS.map((d) => ({ ...d, checked: true })));
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId]   = useState<string | null>(null);
   const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: true, week: true, month: false, older: false });
@@ -530,9 +531,10 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           <div className="flex items-center gap-2">
             <span className="text-[16px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
             <button
-              onClick={() => setIsAuto((v) => !v)}
-              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors"
+              onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
+              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center"
               style={{
+                minWidth: "54px",
                 backgroundColor: isAuto ? c.primary : "transparent",
                 color: isAuto ? "white" : c.iconGray,
                 border: `1.5px solid ${isAuto ? c.primary : c.border}`,
