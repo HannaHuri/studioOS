@@ -439,8 +439,8 @@ function DocRow({
   const lit = expanded || highlighted;
   return (
     <div
-      className="relative rounded-lg border transition-colors cursor-pointer"
-      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: highlighted ? c.hoverBg : "white" }}
+      className="transition-colors cursor-pointer"
+      style={{ borderBottom: "1px solid #f0f2f6", backgroundColor: highlighted ? c.hoverBg : (expanded ? "#f6f7f9" : "white") }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -703,8 +703,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const bucketMissing = bucketDocs.some((d) => d.missing);
           const bucketWords = formatWords(bucketDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
           return (
-            <div key={bucket} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#f5f9ff" }}>
+            <div key={bucket} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 px-1 py-1">
                 <CheckboxBlue checked={allBucketOn} onToggle={() => toggleBucketAll(bucket, !allBucketOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
@@ -727,17 +727,21 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   </span>
                 </button>
               </div>
-              {open && bucketDocs.map((doc) => (
-                <DocRow
-                  key={doc.id} doc={doc}
-                  expanded={pinnedId === doc.id}
-                  highlighted={hoveredId === doc.id}
-                  onToggleCheck={() => toggleDoc(doc.id)}
-                  onHover={() => setHoveredId(doc.id)}
-                  onLeave={() => setHoveredId(null)}
-                  onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
-                />
-              ))}
+              {open && (
+                <div className="flex flex-col">
+                  {bucketDocs.map((doc) => (
+                    <DocRow
+                      key={doc.id} doc={doc}
+                      expanded={pinnedId === doc.id}
+                      highlighted={hoveredId === doc.id}
+                      onToggleCheck={() => toggleDoc(doc.id)}
+                      onHover={() => setHoveredId(doc.id)}
+                      onLeave={() => setHoveredId(null)}
+                      onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -749,8 +753,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const allOn = typeDocs.every((d) => d.checked);
           const catMissing = typeDocs.some((d) => d.missing);
           return (
-            <div key={type} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#f5f9ff" }}>
+            <div key={type} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 px-1 py-1">
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
@@ -773,17 +777,21 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                   </span>
                 </button>
               </div>
-              {open && typeDocs.map((doc) => (
-                <DocRow
-                  key={doc.id} doc={doc}
-                  expanded={pinnedId === doc.id}
-                  highlighted={hoveredId === doc.id}
-                  onToggleCheck={() => toggleDoc(doc.id)}
-                  onHover={() => setHoveredId(doc.id)}
-                  onLeave={() => setHoveredId(null)}
-                  onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
-                />
-              ))}
+              {open && (
+                <div className="flex flex-col">
+                  {typeDocs.map((doc) => (
+                    <DocRow
+                      key={doc.id} doc={doc}
+                      expanded={pinnedId === doc.id}
+                      highlighted={hoveredId === doc.id}
+                      onToggleCheck={() => toggleDoc(doc.id)}
+                      onHover={() => setHoveredId(doc.id)}
+                      onLeave={() => setHoveredId(null)}
+                      onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
