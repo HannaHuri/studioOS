@@ -650,15 +650,15 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <div
               key={cf.id}
               className="flex flex-col rounded-lg overflow-hidden"
-              style={caseOpen ? { border: "1px solid #edf0f5" } : undefined}
+              style={caseOpen ? { border: "1px solid #c2d8f2" } : undefined}
             >
               {/* Case header */}
               <div
                 className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "" : "rounded-md"}`}
                 style={{
-                  backgroundColor: caseOpen ? "white" : "#f5f9ff",
-                  border: caseOpen ? undefined : "1px solid #e2ebf6",
-                  borderBottom: caseOpen ? "1px solid #edf0f5" : undefined,
+                  backgroundColor: "white",
+                  border: caseOpen ? undefined : "1px solid #c2d8f2",
+                  borderBottom: caseOpen ? "1px solid #eef2f7" : undefined,
                 }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
