@@ -371,7 +371,7 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", left: 0, width: "176px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", right: 0, width: "172px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             <label className="flex flex-col gap-1 text-[12px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
@@ -401,7 +401,7 @@ function DocRow({
   return (
     <div
       className="rounded-lg border transition-colors"
-      style={{ borderColor: expanded ? c.primary : c.inputBorder, backgroundColor: expanded ? "#f7faff" : "white" }}
+      style={{ borderColor: expanded ? c.primary : "#edf0f5", backgroundColor: expanded ? "#f7faff" : "white" }}
       dir="rtl"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -557,14 +557,16 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const open = openBuckets[bucket];
           return (
             <div key={bucket} className="flex flex-col gap-2">
-              <button
-                className="flex items-center gap-1.5 text-right"
-                onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
-              >
-                <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
-                <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
-                <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
-              </button>
+              <div className="pb-1.5" style={{ borderBottom: `1.5px solid ${c.primaryLight}` }}>
+                <button
+                  className="flex items-center gap-1.5 text-right w-full"
+                  onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
+                >
+                  <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
+                  <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
+                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                </button>
+              </div>
               {open && bucketDocs.map((doc) => (
                 <DocRow
                   key={doc.id} doc={doc}
@@ -586,7 +588,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const allOn = typeDocs.every((d) => d.checked);
           return (
             <div key={type} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pb-1.5" style={{ borderBottom: `1.5px solid ${c.primaryLight}` }}>
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center gap-1.5 flex-1 text-right"
@@ -1297,7 +1299,7 @@ export default function MishpatPage() {
           <button
             onClick={() => setIsPanelOpen((v) => !v)}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "58px", left: "-12px" }}
+            style={{ border: `1px solid ${c.border}`, top: "42px", left: "-12px" }}
             title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
           >
             {isPanelOpen
