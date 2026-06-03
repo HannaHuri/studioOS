@@ -273,6 +273,20 @@ const TYPE_OPTIONS = [
 ];
 // Aggregate word count per type (for the "by type" category tags)
 const CAT_WORDS: Record<string, string> = Object.fromEntries(DOC_TYPE_TOTALS.map((t) => [t.type, t.words]));
+
+// Word-count parsing/formatting (chat budget is capped at 60K words per question)
+function parseWords(s: string): number {
+  const t = s.trim();
+  if (t.toUpperCase().endsWith("K")) return Math.round(parseFloat(t) * 1000);
+  return parseInt(t, 10) || 0;
+}
+function formatWords(n: number): string {
+  if (n >= 1000) {
+    const k = n / 1000;
+    return (Number.isInteger(k) ? k.toString() : k.toFixed(1)) + "K";
+  }
+  return String(n);
+}
 const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפט"];
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
@@ -504,6 +518,9 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   function toggleAllDocs(next: boolean) {
     setDocs((p) => p.map((d) => ({ ...d, checked: next })));
   }
+  function toggleBucketAll(bucket: DocBucket, next: boolean) {
+    setDocs((p) => p.map((d) => (d.bucket === bucket ? { ...d, checked: next } : d)));
+  }
 
   // Filtering
   const filtered = docs.filter((d) =>
@@ -613,11 +630,15 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           const bucketDocs = filtered.filter((d) => d.bucket === bucket);
           if (bucketDocs.length === 0) return null;
           const open = openBuckets[bucket];
+          const allBucketOn = bucketDocs.every((d) => d.checked);
+          const bucketMissing = bucketDocs.some((d) => d.missing);
+          const bucketWords = formatWords(bucketDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
           return (
             <div key={bucket} className="flex flex-col gap-2">
-              <div className="rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+              <div className="flex items-center gap-2 rounded-sm px-2.5 py-1.5" style={{ backgroundColor: "#e6f0fd" }}>
+                <CheckboxBlue checked={allBucketOn} onToggle={() => toggleBucketAll(bucket, !allBucketOn)} />
                 <button
-                  className="flex items-center justify-between w-full"
+                  className="flex items-center justify-between flex-1"
                   onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
                 >
                   <span className="flex items-center gap-1">
@@ -625,7 +646,16 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                     <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
                     {!open && bucketDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                   </span>
-                  <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="rounded-full px-2 py-px text-[12px]"
+                      style={bucketMissing
+                        ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
+                        : { color: c.text, backgroundColor: "white", fontFamily: "Figtree, sans-serif" }}
+                      title={bucketMissing ? "כולל מסמך ללא תוכן" : undefined}
+                    >{bucketWords}</span>
+                    <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                  </span>
                 </button>
               </div>
               {open && bucketDocs.map((doc) => (
