@@ -532,8 +532,8 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId]   = useState<string | null>(null);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
-  const [openBuckets, setOpenBuckets] = useState<Record<DocBucket, boolean>>({ today: false, week: false, month: false, older: false });
-  const [openTypes, setOpenTypes] = useState<Record<string, boolean>>({});
+  const [openBucket, setOpenBucket] = useState<DocBucket | null>(null); // one category open at a time
+  const [openType, setOpenType]     = useState<string | null>(null);
 
   const bg = isDark ? dk.surface : "white";
 
@@ -565,11 +565,6 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
   const typesInData = Array.from(new Set(filtered.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
-
-  function setAllGroups(open: boolean) {
-    if (grouping === "chrono") setOpenBuckets({ today: open, week: open, month: open, older: open });
-    else setOpenTypes(Object.fromEntries(typesInData.map((t) => [t, open])));
-  }
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
@@ -634,19 +629,12 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         </div>
 
-        {/* Row 4: select-all (right) + expand/collapse all (left) */}
-        <div className="flex items-center justify-between" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        {/* Row 4: select-all */}
+        <div className="flex items-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
           <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
-          {openCaseId && (
-            <div className="flex items-center gap-1 text-[13px]">
-              <button onClick={() => setAllGroups(true)} style={{ color: c.primary }} className="hover:underline">פתח הכל</button>
-              <span style={{ color: c.border }}>|</span>
-              <button onClick={() => setAllGroups(false)} style={{ color: c.primary }} className="hover:underline">כווץ הכל</button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -676,7 +664,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => { setOpenCaseId(caseOpen ? null : cf.id); setOpenBucket(null); setOpenType(null); }}>
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
@@ -704,7 +692,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         {grouping === "chrono" && filtered.length > 0 && BUCKET_ORDER.map((bucket) => {
           const bucketDocs = filtered.filter((d) => d.bucket === bucket);
           if (bucketDocs.length === 0) return null;
-          const open = openBuckets[bucket];
+          const open = openBucket === bucket;
           const allBucketOn = bucketDocs.every((d) => d.checked);
           const bucketMissing = bucketDocs.some((d) => d.missing);
           const bucketWords = formatWords(bucketDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
@@ -714,7 +702,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <CheckboxBlue checked={allBucketOn} onToggle={() => toggleBucketAll(bucket, !allBucketOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
-                  onClick={() => setOpenBuckets((p) => ({ ...p, [bucket]: !p[bucket] }))}
+                  onClick={() => setOpenBucket(open ? null : bucket)}
                 >
                   <span className="flex items-center gap-1">
                     <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
@@ -755,7 +743,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         {/* Type grouping */}
         {grouping === "type" && filtered.length > 0 && typesInData.map((type) => {
           const typeDocs = filtered.filter((d) => d.type === type);
-          const open = openTypes[type] ?? false;
+          const open = openType === type;
           const allOn = typeDocs.every((d) => d.checked);
           const catMissing = typeDocs.some((d) => d.missing);
           return (
@@ -764,7 +752,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
                 <button
                   className="flex items-center justify-between flex-1"
-                  onClick={() => setOpenTypes((p) => ({ ...p, [type]: !(p[type] ?? false) }))}
+                  onClick={() => setOpenType(open ? null : type)}
                 >
                   <span className="flex items-center gap-1">
                     <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
