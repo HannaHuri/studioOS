@@ -6,7 +6,7 @@ import {
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
-  Split, Sun, ThumbsDown, ThumbsUp, X, Zap,
+  Split, Sun, ThumbsDown, ThumbsUp, Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -889,26 +889,32 @@ export default function MishpatPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [narrow, setNarrow] = useState(false);
   const [vw, setVw] = useState(1280);
 
-  // Track viewport width → choose push (wide) vs drawer (narrow) mode
+  // Responsive breakpoints — ALL behavior is PUSH (panels reflow the chat, never overlay it)
+  const BOTH_MIN = 1080; // >= : both side panels may be open together
+  const CHAT_ONLY = 760; // <  : panels auto-close, only the conversation remains
+  const canBoth = vw >= BOTH_MIN;
+  const chatOnly = vw < CHAT_ONLY;
+
   useEffect(() => {
-    const update = () => { setVw(window.innerWidth); setNarrow(window.innerWidth < 1024); };
+    const update = () => setVw(window.innerWidth);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Narrow mode: never keep both panels open at once
+  // Auto-adjust open panels to the available width
   useEffect(() => {
-    if (narrow && isPanelOpen && isHistoryOpen) setIsHistoryOpen(false);
-  }, [narrow, isPanelOpen, isHistoryOpen]);
+    if (vw < CHAT_ONLY) { setIsPanelOpen(false); setIsHistoryOpen(false); }
+    else if (vw < BOTH_MIN && isPanelOpen && isHistoryOpen) { setIsHistoryOpen(false); }
+  }, [vw, isPanelOpen, isHistoryOpen]);
 
+  // When both can't fit, opening one panel closes the other (exclusive)
   const toggleDocs = () =>
-    setIsPanelOpen((v) => { const nv = !v; if (nv && narrow) setIsHistoryOpen(false); return nv; });
+    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsHistoryOpen(false); return nv; });
   const toggleHistory = () =>
-    setIsHistoryOpen((v) => { const nv = !v; if (nv && narrow) setIsPanelOpen(false); return nv; });
+    setIsHistoryOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsPanelOpen(false); return nv; });
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -926,17 +932,18 @@ export default function MishpatPage() {
   const sidebarBg = isDark ? dk.surface : "white";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
+    <div className="fixed inset-0 z-50 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
-        {/* ── LEFT: Documents panel — column (pushes chat) in wide mode; 40px rail in narrow ── */}
+      <div className="absolute top-16 bottom-0 left-0 right-0 flex min-w-[640px]" dir="ltr">
+        {/* ── LEFT: Documents panel — always a column that PUSHES the chat (never overlay). Hidden when chat-only ── */}
+        {!chatOnly && (
         <div
           className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen && !narrow ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          style={{ width: isPanelOpen ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen && !narrow ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
           {/* Toggle button */}
@@ -951,45 +958,15 @@ export default function MishpatPage() {
               : <ChevronRight size={16} style={{ color: c.iconGray }} />}
           </button>
         </div>
+        )}
 
-        {/* ── CHAT: flex-1, never below min-width → input always fully usable. Hosts narrow-mode drawers ── */}
-        <div className="flex-1 flex relative min-w-[360px]">
+        {/* ── CHAT: flex-1, never below min-width → input is always fully usable, never covered ── */}
+        <div className="flex-1 flex min-w-[360px]">
           <ChatArea isDark={isDark} conversationKey={convKey} />
-
-          {/* Scrim — narrow mode, when any drawer is open (click to dismiss → back to typing) */}
-          {narrow && (isPanelOpen || isHistoryOpen) && (
-            <div
-              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); }}
-              className="absolute inset-0 z-30"
-              style={{ backgroundColor: "rgba(0,0,0,0.28)" }}
-            />
-          )}
-
-          {/* Documents drawer (narrow) — slides over from the left */}
-          {narrow && isPanelOpen && (
-            <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "2px 0 16px rgba(0,0,0,0.22)" }}>
-              <div className="absolute inset-0 overflow-y-auto">
-                <DocumentPanelOpen isDark={isDark} />
-              </div>
-              <button onClick={() => setIsPanelOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", right: "8px", border: `1px solid ${c.border}` }} title="סגור">
-                <X size={14} style={{ color: c.iconGray }} />
-              </button>
-            </div>
-          )}
-
-          {/* History drawer (narrow) — slides over from the right */}
-          {narrow && isHistoryOpen && (
-            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "-2px 0 16px rgba(0,0,0,0.22)" }}>
-              <HistoryPanel isDark={isDark} />
-              <button onClick={() => setIsHistoryOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
-                <X size={14} style={{ color: c.iconGray }} />
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* ── RIGHT: History panel — column (pushes chat) in wide mode only ── */}
-        {!narrow && isHistoryOpen && (
+        {/* ── RIGHT: History panel — always a column that PUSHES the chat. Hidden when chat-only ── */}
+        {!chatOnly && isHistoryOpen && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
             <HistoryPanel isDark={isDark} />
           </div>
@@ -1009,13 +986,14 @@ export default function MishpatPage() {
             {topIcons.map(({ Icon, label }) => {
               const isHist = label === "היסטוריה";
               const active = isHist && isHistoryOpen;
+              const disabled = isHist && chatOnly;
               return (
                 <button
                   key={label}
-                  onClick={isHist ? toggleHistory : undefined}
+                  onClick={isHist && !chatOnly ? toggleHistory : undefined}
                   className="size-8 flex items-center justify-center rounded transition-colors hover:bg-black/5"
-                  style={{ color: active ? "white" : iconCol, backgroundColor: active ? c.primary : undefined }}
-                  title={label}
+                  style={{ color: active ? "white" : iconCol, backgroundColor: active ? c.primary : undefined, opacity: disabled ? 0.35 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+                  title={disabled ? `${label} (המסך צר מדי)` : label}
                 >
                   <Icon size={19} />
                 </button>
@@ -1038,8 +1016,8 @@ export default function MishpatPage() {
           className="absolute bottom-3 left-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] shadow-md"
           style={{ transform: "translateX(-50%)", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${c.border}`, color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
         >
-          <span className="size-2 rounded-full" style={{ backgroundColor: narrow ? "#e0a000" : c.primary }} />
-          <span>{narrow ? "מגירה (Drawer)" : "דחיפה (Push)"}</span>
+          <span className="size-2 rounded-full" style={{ backgroundColor: chatOnly ? "#d83a52" : canBoth ? c.primary : "#e0a000" }} />
+          <span>{chatOnly ? "צ'אט בלבד" : canBoth ? "שני פאנלים אפשריים" : "פאנל אחד בכל פעם"}</span>
           <span style={{ color: c.textLight }}>·</span>
           <span style={{ color: c.textLight }}>{vw}px</span>
         </div>
