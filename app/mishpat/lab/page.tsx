@@ -450,7 +450,7 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
         <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
           <span
             className="text-[14px] font-medium hover:underline line-clamp-2"
-            style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
           </span>
@@ -474,14 +474,14 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
       )}
 
       {/* Summary (always visible) · related docs as links */}
-      <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }}>
+      <div className="px-3 pb-2.5 pt-1.5 flex flex-col gap-1.5 border-t" style={{ borderColor: c.inputBorder }}>
         <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
             {doc.related.map((r) => (
-              <button key={r} className="flex items-center gap-1 w-fit text-right hover:underline" title="פתיחת המסמך">
-                <FileText size={12} style={{ color: c.iconGray, flexShrink: 0 }} />
-                <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
+              <button key={r} className="flex items-center gap-1 text-right hover:underline" title="פתיחת המסמך">
+                <FileText size={12} style={{ color: c.primary, flexShrink: 0 }} />
+                <span className="text-[13px]" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
             ))}
           </div>
@@ -622,18 +622,11 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
           return (
-            <div
-              key={cf.id}
-              className="flex flex-col rounded-lg"
-              style={{ boxShadow: "0 0 0 1px #c2d8f2" }}
-            >
-              {/* Case header */}
+            <div key={cf.id} className="flex flex-col">
+              {/* Case header — plain, no frame (saves height) */}
               <div
-                className={`flex items-start gap-2 px-2.5 py-2.5 ${caseOpen ? "rounded-t-lg" : "rounded-lg"}`}
-                style={{
-                  backgroundColor: "white",
-                  borderBottom: caseOpen ? "1px solid #eef2f7" : undefined,
-                }}
+                className="flex items-start gap-2 px-1 py-2"
+                style={{ borderBottom: caseOpen ? "1px solid #eef2f7" : undefined }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
@@ -655,7 +648,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-2 p-2.5 rounded-b-lg" style={{ backgroundColor: "white" }}>
+                <div className="flex flex-col gap-1.5 pt-2">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
