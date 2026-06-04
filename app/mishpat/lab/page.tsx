@@ -430,15 +430,22 @@ function DateRangeFilter({
 }
 
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
-function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => void }) {
+function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onToggleCheck: () => void }) {
+  const meta = (
+    <>
+      <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+      <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+      {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
+    </>
+  );
   return (
     <div
       className="rounded-lg border"
       style={{ borderColor: "#dce8f6", backgroundColor: "#f5f9ff" }}
       dir="rtl"
     >
-      {/* Top: checkbox · name (opens doc) · external · count */}
-      <div className="flex items-start gap-2 px-3 pt-2.5">
+      {/* Top: checkbox · name (opens doc) · [meta inline when wide] · external · count */}
+      <div className={`flex items-start gap-2 px-3 pt-2.5 ${wide ? "pb-2.5" : ""}`}>
         <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
           <span
@@ -448,6 +455,7 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
             {doc.name}
           </span>
         </button>
+        {wide && <div className="flex items-center gap-2">{meta}</div>}
         <div className="flex items-center gap-1 flex-shrink-0">
           <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
@@ -460,31 +468,22 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
         </div>
       </div>
 
-      {/* Meta: submitter chip (right) · date · used dot */}
-      <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
-        <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
-        <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-        {doc.used && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
-      </div>
+      {/* Meta row — only when narrow (when wide it sits inline above) */}
+      {!wide && (
+        <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">{meta}</div>
+      )}
 
-      {/* Summary (always visible) · related */}
-      <div className="px-3 pb-3 pt-2 flex flex-col gap-2.5 border-t" style={{ borderColor: c.inputBorder }}>
+      {/* Summary (always visible) · related docs as links */}
+      <div className="px-3 pb-3 pt-2 flex flex-col gap-2 border-t" style={{ borderColor: c.inputBorder }}>
         <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[14px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
-            <div className="flex flex-wrap gap-1.5">
-              {doc.related.map((r) => (
-                <span
-                  key={r}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-[13px] cursor-pointer hover:opacity-80"
-                  style={{ backgroundColor: "white", color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                >
-                  <FileText size={13} style={{ color: c.iconGray }} />
-                  {r}
-                </span>
-              ))}
-            </div>
+          <div className="flex flex-col gap-1">
+            {doc.related.map((r) => (
+              <button key={r} className="flex items-center gap-1 w-fit text-right hover:underline" title="פתיחת המסמך">
+                <FileText size={12} style={{ color: c.iconGray, flexShrink: 0 }} />
+                <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -493,12 +492,14 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
 }
 
 // ── Document panel (open) — chronological browser ────────────────────────────
-function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
+function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth: number }) {
+  const wide = panelWidth >= 480; // when the panel is widened → compact each row (meta inline)
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
+  const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
@@ -506,6 +507,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
   ]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
+  const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
 
   const bg = isDark ? dk.surface : "white";
 
@@ -536,6 +538,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   );
 
   const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
+  const typesInData = Array.from(new Set(filteredSorted.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   return (
@@ -560,6 +563,25 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             >
               {isAuto ? "אוטו׳" : "ידני"}
             </button>
+          </div>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
+            {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
+              <button
+                key={key}
+                onClick={() => setGrouping(key)}
+                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors"
+                style={{
+                  backgroundColor: grouping === key ? "white" : "transparent",
+                  color: grouping === key ? c.primary : c.textGray,
+                  fontWeight: grouping === key ? 600 : 400,
+                  boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                  fontFamily: "Noto Sans Hebrew, sans-serif",
+                }}
+              >
+                <Ico size={13} />
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -640,10 +662,50 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           </div>
         )}
 
-        {/* All documents, flat chronological order (newest first), summaries always shown */}
-        {filteredSorted.map((doc) => (
-          <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
+        {/* Chronological view — flat list (newest first), summaries always shown */}
+        {grouping === "chrono" && filteredSorted.map((doc) => (
+          <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
         ))}
+
+        {/* Folder view — grouped by document type */}
+        {grouping === "type" && typesInData.map((type) => {
+          const typeDocs = filteredSorted.filter((d) => d.type === type);
+          const open = openType === type;
+          const allOn = typeDocs.every((d) => d.checked);
+          const catMissing = typeDocs.some((d) => d.missing);
+          return (
+            <div key={type} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 px-1 py-1">
+                <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
+                <button className="flex items-center justify-between flex-1" onClick={() => setOpenType(open ? null : type)}>
+                  <span className="flex items-center gap-1">
+                    <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0 }} />
+                    <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                    <span className="text-[13px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                    {!open && typeDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="rounded-full px-2 py-px text-[12px]"
+                      style={catMissing
+                        ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
+                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
+                      title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : undefined}
+                    >{CAT_WORDS[type] ?? "—"}</span>
+                    <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                  </span>
+                </button>
+              </div>
+              {open && (
+                <div className="flex flex-col gap-2">
+                  {typeDocs.map((doc) => (
+                    <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
                 </div>
               )}
@@ -1332,7 +1394,7 @@ export default function MishpatPage() {
           style={{ width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} panelWidth={panelWidth} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
           {/* Resize handle — inner (left) edge of the right-side panel; drag to widen */}
