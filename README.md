@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# studioOS
 
-## Getting Started
+סביבת עבודה (דשבורד) מבוססת **Next.js** שמרכזת כמה מודולים. המודול המרכזי בפיתוח כעת
+הוא **נט המשפט** — עוזר צ'אט משפטי לשופטים (ממשק עברית RTL בשפת העיצוב של Vibe / monday).
 
-First, run the development server:
+> השם `studioOS` הוא שם גנרי שניתן לפרויקט בעת יצירתו. כל הנתיבים באפליקציה יושבים תחת
+> `basePath: "/studioOS"` (ראו `next.config.ts`), ולכן ה-URL-ים בפרודקשן הם בצורה
+> `…/studioOS/<route>`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+🔗 **דמו חי:** https://studio-os-silk.vercel.app/studioOS/mishpat
+
+---
+
+## מבנה הפרויקט
+
+```
+app/
+├─ page.tsx              # דף הבית / דשבורד
+├─ shell-layout.tsx      # מעטפת כללית (מוסתרת בנתיבי /mishpat)
+├─ globals.css           # סגנונות גלובליים + utilities (docs-scroll, אנימציות)
+├─ mishpat/              # ★ נט המשפט — המודול הפעיל
+│  ├─ page.tsx           #   מסך הצ'אט הראשי (קלט, פאנלים צדדיים רספונסיביים)
+│  ├─ admin/page.tsx     #   ניהול בטא (טבלת משתמשים, עריכה, סטטוסים)
+│  └─ lab/page.tsx       #   "מעבדה" — גרסת עבודה לעיצוב פאנל המסמכים
+├─ projects/             # מודול פרויקטים
+├─ tasks/                # מודול משימות
+└─ team/                 # מודול צוות
+
+docs/
+└─ responsive-panels-spec.md   # מפרט התנהגות רספונסיבית של הפאנלים (לפיתוח)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## טכנולוגיות
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS v4** + **shadcn/ui** + **Radix UI**
+- **lucide-react** (אייקונים), **recharts** (גרפים), **dnd-kit** (גרירה ושחרור)
+- פריסה ב-**Vercel**
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## הרצה מקומית
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+הדף יעלה בכתובת **http://localhost:3001/studioOS** (שימו לב ל-`basePath`; הפורט הוא 3001).
 
-## Deploy on Vercel
+נתיבים שימושיים בפיתוח:
+- `/studioOS/mishpat` — מסך הצ'אט
+- `/studioOS/mishpat/admin` — ניהול בטא
+- `/studioOS/mishpat/lab` — מעבדת עיצוב פאנל המסמכים
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run build   # בילד לפרודקשן
+npm run start   # הרצת בילד
+npm run lint    # בדיקות lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## הערות לפיתוח
+
+- **עברית / RTL:** רוב המסכים `dir="rtl"`; משתמשים ב-CSS logical properties
+  (`marginInlineStart`, `borderInlineStart` וכו') כדי שיתנהגו נכון ב-RTL.
+- **עיצוב:** שפת Vibe (monday) — צבעים, טיפוגרפיה ואייקונים מוגדרים כ-tokens בראש כל קובץ מסך.
+- **התנהגות רספונסיבית של הפאנלים:** מתועדת במלואה ב-
+  [`docs/responsive-panels-spec.md`](docs/responsive-panels-spec.md) —
+  כולל נקודות מעבר, מודל "כוונה מול תצוגה", ה-gotcha של `min-width: 0`, ודוגמאות Angular.
+- **`/mishpat/lab`** הוא עותק עבודה בטוח של מסך הצ'אט לניסויי עיצוב — אין לפרסם אותו כפרודקשן.
+- כל שינוי נדחף ל-`main` ומתפרסם אוטומטית ב-Vercel.
