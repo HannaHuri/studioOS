@@ -6,7 +6,7 @@ import {
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
-  Split, Sun, ThumbsDown, ThumbsUp, Zap,
+  Split, Sun, ThumbsDown, ThumbsUp, X, Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -850,10 +850,65 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
+function HistoryPanel({ isDark }: { isDark: boolean }) {
+  const items = [
+    { t: "תביעה כספית — כהן נ׳ לוי", d: "היום, 14:32" },
+    { t: "סכסוך מקרקעין — חלקה 1123", d: "אתמול, 09:10" },
+    { t: "ערעור על החלטת ביניים", d: "2 ביוני 2026" },
+    { t: "בקשה לסעד זמני דחוף", d: "30 במאי 2026" },
+    { t: "תצהיר עדות ראשית — עד מומחה", d: "28 במאי 2026" },
+    { t: "כתב הגנה מתוקן", d: "21 במאי 2026" },
+  ];
+  const bg = isDark ? dk.surface : "white";
+  const titleCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  return (
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl">
+      <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}>
+        <Clock size={18} style={{ color: c.primary }} />
+        <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
+      </div>
+      <div className="flex-1 overflow-y-auto docs-scroll px-3 py-3 flex flex-col gap-1.5">
+        {items.map((it, i) => (
+          <button
+            key={i}
+            className="text-right rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03]"
+            style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            <div className="text-[14px]" style={{ color: titleCol }}>{it.t}</div>
+            <div className="text-[12px] mt-0.5" style={{ color: subCol }}>{it.d}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
+  const [narrow, setNarrow] = useState(false);
+  const [vw, setVw] = useState(1280);
+
+  // Track viewport width → choose push (wide) vs drawer (narrow) mode
+  useEffect(() => {
+    const update = () => { setVw(window.innerWidth); setNarrow(window.innerWidth < 1024); };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Narrow mode: never keep both panels open at once
+  useEffect(() => {
+    if (narrow && isPanelOpen && isHistoryOpen) setIsHistoryOpen(false);
+  }, [narrow, isPanelOpen, isHistoryOpen]);
+
+  const toggleDocs = () =>
+    setIsPanelOpen((v) => { const nv = !v; if (nv && narrow) setIsHistoryOpen(false); return nv; });
+  const toggleHistory = () =>
+    setIsHistoryOpen((v) => { const nv = !v; if (nv && narrow) setIsPanelOpen(false); return nv; });
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -875,18 +930,18 @@ export default function MishpatPage() {
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
       <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
-        {/* Panel wrapper */}
+        {/* ── LEFT: Documents panel — column (pushes chat) in wide mode; 40px rail in narrow ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          style={{ width: isPanelOpen && !narrow ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+            {isPanelOpen && !narrow ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
-          {/* Toggle button — size-6, arrow-16, top-36 */}
+          {/* Toggle button */}
           <button
-            onClick={() => setIsPanelOpen((v) => !v)}
+            onClick={toggleDocs}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
             style={{ border: `1px solid ${c.border}`, top: "88px", right: "-12px" }}
             title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
@@ -897,13 +952,53 @@ export default function MishpatPage() {
           </button>
         </div>
 
-        {/* Chat */}
-        <ChatArea isDark={isDark} conversationKey={convKey} />
+        {/* ── CHAT: flex-1, never below min-width → input always fully usable. Hosts narrow-mode drawers ── */}
+        <div className="flex-1 flex relative min-w-[360px]">
+          <ChatArea isDark={isDark} conversationKey={convKey} />
 
-        {/* Right icon bar */}
+          {/* Scrim — narrow mode, when any drawer is open (click to dismiss → back to typing) */}
+          {narrow && (isPanelOpen || isHistoryOpen) && (
+            <div
+              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); }}
+              className="absolute inset-0 z-30"
+              style={{ backgroundColor: "rgba(0,0,0,0.28)" }}
+            />
+          )}
+
+          {/* Documents drawer (narrow) — slides over from the left */}
+          {narrow && isPanelOpen && (
+            <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "2px 0 16px rgba(0,0,0,0.22)" }}>
+              <div className="absolute inset-0 overflow-y-auto">
+                <DocumentPanelOpen isDark={isDark} />
+              </div>
+              <button onClick={() => setIsPanelOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", right: "8px", border: `1px solid ${c.border}` }} title="סגור">
+                <X size={14} style={{ color: c.iconGray }} />
+              </button>
+            </div>
+          )}
+
+          {/* History drawer (narrow) — slides over from the right */}
+          {narrow && isHistoryOpen && (
+            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "-2px 0 16px rgba(0,0,0,0.22)" }}>
+              <HistoryPanel isDark={isDark} />
+              <button onClick={() => setIsHistoryOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
+                <X size={14} style={{ color: c.iconGray }} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT: History panel — column (pushes chat) in wide mode only ── */}
+        {!narrow && isHistoryOpen && (
+          <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
+            <HistoryPanel isDark={isDark} />
+          </div>
+        )}
+
+        {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
@@ -911,11 +1006,21 @@ export default function MishpatPage() {
             <Plus size={16} />
           </button>
           <div className="flex flex-col items-center gap-2">
-            {topIcons.map(({ Icon, label }) => (
-              <button key={label} className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title={label}>
-                <Icon size={19} />
-              </button>
-            ))}
+            {topIcons.map(({ Icon, label }) => {
+              const isHist = label === "היסטוריה";
+              const active = isHist && isHistoryOpen;
+              return (
+                <button
+                  key={label}
+                  onClick={isHist ? toggleHistory : undefined}
+                  className="size-8 flex items-center justify-center rounded transition-colors hover:bg-black/5"
+                  style={{ color: active ? "white" : iconCol, backgroundColor: active ? c.primary : undefined }}
+                  title={label}
+                >
+                  <Icon size={19} />
+                </button>
+              );
+            })}
           </div>
           <div className="flex-1" />
           <div className="w-9 border-t mb-3" style={{ borderColor: isDark ? dk.border : c.border }} />
@@ -926,6 +1031,17 @@ export default function MishpatPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* ── Responsive-mode indicator (demo aid — resize the window to watch it switch) ── */}
+        <div
+          className="absolute bottom-3 left-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] shadow-md"
+          style={{ transform: "translateX(-50%)", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${c.border}`, color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+        >
+          <span className="size-2 rounded-full" style={{ backgroundColor: narrow ? "#e0a000" : c.primary }} />
+          <span>{narrow ? "מגירה (Drawer)" : "דחיפה (Push)"}</span>
+          <span style={{ color: c.textLight }}>·</span>
+          <span style={{ color: c.textLight }}>{vw}px</span>
         </div>
       </div>
     </div>
