@@ -885,17 +885,36 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
 }
 
 export default function MishpatPage() {
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [docsWanted, setDocsWanted] = useState(false);
+  const [historyWanted, setHistoryWanted] = useState(false);
+  const [lastOpened, setLastOpened] = useState<"docs" | "history">("docs");
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
   const [vw, setVw] = useState(1280);
 
   // Responsive breakpoints — ALL behavior is PUSH (panels reflow the chat, never overlay it)
-  const BOTH_MIN = 1080; // >= : both side panels may be open together
-  const CHAT_ONLY = 760; // <  : panels auto-close, only the conversation remains
+  const BOTH_MIN = 1080; // >= : both side panels may be shown together
+  const CHAT_ONLY = 760; // <  : panels hidden, only the conversation remains
   const canBoth = vw >= BOTH_MIN;
   const chatOnly = vw < CHAT_ONLY;
+
+  // Visibility is DERIVED from intent (docsWanted / historyWanted) + available width.
+  // Resizing never erases intent → panels restore automatically when the window grows again.
+  let showDocs = false;
+  let showHistory = false;
+  if (!chatOnly) {
+    if (canBoth) {
+      showDocs = docsWanted;
+      showHistory = historyWanted;
+    } else if (docsWanted && historyWanted) {
+      // Exclusive zone: show only the most-recently-opened; the other stays "wanted" and returns when there's room
+      if (lastOpened === "history") showHistory = true;
+      else showDocs = true;
+    } else {
+      showDocs = docsWanted;
+      showHistory = historyWanted;
+    }
+  }
 
   useEffect(() => {
     const update = () => setVw(window.innerWidth);
@@ -904,17 +923,10 @@ export default function MishpatPage() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Auto-adjust open panels to the available width
-  useEffect(() => {
-    if (vw < CHAT_ONLY) { setIsPanelOpen(false); setIsHistoryOpen(false); }
-    else if (vw < BOTH_MIN && isPanelOpen && isHistoryOpen) { setIsHistoryOpen(false); }
-  }, [vw, isPanelOpen, isHistoryOpen]);
-
-  // When both can't fit, opening one panel closes the other (exclusive)
   const toggleDocs = () =>
-    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsHistoryOpen(false); return nv; });
+    setDocsWanted((v) => { const nv = !v; if (nv) setLastOpened("docs"); return nv; });
   const toggleHistory = () =>
-    setIsHistoryOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsPanelOpen(false); return nv; });
+    setHistoryWanted((v) => { const nv = !v; if (nv) setLastOpened("history"); return nv; });
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -940,10 +952,10 @@ export default function MishpatPage() {
         {!chatOnly && (
         <div
           className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          style={{ width: showDocs ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+            {showDocs ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
           {/* Toggle button */}
@@ -951,9 +963,9 @@ export default function MishpatPage() {
             onClick={toggleDocs}
             className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
             style={{ border: `1px solid ${c.border}`, top: "88px", right: "-12px" }}
-            title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
+            title={showDocs ? "סגור מסמכים" : "פתח מסמכים"}
           >
-            {isPanelOpen
+            {showDocs
               ? <ChevronLeft size={16} style={{ color: c.iconGray }} />
               : <ChevronRight size={16} style={{ color: c.iconGray }} />}
           </button>
@@ -966,7 +978,7 @@ export default function MishpatPage() {
         </div>
 
         {/* ── RIGHT: History panel — always a column that PUSHES the chat. Hidden when chat-only ── */}
-        {!chatOnly && isHistoryOpen && (
+        {!chatOnly && showHistory && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
             <HistoryPanel isDark={isDark} />
           </div>
@@ -975,7 +987,7 @@ export default function MishpatPage() {
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); }}
+            onClick={() => { setConvKey((k) => k + 1); setDocsWanted(false); setHistoryWanted(false); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
@@ -985,7 +997,7 @@ export default function MishpatPage() {
           <div className="flex flex-col items-center gap-2">
             {topIcons.map(({ Icon, label }) => {
               const isHist = label === "היסטוריה";
-              const active = isHist && isHistoryOpen;
+              const active = isHist && showHistory;
               const disabled = isHist && chatOnly;
               return (
                 <button
