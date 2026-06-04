@@ -430,45 +430,26 @@ function DateRangeFilter({
 }
 
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
-function DocRow({
-  doc, expanded, highlighted, onToggleCheck, onHover, onLeave, onTogglePin,
-}: {
-  doc: CaseDoc; expanded: boolean; highlighted: boolean;
-  onToggleCheck: () => void; onHover: () => void; onLeave: () => void; onTogglePin: () => void;
-}) {
-  const lit = expanded || highlighted;
+function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => void }) {
   return (
     <div
-      className="rounded-lg border transition-all cursor-pointer"
-      style={{
-        borderColor: expanded ? c.primary : "#dce8f6",
-        backgroundColor: highlighted ? "#eaf2fc" : "#f5f9ff",
-        boxShadow: expanded ? "0 2px 8px rgba(0,115,234,0.10)" : "none",
-      }}
+      className="rounded-lg border"
+      style={{ borderColor: "#dce8f6", backgroundColor: "#f5f9ff" }}
       dir="rtl"
-      onMouseEnter={onHover}
-      onMouseLeave={onLeave}
-      onClick={onTogglePin}
     >
-      {/* Top: checkbox · name (opens doc) · count · open */}
+      {/* Top: checkbox · name (opens doc) · external · count */}
       <div className="flex items-start gap-2 px-3 pt-2.5">
-        <span onClick={(e) => e.stopPropagation()}>
-          <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
-        </span>
-        <button
-          className="flex-1 min-w-0 text-right"
-          title="פתיחת המסמך"
-          onClick={(e) => { e.stopPropagation(); /* open document */ }}
-        >
+        <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
+        <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
           <span
             className="text-[14px] font-medium hover:underline line-clamp-2"
-            style={{ color: lit ? c.primary : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
           </span>
         </button>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button title="פתיחה בחלון חדש" onClick={(e) => e.stopPropagation()} className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
+          <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
           </button>
           <span
@@ -477,40 +458,36 @@ function DocRow({
             title={doc.missing ? "המסמך ללא תוכן" : undefined}
           >{doc.words}</span>
         </div>
-        <ChevronDown size={15} className="flex-shrink-0" style={{ color: c.iconGray, transition: "transform 0.15s", transform: expanded ? "rotate(180deg)" : "none" }} />
       </div>
 
-      {/* Meta: submitter chip (right) · date */}
+      {/* Meta: submitter chip (right) · date · used dot */}
       <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">
         <span className="rounded px-2 py-0.5 text-[12px]" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
         <span className="text-[12px]" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
         {doc.used && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
       </div>
 
-      {/* Expanded: summary · related */}
-      {expanded && (
-        <div className="px-3 pb-3 pt-2 flex flex-col gap-2.5 border-t" style={{ borderColor: c.inputBorder }} dir="rtl">
-          <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
-          {doc.related.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[14px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
-              <div className="flex flex-wrap gap-1.5">
-                {doc.related.map((r) => (
-                  <span
-                    key={r}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-[13px] cursor-pointer hover:opacity-80"
-                    style={{ backgroundColor: "white", color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                  >
-                    <FileText size={13} style={{ color: c.iconGray }} />
-                    {r}
-                  </span>
-                ))}
-              </div>
+      {/* Summary (always visible) · related */}
+      <div className="px-3 pb-3 pt-2 flex flex-col gap-2.5 border-t" style={{ borderColor: c.inputBorder }}>
+        <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+        {doc.related.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[14px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים</span>
+            <div className="flex flex-wrap gap-1.5">
+              {doc.related.map((r) => (
+                <span
+                  key={r}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-[13px] cursor-pointer hover:opacity-80"
+                  style={{ backgroundColor: "white", color: c.textGray, border: `1px solid ${c.inputBorder}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                >
+                  <FileText size={13} style={{ color: c.iconGray }} />
+                  {r}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -522,18 +499,13 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
-  const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
     ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true })),
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
   ]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId]   = useState<string | null>(null);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
-  const [openBucket, setOpenBucket] = useState<DocBucket | null>(null); // one category open at a time
-  const [openType, setOpenType]     = useState<string | null>(null);
 
   const bg = isDark ? dk.surface : "white";
 
@@ -563,7 +535,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
     (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()))
   );
 
-  const typesInData = Array.from(new Set(filtered.map((d) => d.type)));
+  const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   return (
@@ -588,25 +560,6 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             >
               {isAuto ? "אוטו׳" : "ידני"}
             </button>
-          </div>
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
-            {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
-              <button
-                key={key}
-                onClick={() => setGrouping(key)}
-                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors"
-                style={{
-                  backgroundColor: grouping === key ? "white" : "transparent",
-                  color: grouping === key ? c.primary : c.textGray,
-                  fontWeight: grouping === key ? 600 : 400,
-                  boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                  fontFamily: "Noto Sans Hebrew, sans-serif",
-                }}
-              >
-                <Ico size={13} />
-                {label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -663,7 +616,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => { setOpenCaseId(caseOpen ? null : cf.id); setOpenBucket(null); setOpenType(null); }}>
+                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
@@ -680,114 +633,18 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-3 p-2.5 rounded-b-lg" style={{ backgroundColor: "white" }}>
+                <div className="flex flex-col gap-2 p-2.5 rounded-b-lg" style={{ backgroundColor: "white" }}>
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
           </div>
         )}
 
-        {/* Chronological grouping */}
-        {grouping === "chrono" && filtered.length > 0 && BUCKET_ORDER.map((bucket) => {
-          const bucketDocs = filtered.filter((d) => d.bucket === bucket);
-          if (bucketDocs.length === 0) return null;
-          const open = openBucket === bucket;
-          const allBucketOn = bucketDocs.every((d) => d.checked);
-          const bucketMissing = bucketDocs.some((d) => d.missing);
-          const bucketWords = formatWords(bucketDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
-          return (
-            <div key={bucket} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 px-3 py-1">
-                <CheckboxBlue checked={allBucketOn} onToggle={() => toggleBucketAll(bucket, !allBucketOn)} />
-                <button
-                  className="flex items-center justify-between flex-1"
-                  onClick={() => setOpenBucket(open ? null : bucket)}
-                >
-                  <span className="flex items-center gap-1">
-                    <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{BUCKET_LABELS[bucket]}</span>
-                    <span className="text-[13px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({bucketDocs.length})</span>
-                    {!open && bucketDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="rounded-full px-2 py-px text-[12px]"
-                      style={bucketMissing
-                        ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
-                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
-                      title={bucketMissing ? "כולל מסמך ללא תוכן" : undefined}
-                    >{bucketWords}</span>
-                    <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
-                  </span>
-                </button>
-              </div>
-              {open && (
-                <div className="flex flex-col gap-2">
-                  {bucketDocs.map((doc) => (
-                    <DocRow
-                      key={doc.id} doc={doc}
-                      expanded={pinnedId === doc.id}
-                      highlighted={hoveredId === doc.id}
-                      onToggleCheck={() => toggleDoc(doc.id)}
-                      onHover={() => setHoveredId(doc.id)}
-                      onLeave={() => setHoveredId(null)}
-                      onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* All documents, flat chronological order (newest first), summaries always shown */}
+        {filteredSorted.map((doc) => (
+          <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
+        ))}
 
-        {/* Type grouping */}
-        {grouping === "type" && filtered.length > 0 && typesInData.map((type) => {
-          const typeDocs = filtered.filter((d) => d.type === type);
-          const open = openType === type;
-          const allOn = typeDocs.every((d) => d.checked);
-          const catMissing = typeDocs.some((d) => d.missing);
-          return (
-            <div key={type} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 px-3 py-1">
-                <CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} />
-                <button
-                  className="flex items-center justify-between flex-1"
-                  onClick={() => setOpenType(open ? null : type)}
-                >
-                  <span className="flex items-center gap-1">
-                    <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                    <span className="text-[13px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
-                    {!open && typeDocs.some((d) => d.used) && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="rounded-full px-2 py-px text-[12px]"
-                      style={catMissing
-                        ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
-                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
-                      title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : undefined}
-                    >{CAT_WORDS[type] ?? "—"}</span>
-                    <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
-                  </span>
-                </button>
-              </div>
-              {open && (
-                <div className="flex flex-col gap-2">
-                  {typeDocs.map((doc) => (
-                    <DocRow
-                      key={doc.id} doc={doc}
-                      expanded={pinnedId === doc.id}
-                      highlighted={hoveredId === doc.id}
-                      onToggleCheck={() => toggleDoc(doc.id)}
-                      onHover={() => setHoveredId(doc.id)}
-                      onLeave={() => setHoveredId(null)}
-                      onTogglePin={() => setPinnedId((p) => (p === doc.id ? null : doc.id))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
                 </div>
               )}
             </div>
@@ -1415,6 +1272,8 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
+  const [panelWidth, setPanelWidth] = useState(380);
+  const [resizing, setResizing] = useState(false);
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -1469,12 +1328,38 @@ export default function MishpatPage() {
 
         {/* Panel wrapper — right side */}
         <div
-          className="relative flex-shrink-0 transition-all duration-300"
-          style={{ width: isPanelOpen ? "380px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          className={`relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+          style={{ width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
             {isPanelOpen ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
+
+          {/* Resize handle — inner (left) edge of the right-side panel; drag to widen */}
+          {isPanelOpen && (
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setResizing(true);
+                const onMove = (ev: MouseEvent) =>
+                  setPanelWidth(Math.min(720, Math.max(320, window.innerWidth - ev.clientX)));
+                const onUp = () => {
+                  setResizing(false);
+                  document.removeEventListener("mousemove", onMove);
+                  document.removeEventListener("mouseup", onUp);
+                  document.body.style.userSelect = "";
+                };
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+                document.body.style.userSelect = "none";
+              }}
+              className="absolute top-0 bottom-0 left-0 z-10"
+              style={{ width: "8px", cursor: "ew-resize" }}
+              title="גרירה לשינוי רוחב"
+            >
+              <div className="absolute top-0 bottom-0 left-0" style={{ width: "2px", backgroundColor: resizing ? c.primary : "#dbe7f7" }} />
+            </div>
+          )}
 
           {/* Toggle button — pokes out on the LEFT edge (panel is on the right) */}
           <button
