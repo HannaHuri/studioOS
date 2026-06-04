@@ -705,7 +705,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   if (isEmpty) {
     return (
       <>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6" style={{ backgroundColor: bg }}>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
             <p
               className="text-right text-[22px] font-medium mb-2"
@@ -725,7 +725,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   // ── Normal state ───────────────────────────────────────────────────────
   return (
     <>
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: bg }}>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
         <div className="flex-1 overflow-y-auto">
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => (
@@ -932,10 +932,10 @@ export default function MishpatPage() {
   const sidebarBg = isDark ? dk.surface : "white";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
+    <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 bottom-0 left-0 right-0 flex min-w-[640px]" dir="ltr">
+      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* ── LEFT: Documents panel — always a column that PUSHES the chat (never overlay). Hidden when chat-only ── */}
         {!chatOnly && (
         <div
@@ -960,8 +960,8 @@ export default function MishpatPage() {
         </div>
         )}
 
-        {/* ── CHAT: flex-1, never below min-width → input is always fully usable, never covered ── */}
-        <div className="flex-1 flex min-w-[360px]">
+        {/* ── CHAT: flex-1 + min-w-0 → column shrinks fluidly so the input never overflows under a panel ── */}
+        <div className="flex-1 flex min-w-0">
           <ChatArea isDark={isDark} conversationKey={convKey} />
         </div>
 
