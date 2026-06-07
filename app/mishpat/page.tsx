@@ -94,7 +94,7 @@ const SCOPE_ORDER: ScopeOption[] = ["תמציתי", "מורחב", "מקיף"];
 const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
   "תמציתי": { desc: "היקף ממוקד, מענה מהיר לרוב השאלות",       Icon: Zap },
   "מורחב":  { desc: "היקף רחב יותר, לשאלות הדורשות הקשר נוסף",  Icon: Layers },
-  "מקיף":   { desc: "בחינה מעמיקה של המסמכים, מומלץ לניתוח יסודי", Icon: Microscope },
+  "מקיף":   { desc: "ההיקף הרחב ביותר, מומלץ לניתוח יסודי", Icon: Microscope },
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
