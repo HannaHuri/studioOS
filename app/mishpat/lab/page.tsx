@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check,
+  Calendar, ExternalLink, Check, Star,
   type LucideIcon,
 } from "lucide-react";
 
@@ -116,6 +116,8 @@ interface CaseDoc {
   checked: boolean;      // selected for chat
   used?: boolean;        // referenced by the chat's answer
   missing?: boolean;     // document has no text / not processed (0 words)
+  key?: boolean;         // central/pivotal document
+  keyReason?: string;    // why it's central — shown in tooltip (transparency)
   caseId?: string;       // which case this document belongs to
 }
 
@@ -144,6 +146,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true, used: true,
+    key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו",
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "תובע",
@@ -156,6 +159,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "18.05.26", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
     related: ["החלטה על מינוי מומחה"], checked: false, used: true,
+    key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק",
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "נתבעת",
@@ -441,7 +445,7 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
   return (
     <div
       className="rounded-lg border"
-      style={{ borderColor: "#dce8f6", backgroundColor: "#f5f9ff" }}
+      style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
       dir="rtl"
     >
       {/* Top: checkbox · name (opens doc) · [meta inline when wide] · external · count */}
@@ -452,6 +456,11 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
             className="text-[14px] font-medium hover:underline line-clamp-2"
             style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
+            {doc.key && (
+              <span title={doc.keyReason} className="inline-flex ml-1" style={{ verticalAlign: "-2px" }}>
+                <Star size={13} style={{ color: "#e0a000", fill: "#e0a000" }} />
+              </span>
+            )}
             {doc.name}
           </span>
         </button>
@@ -585,23 +594,23 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           </div>
         </div>
 
-        {/* Row 2: search */}
-        <div className="relative">
-          <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="חיפוש שם מסמך או תקציר"
-            className="w-full h-9 rounded-md text-[13px] outline-none"
-            style={{ border: `1px solid ${c.inputBorder}`, color: c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
-          />
-        </div>
-
-        {/* Row 3: filters */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
-          <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
-          <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
+        {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
+        <div className={wide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
+          <div className="relative flex-1 min-w-0">
+            <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="חיפוש שם מסמך או תקציר"
+              className="w-full h-9 rounded-md text-[13px] outline-none"
+              style={{ border: `1px solid ${c.inputBorder}`, color: c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
+            <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
+            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
+            <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
+          </div>
         </div>
 
         {/* Row 4: select-all */}
@@ -622,12 +631,9 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
           return (
-            <div key={cf.id} className="flex flex-col">
-              {/* Case header — plain, no frame (saves height) */}
-              <div
-                className="flex items-start gap-2 px-1 py-2"
-                style={{ borderBottom: caseOpen ? "1px solid #eef2f7" : undefined }}
-              >
+            <div key={cf.id} className="flex flex-col rounded-lg p-2" style={{ backgroundColor: "#e9f2fd" }}>
+              {/* Case header — sits on the light-blue (תכלת) case card */}
+              <div className="flex items-start gap-2 px-1 py-1">
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -648,7 +654,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
               </div>
 
               {caseOpen && (
-                <div className="flex flex-col gap-1.5 pt-2">
+                <div className="flex flex-col gap-1.5 pt-1.5">
         {filtered.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
