@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Star,
+  Calendar, ExternalLink, Check, Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +118,8 @@ interface CaseDoc {
   missing?: boolean;     // document has no text / not processed (0 words)
   key?: boolean;         // central/pivotal document
   keyReason?: string;    // why it's central — shown in tooltip (transparency)
+  isNew?: boolean;       // new since the judge's last visit
+  pending?: boolean;     // awaiting the judge's decision
   caseId?: string;       // which case this document belongs to
 }
 
@@ -140,6 +142,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
+    isNew: true, pending: true,
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
@@ -153,6 +156,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
     related: ["בקשה לדחיית מועד דיון"], checked: false,
+    isNew: true,
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
@@ -439,7 +443,14 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
     <>
       <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
       <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-      {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט" />}
+      {doc.key && (
+        <span title={doc.keyReason} className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdf3da", color: "#9a6b00", fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <Sparkles size={11} /> מרכזי
+        </span>
+      )}
+      {doc.used && <span title="שימש בתשובת הצ׳אט האחרונה" className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#e3f0ff", color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>בתשובה</span>}
+      {doc.isNew && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#e7f6ec", color: "#1f8a4c", fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>}
+      {doc.pending && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להחלטה</span>}
     </>
   );
   return (
@@ -456,15 +467,10 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
             className="text-[14px] font-medium hover:underline line-clamp-2"
             style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
-            {doc.key && (
-              <span title={doc.keyReason} className="inline-flex ml-1" style={{ verticalAlign: "-2px" }}>
-                <Star size={13} style={{ color: "#e0a000", fill: "#e0a000" }} />
-              </span>
-            )}
             {doc.name}
           </span>
         </button>
-        {wide && <div className="flex items-center gap-2">{meta}</div>}
+        {wide && <div className="flex items-center flex-wrap justify-end gap-x-2 gap-y-1">{meta}</div>}
         <div className="flex items-center gap-1 flex-shrink-0">
           <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
@@ -479,7 +485,7 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
 
       {/* Meta row — only when narrow (when wide it sits inline above) */}
       {!wide && (
-        <div className="flex items-center gap-2 px-3 pt-1 pb-2.5">{meta}</div>
+        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 px-3 pt-1 pb-2.5">{meta}</div>
       )}
 
       {/* Summary (always visible) · related docs as links */}
@@ -502,7 +508,9 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
 
 // ── Document panel (open) — chronological browser ────────────────────────────
 function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth: number }) {
-  const wide = panelWidth >= 480; // when the panel is widened → compact each row (meta inline)
+  const twoCol = panelWidth >= 560;     // two-column document grid (most docs above the fold)
+  const headerWide = panelWidth >= 480; // filters move up onto the search row
+  const wide = headerWide && !twoCol;   // single wide column → doc meta inline on the name row
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
@@ -517,6 +525,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
   ]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
+  const [lens, setLens]             = useState<"all" | "new" | "pending">("all"); // status lens
 
   const bg = isDark ? dk.surface : "white";
 
@@ -547,7 +556,10 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
   );
 
   const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
-  const typesInData = Array.from(new Set(filteredSorted.map((d) => d.type)));
+  const newCount = filteredSorted.filter((d) => d.isNew).length;
+  const pendingCount = filteredSorted.filter((d) => d.pending).length;
+  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && d.isNew) || (lens === "pending" && d.pending));
+  const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   return (
@@ -613,12 +625,28 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           </div>
         </div>
 
-        {/* Row 4: select-all */}
-        <div className="flex items-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
+        {/* Row 4: select-all (right) · status lenses (left) */}
+        <div className="flex items-center justify-between gap-2" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <button className="flex items-center gap-1.5 flex-shrink-0" onClick={() => toggleAllDocs(!allChecked)}>
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {([["new", "מה חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
+              const on = lens === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setLens(on ? "all" : key)}
+                  className="flex items-center gap-1 px-2.5 h-7 rounded-full text-[12px] transition-colors"
+                  style={{ backgroundColor: on ? c.primary : "transparent", color: on ? "white" : c.textGray, border: `1px solid ${on ? c.primary : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                >
+                  {label}
+                  <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -655,20 +683,24 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
 
               {caseOpen && (
                 <div className="flex flex-col gap-1.5 pt-1.5">
-        {filtered.length === 0 && (
+        {lensed.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
           </div>
         )}
 
-        {/* Chronological view — flat list (newest first), summaries always shown */}
-        {grouping === "chrono" && filteredSorted.map((doc) => (
-          <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
-        ))}
+        {/* Chronological view — flat list (newest first); two columns when the panel is wide (RTL: right→left) */}
+        {grouping === "chrono" && (
+          <div className={twoCol ? "grid grid-cols-2 gap-1.5 items-start" : "flex flex-col gap-1.5"}>
+            {lensed.map((doc) => (
+              <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+            ))}
+          </div>
+        )}
 
         {/* Folder view — grouped by document type */}
         {grouping === "type" && typesInData.map((type) => {
-          const typeDocs = filteredSorted.filter((d) => d.type === type);
+          const typeDocs = lensed.filter((d) => d.type === type);
           const open = openType === type;
           const allOn = typeDocs.every((d) => d.checked);
           const catMissing = typeDocs.some((d) => d.missing);
@@ -696,7 +728,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
                 </button>
               </div>
               {open && (
-                <div className="flex flex-col gap-2">
+                <div className={twoCol ? "grid grid-cols-2 gap-1.5 items-start" : "flex flex-col gap-2"}>
                   {typeDocs.map((doc) => (
                     <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
