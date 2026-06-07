@@ -631,9 +631,9 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
           return (
-            <div key={cf.id} className="flex flex-col rounded-lg p-2" style={{ backgroundColor: "#e9f2fd" }}>
-              {/* Case header — sits on the light-blue (תכלת) case card */}
-              <div className="flex items-start gap-2 px-1 py-1">
+            <div key={cf.id} className="flex flex-col">
+              {/* Case header — gentle takhelet pill only; documents stay on white below */}
+              <div className="flex items-start gap-2 rounded-lg px-2 py-2" style={{ backgroundColor: "#eef4fc" }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
