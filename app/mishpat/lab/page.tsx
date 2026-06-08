@@ -444,19 +444,19 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
       <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
       <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       {doc.key && (
-        <span title={doc.keyReason} className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdf3da", color: "#9a6b00", fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <Sparkles size={11} /> מרכזי
+        <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
+          <Sparkles size={14} style={{ color: "#e0a000" }} />
         </span>
       )}
-      {doc.used && <span title="שימש בתשובת הצ׳אט האחרונה" className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#e3f0ff", color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>בתשובה</span>}
-      {doc.isNew && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#e7f6ec", color: "#1f8a4c", fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>}
+      {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+      {doc.isNew && <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>}
       {doc.pending && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להחלטה</span>}
     </>
   );
   return (
     <div
       className="rounded-lg border"
-      style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
+      style={{ borderColor: "#dce8f6", backgroundColor: "white", boxShadow: doc.isNew ? "inset -3px 0 0 0 #0073ea" : undefined }}
       dir="rtl"
     >
       {/* Top: checkbox · name (opens doc) · [meta inline when wide] · external · count */}
@@ -490,7 +490,7 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
 
       {/* Summary (always visible) · related docs as links */}
       <div className="px-3 pb-2.5 pt-1.5 flex flex-col gap-1.5 border-t" style={{ borderColor: c.inputBorder }}>
-        <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+        <p className="text-[14px] leading-snug line-clamp-2" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {doc.related.map((r) => (
@@ -607,7 +607,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
         </div>
 
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
-        <div className={wide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
+        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
           <div className="relative flex-1 min-w-0">
             <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
             <input
@@ -672,7 +672,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
                       <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
-                        {!caseOpen && caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                        {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       </span>
                       <span className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
