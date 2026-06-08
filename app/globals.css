@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
-.docs-scroll { scrollbar-width: thin; scrollbar-color: #dde1ea transparent; }
-.docs-scroll::-webkit-scrollbar { width: 8px; }
-.docs-scroll::-webkit-scrollbar-thumb { background: #dde1ea; border-radius: 4px; }
-.docs-scroll::-webkit-scrollbar-thumb:hover { background: #cfd4df; }
+.docs-scroll { scrollbar-width: thin; scrollbar-color: #e3e7ef transparent; }
+.docs-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.docs-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.docs-scroll::-webkit-scrollbar-thumb { background: #e3e7ef; border-radius: 3px; }
+.docs-scroll::-webkit-scrollbar-thumb:hover { background: #d4d9e4; }
 .docs-scroll::-webkit-scrollbar-track { background: transparent; }
 
 @keyframes toastSlideIn {

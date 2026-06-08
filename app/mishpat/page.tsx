@@ -143,7 +143,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto" style={{ backgroundColor: bg }}>
+    <div className="h-full flex flex-col overflow-y-auto docs-scroll" style={{ backgroundColor: bg }}>
       {/* Header: title | אוטו' | RotateCw | Search */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-2" dir="rtl">
         <span className="text-[17px] leading-[1.25] flex-1" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
@@ -745,7 +745,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto docs-scroll">
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => (
               <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
@@ -967,7 +967,7 @@ export default function MishpatPage() {
           className="relative flex-shrink-0 transition-all duration-300"
           style={{ width: isPanelOpen && !narrow ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
-          <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
+          <div className="absolute inset-0 overflow-y-auto docs-scroll" style={{ overflowX: "visible" }}>
             {isPanelOpen && !narrow ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
@@ -1000,7 +1000,7 @@ export default function MishpatPage() {
           {/* Documents drawer (narrow) — overlays from the left */}
           {narrow && isPanelOpen && (
             <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
-              <div className="absolute inset-0 overflow-y-auto"><DocumentPanelOpen isDark={isDark} /></div>
+              <div className="absolute inset-0 overflow-y-auto docs-scroll"><DocumentPanelOpen isDark={isDark} /></div>
               <button onClick={() => setIsPanelOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", right: "8px", border: `1px solid ${c.border}` }} title="סגור">
                 <X size={14} style={{ color: c.iconGray }} />
               </button>
