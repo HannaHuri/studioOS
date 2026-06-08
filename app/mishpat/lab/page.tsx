@@ -452,7 +452,7 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
       <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       {doc.key && (
         <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
-          <Key size={13} style={{ color: "#e0a000" }} />
+          <Key size={13} style={{ color: c.iconGray }} />
         </span>
       )}
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
@@ -710,7 +710,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
             {chronoNew.length > 0 && chronoRest.length > 0 && (
               <div className="flex items-center gap-2 py-0.5" title="כל המסמכים שמעל הקו התווספו מאז הכניסה האחרונה">
                 <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש מהכניסה האחרונה</span>
-                <div className="flex-1 rounded" style={{ height: "2px", backgroundColor: c.primary }} />
+                <div className="flex-1" style={{ height: "1px", backgroundColor: c.primary }} />
               </div>
             )}
             {chronoRest.length > 0 && (
