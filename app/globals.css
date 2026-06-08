@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* No standard scrollbar-width/color — they make Chrome 121+ ignore ::-webkit-scrollbar (and show native arrows) */
-.docs-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.docs-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .docs-scroll::-webkit-scrollbar-button,
 .docs-scroll::-webkit-scrollbar-button:single-button,
 .docs-scroll::-webkit-scrollbar-button:vertical:decrement,
@@ -10,7 +10,7 @@
 .docs-scroll::-webkit-scrollbar-button:vertical:end,
 .docs-scroll::-webkit-scrollbar-button:horizontal:start,
 .docs-scroll::-webkit-scrollbar-button:horizontal:end { display: none !important; width: 0 !important; height: 0 !important; }
-.docs-scroll::-webkit-scrollbar-thumb { background: #e5e9f0; border-radius: 5px; }
+.docs-scroll::-webkit-scrollbar-thumb { background: #e5e9f0; border-radius: 4px; }
 .docs-scroll::-webkit-scrollbar-thumb:hover { background: #c2c9d6; }
 .docs-scroll::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
 
