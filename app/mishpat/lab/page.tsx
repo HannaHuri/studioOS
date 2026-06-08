@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Sparkles,
+  Calendar, ExternalLink, Check, Key,
   type LucideIcon,
 } from "lucide-react";
 
@@ -438,25 +438,31 @@ function DateRangeFilter({
 }
 
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
+const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
+  "תובע": { bg: "#e6f0fb", color: "#1a6dc4" },     // blue
+  "נתבעת": { bg: "#f1eafc", color: "#7a4ec2" },     // purple
+  "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
+};
+
 function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onToggleCheck: () => void }) {
+  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const meta = (
     <>
-      <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#eef1f8", color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+      <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
       <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       {doc.key && (
         <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
-          <Sparkles size={14} style={{ color: "#e0a000" }} />
+          <Key size={13} style={{ color: "#e0a000" }} />
         </span>
       )}
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      {doc.isNew && <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>}
       {doc.pending && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להחלטה</span>}
     </>
   );
   return (
     <div
-      className="rounded-lg border"
-      style={{ borderColor: "#dce8f6", backgroundColor: "white", boxShadow: doc.isNew ? "inset -3px 0 0 0 #0073ea" : undefined }}
+      className="rounded-lg border h-full overflow-hidden"
+      style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
       dir="rtl"
     >
       {/* Top: checkbox · name (opens doc) · [meta inline when wide] · external · count */}
@@ -559,6 +565,8 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
   const newCount = filteredSorted.filter((d) => d.isNew).length;
   const pendingCount = filteredSorted.filter((d) => d.pending).length;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && d.isNew) || (lens === "pending" && d.pending));
+  const chronoNew  = lens === "all" ? lensed.filter((d) => d.isNew) : [];   // above the divider
+  const chronoRest = lens === "all" ? lensed.filter((d) => !d.isNew) : lensed; // below the divider (already viewed)
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
@@ -689,13 +697,30 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
           </div>
         )}
 
-        {/* Chronological view — flat list (newest first); two columns when the panel is wide (RTL: right→left) */}
+        {/* Chronological view — newest first; uniform heights (grid auto-rows 1fr); two cols when wide; "new" divider */}
         {grouping === "chrono" && (
-          <div className={twoCol ? "grid grid-cols-2 gap-1.5 items-start" : "flex flex-col gap-1.5"}>
-            {lensed.map((doc) => (
-              <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
-            ))}
-          </div>
+          <>
+            {chronoNew.length > 0 && (
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
+                {chronoNew.map((doc) => (
+                  <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                ))}
+              </div>
+            )}
+            {chronoNew.length > 0 && chronoRest.length > 0 && (
+              <div className="flex items-center gap-2 py-0.5" title="כל המסמכים שמעל הקו התווספו מאז הכניסה האחרונה">
+                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש מהכניסה האחרונה</span>
+                <div className="flex-1 rounded" style={{ height: "2px", backgroundColor: c.primary }} />
+              </div>
+            )}
+            {chronoRest.length > 0 && (
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
+                {chronoRest.map((doc) => (
+                  <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Folder view — grouped by document type */}
@@ -728,7 +753,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
                 </button>
               </div>
               {open && (
-                <div className={twoCol ? "grid grid-cols-2 gap-1.5 items-start" : "flex flex-col gap-2"}>
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
                   {typeDocs.map((doc) => (
                     <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
