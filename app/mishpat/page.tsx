@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
-  Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
+  Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
@@ -385,14 +385,32 @@ function MessageActions({ isDark, showBadges, onToggleBadges }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
 }) {
   const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const handleUp = () => setFeedback((f) => (f === "up" ? null : "up"));
+  const handleDown = () =>
+    setFeedback((f) => {
+      if (f === "down") return null;
+      setShowFeedback(true);
+      return "down";
+    });
 
   return (
     <>
       <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
-        <VibeBtn title="העתק"><Copy size={18} /></VibeBtn>
-        <VibeBtn title="מועיל"><ThumbsUp size={18} /></VibeBtn>
-        <VibeBtn title="לא מועיל" onClick={() => setShowFeedback(true)}>
-          <ThumbsDown size={18} />
+        <VibeBtn title={copied ? "הועתק" : "העתק"} active={copied} onClick={handleCopy}>
+          {copied ? <Check size={18} /> : <Copy size={18} />}
+        </VibeBtn>
+        <VibeBtn title="תשובה טובה" active={feedback === "up"} onClick={handleUp}>
+          <ThumbsUp size={18} fill={feedback === "up" ? c.primary : "none"} />
+        </VibeBtn>
+        <VibeBtn title="תשובה לא טובה" active={feedback === "down"} onClick={handleDown}>
+          <ThumbsDown size={18} fill={feedback === "down" ? c.primary : "none"} />
         </VibeBtn>
         <VibeBtn title="המשך בשיחה חדשה">
           <Split size={18} style={{ transform: "rotate(90deg)" }} />
