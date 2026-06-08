@@ -403,14 +403,14 @@ function MessageActions({ isDark, showBadges, onToggleBadges }: {
   return (
     <>
       <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
-        <VibeBtn title={copied ? "הועתק" : "העתק"} active={copied} onClick={handleCopy}>
+        <VibeBtn title={copied ? "הועתק" : "העתק"} onClick={handleCopy}>
           {copied ? <Check size={18} /> : <Copy size={18} />}
         </VibeBtn>
-        <VibeBtn title="תשובה טובה" active={feedback === "up"} onClick={handleUp}>
-          <ThumbsUp size={18} fill={feedback === "up" ? c.primary : "none"} />
+        <VibeBtn title="תשובה טובה" onClick={handleUp}>
+          <ThumbsUp size={18} fill={feedback === "up" ? c.iconGray : "none"} />
         </VibeBtn>
-        <VibeBtn title="תשובה לא טובה" active={feedback === "down"} onClick={handleDown}>
-          <ThumbsDown size={18} fill={feedback === "down" ? c.primary : "none"} />
+        <VibeBtn title="תשובה לא טובה" onClick={handleDown}>
+          <ThumbsDown size={18} fill={feedback === "down" ? c.iconGray : "none"} />
         </VibeBtn>
         <VibeBtn title="המשך בשיחה חדשה">
           <Split size={18} style={{ transform: "rotate(90deg)" }} />
@@ -569,16 +569,17 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Citations toggle — left of case info */}
           <button
             onClick={() => setShowCitations((v) => !v)}
-            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              backgroundColor: showCitations ? c.primary : c.primaryLight,
-              color: showCitations ? "white" : c.iconGray,
+              backgroundColor: showCitations ? c.primaryLight : "transparent",
+              border: `1px solid ${showCitations ? c.primary : "transparent"}`,
+              color: showCitations ? c.primary : c.iconGray,
             }}
             title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = showCitations ? "#0060c7" : "#e6e8ed"; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primary : c.primaryLight; }}
+            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
           >
-            <Quote size={18} strokeWidth={2} />
+            <Quote size={16} strokeWidth={2} />
           </button>
 
           {/* Case info — aligned to the right, hoverable */}
