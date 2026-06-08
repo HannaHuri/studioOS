@@ -895,17 +895,20 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
         <Clock size={18} style={{ color: c.primary }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
       </div>
-      <div className="flex-1 overflow-y-auto docs-scroll px-3 py-3 flex flex-col gap-1.5">
-        {items.map((it, i) => (
-          <button
-            key={i}
-            className="text-right rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03]"
-            style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-          >
-            <div className="text-[14px]" style={{ color: titleCol }}>{it.t}</div>
-            <div className="text-[12px] mt-0.5" style={{ color: subCol }}>{it.d}</div>
-          </button>
-        ))}
+      {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
+      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+        <div className="px-3 py-3 flex flex-col gap-1.5" dir="rtl">
+          {items.map((it, i) => (
+            <button
+              key={i}
+              className="text-right rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03]"
+              style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            >
+              <div className="text-[14px]" style={{ color: titleCol }}>{it.t}</div>
+              <div className="text-[12px] mt-0.5" style={{ color: subCol }}>{it.d}</div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
