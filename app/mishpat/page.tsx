@@ -416,7 +416,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges }: {
           <Split size={18} style={{ transform: "rotate(90deg)" }} />
         </VibeBtn>
         <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
-        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} active={!showBadges} onClick={onToggleBadges}>
+        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} onClick={onToggleBadges}>
           {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
         </VibeBtn>
         <SourcesBtn isDark={isDark} />
@@ -572,8 +572,8 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
               backgroundColor: showCitations ? c.primaryLight : "transparent",
-              border: `1px solid ${showCitations ? c.primary : "transparent"}`,
-              color: showCitations ? c.primary : c.iconGray,
+              border: `1px solid ${showCitations ? c.primary : c.border}`,
+              color: c.iconGray,
             }}
             title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
             onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}

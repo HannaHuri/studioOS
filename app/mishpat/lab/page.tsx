@@ -921,20 +921,38 @@ function MessageActions({ isDark, showBadges, onToggleBadges }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
 }) {
   const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const handleUp = () => setFeedback((f) => (f === "up" ? null : "up"));
+  const handleDown = () =>
+    setFeedback((f) => {
+      if (f === "down") return null;
+      setShowFeedback(true);
+      return "down";
+    });
 
   return (
     <>
       <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
-        <VibeBtn title="העתק"><Copy size={18} /></VibeBtn>
-        <VibeBtn title="מועיל"><ThumbsUp size={18} /></VibeBtn>
-        <VibeBtn title="לא מועיל" onClick={() => setShowFeedback(true)}>
-          <ThumbsDown size={18} />
+        <VibeBtn title={copied ? "הועתק" : "העתק"} onClick={handleCopy}>
+          {copied ? <Check size={18} /> : <Copy size={18} />}
+        </VibeBtn>
+        <VibeBtn title="תשובה טובה" onClick={handleUp}>
+          <ThumbsUp size={18} fill={feedback === "up" ? c.iconGray : "none"} />
+        </VibeBtn>
+        <VibeBtn title="תשובה לא טובה" onClick={handleDown}>
+          <ThumbsDown size={18} fill={feedback === "down" ? c.iconGray : "none"} />
         </VibeBtn>
         <VibeBtn title="המשך בשיחה חדשה">
           <Split size={18} style={{ transform: "rotate(90deg)" }} />
         </VibeBtn>
         <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
-        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} active={!showBadges} onClick={onToggleBadges}>
+        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} onClick={onToggleBadges}>
           {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
         </VibeBtn>
         <SourcesBtn isDark={isDark} />
@@ -1087,16 +1105,17 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Citations toggle — left of case info */}
           <button
             onClick={() => setShowCitations((v) => !v)}
-            className="size-8 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              backgroundColor: showCitations ? c.primary : c.primaryLight,
-              color: showCitations ? "white" : c.iconGray,
+              backgroundColor: showCitations ? c.primaryLight : "transparent",
+              border: `1px solid ${showCitations ? c.primary : c.border}`,
+              color: c.iconGray,
             }}
             title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = showCitations ? "#0060c7" : "#e6e8ed"; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primary : c.primaryLight; }}
+            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
           >
-            <Quote size={18} strokeWidth={2} />
+            <Quote size={16} strokeWidth={2} />
           </button>
 
           {/* Case info — aligned to the right, hoverable */}
