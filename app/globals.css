@@ -10,7 +10,7 @@
 .docs-scroll::-webkit-scrollbar-button:vertical:end,
 .docs-scroll::-webkit-scrollbar-button:horizontal:start,
 .docs-scroll::-webkit-scrollbar-button:horizontal:end { display: none !important; width: 0 !important; height: 0 !important; }
-.docs-scroll::-webkit-scrollbar-thumb { background: #dde1e9; border-radius: 5px; }
+.docs-scroll::-webkit-scrollbar-thumb { background: #e5e9f0; border-radius: 5px; }
 .docs-scroll::-webkit-scrollbar-thumb:hover { background: #c2c9d6; }
 .docs-scroll::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
 
