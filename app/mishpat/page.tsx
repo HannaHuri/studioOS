@@ -923,8 +923,16 @@ export default function MishpatPage() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // When both can't fit, keep only one open — and do NOT auto-restore when the window grows again.
+  // On crossing INTO narrow (below CHAT_ONLY), default to closed — a drawer opens only on an explicit click.
+  const prevNarrow = useRef(false);
   useEffect(() => {
+    const nowNarrow = vw < CHAT_ONLY;
+    if (nowNarrow && !prevNarrow.current) {
+      setIsPanelOpen(false);
+      setIsHistoryOpen(false);
+    }
+    prevNarrow.current = nowNarrow;
+    // When both can't fit, keep only one open — and do NOT auto-restore when the window grows again.
     if (vw < BOTH_MIN && isPanelOpen && isHistoryOpen) setIsHistoryOpen(false);
   }, [vw, isPanelOpen, isHistoryOpen]);
 
@@ -991,7 +999,7 @@ export default function MishpatPage() {
 
           {/* Documents drawer (narrow) — overlays from the left */}
           {narrow && isPanelOpen && (
-            <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white", boxShadow: "2px 0 16px rgba(0,0,0,0.22)" }}>
+            <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               <div className="absolute inset-0 overflow-y-auto"><DocumentPanelOpen isDark={isDark} /></div>
               <button onClick={() => setIsPanelOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", right: "8px", border: `1px solid ${c.border}` }} title="סגור">
                 <X size={14} style={{ color: c.iconGray }} />
@@ -1001,7 +1009,7 @@ export default function MishpatPage() {
 
           {/* History drawer (narrow) — overlays from the right */}
           {narrow && isHistoryOpen && (
-            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white", boxShadow: "-2px 0 16px rgba(0,0,0,0.22)" }}>
+            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               <HistoryPanel isDark={isDark} />
               <button onClick={() => setIsHistoryOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
                 <X size={14} style={{ color: c.iconGray }} />
