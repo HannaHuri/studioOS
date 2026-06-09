@@ -584,11 +584,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   );
 
   const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
-  const newCount = filteredSorted.filter((d) => d.isNew).length;
+  // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
+  const LAST_VISIT = "2026-05-31";
+  const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
+  const newCount = filteredSorted.filter(isNewDoc).length;
   const pendingCount = filteredSorted.filter((d) => d.pending).length;
-  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && d.isNew) || (lens === "pending" && d.pending));
-  const chronoNew  = lens === "all" ? lensed.filter((d) => d.isNew) : [];   // above the divider
-  const chronoRest = lens === "all" ? lensed.filter((d) => !d.isNew) : lensed; // below the divider (already viewed)
+  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && isNewDoc(d)) || (lens === "pending" && d.pending));
+  const chronoNew  = lens === "all" ? lensed.filter(isNewDoc) : [];     // above the divider
+  const chronoRest = lens === "all" ? lensed.filter((d) => !isNewDoc(d)) : lensed; // below the divider (already viewed)
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
@@ -736,7 +739,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
           /* Multi-column: one continuous grid (no full-width divider → no wasted cells); new docs get a blue edge */
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}>
             {lensed.map((doc) => (
-              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && !!doc.isNew} onToggleCheck={() => toggleDoc(doc.id)} />
+              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
             ))}
           </div>
         ) : (
