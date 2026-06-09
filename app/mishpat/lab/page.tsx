@@ -465,13 +465,17 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   return (
     <div
-      className="rounded-lg border h-full overflow-hidden flex flex-col"
+      className="rounded-[8px] border h-full overflow-hidden flex flex-col cursor-pointer transition-colors"
       style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
+      title="פתיחת המסמך בחלון חדש"
+      onClick={() => { /* open document in a new tab (dev: wire real URL) */ }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : "#f6f9ff"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : "white"; }}
     >
       {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
       <div className="flex items-center gap-2 px-3 pt-2.5">
-        <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
+        <span onClick={(e) => e.stopPropagation()}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         <button className="flex-1 min-w-0 text-right" title={doc.name}>
           <span className="doc-link text-[14px] font-medium block truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             {doc.name}
@@ -499,9 +503,6 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
           </span>
         )}
         <div className="flex-1" />
-        <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}>
-          <ExternalLink size={14} />
-        </button>
         <span
           className="rounded-full px-2 py-px text-[12px] flex-shrink-0"
           style={{ color: doc.missing ? "#d83a52" : textCol, backgroundColor: doc.missing ? "#fde8eb" : (isDark ? "transparent" : "white"), fontFamily: "Figtree, sans-serif" }}
@@ -515,14 +516,14 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
         {doc.related.length > 0 && (
           <div className={`flex items-center gap-x-3 gap-y-1 mt-auto ${relMore ? "flex-wrap" : "flex-nowrap overflow-hidden"}`}>
             {shownRelated.map((r) => (
-              <button key={r} className="doc-link flex items-center gap-1 text-right min-w-0" title="פתיחת המסמך">
+              <button key={r} onClick={(e) => e.stopPropagation()} className="doc-link flex items-center gap-1 text-right min-w-0" title="פתיחת המסמך">
                 <FileText size={12} style={{ flexShrink: 0 }} />
                 <span className="text-[13px] truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
             ))}
             {doc.related.length > RELATED_LIMIT && (
               <button
-                onClick={() => setRelMore((v) => !v)}
+                onClick={(e) => { e.stopPropagation(); setRelMore((v) => !v); }}
                 className="flex items-center gap-0.5 text-[13px] flex-shrink-0"
                 style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
               >
