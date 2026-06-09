@@ -452,7 +452,7 @@ const PARTY_NAMES: Record<string, Record<string, string>> = {
   c2: { "תובע": "יוסי כהן", "נתבעת": "חברת הבנייה הגדולה בע״מ" },
 };
 
-function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean; onToggleCheck: () => void }) {
+function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onToggleCheck: () => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
@@ -464,7 +464,7 @@ function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean;
   return (
     <div
       className="rounded-lg border h-full overflow-hidden flex flex-col"
-      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white" }}
+      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -3px 0 0 0 #0073ea" : undefined }}
       dir="rtl"
     >
       {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
@@ -733,10 +733,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         )}
 
         {/* Chronological view — newest first; uniform heights (grid auto-rows 1fr); two cols when wide; "new" divider */}
-        {grouping === "chrono" && (
+        {grouping === "chrono" && (multiCol ? (
+          /* Multi-column: one continuous grid (no full-width divider → no wasted cells); new docs get a blue edge */
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}>
+            {lensed.map((doc) => (
+              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && !!doc.isNew} onToggleCheck={() => toggleDoc(doc.id)} />
+            ))}
+          </div>
+        ) : (
+          /* Single column: "new since last visit" divider */
           <>
             {chronoNew.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
+              <div className="flex flex-col gap-1.5">
                 {chronoNew.map((doc) => (
                   <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
@@ -749,14 +757,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
               </div>
             )}
             {chronoRest.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
+              <div className="flex flex-col gap-1.5">
                 {chronoRest.map((doc) => (
                   <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
               </div>
             )}
           </>
-        )}
+        ))}
 
         {/* Folder view — grouped by document type */}
         {grouping === "type" && typesInData.map((type) => {
@@ -1518,7 +1526,7 @@ export default function MishpatPage() {
             ? { right: 0, left: "72px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
             : { width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
-          <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
+          <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
               ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} />
               : <DocumentPanelClosed isDark={isDark} />}
