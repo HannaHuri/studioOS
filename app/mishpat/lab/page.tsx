@@ -149,7 +149,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
-    related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true, used: true,
+    related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true,
     key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו",
   },
   {
@@ -452,7 +452,7 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
   const shownRelated = relMore ? doc.related : doc.related.slice(0, RELATED_LIMIT);
   return (
     <div
-      className="rounded-lg border h-full overflow-hidden"
+      className="rounded-lg border h-full overflow-hidden flex flex-col"
       style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
       dir="rtl"
     >
@@ -493,10 +493,10 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
       </div>
 
       {/* Summary + related docs (collapses to one line with a "more" toggle) */}
-      <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5">
+      <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5 flex-1">
         <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto">
             {shownRelated.map((r) => (
               <button key={r} className="doc-link flex items-center gap-1 text-right" title="פתיחת המסמך">
                 <FileText size={12} style={{ flexShrink: 0 }} />
@@ -708,7 +708,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
         {grouping === "chrono" && (
           <>
             {chronoNew.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                 {chronoNew.map((doc) => (
                   <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
@@ -721,7 +721,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
               </div>
             )}
             {chronoRest.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                 {chronoRest.map((doc) => (
                   <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
@@ -760,7 +760,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
                 </button>
               </div>
               {open && (
-                <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
                     <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
