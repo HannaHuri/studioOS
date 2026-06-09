@@ -319,9 +319,9 @@ const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפ�
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
-  label, value, options, onChange, searchable = false,
+  label, value, options, onChange, searchable = false, subLabels,
 }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean;
+  label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean; subLabels?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -348,11 +348,11 @@ function FilterDropdown({
         <>
           <div className="fixed inset-0 z-30" onClick={() => { setOpen(false); setQ(""); }} />
           <div
-            className="absolute z-40 mt-1 rounded-lg py-1"
+            className="absolute z-40 mt-1 rounded-lg py-1 overflow-hidden"
             style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             {searchable && (
-              <div className="px-3 pt-2 pb-2" style={{ borderBottom: "1px solid #eef1f4" }}>
+              <div className="pr-2 pl-3 pt-2 pb-2" style={{ borderBottom: "1px solid #eef1f4" }}>
                 <input
                   autoFocus
                   value={q}
@@ -371,13 +371,16 @@ function FilterDropdown({
                     key={opt}
                     dir="rtl"
                     onClick={() => { onChange(opt); setOpen(false); setQ(""); }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-[13px] text-right"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] text-right"
                     style={{ backgroundColor: sel ? "#eff4ff" : "transparent", color: sel ? c.primary : c.text, fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                     onMouseEnter={(e) => { if (!sel) e.currentTarget.style.backgroundColor = c.hoverBg; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = sel ? "#eff4ff" : "transparent"; }}
                   >
-                    <span>{opt}</span>
-                    {sel && <Check size={13} style={{ color: c.primary }} />}
+                    <span className="flex flex-col items-start min-w-0">
+                      <span>{opt}</span>
+                      {subLabels?.[opt] && <span className="text-[11px] mt-0.5 truncate max-w-full" style={{ color: c.textLight, fontWeight: 400 }}>{subLabels[opt]}</span>}
+                    </span>
+                    {sel && <Check size={13} style={{ color: c.primary, flexShrink: 0 }} />}
                   </button>
                 );
               })}
@@ -418,7 +421,7 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", left: 0, width: "164px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", right: 0, width: "164px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
@@ -665,7 +668,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
-            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} />
+            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} />
             <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
           </div>
         </div>
