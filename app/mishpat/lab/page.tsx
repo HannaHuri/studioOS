@@ -108,6 +108,7 @@ interface CaseDoc {
   type: string;          // doc type — chip + filter
   submitter: string;     // צד מגיש
   date: string;          // display date
+  time?: string;         // display time (matters when several docs are filed the same day)
   iso: string;           // ISO date (for range filtering)
   bucket: DocBucket;
   words: string;         // word count
@@ -139,28 +140,28 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 const CASE_DOCS: CaseDoc[] = [
   {
     id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת",
-    date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "1.1K",
+    date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
     isNew: true, pending: true,
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
-    date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "8.4K",
+    date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה"], checked: true, used: true,
     key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו",
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשה בתיק", submitter: "תובע",
-    date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "640",
+    date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
     related: ["בקשה לדחיית מועד דיון"], checked: false,
     isNew: true,
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
-    date: "18.05.26", iso: "2026-05-18", bucket: "month", words: "4.2K",
+    date: "18.05.26", time: "14:22", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
     related: ["החלטה על מינוי מומחה"], checked: false, used: true,
     key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק",
@@ -448,15 +449,15 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const meta = (
     <>
+      <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
       <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
-      <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
       {doc.key && (
         <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
           <Key size={13} style={{ color: c.iconGray }} />
         </span>
       )}
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      {doc.pending && <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להחלטה</span>}
+      {doc.pending && <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}><Clock size={11} /> ממתין להחלטה</span>}
     </>
   );
   return (
@@ -470,8 +471,8 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
         <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
           <span
-            className="text-[14px] font-medium hover:underline line-clamp-2"
-            style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            className="doc-link text-[14px] font-medium line-clamp-2"
+            style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
             {doc.name}
           </span>
@@ -500,9 +501,9 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
         {doc.related.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {doc.related.map((r) => (
-              <button key={r} className="flex items-center gap-1 text-right hover:underline" title="פתיחת המסמך">
-                <FileText size={12} style={{ color: c.primary, flexShrink: 0 }} />
-                <span className="text-[13px]" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
+              <button key={r} className="doc-link flex items-center gap-1 text-right" title="פתיחת המסמך">
+                <FileText size={12} style={{ flexShrink: 0 }} />
+                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
             ))}
           </div>
@@ -709,8 +710,8 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
             )}
             {chronoNew.length > 0 && chronoRest.length > 0 && (
               <div className="flex items-center gap-2 py-0.5" title="כל המסמכים שמעל הקו התווספו מאז הכניסה האחרונה">
-                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש מהכניסה האחרונה</span>
-                <div className="flex-1" style={{ height: "1px", backgroundColor: c.primary }} />
+                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>
+                <div className="flex-1" style={{ height: "0.5px", backgroundColor: c.primary }} />
               </div>
             )}
             {chronoRest.length > 0 && (
