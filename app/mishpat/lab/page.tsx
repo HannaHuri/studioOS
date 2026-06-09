@@ -682,7 +682,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                 >
                   {key === "pending" && <Gavel size={12} style={{ transform: "scaleX(-1)" }} />}
                   {label}
-                  <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
+                  {openCaseId && <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>}
                 </button>
               );
             })}
