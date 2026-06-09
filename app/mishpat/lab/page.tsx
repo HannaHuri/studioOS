@@ -150,7 +150,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע", submitterName: "משה כהן ובניו בע״מ",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
-    related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true,
+    related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
     key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו",
   },
   {
@@ -158,7 +158,6 @@ const CASE_DOCS: CaseDoc[] = [
     date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
     related: ["בקשה לדחיית מועד דיון"], checked: false,
-    isNew: true,
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקול", submitter: "בית המשפט",
@@ -464,7 +463,7 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
   return (
     <div
       className="rounded-lg border h-full overflow-hidden flex flex-col"
-      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -3px 0 0 0 #0073ea" : undefined }}
+      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
     >
       {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
@@ -1521,7 +1520,7 @@ export default function MishpatPage() {
 
         {/* Panel wrapper — column normally; wide overlay in focus mode */}
         <div
-          className={focusDocs ? "absolute top-0 bottom-0 z-40 overflow-hidden" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+          className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
           style={focusDocs
             ? { right: 0, left: "72px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
             : { width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
