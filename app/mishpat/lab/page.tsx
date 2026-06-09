@@ -595,8 +595,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[16px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[16px] truncate" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
             <button
               onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
               className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center"
@@ -612,7 +612,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
               {isAuto ? "אוטו׳" : "ידני"}
             </button>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
