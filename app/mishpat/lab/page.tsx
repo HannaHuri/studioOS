@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, Filter,
   type LucideIcon,
 } from "lucide-react";
 
@@ -671,6 +671,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <Filter size={14} className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight }} />
             {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
               const on = lens === key;
               return (
