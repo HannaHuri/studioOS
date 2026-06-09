@@ -445,15 +445,18 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
 };
 
-function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => void }) {
+function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean; onToggleCheck: () => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
   const shownRelated = relMore ? doc.related : doc.related.slice(0, RELATED_LIMIT);
+  const iconCol = isDark ? dk.textMuted : c.iconGray;
+  const subText = isDark ? dk.textMuted : c.textGray;
+  const textCol = isDark ? dk.text : c.text;
   return (
     <div
       className="rounded-lg border h-full overflow-hidden flex flex-col"
-      style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
+      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white" }}
       dir="rtl"
     >
       {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
@@ -468,33 +471,33 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
 
       {/* Row 2: all metadata + icons on one line (date · submitter · key · used · pending · open · count) */}
       <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5 overflow-hidden">
-        <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
+        <span className="text-[12px] flex-shrink-0" style={{ color: subText, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
         <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
         {doc.key && (
           <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
-            <Key size={13} style={{ color: c.iconGray }} />
+            <Key size={13} style={{ color: iconCol }} />
           </span>
         )}
         {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         {doc.pending && (
           <span title="ממתין להחלטתי" className="inline-flex items-center flex-shrink-0" aria-label="ממתין להחלטתי">
-            <Gavel size={13} style={{ color: c.iconGray }} />
+            <Gavel size={13} style={{ color: iconCol }} />
           </span>
         )}
         <div className="flex-1" />
-        <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: c.iconGray }}>
+        <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}>
           <ExternalLink size={14} />
         </button>
         <span
           className="rounded-full px-2 py-px text-[12px] flex-shrink-0"
-          style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : "white", fontFamily: "Figtree, sans-serif" }}
+          style={{ color: doc.missing ? "#d83a52" : textCol, backgroundColor: doc.missing ? "#fde8eb" : (isDark ? "transparent" : "white"), fontFamily: "Figtree, sans-serif" }}
           title={doc.missing ? "המסמך ללא תוכן" : undefined}
         >{doc.words}</span>
       </div>
 
       {/* Summary + related docs (collapses to one line with a "more" toggle) */}
       <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5 flex-1">
-        <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+        <p className="text-[14px] leading-snug" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto">
             {shownRelated.map((r) => (
@@ -578,7 +581,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg }}>
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
@@ -601,15 +604,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             </button>
           </div>
           <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
                 key={key}
                 onClick={() => setGrouping(key)}
                 className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors"
                 style={{
-                  backgroundColor: grouping === key ? "white" : "transparent",
-                  color: grouping === key ? c.primary : c.textGray,
+                  backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
+                  color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
                   fontWeight: grouping === key ? 600 : 400,
                   boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
                   fontFamily: "Noto Sans Hebrew, sans-serif",
@@ -642,7 +645,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
               onChange={(e) => setSearch(e.target.value)}
               placeholder="חיפוש שם מסמך או תקציר"
               className="w-full h-9 rounded-md text-[13px] outline-none"
-              style={{ border: `1px solid ${c.inputBorder}`, color: c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
             />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
@@ -688,7 +691,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
           return (
             <div key={cf.id} className="flex flex-col">
               {/* Case header — gentle takhelet pill only; documents stay on white below */}
-              <div className="flex items-start gap-2 rounded-lg px-2 py-2" style={{ backgroundColor: "#eef4fc" }}>
+              <div className="flex items-start gap-2 rounded-lg px-2 py-2" style={{ backgroundColor: isDark ? "#222d44" : "#eef4fc" }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -696,12 +699,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: c.text }}>
+                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: isDark ? dk.text : c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       </span>
-                      <span className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
+                      <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
                   <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
@@ -722,7 +725,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             {chronoNew.length > 0 && (
               <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                 {chronoNew.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
+                  <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
               </div>
             )}
@@ -735,7 +738,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             {chronoRest.length > 0 && (
               <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                 {chronoRest.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
+                  <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
               </div>
             )}
@@ -774,7 +777,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
               {open && (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
-                    <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
+                    <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
                 </div>
               )}

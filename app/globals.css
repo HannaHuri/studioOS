@@ -15,8 +15,8 @@
 .docs-scroll::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
 
 /* Document links: look like main-color text by default, reveal as links on hover */
-.doc-link { color: #323338; text-decoration: none; transition: color 0.12s; }
-.doc-link:hover { color: #0073ea; text-decoration: underline; }
+.doc-link { color: var(--doc-link-color, #323338); text-decoration: none; transition: color 0.12s; }
+.doc-link:hover { color: var(--doc-link-hover, #0073ea); text-decoration: underline; }
 
 @keyframes toastSlideIn {
   from { opacity: 0; transform: translateX(-50%) translateY(16px); }
