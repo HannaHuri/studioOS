@@ -319,9 +319,9 @@ const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפ�
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
-  label, value, options, onChange, searchable = false, subLabels,
+  label, value, options, onChange, searchable = false, subLabels, isDark,
 }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean; subLabels?: Record<string, string>;
+  label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean; subLabels?: Record<string, string>; isDark?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -334,9 +334,9 @@ function FilterDropdown({
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
         style={{
-          border: `1px solid ${isFiltered ? c.primary : c.border}`,
-          color: isFiltered ? c.primary : c.textGray,
-          backgroundColor: isFiltered ? "#eff4ff" : "white",
+          border: `1px solid ${isFiltered ? c.primary : (isDark ? dk.border : c.border)}`,
+          color: isFiltered ? c.primary : (isDark ? dk.textMuted : c.textGray),
+          backgroundColor: isFiltered ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
           fontFamily: "Noto Sans Hebrew, sans-serif",
         }}
       >
@@ -349,17 +349,17 @@ function FilterDropdown({
           <div className="fixed inset-0 z-30" onClick={() => { setOpen(false); setQ(""); }} />
           <div
             className="absolute z-40 mt-1 rounded-lg py-1 overflow-hidden"
-            style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             {searchable && (
-              <div className="pr-2 pl-3 pt-2 pb-2" style={{ borderBottom: "1px solid #eef1f4" }}>
+              <div className="pr-2 pl-3 pt-1 pb-2" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
                 <input
                   autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="הקלידו סוג..."
+                  placeholder="הקלידו סוג…"
                   className="w-full h-7 text-[13px] outline-none"
-                  style={{ border: "none", background: "transparent", color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  style={{ border: "none", background: "transparent", color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 />
               </div>
             )}
@@ -372,13 +372,13 @@ function FilterDropdown({
                     dir="rtl"
                     onClick={() => { onChange(opt); setOpen(false); setQ(""); }}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] text-right"
-                    style={{ backgroundColor: sel ? "#eff4ff" : "transparent", color: sel ? c.primary : c.text, fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                    onMouseEnter={(e) => { if (!sel) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = sel ? "#eff4ff" : "transparent"; }}
+                    style={{ backgroundColor: sel ? (isDark ? "#22304a" : "#eff4ff") : "transparent", color: sel ? c.primary : (isDark ? dk.text : c.text), fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                    onMouseEnter={(e) => { if (!sel) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = sel ? (isDark ? "#22304a" : "#eff4ff") : "transparent"; }}
                   >
                     <span className="flex flex-col items-start min-w-0">
                       <span>{opt}</span>
-                      {subLabels?.[opt] && <span className="text-[11px] mt-0.5 truncate max-w-full" style={{ color: c.textLight, fontWeight: 400 }}>{subLabels[opt]}</span>}
+                      {subLabels?.[opt] && <span className="text-[13px] mt-0.5 truncate max-w-full" style={{ color: isDark ? dk.textMuted : c.textGray, fontWeight: 400 }}>{subLabels[opt]}</span>}
                     </span>
                     {sel && <Check size={13} style={{ color: c.primary, flexShrink: 0 }} />}
                   </button>
@@ -397,9 +397,9 @@ function FilterDropdown({
 
 // ── Date range filter (from / to) ────────────────────────────────────────────
 function DateRangeFilter({
-  from, to, onChange,
+  from, to, onChange, isDark,
 }: {
-  from: string; to: string; onChange: (from: string, to: string) => void;
+  from: string; to: string; onChange: (from: string, to: string) => void; isDark?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const active = !!(from || to);
@@ -410,7 +410,7 @@ function DateRangeFilter({
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors"
-        style={{ border: `1px solid ${active ? c.primary : c.border}`, color: active ? c.primary : c.textGray, backgroundColor: active ? "#eff4ff" : "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        style={{ border: `1px solid ${active ? c.primary : (isDark ? dk.border : c.border)}`, color: active ? c.primary : (isDark ? dk.textMuted : c.textGray), backgroundColor: active ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"), fontFamily: "Noto Sans Hebrew, sans-serif" }}
       >
         <Calendar size={13} />
         <span>{label}</span>
@@ -421,15 +421,15 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", right: 0, width: "164px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", right: 0, width: "164px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
-            <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <label className="flex flex-col gap-1 text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
-              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text }} />
             </label>
-            <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <label className="flex flex-col gap-1 text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               עד תאריך
-              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${c.inputBorder}`, color: c.text }} />
+              <input type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className="w-full box-border h-9 rounded px-2 text-[14px] outline-none" style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text }} />
             </label>
             {active && (
               <button onClick={() => onChange("", "")} className="text-[12px] self-start" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>נקה טווח</button>
@@ -473,7 +473,7 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
       <div className="flex items-center gap-2 px-3 pt-2.5">
         <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         <button className="flex-1 min-w-0 text-right" title={doc.name}>
-          <span className="doc-link text-[14px] font-medium line-clamp-1" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <span className="doc-link text-[14px] font-medium block truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             {doc.name}
           </span>
         </button>
@@ -513,11 +513,11 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
       <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5 flex-1">
         <p className="text-[14px] leading-snug" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto">
+          <div className={`flex items-center gap-x-3 gap-y-1 mt-auto ${relMore ? "flex-wrap" : "flex-nowrap overflow-hidden"}`}>
             {shownRelated.map((r) => (
-              <button key={r} className="doc-link flex items-center gap-1 text-right" title="פתיחת המסמך">
+              <button key={r} className="doc-link flex items-center gap-1 text-right min-w-0" title="פתיחת המסמך">
                 <FileText size={12} style={{ flexShrink: 0 }} />
-                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
+                <span className="text-[13px] truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
             ))}
             {doc.related.length > RELATED_LIMIT && (
@@ -667,9 +667,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
-            <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable />
-            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} />
-            <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
+            <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
+            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
+            <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
           </div>
         </div>
 
