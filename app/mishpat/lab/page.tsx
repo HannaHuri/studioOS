@@ -622,12 +622,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             </button>
           </div>
           <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
                 key={key}
                 onClick={() => setGrouping(key)}
-                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors"
+                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
                 style={{
                   backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
                   color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
