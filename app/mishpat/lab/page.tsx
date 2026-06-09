@@ -680,7 +680,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                   className="flex items-center gap-1 px-2.5 h-7 rounded-full text-[12px] transition-colors"
                   style={{ backgroundColor: on ? c.primary : "transparent", color: on ? "white" : (isDark ? dk.textMuted : c.textGray), border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
-                  {key === "pending" && <Gavel size={12} />}
+                  {key === "pending" && <Gavel size={12} style={{ transform: "scaleX(-1)" }} />}
                   {label}
                   <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
                 </button>
