@@ -1097,7 +1097,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         dir="rtl"
       >
         <input
-          className="w-full bg-transparent outline-none text-right text-[16px] min-h-[24px]"
+          className={`w-full bg-transparent outline-none text-right text-[16px] min-h-[24px] ${isDark ? "dark-ph" : ""}`}
           style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -1156,13 +1156,13 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             onClick={() => setShowCitations((v) => !v)}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              backgroundColor: showCitations ? c.primaryLight : "transparent",
-              border: `1px solid ${showCitations ? c.primary : c.border}`,
-              color: c.iconGray,
+              backgroundColor: showCitations ? (isDark ? "#22304a" : c.primaryLight) : "transparent",
+              border: `1px solid ${showCitations ? c.primary : (isDark ? dk.border : c.border)}`,
+              color: isDark ? dk.textMuted : c.iconGray,
             }}
             title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
+            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? (isDark ? "#22304a" : c.primaryLight) : "transparent"; }}
           >
             <Quote size={16} strokeWidth={2} />
           </button>
@@ -1568,13 +1568,13 @@ export default function MishpatPage() {
           {!focusDocs && (
             <button
               onClick={() => setIsPanelOpen((v) => !v)}
-              className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-              style={{ border: `1px solid ${c.border}`, top: "34px", left: "-12px" }}
+              className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "34px", left: "-12px" }}
               title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
             >
               {isPanelOpen
-                ? <ChevronRight size={16} style={{ color: c.iconGray }} />
-                : <ChevronLeft size={16} style={{ color: c.iconGray }} />}
+                ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+                : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
             </button>
           )}
         </div>
