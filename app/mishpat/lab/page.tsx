@@ -672,6 +672,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
           </button>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
+              // "New" only appears when there is something new (hidden on first visit); kept if it's the active filter
+              if (key === "new" && count === 0 && lens !== "new") return null;
               const on = lens === key;
               return (
                 <button
