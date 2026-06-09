@@ -457,7 +457,11 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
         </span>
       )}
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      {doc.pending && <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: "#fdecdd", color: "#b5621a", fontFamily: "Noto Sans Hebrew, sans-serif" }}><Clock size={11} /> ממתין להחלטה</span>}
+      {doc.pending && (
+        <span title="ממתין להחלטה" className="inline-flex items-center flex-shrink-0" aria-label="ממתין להחלטה">
+          <Clock size={13} style={{ color: "#c07a2b" }} />
+        </span>
+      )}
     </>
   );
   return (
@@ -471,13 +475,13 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
         <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
         <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
           <span
-            className="doc-link text-[14px] font-medium line-clamp-2"
-            style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            className="doc-link text-[14px] font-medium leading-snug line-clamp-2"
+            style={{ fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "2.75em" }}
           >
             {doc.name}
           </span>
         </button>
-        {wide && <div className="flex items-center flex-wrap justify-end gap-x-2 gap-y-1">{meta}</div>}
+        {wide && <div className="flex items-center justify-end gap-2 min-w-0 overflow-hidden">{meta}</div>}
         <div className="flex items-center gap-1 flex-shrink-0">
           <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
             <ExternalLink size={14} />
@@ -492,12 +496,12 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
 
       {/* Meta row — only when narrow (when wide it sits inline above) */}
       {!wide && (
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 px-3 pt-1 pb-2.5">{meta}</div>
+        <div className="flex items-center gap-2 px-3 pt-1 pb-2.5 overflow-hidden">{meta}</div>
       )}
 
       {/* Summary (always visible) · related docs as links */}
-      <div className="px-3 pb-2.5 pt-1.5 flex flex-col gap-1.5 border-t" style={{ borderColor: c.inputBorder }}>
-        <p className="text-[14px] leading-snug line-clamp-2" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
+      <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5">
+        <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {doc.related.map((r) => (
