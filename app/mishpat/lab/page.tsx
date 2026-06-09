@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key,
+  Calendar, ExternalLink, Check, Key, Gavel,
   type LucideIcon,
 } from "lucide-react";
 
@@ -445,71 +445,74 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
 };
 
-function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onToggleCheck: () => void }) {
+function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
-  const meta = (
-    <>
-      <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
-      <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
-      {doc.key && (
-        <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
-          <Key size={13} style={{ color: c.iconGray }} />
-        </span>
-      )}
-      {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      {doc.pending && (
-        <span title="ממתין להחלטה" className="inline-flex items-center flex-shrink-0" aria-label="ממתין להחלטה">
-          <Clock size={13} style={{ color: "#c07a2b" }} />
-        </span>
-      )}
-    </>
-  );
+  const [relMore, setRelMore] = useState(false);
+  const RELATED_LIMIT = 2;
+  const shownRelated = relMore ? doc.related : doc.related.slice(0, RELATED_LIMIT);
   return (
     <div
       className="rounded-lg border h-full overflow-hidden"
       style={{ borderColor: "#dce8f6", backgroundColor: "white" }}
       dir="rtl"
     >
-      {/* Top: checkbox · name (opens doc) · [meta inline when wide] · external · count */}
-      <div className={`flex items-start gap-2 px-3 pt-2.5 ${wide ? "pb-2.5" : ""}`}>
+      {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
+      <div className="flex items-center gap-2 px-3 pt-2.5">
         <CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} />
-        <button className="flex-1 min-w-0 text-right" title="פתיחת המסמך">
-          <span
-            className="doc-link text-[14px] font-medium leading-snug line-clamp-2"
-            style={{ fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "2.75em" }}
-          >
+        <button className="flex-1 min-w-0 text-right" title={doc.name}>
+          <span className="doc-link text-[14px] font-medium line-clamp-1" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             {doc.name}
           </span>
         </button>
-        {wide && <div className="flex items-center justify-end gap-2 min-w-0 overflow-hidden">{meta}</div>}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: c.iconGray }}>
-            <ExternalLink size={14} />
-          </button>
-          <span
-            className="rounded-full px-2 py-px text-[12px]"
-            style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : "white", fontFamily: "Figtree, sans-serif" }}
-            title={doc.missing ? "המסמך ללא תוכן" : undefined}
-          >{doc.words}</span>
-        </div>
       </div>
 
-      {/* Meta row — only when narrow (when wide it sits inline above) */}
-      {!wide && (
-        <div className="flex items-center gap-2 px-3 pt-1 pb-2.5 overflow-hidden">{meta}</div>
-      )}
+      {/* Row 2: all metadata + icons on one line (date · submitter · key · used · pending · open · count) */}
+      <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5 overflow-hidden">
+        <span className="text-[12px] flex-shrink-0" style={{ color: c.textGray, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
+        <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+        {doc.key && (
+          <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
+            <Key size={13} style={{ color: c.iconGray }} />
+          </span>
+        )}
+        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        {doc.pending && (
+          <span title="ממתין להחלטתי" className="inline-flex items-center flex-shrink-0" aria-label="ממתין להחלטתי">
+            <Gavel size={13} style={{ color: c.iconGray }} />
+          </span>
+        )}
+        <div className="flex-1" />
+        <button title="פתיחה בחלון חדש" className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: c.iconGray }}>
+          <ExternalLink size={14} />
+        </button>
+        <span
+          className="rounded-full px-2 py-px text-[12px] flex-shrink-0"
+          style={{ color: doc.missing ? "#d83a52" : c.text, backgroundColor: doc.missing ? "#fde8eb" : "white", fontFamily: "Figtree, sans-serif" }}
+          title={doc.missing ? "המסמך ללא תוכן" : undefined}
+        >{doc.words}</span>
+      </div>
 
-      {/* Summary (always visible) · related docs as links */}
+      {/* Summary + related docs (collapses to one line with a "more" toggle) */}
       <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-1.5">
         <p className="text-[14px] leading-snug" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</p>
         {doc.related.length > 0 && (
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {doc.related.map((r) => (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {shownRelated.map((r) => (
               <button key={r} className="doc-link flex items-center gap-1 text-right" title="פתיחת המסמך">
                 <FileText size={12} style={{ flexShrink: 0 }} />
                 <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
             ))}
+            {doc.related.length > RELATED_LIMIT && (
+              <button
+                onClick={() => setRelMore((v) => !v)}
+                className="flex items-center gap-0.5 text-[13px] flex-shrink-0"
+                style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              >
+                {relMore ? "פחות" : "עוד"}
+                <ChevronDown size={12} style={{ transition: "transform 0.15s", transform: relMore ? "rotate(180deg)" : "none" }} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -521,7 +524,6 @@ function DocRow({ doc, wide, onToggleCheck }: { doc: CaseDoc; wide: boolean; onT
 function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth: number }) {
   const twoCol = panelWidth >= 560;     // two-column document grid (most docs above the fold)
   const headerWide = panelWidth >= 480; // filters move up onto the search row
-  const wide = headerWide && !twoCol;   // single wide column → doc meta inline on the name row
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
@@ -708,7 +710,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
             {chronoNew.length > 0 && (
               <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
                 {chronoNew.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                  <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
               </div>
             )}
@@ -721,7 +723,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
             {chronoRest.length > 0 && (
               <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
                 {chronoRest.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                  <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
               </div>
             )}
@@ -760,7 +762,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
               {open && (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: "1fr" }}>
                   {typeDocs.map((doc) => (
-                    <DocRow key={doc.id} doc={doc} wide={wide} onToggleCheck={() => toggleDoc(doc.id)} />
+                    <DocRow key={doc.id} doc={doc} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
                 </div>
               )}
