@@ -492,16 +492,6 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
           style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}
         >{doc.submitter}</span>
         {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-        {doc.key && (
-          <span title={doc.keyReason} className="inline-flex items-center justify-center flex-shrink-0 rounded px-1.5 py-1 transition-colors hover:bg-black/5 cursor-pointer" aria-label="מסמך מרכזי">
-            <Key size={13} style={{ color: iconCol }} />
-          </span>
-        )}
-        {doc.pending && (
-          <span title="ממתין להחלטתי" className="inline-flex items-center justify-center flex-shrink-0 rounded px-1.5 py-1 transition-colors hover:bg-black/5 cursor-pointer" aria-label="ממתין להחלטתי">
-            <Gavel size={13} style={{ color: iconCol }} />
-          </span>
-        )}
         <div className="flex-1" />
         <span
           className="rounded-full px-2 py-px text-[12px] flex-shrink-0"
@@ -688,8 +678,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                   key={key}
                   onClick={() => setLens(on ? "all" : key)}
                   className="flex items-center gap-1 px-2.5 h-7 rounded-full text-[12px] transition-colors"
-                  style={{ backgroundColor: on ? c.primary : "transparent", color: on ? "white" : c.textGray, border: `1px solid ${on ? c.primary : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  style={{ backgroundColor: on ? c.primary : "transparent", color: on ? "white" : (isDark ? dk.textMuted : c.textGray), border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
+                  {key === "pending" && <Gavel size={12} />}
                   {label}
                   <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
                 </button>
