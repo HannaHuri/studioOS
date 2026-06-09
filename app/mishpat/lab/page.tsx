@@ -446,6 +446,12 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
 };
 
+// Specific party name per case + side (shown on hover; useful when a side has several)
+const PARTY_NAMES: Record<string, Record<string, string>> = {
+  c1: { "תובע": "משה כהן ובניו בע״מ", "נתבעת": "משה לוי ובניו בע״מ" },
+  c2: { "תובע": "יוסי כהן", "נתבעת": "חברת הבנייה הגדולה בע״מ" },
+};
+
 function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean; onToggleCheck: () => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
@@ -454,6 +460,7 @@ function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean;
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const subText = isDark ? dk.textMuted : c.textGray;
   const textCol = isDark ? dk.text : c.text;
+  const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   return (
     <div
       className="rounded-lg border h-full overflow-hidden flex flex-col"
@@ -474,18 +481,18 @@ function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean;
       <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5 overflow-hidden">
         <span className="text-[12px] flex-shrink-0" style={{ color: subText, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
         <span
-          title={doc.submitterName ? `${doc.submitter} — ${doc.submitterName}` : doc.submitter}
+          title={partyName ? `${doc.submitter} — ${partyName}` : doc.submitter}
           className="rounded px-2 py-0.5 text-[12px] flex-shrink-0"
           style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}
         >{doc.submitter}</span>
         {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         {doc.key && (
-          <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0 rounded p-0.5 transition-colors hover:bg-black/5 cursor-pointer" aria-label="מסמך מרכזי">
+          <span title={doc.keyReason} className="inline-flex items-center justify-center flex-shrink-0 rounded px-1.5 py-1 transition-colors hover:bg-black/5 cursor-pointer" aria-label="מסמך מרכזי">
             <Key size={13} style={{ color: iconCol }} />
           </span>
         )}
         {doc.pending && (
-          <span title="ממתין להחלטתי" className="inline-flex items-center flex-shrink-0 rounded p-0.5 transition-colors hover:bg-black/5 cursor-pointer" aria-label="ממתין להחלטתי">
+          <span title="ממתין להחלטתי" className="inline-flex items-center justify-center flex-shrink-0 rounded px-1.5 py-1 transition-colors hover:bg-black/5 cursor-pointer" aria-label="ממתין להחלטתי">
             <Gavel size={13} style={{ color: iconCol }} />
           </span>
         )}
@@ -1440,6 +1447,13 @@ export default function MishpatPage() {
   const [panelWidth, setPanelWidth] = useState(380);
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
+  const [vw, setVw] = useState(1280);
+  useEffect(() => {
+    const u = () => setVw(window.innerWidth);
+    u();
+    window.addEventListener("resize", u);
+    return () => window.removeEventListener("resize", u);
+  }, []);
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -1506,7 +1520,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? 900 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
