@@ -107,6 +107,7 @@ interface CaseDoc {
   name: string;
   type: string;          // doc type — chip + filter
   submitter: string;     // צד מגיש
+  submitterName?: string; // specific party name (shown on hover; useful when a side has several)
   date: string;          // display date
   time?: string;         // display time (matters when several docs are filed the same day)
   iso: string;           // ISO date (for range filtering)
@@ -139,14 +140,14 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
-    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת",
+    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת", submitterName: "משה לוי ובניו בע״מ",
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
     isNew: true, pending: true,
   },
   {
-    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע",
+    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע", submitterName: "משה כהן ובניו בע״מ",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true,
@@ -472,15 +473,19 @@ function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean;
       {/* Row 2: all metadata + icons on one line (date · submitter · key · used · pending · open · count) */}
       <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5 overflow-hidden">
         <span className="text-[12px] flex-shrink-0" style={{ color: subText, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
-        <span className="rounded px-2 py-0.5 text-[12px] flex-shrink-0" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.submitter}</span>
+        <span
+          title={doc.submitterName ? `${doc.submitter} — ${doc.submitterName}` : doc.submitter}
+          className="rounded px-2 py-0.5 text-[12px] flex-shrink-0"
+          style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        >{doc.submitter}</span>
+        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         {doc.key && (
-          <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0" aria-label="מסמך מרכזי">
+          <span title={doc.keyReason} className="inline-flex items-center flex-shrink-0 rounded p-0.5 transition-colors hover:bg-black/5 cursor-pointer" aria-label="מסמך מרכזי">
             <Key size={13} style={{ color: iconCol }} />
           </span>
         )}
-        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         {doc.pending && (
-          <span title="ממתין להחלטתי" className="inline-flex items-center flex-shrink-0" aria-label="ממתין להחלטתי">
+          <span title="ממתין להחלטתי" className="inline-flex items-center flex-shrink-0 rounded p-0.5 transition-colors hover:bg-black/5 cursor-pointer" aria-label="ממתין להחלטתי">
             <Gavel size={13} style={{ color: iconCol }} />
           </span>
         )}
@@ -525,7 +530,8 @@ function DocRow({ doc, isDark, onToggleCheck }: { doc: CaseDoc; isDark: boolean;
 
 // ── Document panel (open) — chronological browser ────────────────────────────
 function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void }) {
-  const twoCol = panelWidth >= 560;     // two-column document grid (most docs above the fold)
+  const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
+  const multiCol = cols > 1;
   const headerWide = panelWidth >= 480; // filters move up onto the search row
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
@@ -662,7 +668,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            {([["new", "מה חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
+            {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
               const on = lens === key;
               return (
                 <button
@@ -723,7 +729,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         {grouping === "chrono" && (
           <>
             {chronoNew.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                 {chronoNew.map((doc) => (
                   <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
@@ -732,11 +738,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             {chronoNew.length > 0 && chronoRest.length > 0 && (
               <div className="flex items-center gap-2 py-0.5" title="כל המסמכים שמעל הקו התווספו מאז הכניסה האחרונה">
                 <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>
-                <div className="flex-1" style={{ height: "0.5px", backgroundColor: c.primary }} />
+                <div className="flex-1" style={{ height: "0.5px", backgroundColor: "rgba(0,115,234,0.4)" }} />
               </div>
             )}
             {chronoRest.length > 0 && (
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                 {chronoRest.map((doc) => (
                   <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                 ))}
@@ -775,7 +781,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                 </button>
               </div>
               {open && (
-                <div className="grid gap-1.5" style={{ gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr", gridAutoRows: twoCol ? "1fr" : "auto" }}>
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
                     <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
