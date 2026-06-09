@@ -418,7 +418,7 @@ function DateRangeFilter({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
-            style={{ top: "100%", right: 0, width: "190px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
+            style={{ top: "100%", left: 0, width: "164px", backgroundColor: "white", border: `1px solid ${c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             <label className="flex flex-col gap-1 text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               מתאריך
