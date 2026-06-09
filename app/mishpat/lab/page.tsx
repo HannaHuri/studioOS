@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -521,7 +521,7 @@ function DocRow({ doc, onToggleCheck }: { doc: CaseDoc; onToggleCheck: () => voi
 }
 
 // ── Document panel (open) — chronological browser ────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth: number }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void }) {
   const twoCol = panelWidth >= 560;     // two-column document grid (most docs above the fold)
   const headerWide = panelWidth >= 480; // filters move up onto the search row
   const [search, setSearch]       = useState("");
@@ -600,6 +600,7 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
               {isAuto ? "אוטו׳" : "ידני"}
             </button>
           </div>
+          <div className="flex items-center gap-1.5">
           <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: c.hoverBg }}>
             {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
               <button
@@ -618,6 +619,17 @@ function DocumentPanelOpen({ isDark, panelWidth }: { isDark: boolean; panelWidth
                 {label}
               </button>
             ))}
+          </div>
+          {onToggleFocus && (
+            <button
+              onClick={onToggleFocus}
+              className="size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0"
+              style={{ color: c.iconGray }}
+              title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
+            >
+              {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            </button>
+          )}
           </div>
         </div>
 
@@ -1418,6 +1430,7 @@ export default function MishpatPage() {
   const [convKey, setConvKey] = useState(0);
   const [panelWidth, setPanelWidth] = useState(380);
   const [resizing, setResizing] = useState(false);
+  const [focusDocs, setFocusDocs] = useState(false);
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -1470,17 +1483,26 @@ export default function MishpatPage() {
         {/* Chat */}
         <ChatArea isDark={isDark} conversationKey={convKey} />
 
-        {/* Panel wrapper — right side */}
+        {/* Focus backdrop — dims the chat behind the expanded documents */}
+        {isPanelOpen && focusDocs && (
+          <div onClick={() => setFocusDocs(false)} className="absolute inset-0 z-30" style={{ backgroundColor: "rgba(0,0,0,0.3)" }} />
+        )}
+
+        {/* Panel wrapper — column normally; wide overlay in focus mode */}
         <div
-          className={`relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
-          style={{ width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+          className={focusDocs ? "absolute top-0 bottom-0 z-40 overflow-hidden" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+          style={focusDocs
+            ? { right: 0, left: "72px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
+            : { width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto" style={{ overflowX: "visible" }}>
-            {isPanelOpen ? <DocumentPanelOpen isDark={isDark} panelWidth={panelWidth} /> : <DocumentPanelClosed isDark={isDark} />}
+            {isPanelOpen
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? 900 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} />
+              : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
-          {/* Resize handle — inner (left) edge of the right-side panel; drag to widen */}
-          {isPanelOpen && (
+          {/* Resize handle — column mode only */}
+          {isPanelOpen && !focusDocs && (
             <div
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -1505,17 +1527,19 @@ export default function MishpatPage() {
             </div>
           )}
 
-          {/* Toggle button — pokes out on the LEFT edge (panel is on the right) */}
-          <button
-            onClick={() => setIsPanelOpen((v) => !v)}
-            className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
-            style={{ border: `1px solid ${c.border}`, top: "34px", left: "-12px" }}
-            title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
-          >
-            {isPanelOpen
-              ? <ChevronRight size={16} style={{ color: c.iconGray }} />
-              : <ChevronLeft size={16} style={{ color: c.iconGray }} />}
-          </button>
+          {/* Toggle button — pokes out on the LEFT edge (panel is on the right); hidden in focus */}
+          {!focusDocs && (
+            <button
+              onClick={() => setIsPanelOpen((v) => !v)}
+              className="absolute z-20 size-6 flex items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
+              style={{ border: `1px solid ${c.border}`, top: "34px", left: "-12px" }}
+              title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
+            >
+              {isPanelOpen
+                ? <ChevronRight size={16} style={{ color: c.iconGray }} />
+                : <ChevronLeft size={16} style={{ color: c.iconGray }} />}
+            </button>
+          )}
         </div>
       </div>
     </div>
