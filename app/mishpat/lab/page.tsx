@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, Filter,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -581,8 +581,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-05-31";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
-  const newCount = filteredSorted.filter(isNewDoc).length;
-  const pendingCount = filteredSorted.filter((d) => d.pending).length;
+  const newCount = (openCaseId ? filteredSorted : docs).filter(isNewDoc).length;       // per-case when open, else across all cases
+  const pendingCount = (openCaseId ? filteredSorted : docs).filter((d) => d.pending).length;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && isNewDoc(d)) || (lens === "pending" && d.pending));
   const chronoNew  = lens === "all" ? lensed.filter(isNewDoc) : [];     // above the divider
   const chronoRest = lens === "all" ? lensed.filter((d) => !isNewDoc(d)) : lensed; // below the divider (already viewed)
@@ -671,7 +671,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
           </button>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            <Filter size={14} className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight }} />
             {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
               const on = lens === key;
               return (
@@ -683,7 +682,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
                 >
                   {key === "pending" && <Gavel size={12} style={{ transform: "scaleX(-1)" }} />}
                   {label}
-                  {openCaseId && <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>}
+                  <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
                 </button>
               );
             })}
