@@ -627,7 +627,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         </div>
 
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
-        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
+        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5 w-fit max-w-full self-start"}>
           <div className="relative flex-1 min-w-0">
             <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
             <input
