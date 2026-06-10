@@ -468,7 +468,7 @@ function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseD
       className="rounded-[8px] border h-full overflow-hidden flex flex-col cursor-pointer transition-colors"
       style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
-      title="פתיחת המסמך בחלון חדש"
+      title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : "#f6f9ff"; }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : "white"; }}

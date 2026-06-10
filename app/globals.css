@@ -21,6 +21,9 @@
 /* Placeholder color in dark mode (inline styles can't target ::placeholder) */
 .dark-ph::placeholder { color: #6b7da3; opacity: 1; }
 
+/* Tailwind v4 no longer sets pointer on buttons — restore it for enabled buttons */
+button:not(:disabled) { cursor: pointer; }
+
 @keyframes toastSlideIn {
   from { opacity: 0; transform: translateX(-50%) translateY(16px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
