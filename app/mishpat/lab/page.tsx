@@ -1117,7 +1117,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   function renderInput() {
     return (
       <div
-        className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
+        className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2 overflow-hidden"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
           boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)",
@@ -1135,7 +1135,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           placeholder={isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
-        <div className="flex items-center gap-1.5" dir="ltr">
+        <div className="flex items-center gap-1.5 min-w-0" dir="ltr">
           {/* Send button — default / hover / press states */}
           <button
             onClick={handleSend}
