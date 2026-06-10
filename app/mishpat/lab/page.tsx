@@ -595,20 +595,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[16px] truncate" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
-            <button
-              onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
-              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center"
-              style={{
-                minWidth: "54px",
-                backgroundColor: isAuto ? c.primary : "transparent",
-                color: isAuto ? "white" : c.iconGray,
-                border: `1.5px solid ${isAuto ? c.primary : c.border}`,
-                fontFamily: "Noto Sans Hebrew, sans-serif",
-              }}
-              title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
-            >
-              {isAuto ? "אוטו׳" : "ידני"}
-            </button>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
@@ -679,11 +665,25 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         {/* Thin separator between the filter controls and the checkbox controls */}
         <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
 
-        {/* Select-all for chat */}
-        <div className="flex items-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        {/* Chat-selection zone: select-all + auto/manual mode */}
+        <div className="flex items-center justify-between gap-2" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
           <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
             <span className="text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
+          </button>
+          <button
+            onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
+            className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
+            style={{
+              minWidth: "54px",
+              backgroundColor: isAuto ? c.primary : "transparent",
+              color: isAuto ? "white" : (isDark ? dk.textMuted : c.iconGray),
+              border: `1.5px solid ${isAuto ? c.primary : (isDark ? dk.border : c.border)}`,
+              fontFamily: "Noto Sans Hebrew, sans-serif",
+            }}
+            title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
+          >
+            {isAuto ? "אוטו׳" : "ידני"}
           </button>
         </div>
       </div>
