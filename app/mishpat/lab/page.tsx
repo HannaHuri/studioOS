@@ -594,7 +594,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[16px] truncate flex-shrink-0" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
             <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
               {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
                 <button
