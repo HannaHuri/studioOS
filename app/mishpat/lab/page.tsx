@@ -581,9 +581,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-05-31";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
-  const newCount = filteredSorted.filter(isNewDoc).length;
-  const pendingCount = filteredSorted.filter((d) => d.pending).length;
-  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && isNewDoc(d)) || (lens === "pending" && d.pending));
+  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const chronoNew  = lens === "all" ? lensed.filter(isNewDoc) : [];     // above the divider
   const chronoRest = lens === "all" ? lensed.filter((d) => !isNewDoc(d)) : lensed; // below the divider (already viewed)
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
@@ -661,32 +659,32 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
             <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
             <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
+            <button
+              onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
+              className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+              style={{
+                border: `1px solid ${lens === "pending" ? c.primary : (isDark ? dk.border : c.border)}`,
+                color: lens === "pending" ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                backgroundColor: lens === "pending" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+                fontFamily: "Noto Sans Hebrew, sans-serif",
+              }}
+              title="הצג רק מסמכים הממתינים להחלטה"
+            >
+              <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
+              ממתין להחלטה
+            </button>
           </div>
         </div>
 
-        {/* Row 4: select-all (right) · status lenses (left) */}
-        <div className="flex items-center justify-between gap-2" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <button className="flex items-center gap-1.5 flex-shrink-0" onClick={() => toggleAllDocs(!allChecked)}>
+        {/* Thin separator between the filter controls and the checkbox controls */}
+        <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
+
+        {/* Select-all for chat */}
+        <div className="flex items-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
             <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
-            <span className="text-[14px]" style={{ color: c.textGray }}>כל המסמכים</span>
+            <span className="text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
           </button>
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
-              const on = lens === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setLens(on ? "all" : key)}
-                  className="flex items-center gap-1 px-2.5 h-7 rounded-full text-[12px] transition-colors"
-                  style={{ backgroundColor: on ? c.primary : "transparent", color: on ? "white" : (isDark ? dk.textMuted : c.textGray), border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                >
-                  {key === "pending" && <Gavel size={12} style={{ transform: "scaleX(-1)" }} />}
-                  {label}
-                  <span style={{ color: on ? "rgba(255,255,255,0.85)" : c.textLight, fontFamily: "Figtree, sans-serif" }}>({count})</span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
