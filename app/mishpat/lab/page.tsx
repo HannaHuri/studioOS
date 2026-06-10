@@ -592,41 +592,39 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[16px] truncate" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
-            {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
-              <button
-                key={key}
-                onClick={() => setGrouping(key)}
-                className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
-                style={{
-                  backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
-                  color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                  fontWeight: grouping === key ? 600 : 400,
-                  boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                  fontFamily: "Noto Sans Hebrew, sans-serif",
-                }}
-              >
-                <Ico size={13} />
-                {label}
-              </button>
-            ))}
+            <span className="text-[16px] truncate flex-shrink-0" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים</span>
+            <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
+              {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
+                <button
+                  key={key}
+                  onClick={() => setGrouping(key)}
+                  className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+                  style={{
+                    backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
+                    color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                    fontWeight: grouping === key ? 600 : 400,
+                    boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                    fontFamily: "Noto Sans Hebrew, sans-serif",
+                  }}
+                >
+                  <Ico size={13} />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {onToggleFocus && (
             <button
               onClick={onToggleFocus}
               className="size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0"
-              style={{ color: c.iconGray }}
+              style={{ color: isDark ? dk.textMuted : c.iconGray }}
               title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
             >
               {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
           )}
-          </div>
         </div>
 
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
@@ -665,12 +663,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         {/* Thin separator between the filter controls and the checkbox controls */}
         <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
 
-        {/* Chat-selection zone: select-all + auto/manual mode */}
-        <div className="flex items-center justify-between gap-2" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
-            <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
-            <span className="text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
-          </button>
+        {/* Chat-selection zone: auto/manual mode (right) + select-all */}
+        <div className="flex items-center gap-3" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
           <button
             onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
             className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
@@ -684,6 +678,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
             title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
           >
             {isAuto ? "אוטו׳" : "ידני"}
+          </button>
+          <button className="flex items-center gap-1.5" onClick={() => toggleAllDocs(!allChecked)}>
+            <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
+            <span className="text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
           </button>
         </div>
       </div>
