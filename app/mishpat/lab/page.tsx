@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, Download, Printer, X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -454,7 +454,7 @@ const PARTY_NAMES: Record<string, Record<string, string>> = {
   c2: { "תובע": "יוסי כהן", "נתבעת": "חברת הבנייה הגדולה בע״מ" },
 };
 
-function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onToggleCheck: () => void }) {
+function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
@@ -469,7 +469,7 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
       style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
       title="פתיחת המסמך בחלון חדש"
-      onClick={() => { /* open document in a new tab (dev: wire real URL) */ }}
+      onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : "#f6f9ff"; }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : "white"; }}
     >
@@ -528,8 +528,62 @@ function DocRow({ doc, isDark, markNew, onToggleCheck }: { doc: CaseDoc; isDark:
   );
 }
 
+// ── Mock document viewer (opens as a third pane next to the chat) ────────────
+const MOCK_DOC_PARAS = [
+  "1. בהתאם להחלטת בית המשפט מיום 12.4.2026, ולאחר שהוגשו כתבי הטענות מטעם הצדדים, מתכבד הח״מ להגיש מסמך זה לעיון בית המשפט הנכבד.",
+  "2. אין חולק כי בין הצדדים נכרת הסכם בכתב, וכי במועד הרלוונטי לתביעה עמדו הצדדים ביחסים חוזיים מחייבים. המחלוקת נסבה על שאלת קיומם של התנאים המתלים שנקבעו בסעיף 7 להסכם.",
+  "3. מן הראיות שהובאו בפני בית המשפט עולה כי הצד שכנגד לא עמד בלוח הזמנים שנקבע, ולא מסר הודעה כנדרש בסעיף 9. נטל ההוכחה בעניין זה מוטל על הטוען לקיום ההתחייבות, ולא הורם.",
+  "4. לאור האמור, ובשים לב לפסיקה הרלוונטית, מתבקש בית המשפט הנכבד לקבוע כי הופרה התחייבות יסודית, על כל המשתמע מכך לעניין הסעדים המבוקשים בכתב התביעה.",
+  "5. שמורה לח״מ הזכות להוסיף ולטעון, להגיש ראיות משלימות ולהשלים טיעון בעל-פה במועד הדיון, ככל שבית המשפט הנכבד יורה על כך.",
+];
+
+function DocViewer({ doc, isDark, onClose }: { doc: CaseDoc; isDark: boolean; onClose: () => void }) {
+  const iconCol = isDark ? dk.textMuted : c.iconGray;
+  return (
+    <div className="flex-1 min-w-0 flex flex-col" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-2 px-3 flex-shrink-0" style={{ height: "52px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={17} style={{ color: iconCol, flexShrink: 0 }} />
+          <span className="truncate text-[14px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+          <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
+        </div>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button title="הורדה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><Download size={17} /></button>
+          <button title="הדפסה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><Printer size={17} /></button>
+          <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>
+          <div className="w-px h-5 mx-1" style={{ backgroundColor: isDark ? dk.border : "#d8dde7" }} />
+          <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={19} /></button>
+        </div>
+      </div>
+      {/* Pages */}
+      <div className="flex-1 overflow-y-auto docs-scroll">
+        <div className="flex flex-col items-center gap-4 py-5 px-4">
+          {[1, 2].map((p) => (
+            <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
+              {p === 1 && (
+                <div className="text-center mb-7">
+                  <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
+                  <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
+                  <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבעת"]}</div>
+                  <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
+                </div>
+              )}
+              <p className="text-[14px] leading-[1.95]" style={{ color: "#2b3340" }}>{doc.summary}</p>
+              {MOCK_DOC_PARAS.map((t, i) => (
+                <p key={i} className="text-[14px] leading-[1.95] mt-3.5" style={{ color: "#2b3340" }}>{t}</p>
+              ))}
+              <div className="text-center text-[11px] mt-9" style={{ color: "#aab2c0" }}>— {p} —</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Document panel (open) — chronological browser ────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void }) {
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 480; // filters move up onto the search row
@@ -727,7 +781,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         {grouping === "chrono" && (
           <div className={multiCol ? "grid gap-1.5" : "flex flex-col gap-1.5"} style={multiCol ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" } : undefined}>
             {lensed.map((doc) => (
-              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
+              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
             ))}
           </div>
         )}
@@ -764,7 +818,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
               {open && (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
-                    <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
+                    <DocRow key={doc.id} doc={doc} isDark={isDark} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
                   ))}
                 </div>
               )}
@@ -1421,6 +1475,7 @@ export default function MishpatPage() {
   const [panelWidth, setPanelWidth] = useState(380);
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
+  const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
   const [vw, setVw] = useState(1280);
   useEffect(() => {
     const u = () => setVw(window.innerWidth);
@@ -1480,6 +1535,9 @@ export default function MishpatPage() {
         {/* Chat */}
         <ChatArea isDark={isDark} conversationKey={convKey} />
 
+        {/* Document viewer — third pane, opens on document click */}
+        {openDoc && <DocViewer doc={openDoc} isDark={isDark} onClose={() => setOpenDoc(null)} />}
+
         {/* Focus backdrop — dims the chat behind the expanded documents */}
         {isPanelOpen && focusDocs && (
           <div onClick={() => setFocusDocs(false)} className="absolute inset-0 z-30" style={{ backgroundColor: "rgba(0,0,0,0.3)" }} />
@@ -1494,7 +1552,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={setOpenDoc} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
