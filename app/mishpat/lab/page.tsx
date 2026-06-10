@@ -582,8 +582,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   const LAST_VISIT = "2026-05-31";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
-  const chronoNew  = lens === "all" ? lensed.filter(isNewDoc) : [];     // above the divider
-  const chronoRest = lens === "all" ? lensed.filter((d) => !isNewDoc(d)) : lensed; // below the divider (already viewed)
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
@@ -627,7 +625,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         </div>
 
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
-        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5 w-fit max-w-full self-start"}>
+        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
           <div className="relative flex-1 min-w-0">
             <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
             <input
@@ -725,38 +723,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
         )}
 
         {/* Chronological view — newest first; uniform heights (grid auto-rows 1fr); two cols when wide; "new" divider */}
-        {grouping === "chrono" && (multiCol ? (
-          /* Multi-column: one continuous grid (no full-width divider → no wasted cells); new docs get a blue edge */
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}>
+        {/* Chronological — one continuous list; new docs marked by a blue edge (same in 1 / many columns) */}
+        {grouping === "chrono" && (
+          <div className={multiCol ? "grid gap-1.5" : "flex flex-col gap-1.5"} style={multiCol ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" } : undefined}>
             {lensed.map((doc) => (
               <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
             ))}
           </div>
-        ) : (
-          /* Single column: "new since last visit" divider */
-          <>
-            {chronoNew.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                {chronoNew.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
-                ))}
-              </div>
-            )}
-            {chronoNew.length > 0 && chronoRest.length > 0 && (
-              <div className="flex items-center gap-2 py-0.5" title="כל המסמכים שמעל הקו התווספו מאז הכניסה האחרונה">
-                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>חדש</span>
-                <div className="flex-1" style={{ height: "0.5px", backgroundColor: "rgba(0,115,234,0.4)" }} />
-              </div>
-            )}
-            {chronoRest.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                {chronoRest.map((doc) => (
-                  <DocRow key={doc.id} doc={doc} isDark={isDark} onToggleCheck={() => toggleDoc(doc.id)} />
-                ))}
-              </div>
-            )}
-          </>
-        ))}
+        )}
 
         {/* Folder view — grouped by document type */}
         {grouping === "type" && typesInData.map((type) => {
