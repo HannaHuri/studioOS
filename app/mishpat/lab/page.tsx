@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, Download, Printer, X,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -547,7 +547,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
         onMouseDown={(e) => {
           e.preventDefault();
           const rightEdge = rootRef.current?.getBoundingClientRect().right ?? window.innerWidth;
-          const onMove = (ev: MouseEvent) => onWidthChange(Math.max(380, Math.min(window.innerWidth - 480, rightEdge - ev.clientX)));
+          const onMove = (ev: MouseEvent) => onWidthChange(Math.max(380, Math.min(rightEdge - 375, rightEdge - ev.clientX)));
           const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
           document.addEventListener("mousemove", onMove);
           document.addEventListener("mouseup", onUp);
@@ -567,16 +567,13 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
           <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button title="הורדה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><Download size={17} /></button>
-          <button title="הדפסה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><Printer size={17} /></button>
           <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>
-          <div className="w-px h-5 mx-1" style={{ backgroundColor: isDark ? dk.border : "#d8dde7" }} />
           <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={19} /></button>
         </div>
       </div>
-      {/* Pages */}
-      <div className="flex-1 overflow-y-auto docs-scroll">
-        <div className="flex flex-col items-center gap-4 py-5 px-4">
+      {/* Pages — outer ltr puts scrollbar on the right */}
+      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+        <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
           {[1, 2].map((p) => (
             <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
               {p === 1 && (
