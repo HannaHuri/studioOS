@@ -581,8 +581,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-05-31";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
-  const newCount = (openCaseId ? filteredSorted : docs).filter(isNewDoc).length;       // per-case when open, else across all cases
-  const pendingCount = (openCaseId ? filteredSorted : docs).filter((d) => d.pending).length;
+  const newCount = filteredSorted.filter(isNewDoc).length;
+  const pendingCount = filteredSorted.filter((d) => d.pending).length;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "new" && isNewDoc(d)) || (lens === "pending" && d.pending));
   const chronoNew  = lens === "all" ? lensed.filter(isNewDoc) : [];     // above the divider
   const chronoRest = lens === "all" ? lensed.filter((d) => !isNewDoc(d)) : lensed; // below the divider (already viewed)
@@ -672,8 +672,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus }: { isD
           </button>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             {([["new", "חדש", newCount], ["pending", "ממתין להחלטתי", pendingCount]] as const).map(([key, label, count]) => {
-              // "New" only appears when there is something new (hidden on first visit); kept if it's the active filter
-              if (key === "new" && count === 0 && lens !== "new") return null;
               const on = lens === key;
               return (
                 <button
