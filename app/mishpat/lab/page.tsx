@@ -1338,7 +1338,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   if (isEmpty) {
     return (
       <>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6" style={{ backgroundColor: bg }}>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
             <p
               className="text-right text-[22px] font-medium mb-2"
@@ -1358,7 +1358,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   // ── Normal state ───────────────────────────────────────────────────────
   return (
     <>
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: bg }}>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
         <div className="flex-1 overflow-y-auto">
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => (
