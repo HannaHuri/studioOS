@@ -537,10 +537,28 @@ const MOCK_DOC_PARAS = [
   "5. שמורה לח״מ הזכות להוסיף ולטעון, להגיש ראיות משלימות ולהשלים טיעון בעל-פה במועד הדיון, ככל שבית המשפט הנכבד יורה על כך.",
 ];
 
-function DocViewer({ doc, isDark, onClose }: { doc: CaseDoc; isDark: boolean; onClose: () => void }) {
+function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDoc; isDark: boolean; width: number; onWidthChange: (w: number) => void; onClose: () => void }) {
   const iconCol = isDark ? dk.textMuted : c.iconGray;
+  const rootRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="flex-1 min-w-0 flex flex-col" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
+    <div ref={rootRef} className="relative flex-shrink-0 flex flex-col" style={{ width: `${width}px`, borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
+      {/* Drag handle — left edge: drag to resize the viewer width */}
+      <div
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const rightEdge = rootRef.current?.getBoundingClientRect().right ?? window.innerWidth;
+          const onMove = (ev: MouseEvent) => onWidthChange(Math.max(380, Math.min(window.innerWidth - 480, rightEdge - ev.clientX)));
+          const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+          document.body.style.userSelect = "none";
+        }}
+        className="absolute top-0 bottom-0 left-0 z-20 group"
+        style={{ width: "8px", cursor: "ew-resize" }}
+        title="גרירה לשינוי רוחב המסמך"
+      >
+        <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
+      </div>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 px-3 flex-shrink-0" style={{ height: "52px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
         <div className="flex items-center gap-2 min-w-0">
@@ -1476,6 +1494,7 @@ export default function MishpatPage() {
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
+  const [viewerWidth, setViewerWidth] = useState(620);
   const [vw, setVw] = useState(1280);
   useEffect(() => {
     const u = () => setVw(window.innerWidth);
@@ -1536,7 +1555,7 @@ export default function MishpatPage() {
         <ChatArea isDark={isDark} conversationKey={convKey} />
 
         {/* Document viewer — third pane, opens on document click */}
-        {openDoc && <DocViewer doc={openDoc} isDark={isDark} onClose={() => setOpenDoc(null)} />}
+        {openDoc && <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={() => setOpenDoc(null)} />}
 
         {/* Focus backdrop — dims the chat behind the expanded documents */}
         {isPanelOpen && focusDocs && (
