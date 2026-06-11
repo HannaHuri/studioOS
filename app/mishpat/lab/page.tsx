@@ -598,7 +598,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
 }
 
 // ── Document panel (open) — chronological browser ────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void }) {
+function DocumentPanelOpen({ isDark, panelWidth, onOpenDoc }: { isDark: boolean; panelWidth: number; onOpenDoc?: (doc: CaseDoc) => void }) {
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 480; // filters move up onto the search row
@@ -658,41 +658,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
-        {/* Row 1: title + auto pill (right) · grouping toggle (left) */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
-              {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
-                <button
-                  key={key}
-                  onClick={() => setGrouping(key)}
-                  className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
-                  style={{
-                    backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
-                    color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                    fontWeight: grouping === key ? 600 : 400,
-                    boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                    fontFamily: "Noto Sans Hebrew, sans-serif",
-                  }}
-                >
-                  <Ico size={13} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {onToggleFocus && (
-            <button
-              onClick={onToggleFocus}
-              className="size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0"
-              style={{ color: isDark ? dk.textMuted : c.iconGray }}
-              title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
-            >
-              {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            </button>
-          )}
-        </div>
-
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
         <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
           <div className="relative flex-1 min-w-0">
@@ -706,6 +671,27 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
+            {openCaseId && (
+              <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
+                {([["chrono", "כרונולוגי", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
+                  <button
+                    key={key}
+                    onClick={() => setGrouping(key)}
+                    className="flex items-center gap-1 px-2.5 h-7 rounded text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+                    style={{
+                      backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
+                      color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                      fontWeight: grouping === key ? 600 : 400,
+                      boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                      fontFamily: "Noto Sans Hebrew, sans-serif",
+                    }}
+                  >
+                    <Ico size={13} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
             <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
             <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
@@ -1568,7 +1554,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={setOpenDoc} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} onOpenDoc={setOpenDoc} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
@@ -1609,6 +1595,20 @@ export default function MishpatPage() {
               {isPanelOpen
                 ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
                 : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
+            </button>
+          )}
+
+          {/* Expand / focus toggle — edge button, just below the open/close chevron */}
+          {isPanelOpen && (
+            <button
+              onClick={() => setFocusDocs((v) => !v)}
+              className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: focusDocs ? "34px" : "64px", left: "-12px" }}
+              title={focusDocs ? "צא ממצב מורחב" : "הרחבת המסמכים"}
+            >
+              {focusDocs
+                ? <Minimize2 size={14} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+                : <Maximize2 size={14} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
             </button>
           )}
         </div>
