@@ -660,15 +660,27 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
         <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
-          <div className="relative flex-1 min-w-0">
-            <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="חיפוש שם מסמך או תקציר"
-              className="w-full h-9 rounded-md text-[13px] outline-none"
-              style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
-            />
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0">
+              <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="חיפוש שם מסמך או תקציר"
+                className="w-full h-9 rounded-md text-[13px] outline-none"
+                style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              />
+            </div>
+            {onToggleFocus && (
+              <button
+                onClick={onToggleFocus}
+                className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
+                style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.textMuted : c.iconGray }}
+                title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
+              >
+                {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
@@ -717,38 +729,26 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             </button>
           </div>
 
-          {/* View controls (left) — only relevant when a case is open */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {openCaseId && (
-              <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
-                {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
-                  <button
-                    key={key}
-                    onClick={() => setGrouping(key)}
-                    className="size-7 flex items-center justify-center rounded transition-colors"
-                    style={{
-                      backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
-                      color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.iconGray),
-                      boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                    }}
-                    title={label}
-                  >
-                    <Ico size={15} />
-                  </button>
-                ))}
-              </div>
-            )}
-            {onToggleFocus && (
-              <button
-                onClick={onToggleFocus}
-                className="size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5"
-                style={{ color: isDark ? dk.textMuted : c.iconGray }}
-                title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
-              >
-                {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-              </button>
-            )}
-          </div>
+          {/* Grouping toggle (left) — only relevant when a case is open */}
+          {openCaseId && (
+            <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
+              {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
+                <button
+                  key={key}
+                  onClick={() => setGrouping(key)}
+                  className="size-7 flex items-center justify-center rounded transition-colors"
+                  style={{
+                    backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
+                    color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.iconGray),
+                    boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                  }}
+                  title={label}
+                >
+                  <Ico size={15} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1603,7 +1603,7 @@ export default function MishpatPage() {
             <button
               onClick={() => setIsPanelOpen((v) => !v)}
               className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
-              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "34px", left: "-12px" }}
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
               title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
             >
               {isPanelOpen
