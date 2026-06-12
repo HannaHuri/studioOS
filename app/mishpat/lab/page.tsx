@@ -141,9 +141,9 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
-    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת", submitterName: "המרכז הרפואי קדם בע״מ",
+    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבע", submitterName: "המרכז הרפואי קדם בע״מ",
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
-    summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
+    summary: "הנתבע מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
     isNew: true, pending: true,
   },
@@ -168,9 +168,9 @@ const CASE_DOCS: CaseDoc[] = [
     key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק",
   },
   {
-    id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "נתבעת",
+    id: "d5", name: "כתב הגנה מתוקן", type: "כתב הגנה", submitter: "נתבע",
     date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
-    summary: "הנתבעת דוחה את כל טענות הרשלנות, טוענת להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
+    summary: "הנתבע דוחה את כל טענות הרשלנות, טוענת להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
     related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
@@ -182,7 +182,7 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "תובע",
     date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
-    summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
+    summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבע בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
@@ -198,15 +198,15 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
-    id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "נתבעת",
+    id: "d10", name: "בקשה לזימון עד", type: "בקשה בתיק", submitter: "נתבע",
     date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "0",
     summary: "המסמך טרם עובד — אין תקציר זמין.",
     related: [], checked: false, missing: true,
   },
   {
-    id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "נתבעת",
+    id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהיר", submitter: "נתבע",
     date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
-    summary: "תצהיר עדה מטעם הנתבעת בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
+    summary: "תצהיר עדה מטעם הנתבע בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
@@ -224,13 +224,13 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשה בתיק", submitter: "תובע",
     date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
-    summary: "התובע מבקש לחייב את הנתבעת בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים.",
+    summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים.",
     related: ["כתב תביעה"], checked: false,
   },
   {
-    id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשה בתיק", submitter: "נתבעת",
+    id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשה בתיק", submitter: "נתבע",
     date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
-    summary: "הנתבעת מתנגדת חלקית לגילוי וטוענת לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
+    summary: "הנתבע מתנגדת חלקית לגילוי וטוענת לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
     related: ["בקשה לגילוי מסמכים"], checked: false,
   },
   {
@@ -240,9 +240,9 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["החלטה על מינוי מומחה"], checked: false,
   },
   {
-    id: "d17", name: "כתב תביעה שכנגד", type: "כתב תביעה", submitter: "נתבעת",
+    id: "d17", name: "כתב תביעה שכנגד", type: "כתב תביעה", submitter: "נתבע",
     date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
-    summary: "הנתבעת מגישה תביעה שכנגד בטענה להוצאות שנגרמו לה עקב הגשת התביעה בחוסר תום לב.",
+    summary: "הנתבע מגישה תביעה שכנגד בטענה להוצאות שנגרמו לה עקב הגשת התביעה בחוסר תום לב.",
     related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false,
   },
   {
@@ -266,13 +266,13 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d21", name: "סיכומי התובע", type: "כתב תביעה", submitter: "תובע",
     date: "18.04.26", iso: "2026-04-18", bucket: "older", words: "7.3K",
-    summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבעת לנזקים שנגרמו.",
+    summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבע לנזקים שנגרמו.",
     related: [], checked: false,
   },
   {
     id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטה", submitter: "בית המשפט",
     date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "300",
-    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבעת.",
+    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.",
     related: ["הודעה על הגשת ראיות נוספות"], checked: false,
   },
 ];
@@ -283,8 +283,8 @@ const CASE_DOCS_2: CaseDoc[] = [
     summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשה בתיק", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
     summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק.", related: [], checked: false },
-  { id: "e3", name: "כתב הגנה", type: "כתב הגנה", submitter: "נתבעת", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
-    summary: "הנתבעת טוענת לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false },
+  { id: "e3", name: "כתב הגנה", type: "כתב הגנה", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
+    summary: "הנתבע טוענת לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטה", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
     summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true },
 ];
@@ -316,7 +316,7 @@ function formatWords(n: number): string {
   }
   return String(n);
 }
-const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבעת", "בית המשפט"];
+const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבע", "בית המשפט"];
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
@@ -445,14 +445,14 @@ function DateRangeFilter({
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
 const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
   "תובע": { bg: "#e6f0fb", color: "#1a6dc4" },     // blue
-  "נתבעת": { bg: "#f1eafc", color: "#7a4ec2" },     // purple
+  "נתבע": { bg: "#f1eafc", color: "#7a4ec2" },     // purple
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
 };
 
 // Specific party name per case + side (shown on hover; useful when a side has several)
 const PARTY_NAMES: Record<string, Record<string, string>> = {
-  c1: { "תובע": "יעקב אברמוב", "נתבעת": "המרכז הרפואי קדם בע״מ" },
-  c2: { "תובע": "אורן פרידמן", "נתבעת": "שיכון הצפון חברה לבנייה בע״מ" },
+  c1: { "תובע": "יעקב אברמוב", "נתבע": "המרכז הרפואי קדם בע״מ" },
+  c2: { "תובע": "אורן פרידמן", "נתבע": "שיכון הצפון חברה לבנייה בע״מ" },
 };
 
 function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void }) {
@@ -581,7 +581,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
                 <div className="text-center mb-7">
                   <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
                   <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
-                  <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבעת"]}</div>
+                  <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
                   <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
                 </div>
               )}
@@ -1258,11 +1258,11 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           )}
         </p>
         <p className="mb-3">
-          הנתבעת הגישה אף היא את ראיותיה, לרבות חוות דעת מומחה וחוות דעת אקטואריות.{" "}
+          הנתבע הגישה אף היא את ראיותיה, לרבות חוות דעת מומחה וחוות דעת אקטואריות.{" "}
           {showNum && <Badge num={6} />}
         </p>
         <p>
-          התובעת הגישה בקשות להיתר להגשת תיעוד רפואי חדש שיצטבר עד למועד הדיון, וכן להארכת המועד להגשת סיכומים עקב שגיאות בחוות הדעת האקטואריות של הנתבעת.{" "}
+          התובעת הגישה בקשות להיתר להגשת תיעוד רפואי חדש שיצטבר עד למועד הדיון, וכן להארכת המועד להגשת סיכומים עקב שגיאות בחוות הדעת האקטואריות של הנתבע.{" "}
           {showNum && <><Badge num={7} /><Badge num={8} /></>}
         </p>
       </>
