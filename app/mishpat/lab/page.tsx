@@ -767,17 +767,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — light section-header: leading takhelet accent + bottom border (no colored fill) */}
+              {/* Case header — light section-header: rounded takhelet tab accent + bottom border (no colored fill) */}
               <div
                 className="flex items-start gap-2 px-2 py-2.5"
-                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, borderInlineStart: `3px solid ${c.primary}` }}
+                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
               >
+                <span className="self-stretch w-[3px] rounded-full flex-shrink-0" style={{ backgroundColor: c.primary, marginBlock: "3px" }} />
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
                 <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
                   <span className="flex items-start gap-1.5 min-w-0">
-                    <FolderOpen size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "2px" }} />
+                    <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
                       <span className="flex items-center gap-1.5 text-[16px] font-semibold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
