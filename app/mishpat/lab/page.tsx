@@ -654,6 +654,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
+  const expandBtn = onToggleFocus ? (
+    <button
+      onClick={onToggleFocus}
+      className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
+      style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.textMuted : c.iconGray }}
+      title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
+    >
+      {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+    </button>
+  ) : null;
+
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Header */}
@@ -671,16 +682,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                 style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
               />
             </div>
-            {onToggleFocus && (
-              <button
-                onClick={onToggleFocus}
-                className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
-                style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.textMuted : c.iconGray }}
-                title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
-              >
-                {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              </button>
-            )}
+            {/* Narrow: expand sits next to the search field */}
+            {!headerWide && expandBtn}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
@@ -701,6 +704,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               ממתין להחלטה
             </button>
           </div>
+          {/* Wide / expanded: expand jumps to the far-left end of the row */}
+          {headerWide && expandBtn}
         </div>
 
         {/* Thin separator between the filter controls and the checkbox controls */}
@@ -762,8 +767,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — gentle takhelet pill only; documents stay on white below */}
-              <div className="flex items-start gap-2 rounded-lg px-2 py-2" style={{ backgroundColor: isDark ? "#222d44" : "#eef4fc" }}>
+              {/* Case header — filled takhelet pill when narrow; light section-header (bottom border) when wide so it doesn't read as a long colored bar */}
+              <div
+                className="flex items-start gap-2 px-2 py-2"
+                style={multiCol
+                  ? { borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }
+                  : { borderRadius: "8px", backgroundColor: isDark ? "#222d44" : "#eef4fc" }}
+              >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
