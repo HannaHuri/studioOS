@@ -861,10 +861,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
   return (
     <div className="h-full flex flex-col items-center pt-12 gap-3" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
-      <FileText size={18} style={{ color: c.iconGray }} />
       <span style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px", writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", userSelect: "none" }}>
         מסמכים
       </span>
+      <FileText size={18} style={{ color: c.iconGray }} />
     </div>
   );
 }
