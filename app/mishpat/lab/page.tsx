@@ -760,7 +760,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
       {/* List — outer ltr puts scrollbar on the right; inner rtl keeps content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-       <div className="px-3 pt-1 pb-3 flex flex-col gap-2" dir="rtl">
+       <div className="px-3 pt-1 pb-3 flex flex-col gap-4" dir="rtl">
         {CASES_META.map((cf) => {
           const caseDocs = docs.filter((d) => d.caseId === cf.id);
           const caseOpen = openCaseId === cf.id;
@@ -768,11 +768,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — light section-header: emphasis via a takhelet bottom border (no fill, no side bar) */}
-              <div
-                className="flex items-start gap-2 px-2 py-2.5"
-                style={{ borderBottom: `1px solid ${c.takhelet}` }}
-              >
+              {/* Case header — emphasis through typography + whitespace only (no fill, no line) */}
+              <div className="flex items-start gap-2 px-2 py-3">
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -780,7 +777,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[16px] font-semibold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
+                      <span className="flex items-center gap-1.5 text-[17px] font-bold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
