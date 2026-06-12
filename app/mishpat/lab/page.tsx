@@ -860,7 +860,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
 function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
   return (
-    <div className="h-full flex flex-col items-center gap-3" style={{ backgroundColor: isDark ? dk.surface : "white", paddingTop: "80px" /* clears the open-chevron circle (ends at 68px) with a small gap */ }}>
+    <div className="h-full flex flex-col items-center gap-2" style={{ backgroundColor: isDark ? dk.surface : "white", paddingTop: "76px" /* clears the open-chevron circle (ends at 68px) with a small gap */ }}>
       <FileText size={18} style={{ color: c.iconGray }} />
       <span style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px", writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", userSelect: "none" }}>
         מסמכים
