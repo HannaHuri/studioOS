@@ -767,12 +767,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — light section-header: rounded takhelet tab accent + bottom border (no colored fill) */}
+              {/* Case header — light section-header: emphasis via a takhelet bottom border (no fill, no side bar) */}
               <div
                 className="flex items-start gap-2 px-2 py-2.5"
-                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+                style={{ borderBottom: `2px solid ${c.primary}` }}
               >
-                <span className="self-stretch w-[3px] rounded-full flex-shrink-0" style={{ backgroundColor: c.primary, marginBlock: "3px" }} />
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
