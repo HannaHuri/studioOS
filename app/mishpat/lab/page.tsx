@@ -768,8 +768,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — emphasis through typography + whitespace only (no fill, no line) */}
-              <div className="flex items-start gap-2 px-2 py-3">
+              {/* Case header — emphasis through typography + whitespace only (no fill, no line); capped to the narrow-panel width so the chevron stays on the same line when the panel is widened */}
+              <div className="flex items-start gap-2 px-2 py-3" style={{ maxWidth: "380px" }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
