@@ -611,7 +611,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
-    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true })),
+    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
   ]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
@@ -671,7 +671,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
         <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <div className={`flex items-center gap-1.5 min-w-0 ${headerWide ? "" : "flex-1"}`} style={headerWide ? { width: "300px" } : undefined}>
             <div className="relative flex-1 min-w-0">
               <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
               <input
@@ -704,8 +704,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               ממתין להחלטה
             </button>
           </div>
-          {/* Wide / expanded: expand jumps to the far-left end of the row */}
-          {headerWide && expandBtn}
+          {/* Wide / expanded: a spacer pushes the expand button to the far-left end of the row */}
+          {headerWide && <><div className="flex-1" />{expandBtn}</>}
         </div>
 
         {/* Thin separator between the filter controls and the checkbox controls */}
@@ -767,12 +767,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — filled takhelet pill when narrow; light section-header (bottom border) when wide so it doesn't read as a long colored bar */}
+              {/* Case header — light section-header with a thin bottom border (no colored fill) */}
               <div
                 className="flex items-start gap-2 px-2 py-2"
-                style={multiCol
-                  ? { borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }
-                  : { borderRadius: "8px", backgroundColor: isDark ? "#222d44" : "#eef4fc" }}
+                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
