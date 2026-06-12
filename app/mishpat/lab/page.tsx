@@ -141,14 +141,14 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
-    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת", submitterName: "משה לוי ובניו בע״מ",
+    id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשה בתיק", submitter: "נתבעת", submitterName: "המרכז הרפואי קדם בע״מ",
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבעת מבקשת לדחות את מועד הדיון הקבוע ל-19.6 בשל היעדרות מומחה מרכזי מהארץ, ומציעה מועד חלופי בחודש יולי.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
     isNew: true, pending: true,
   },
   {
-    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע", submitterName: "משה כהן ובניו בע״מ",
+    id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהיר", submitter: "תובע", submitterName: "יעקב אברמוב",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
@@ -176,13 +176,13 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטה", submitter: "בית המשפט",
     date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
-    summary: "בית המשפט ממנה את פרופ׳ כהן כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
+    summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
     related: ["פרוטוקול דיון מקדמי"], checked: false,
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתב תביעה", submitter: "תובע",
     date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
-    summary: "התובע, מר משה כהן, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
+    summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבעת בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
@@ -291,8 +291,8 @@ const CASE_DOCS_2: CaseDoc[] = [
 
 // Case metadata (number + parties)
 const CASES_META = [
-  { id: "c1", number: "12345-67-89", parties: "משה כהן ובניו בע״מ נ׳ משה לוי ובניו בע״מ", type: 'ת"א' },
-  { id: "c2", number: "59198-67-89", parties: "יוסי כהן נ׳ חברת הבנייה הגדולה בע״מ", type: 'ת"א' },
+  { id: "c1", number: "12345-67-89", parties: "יעקב אברמוב נ׳ המרכז הרפואי קדם בע״מ", type: 'ת"א' },
+  { id: "c2", number: "59198-67-89", parties: "אורן פרידמן נ׳ שיכון הצפון חברה לבנייה בע״מ", type: 'ת"א' },
 ];
 
 // ── Filter options ──────────────────────────────────────────────────────────
@@ -451,8 +451,8 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
 
 // Specific party name per case + side (shown on hover; useful when a side has several)
 const PARTY_NAMES: Record<string, Record<string, string>> = {
-  c1: { "תובע": "משה כהן ובניו בע״מ", "נתבעת": "משה לוי ובניו בע״מ" },
-  c2: { "תובע": "יוסי כהן", "נתבעת": "חברת הבנייה הגדולה בע״מ" },
+  c1: { "תובע": "יעקב אברמוב", "נתבעת": "המרכז הרפואי קדם בע״מ" },
+  c2: { "תובע": "אורן פרידמן", "נתבעת": "שיכון הצפון חברה לבנייה בע״מ" },
 };
 
 function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void }) {
@@ -1212,7 +1212,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              59198-67-89 • יוסי כהן נ&apos; משה כהן לוי ובניו ב...
+              59198-67-89 • אורן פרידמן נ&apos; שיכון הצפון חברה ל...
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+2</span>
           </button>

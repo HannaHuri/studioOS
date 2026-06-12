@@ -200,7 +200,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             </span>
             <p className="text-[15px] leading-[18px]" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>12345-67-89</p>
             <p className="text-[14px] leading-[17px] mx-auto" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", maxWidth: "180px" }}>
-              משה כהן ובניו בע&quot;מ נגד משה לוי ובניו בע&quot;מ
+              יעקב אברמוב נגד המרכז הרפואי קדם בע&quot;מ
             </p>
           </button>
 
@@ -592,7 +592,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              59198-67-89 • יוסי כהן נ&apos; משה כהן לוי ובניו ב...
+              59198-67-89 • אורן פרידמן נ&apos; שיכון הצפון חברה ל...
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+2</span>
           </button>
