@@ -768,8 +768,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — emphasis through typography + whitespace only (no fill, no line); capped to the narrow-panel width so the chevron stays on the same line when the panel is widened */}
-              <div className="flex items-start gap-2 px-2 py-3" style={{ maxWidth: "380px" }}>
+              {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width */}
+              <div className="flex items-start gap-2 px-2 py-3" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}` }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -785,7 +785,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                       <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
-                  <ChevronDown size={20} style={{ color: c.iconGray, flexShrink: 0, marginTop: "1px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                  <ChevronDown size={22} style={{ color: c.iconGray, flexShrink: 0, marginTop: "0px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
 
