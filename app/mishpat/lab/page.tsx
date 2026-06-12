@@ -773,7 +773,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                <button className="flex items-start flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
                   <span className="flex items-start gap-1.5 min-w-0">
                     <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
@@ -785,7 +785,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                       <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
-                  <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                  <ChevronDown size={20} style={{ color: c.iconGray, flexShrink: 0, marginTop: "1px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
                 </button>
               </div>
 
