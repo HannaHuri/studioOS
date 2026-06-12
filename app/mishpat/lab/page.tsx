@@ -601,7 +601,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
 function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void }) {
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
-  const headerWide = panelWidth >= 480; // filters move up onto the search row
+  const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
@@ -671,7 +671,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
         <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
-          <div className={`flex items-center gap-1.5 min-w-0 ${headerWide ? "" : "flex-1"}`} style={headerWide ? { width: "300px" } : undefined}>
+          <div className={`flex items-center gap-1.5 min-w-0 ${headerWide ? "" : "flex-1"}`} style={headerWide ? { width: "360px" } : undefined}>
             <div className="relative flex-1 min-w-0">
               <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
               <input
@@ -767,19 +767,19 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseUsed = caseDocs.some((d) => d.used);
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — light section-header with a thin bottom border (no colored fill) */}
+              {/* Case header — light section-header: leading takhelet accent + bottom border (no colored fill) */}
               <div
-                className="flex items-start gap-2 px-2 py-2"
-                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+                className="flex items-start gap-2 px-2 py-2.5"
+                style={{ borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, borderInlineStart: `3px solid ${c.primary}` }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
                 <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
                   <span className="flex items-start gap-1.5 min-w-0">
-                    <FolderOpen size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
+                    <FolderOpen size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[15px] font-medium leading-snug" style={{ color: isDark ? dk.text : c.text }}>
+                      <span className="flex items-center gap-1.5 text-[16px] font-semibold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
