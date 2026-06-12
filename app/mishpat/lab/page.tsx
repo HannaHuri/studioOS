@@ -14,6 +14,7 @@ import {
 // ── Design tokens ──────────────────────────────────────────────────────────
 const c = {
   primary: "#0073ea",
+  takhelet: "#0ea5e9", // strong, bright sky-blue accent (distinct from the corporate primary blue)
   primaryLight: "#cce5ff",
   badgeBg: "#d4e7ff",
   headerBg: "#ecedf5",
@@ -770,7 +771,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               {/* Case header — light section-header: emphasis via a takhelet bottom border (no fill, no side bar) */}
               <div
                 className="flex items-start gap-2 px-2 py-2.5"
-                style={{ borderBottom: `1px solid ${c.primary}` }}
+                style={{ borderBottom: `1px solid ${c.takhelet}` }}
               >
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
