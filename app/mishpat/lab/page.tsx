@@ -637,15 +637,21 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     setDocs((p) => p.map((d) => (d.caseId === caseId ? { ...d, checked: next } : d)));
   }
 
-  // Filtering — scoped to the currently open case
-  const filtered = docs.filter((d) =>
-    d.caseId === openCaseId &&
+  // A document matches the active top filters (type / submitter / date / search) — case-agnostic
+  const matchesFilters = (d: CaseDoc) =>
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
     (!dateFrom || d.iso >= dateFrom) &&
     (!dateTo || d.iso <= dateTo) &&
-    (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()))
-  );
+    (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()));
+  // Full active predicate (filters + the "pending" lens) — used for the per-case match count
+  const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "pending" || d.pending);
+  // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
+  const filterActive =
+    activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
+
+  // Filtering — scoped to the currently open case
+  const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
 
   const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
@@ -766,10 +772,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseOpen = openCaseId === cf.id;
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
+          const caseMatch = filterActive ? caseDocs.filter(matchesActive).length : null; // # of docs matching the active filter (null when no filter)
           return (
             <div key={cf.id} className="flex flex-col">
               {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width */}
-              <div className="flex items-start gap-2 px-2 py-3" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}` }}>
+              <div className="flex items-start gap-2 px-2 py-3 transition-opacity" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}`, opacity: caseMatch === 0 ? 0.5 : 1 }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -781,6 +788,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                         <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
                         <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                        {filterActive && (
+                          <span
+                            className="text-[12px] font-normal rounded-full px-1.5 py-px flex-shrink-0 whitespace-nowrap"
+                            style={caseMatch === 0
+                              ? { backgroundColor: "transparent", color: isDark ? dk.textMuted : c.textLight }
+                              : { backgroundColor: isDark ? "#22304a" : "#e8f0fb", color: isDark ? dk.text : c.primary }}
+                            title="מסמכים בתיק זה התואמים לסינון הפעיל"
+                          >
+                            {caseMatch === 0 ? "אין תואמים" : `${caseMatch} ${caseMatch === 1 ? "תואם" : "תואמים"}`}
+                          </span>
+                        )}
                       </span>
                       <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
