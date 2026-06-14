@@ -567,17 +567,17 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
       </span>
       {/* Summary — main text color, right-aligned */}
       {showSummary && <span className="text-[14px] truncate text-right min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
-      {/* Related docs — comma-separated links (no icon); +N opens the rest (does not trigger the row) */}
+      {/* Related docs — comma-separated links (no icon), right-aligned; +N opens the rest (does not trigger the row) */}
       {showRelated && (
-        <span className="flex items-center min-w-0 overflow-hidden" style={{ maxWidth: "260px" }}>
+        <span className="text-[13px] truncate text-right block" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
           {doc.related.slice(0, 2).map((r, i, a) => (
-            <span key={r} className="flex items-center min-w-0">
-              <button onClick={(e) => e.stopPropagation()} className="doc-link min-w-0 truncate text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="פתיחת המסמך">{r}</button>
-              {(i < a.length - 1 || doc.related.length > 2) && <span className="flex-shrink-0 ml-1" style={{ color: metaCol }}>,</span>}
+            <span key={r}>
+              <button onClick={(e) => e.stopPropagation()} className="doc-link" title="פתיחת המסמך">{r}</button>
+              {(i < a.length - 1 || doc.related.length > 2) && <span style={{ color: metaCol }}>, </span>}
             </span>
           ))}
           {doc.related.length > 2 && (
-            <button onClick={(e) => e.stopPropagation()} className="text-[13px] flex-shrink-0 mr-1 hover:opacity-80" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`עוד מסמכים קשורים: ${doc.related.slice(2).join(" · ")}`}>+{doc.related.length - 2}</button>
+            <button onClick={(e) => e.stopPropagation()} className="hover:opacity-80" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`עוד מסמכים קשורים: ${doc.related.slice(2).join(" · ")}`}>+{doc.related.length - 2}</button>
           )}
         </span>
       )}
@@ -677,7 +677,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // order/grouping axis
   const [layout, setLayout]       = useState<"cards" | "table">("cards");   // density/layout axis
-  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | null>(null); // table column sort
+  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
@@ -695,20 +695,21 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
   const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(120px,200px)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,1fr)"] : []), ...(tableRelated ? ["minmax(0,max-content)"] : []), "50px"].join(" ");
 
-  function toggleSort(key: "date" | "name" | "words") {
+  function toggleSort(key: "date" | "name" | "words" | "submitter") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir(key === "name" ? "asc" : "desc"); } // names a→ב; dates/words high→low
+    else { setSortKey(key); setSortDir(key === "date" || key === "words" ? "desc" : "asc"); } // names/submitter a→ב; dates/words high→low
   }
   const sortDocs = (arr: CaseDoc[]) => {
     if (!sortKey) return arr;
     const dir = sortDir === "asc" ? 1 : -1;
     return [...arr].sort((a, b) => {
       if (sortKey === "name") return a.name.localeCompare(b.name, "he") * dir;
+      if (sortKey === "submitter") return a.submitter.localeCompare(b.submitter, "he") * dir;
       if (sortKey === "words") return (parseWords(a.words) - parseWords(b.words)) * dir;
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
-  const sortHead = (key: "date" | "name" | "words", label: string) => (
+  const sortHead = (key: "date" | "name" | "words" | "submitter", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
@@ -722,7 +723,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     >
       <span />
       {sortHead("date", "תאריך")}
-      <span>מגיש</span>
+      {sortHead("submitter", "מגיש")}
       {sortHead("name", "שם המסמך")}
       {tableSummary && <span>תקציר</span>}
       {tableRelated && <span>קשורים</span>}
