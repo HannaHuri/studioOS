@@ -496,8 +496,10 @@ function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseD
         <div className="flex-1" />
         <span
           className="rounded-full px-2 py-px text-[12px] flex-shrink-0"
-          style={{ color: doc.missing ? "#d83a52" : textCol, backgroundColor: doc.missing ? "#fde8eb" : (isDark ? "transparent" : "white"), fontFamily: "Figtree, sans-serif" }}
-          title={doc.missing ? "המסמך ללא תוכן" : undefined}
+          style={doc.missing
+            ? { color: "#d83a52", backgroundColor: "#fde8eb", fontFamily: "Figtree, sans-serif" }
+            : { color: isDark ? dk.textMuted : c.textLight, backgroundColor: "transparent", fontFamily: "Figtree, sans-serif" }}
+          title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}
         >{doc.words}</span>
       </div>
 
@@ -805,7 +807,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }} title="סך המילים בכל מסמכי התיק">{formatWords(caseWords)} מילים</span>
+                    <span className="text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך המילים בכל מסמכי התיק">{formatWords(caseWords)}</span>
                     <ChevronDown size={22} style={{ color: c.iconGray, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
                   </span>
                 </button>
@@ -851,8 +853,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                       className="rounded-full px-2 py-px text-[12px]"
                       style={catMissing
                         ? { color: "#d83a52", backgroundColor: "#fdeef0", border: "1px dashed #d83a52", fontFamily: "Figtree, sans-serif" }
-                        : { color: c.text, backgroundColor: "#eef4fc", fontFamily: "Figtree, sans-serif" }}
-                      title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : undefined}
+                        : { color: isDark ? dk.textMuted : c.textLight, backgroundColor: "transparent", fontFamily: "Figtree, sans-serif" }}
+                      title={catMissing ? "הקטגוריה כוללת מסמך ללא תוכן" : "מספר מילים"}
                     >{CAT_WORDS[type] ?? "—"}</span>
                     <ChevronDown size={15} style={{ color: c.iconGray, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                   </span>
