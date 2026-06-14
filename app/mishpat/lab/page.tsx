@@ -138,6 +138,17 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
   { type: "בקשה בתיק",                 words: "1.1K" },
 ];
 
+// Word counts are stored as compact strings ("1.1K", "640", "0") — parse/format for per-case totals
+const parseWords = (w: string): number => {
+  const s = w.trim().toUpperCase();
+  return s.endsWith("K") ? Math.round(parseFloat(s) * 1000) : (parseInt(s, 10) || 0);
+};
+const formatWords = (n: number): string => {
+  if (n < 1000) return String(n);
+  const k = n / 1000;
+  return (k >= 100 ? String(Math.round(k)) : k.toFixed(1).replace(/\.0$/, "")) + "K";
+};
+
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
@@ -773,6 +784,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseUsed = caseDocs.some((d) => d.used);
           const caseMatch = filterActive ? caseDocs.filter(matchesActive).length : null; // # of docs matching the active filter (null when no filter)
+          const caseWords = caseDocs.reduce((sum, d) => sum + parseWords(d.words), 0); // total words across the case's documents
           return (
             <div key={cf.id} className="flex flex-col">
               {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width */}
@@ -803,7 +815,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                       <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
                     </span>
                   </span>
-                  <ChevronDown size={22} style={{ color: c.iconGray, flexShrink: 0, marginTop: "0px", transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                  <span className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }} title="סך המילים בכל מסמכי התיק">{formatWords(caseWords)} מילים</span>
+                    <ChevronDown size={22} style={{ color: c.iconGray, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
+                  </span>
                 </button>
               </div>
 
