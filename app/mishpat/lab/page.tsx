@@ -563,7 +563,7 @@ function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary
       {submitterTag ? (
         <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
       ) : (
-        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "10px", height: "10px", backgroundColor: sub.dot }} /></span>
+        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "11px", height: "11px", backgroundColor: sub.bg, border: `1.5px solid ${sub.dot}` }} /></span>
       )}
       {/* Name (+ used dot, vertically centered with a little breathing room) */}
       <span className="flex items-center gap-2 min-w-0">
