@@ -756,14 +756,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     });
   };
   const sortHead = (key: "date" | "name" | "words" | "submitter", label: string) => (
-    <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
+    <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
   );
   const tableHeader = (
     <div
-      className="grid items-center gap-2 px-2 py-2 sticky top-0 z-10 text-[13px] font-medium"
+      className="grid gap-2 px-2 h-8 sticky top-0 z-10 text-[13px] font-medium"
       style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       dir="rtl"
     >
@@ -771,8 +771,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       {sortHead("date", "תאריך")}
       {tableSubmitterTag ? sortHead("submitter", "מגיש") : <span />}
       {sortHead("name", "שם המסמך")}
-      {tableSummary && <span>תקציר</span>}
-      {tableRelated && <span>קשורים</span>}
+      {tableSummary && <span className="flex items-center h-full">תקציר</span>}
+      {tableRelated && <span className="flex items-center h-full">קשורים</span>}
       {sortHead("words", "מילים")}
     </div>
   );
