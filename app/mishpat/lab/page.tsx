@@ -723,15 +723,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   const bg = isDark ? dk.surface : "white";
 
-  // First time the panel is expanded (cards view, case open) in a session → nudge to try table view
+  // Nudge to try table view when the panel is first expanded (cards view, case open).
+  // Once per session, and at most twice ever (small localStorage counter) so it never feels nagging.
   useEffect(() => {
     if (layout === "table") { setTableHint(false); return; }
-    if (isFocus && openCaseId && !tableHintSeenThisSession) {
-      setTableHint(true);
-      tableHintSeenThisSession = true;
-    } else if (!isFocus) {
-      setTableHint(false);
-    }
+    if (!isFocus) { setTableHint(false); return; }
+    if (!openCaseId || tableHintSeenThisSession) return;
+    tableHintSeenThisSession = true;
+    let count = 0;
+    try { count = parseInt(localStorage.getItem("njm_tableHintCount") || "0", 10); } catch {}
+    if (count >= 2) return;
+    setTableHint(true);
+    try { localStorage.setItem("njm_tableHintCount", String(count + 1)); } catch {}
   }, [isFocus, layout, openCaseId]);
 
   // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
@@ -760,7 +763,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   );
   const tableHeader = (
     <div
-      className="grid items-center gap-2 px-2 h-7 sticky top-0 z-10 text-[13px] font-medium leading-none"
+      className="grid items-center gap-2 px-2 py-2 sticky top-0 z-10 text-[13px] font-medium leading-none"
       style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       dir="rtl"
     >
