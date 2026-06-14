@@ -535,7 +535,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 }
 
 // Dense table row (CSS grid so columns align with the header). Reveals summary / related as width allows.
-function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; submitterTag?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#243047" : "#eaf2fd";
@@ -559,8 +559,12 @@ function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated,
       <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
       {/* Date — rightmost data column */}
       <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-      {/* Submitter tag */}
-      <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
+      {/* Submitter — full tag when wide; a small rounded SQUARE (distinct from the round "used" dot) when narrow */}
+      {submitterTag ? (
+        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
+      ) : (
+        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "10px", height: "10px", backgroundColor: sub.color }} /></span>
+      )}
       {/* Name (+ used dot) */}
       <span className="flex items-center gap-1 min-w-0">
         <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
@@ -691,6 +695,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
+  const tableSubmitterTag = panelWidth >= 460; // narrow: submitter shows as a color dot; wider: full tag
   const tableSummary = panelWidth >= 520; // table rows reveal the summary once there is room
   const tableRelated = panelWidth >= 760; // …and related docs when there is even more
   const [search, setSearch]       = useState("");
@@ -716,7 +721,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
   // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
-  const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(140px,1fr)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
+  const tableTemplate = ["22px", "62px", tableSubmitterTag ? "78px" : "20px", tableSummary ? "minmax(140px,1fr)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
 
   function toggleSort(key: "date" | "name" | "words" | "submitter") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -746,7 +751,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     >
       <span />
       {sortHead("date", "תאריך")}
-      {sortHead("submitter", "מגיש")}
+      {tableSubmitterTag ? sortHead("submitter", "מגיש") : <span />}
       {sortHead("name", "שם המסמך")}
       {tableSummary && <span>תקציר</span>}
       {tableRelated && <span>קשורים</span>}
@@ -991,7 +996,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           <div className="flex flex-col gap-1">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} submitterTag={tableSubmitterTag} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1010,7 +1015,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
                   {sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} submitterTag={tableSubmitterTag} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
