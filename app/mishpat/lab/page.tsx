@@ -546,8 +546,8 @@ function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated,
   return (
     <div
       ref={rowRef}
-      className="relative grid items-center gap-2 px-2 h-9 cursor-pointer transition-colors"
-      style={{ gridTemplateColumns: gridCols, borderBottom: `1px solid ${active ? c.primary : (isDark ? dk.border : "#eef1f4")}`, backgroundColor: active ? activeBg : baseBg }}
+      className="relative grid items-center gap-2 px-2 h-9 rounded cursor-pointer transition-colors border"
+      style={{ gridTemplateColumns: gridCols, borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
@@ -988,7 +988,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
         {/* Table · chronological — dense flat rows under a sticky header */}
         {layout === "table" && grouping === "chrono" && (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
               <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
@@ -1003,7 +1003,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             {typesInData.map((type) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               return (
-                <div key={type} className="flex flex-col">
+                <div key={type} className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
                     <FolderOpen size={13} style={{ color: c.iconGray, flexShrink: 0 }} />
                     <span className="text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
