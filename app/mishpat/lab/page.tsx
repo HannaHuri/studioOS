@@ -138,17 +138,6 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
   { type: "בקשה בתיק",                 words: "1.1K" },
 ];
 
-// Word counts are stored as compact strings ("1.1K", "640", "0") — parse/format for per-case totals
-const parseWords = (w: string): number => {
-  const s = w.trim().toUpperCase();
-  return s.endsWith("K") ? Math.round(parseFloat(s) * 1000) : (parseInt(s, 10) || 0);
-};
-const formatWords = (n: number): string => {
-  if (n < 1000) return String(n);
-  const k = n / 1000;
-  return (k >= 100 ? String(Math.round(k)) : k.toFixed(1).replace(/\.0$/, "")) + "K";
-};
-
 // Mock documents (dev team: replace with real API data)
 const CASE_DOCS: CaseDoc[] = [
   {
