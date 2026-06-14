@@ -716,7 +716,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
   // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
-  const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(120px,200px)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,1fr)"] : []), ...(tableRelated ? ["minmax(0,max-content)"] : []), "50px"].join(" ");
+  const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(120px,200px)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
 
   function toggleSort(key: "date" | "name" | "words" | "submitter") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
