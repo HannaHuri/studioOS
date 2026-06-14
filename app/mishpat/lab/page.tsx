@@ -455,7 +455,7 @@ const PARTY_NAMES: Record<string, Record<string, string>> = {
   c2: { "תובע": "אורן פרידמן", "נתבע": "שיכון הצפון חברה לבנייה בע״מ" },
 };
 
-function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
@@ -464,16 +464,18 @@ function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck, rowRef }: { do
   const subText = isDark ? dk.textMuted : c.textGray;
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
+  const baseBg = isDark ? dk.input : "white";
+  const activeBg = isDark ? "#243047" : "#eaf2fd"; // gentle takhelet tint for the currently-open document
   return (
     <div
       ref={rowRef}
       className="rounded-[8px] border h-full overflow-hidden flex flex-col cursor-pointer transition-colors"
-      style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
+      style={{ borderColor: active ? c.primary : (isDark ? dk.border : "#dce8f6"), backgroundColor: active ? activeBg : baseBg, boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : "#f6f9ff"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : "white"; }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
       {/* Row 1: checkbox · document name (single line, ellipsis if long) */}
       <div className="flex items-center gap-2 px-3 pt-2.5">
@@ -847,7 +849,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {grouping === "chrono" && (
           <div className={multiCol ? "grid gap-1.5" : "flex flex-col gap-1.5"} style={multiCol ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" } : undefined}>
             {lensed.map((doc) => (
-              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -884,7 +886,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               {open && (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
-                    <DocRow key={doc.id} doc={doc} isDark={isDark} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRow key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               )}
