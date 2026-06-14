@@ -592,9 +592,9 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              59198-67-89 • אורן פרידמן נ&apos; שיכון הצפון חברה ל...
+              12345-67-89 • יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
             </span>
-            <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+2</span>
+            <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
           </button>
         </div>
       </div>
