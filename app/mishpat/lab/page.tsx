@@ -542,7 +542,7 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
-  const [relPos, setRelPos] = useState<{ top: number; left: number } | null>(null); // +N related popover
+  const [relPos, setRelPos] = useState<{ top: number; right: number } | null>(null); // +N related popover
   return (
     <div
       ref={rowRef}
@@ -579,7 +579,7 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
           ))}
           {doc.related.length > 2 && (
             <button
-              onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setRelPos(relPos ? null : { top: r.bottom + 4, left: Math.max(8, r.left) }); }}
+              onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setRelPos(relPos ? null : { top: r.bottom + 4, right: window.innerWidth - r.right }); }}
               className="hover:opacity-80"
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
               title="עוד מסמכים קשורים"
@@ -593,7 +593,7 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
           <div className="fixed inset-0 z-[190]" onClick={(e) => { e.stopPropagation(); setRelPos(null); }} />
           <div
             className="fixed z-[200] rounded-lg py-1 shadow-xl"
-            style={{ top: relPos.top, left: relPos.left, minWidth: "200px", maxWidth: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}` }}
+            style={{ top: relPos.top, right: relPos.right, minWidth: "200px", maxWidth: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}` }}
             dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1815,19 +1815,19 @@ export default function MishpatPage() {
             </div>
           )}
 
-          {/* Toggle button — pokes out on the LEFT edge (panel is on the right); hidden in focus */}
-          {!focusDocs && (
-            <button
-              onClick={() => setIsPanelOpen((v) => !v)}
-              className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
-              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
-              title={isPanelOpen ? "סגור מסמכים" : "פתח מסמכים"}
-            >
-              {isPanelOpen
+          {/* Toggle button — pokes out on the LEFT edge (panel is on the right). In focus mode it closes the panel directly. */}
+          <button
+            onClick={() => { if (focusDocs) { setFocusDocs(false); setIsPanelOpen(false); } else setIsPanelOpen((v) => !v); }}
+            className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
+            style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
+            title={focusDocs ? "סגור מסמכים" : (isPanelOpen ? "סגור מסמכים" : "פתח מסמכים")}
+          >
+            {focusDocs
+              ? <X size={15} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+              : isPanelOpen
                 ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
                 : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
-            </button>
-          )}
+          </button>
         </div>
       </div>
     </div>
