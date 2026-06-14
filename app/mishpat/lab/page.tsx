@@ -535,9 +535,9 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 }
 
 // Dense table row (CSS grid so columns align with the header). Reveals summary / related as width allows.
-function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; zebra?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
-  const baseBg = zebra ? (isDark ? "#1b2236" : "#fafbfd") : (isDark ? dk.input : "white"); // faint zebra striping
+  const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -716,7 +716,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
   // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
-  const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(120px,200px)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
+  const tableTemplate = ["22px", "62px", "78px", tableSummary ? "minmax(140px,1fr)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
 
   function toggleSort(key: "date" | "name" | "words" | "submitter") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -990,8 +990,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {layout === "table" && grouping === "chrono" && (
           <div className="flex flex-col gap-1">
             {tableHeader}
-            {sortDocs(lensed).map((doc, i) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} zebra={i % 2 === 1} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+            {sortDocs(lensed).map((doc) => (
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1009,8 +1009,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     <span className="text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                     <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
-                  {sortDocs(typeDocs).map((doc, i) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} zebra={i % 2 === 1} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                  {sortDocs(typeDocs).map((doc) => (
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1822,11 +1822,9 @@ export default function MishpatPage() {
             style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
             title={focusDocs ? "סגור מסמכים" : (isPanelOpen ? "סגור מסמכים" : "פתח מסמכים")}
           >
-            {focusDocs
-              ? <X size={15} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
-              : isPanelOpen
-                ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
-                : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
+            {(isPanelOpen || focusDocs)
+              ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+              : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
           </button>
         </div>
       </div>
