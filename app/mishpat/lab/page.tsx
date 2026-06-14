@@ -1611,7 +1611,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={setOpenDoc} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
