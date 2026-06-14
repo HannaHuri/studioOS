@@ -794,13 +794,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
-                  <span className="flex items-start gap-1.5 min-w-0 flex-1">
-                    <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
-                    <span className="flex flex-col min-w-0 gap-0.5">
-                      <span className="flex items-center gap-1.5 text-[17px] font-bold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
-                        <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
-                        <span style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
+                <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                  {/* Row A: title (right) + word count · chevron (left edge) */}
+                  <span className="flex items-center justify-between gap-2 w-full min-w-0">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                      <span className="flex items-center gap-1.5 text-[17px] font-bold leading-snug min-w-0" style={{ color: isDark ? dk.text : c.text }}>
+                        <span className="whitespace-nowrap" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.type}</span>
+                        <span className="whitespace-nowrap" style={{ fontFamily: "Figtree, sans-serif" }}>{cf.number}</span>
                         {caseUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                         {filterActive && (
                           <span
@@ -814,13 +815,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                           </span>
                         )}
                       </span>
-                      <span className="text-[14px] leading-snug truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={cf.parties}>{cf.parties}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך המילים בכל מסמכי התיק">{formatWords(caseWords)}</span>
+                      <ChevronDown size={22} style={{ color: c.iconGray, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
                     </span>
                   </span>
-                  <span className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך המילים בכל מסמכי התיק">{formatWords(caseWords)}</span>
-                    <ChevronDown size={22} style={{ color: c.iconGray, transition: "transform 0.15s", transform: caseOpen ? "rotate(180deg)" : "none" }} />
-                  </span>
+                  {/* Row B: party names — full width, aligned under the title text */}
+                  <span className="text-[14px] leading-snug truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "21px" }} title={cf.parties}>{cf.parties}</span>
                 </button>
               </div>
 
