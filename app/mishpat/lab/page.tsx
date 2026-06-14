@@ -443,10 +443,10 @@ function DateRangeFilter({
 }
 
 // ── Document row — lean by default, expands on hover (or click to pin) ───────
-const SUBMITTER_COLORS: Record<string, { bg: string; color: string }> = {
-  "תובע": { bg: "#e6f0fb", color: "#1a6dc4" },     // blue
-  "נתבע": { bg: "#f1eafc", color: "#7a4ec2" },     // purple
-  "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f" }, // green
+const SUBMITTER_COLORS: Record<string, { bg: string; color: string; dot: string }> = {
+  "תובע": { bg: "#e6f0fb", color: "#1a6dc4", dot: "#69a8e0" },     // blue
+  "נתבע": { bg: "#f1eafc", color: "#7a4ec2", dot: "#a98fd6" },     // purple
+  "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f", dot: "#74b58f" }, // green
 };
 
 // Specific party name per case + side (shown on hover; useful when a side has several)
@@ -456,7 +456,7 @@ const PARTY_NAMES: Record<string, Record<string, string>> = {
 };
 
 function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
+  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
   const shownRelated = relMore ? doc.related : doc.related.slice(0, RELATED_LIMIT);
@@ -536,7 +536,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 
 // Dense table row (CSS grid so columns align with the header). Reveals summary / related as width allows.
 function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; submitterTag?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
+  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -563,12 +563,12 @@ function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary
       {submitterTag ? (
         <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
       ) : (
-        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "10px", height: "10px", backgroundColor: sub.color }} /></span>
+        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "10px", height: "10px", backgroundColor: sub.dot }} /></span>
       )}
-      {/* Name (+ used dot) */}
-      <span className="flex items-center gap-1 min-w-0">
+      {/* Name (+ used dot, vertically centered with a little breathing room) */}
+      <span className="flex items-center gap-2 min-w-0">
         <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
-        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
       </span>
       {/* Summary — main text color, right-aligned */}
       {showSummary && <span className="text-[14px] truncate text-right min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
