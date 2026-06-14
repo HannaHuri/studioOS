@@ -544,7 +544,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated,
   return (
     <div
       ref={rowRef}
-      className="relative flex items-center gap-2 px-2 h-9 rounded-md cursor-pointer transition-colors border"
+      className="relative flex items-center gap-2 px-2 h-9 rounded cursor-pointer transition-colors border"
       style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
@@ -562,13 +562,18 @@ function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated,
       {/* Name */}
       <span className="doc-link flex-1 min-w-0 truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      {doc.pending && <Gavel size={12} style={{ transform: "scaleX(-1)", color: c.iconGray, flexShrink: 0 }} />}
-      {/* Summary — appears when there is room */}
-      {showSummary && <span className="text-[12px] truncate" style={{ flex: "1.6 1 0", color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
-      {/* Related docs — appears when there is even more room */}
+      {/* Summary — appears when there is room; same size as the cards, right-aligned */}
+      {showSummary && <span className="text-[14px] truncate text-right" style={{ flex: "1.6 1 0", color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
+      {/* Related docs — links (like the cards), appear when there is even more room */}
       {showRelated && doc.related.length > 0 && (
-        <span className="flex items-center gap-1 flex-shrink-0 text-[12px]" style={{ color: metaCol }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
-          <Link size={11} />{doc.related.length}
+        <span className="flex items-center gap-2 flex-shrink min-w-0 overflow-hidden">
+          {doc.related.slice(0, 2).map((r) => (
+            <button key={r} onClick={(e) => e.stopPropagation()} className="doc-link flex items-center gap-1 min-w-0" title="פתיחת המסמך">
+              <Link size={11} style={{ flexShrink: 0 }} />
+              <span className="text-[12px] truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
+            </button>
+          ))}
+          {doc.related.length > 2 && <span className="text-[12px] flex-shrink-0" style={{ color: metaCol }}>+{doc.related.length - 2}</span>}
         </span>
       )}
       {/* Words — leftmost column */}
