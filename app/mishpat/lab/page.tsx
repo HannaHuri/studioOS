@@ -455,7 +455,7 @@ const PARTY_NAMES: Record<string, Record<string, string>> = {
   c2: { "תובע": "אורן פרידמן", "נתבע": "שיכון הצפון חברה לבנייה בע״מ" },
 };
 
-function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void }) {
+function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const [relMore, setRelMore] = useState(false);
   const RELATED_LIMIT = 2;
@@ -466,6 +466,7 @@ function DocRow({ doc, isDark, markNew, onOpenDoc, onToggleCheck }: { doc: CaseD
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   return (
     <div
+      ref={rowRef}
       className="rounded-[8px] border h-full overflow-hidden flex flex-col cursor-pointer transition-colors"
       style={{ borderColor: isDark ? dk.border : "#dce8f6", backgroundColor: isDark ? dk.input : "white", boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
@@ -601,7 +602,14 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
 }
 
 // ── Document panel (open) — chronological browser ────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void; openDocId?: string }) {
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // When a document is opened (and the panel narrows out of focus mode), bring its row into view
+  useEffect(() => {
+    if (!openDocId) return;
+    const el = rowRefs.current[openDocId];
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [openDocId, panelWidth]);
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
@@ -839,7 +847,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {grouping === "chrono" && (
           <div className={multiCol ? "grid gap-1.5" : "flex flex-col gap-1.5"} style={multiCol ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: "1fr" } : undefined}>
             {lensed.map((doc) => (
-              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
+              <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -876,7 +884,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               {open && (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: multiCol ? "1fr" : "auto" }}>
                   {typeDocs.map((doc) => (
-                    <DocRow key={doc.id} doc={doc} isDark={isDark} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} />
+                    <DocRow key={doc.id} doc={doc} isDark={isDark} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               )}
@@ -1611,7 +1619,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
