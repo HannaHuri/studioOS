@@ -684,6 +684,9 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose }: { doc: CaseDo
 }
 
 // ── Document panel (open) — chronological browser ────────────────────────────
+// Session-scoped flag: show the "try table view" hint only once per session
+let tableHintSeenThisSession = false;
+
 function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void; openDocId?: string }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // When a document is opened (and the panel narrows out of focus mode), bring its row into view
@@ -705,6 +708,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // order/grouping axis
   const [layout, setLayout]       = useState<"cards" | "table">("cards");   // density/layout axis
+  const [tableHint, setTableHint] = useState(false); // one-per-session nudge to try table view in expanded mode
   const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   const [isAuto, setIsAuto]       = useState(true);
@@ -718,6 +722,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const [lens, setLens]             = useState<"all" | "new" | "pending">("all"); // status lens
 
   const bg = isDark ? dk.surface : "white";
+
+  // First time the panel is expanded (cards view, case open) in a session → nudge to try table view
+  useEffect(() => {
+    if (layout === "table") { setTableHint(false); return; }
+    if (isFocus && openCaseId && !tableHintSeenThisSession) {
+      setTableHint(true);
+      tableHintSeenThisSession = true;
+    } else if (!isFocus) {
+      setTableHint(false);
+    }
+  }, [isFocus, layout, openCaseId]);
 
   // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
   // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
@@ -894,14 +909,26 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           {openCaseId && (
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {/* Layout: cards / table (single toggle) — to the right of the grouping segment */}
-              <button
-                onClick={() => setLayout((l) => (l === "cards" ? "table" : "cards"))}
-                className="size-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
-                style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
-                title={layout === "cards" ? "מעבר לתצוגת טבלה" : "מעבר לתצוגת כרטיסים"}
-              >
-                {layout === "cards" ? <Rows3 size={15} /> : <LayoutGrid size={15} />}
-              </button>
+              <span className="relative flex-shrink-0">
+                <button
+                  onClick={() => setLayout((l) => (l === "cards" ? "table" : "cards"))}
+                  className="size-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
+                  style={{ border: `1px solid ${tableHint ? c.primary : (isDark ? dk.border : c.border)}`, color: isDark ? dk.textMuted : c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
+                  title={layout === "cards" ? "מעבר לתצוגת טבלה" : "מעבר לתצוגת כרטיסים"}
+                >
+                  {layout === "cards" ? <Rows3 size={15} /> : <LayoutGrid size={15} />}
+                </button>
+                {tableHint && (
+                  <div className="absolute z-50" style={{ top: "calc(100% + 9px)", left: 0 }} dir="rtl">
+                    <div className="rounded-lg shadow-lg px-3 py-2 flex items-start gap-2" style={{ backgroundColor: c.primary, color: "white", width: "210px" }}>
+                      <span className="text-[13px] leading-snug" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>בחלון מורחב כדאי לנסות תצוגת טבלה — נוחה לסריקה מהירה</span>
+                      <button onClick={() => setTableHint(false)} className="flex-shrink-0 hover:opacity-80 mt-0.5" title="הבנתי"><X size={14} /></button>
+                    </div>
+                    {/* arrow pointing up to the toggle */}
+                    <div className="absolute" style={{ top: "-4px", left: "14px", width: "9px", height: "9px", backgroundColor: c.primary, transform: "rotate(45deg)" }} />
+                  </div>
+                )}
+              </span>
               {/* Grouping: chronological / by type */}
               <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
                 {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
