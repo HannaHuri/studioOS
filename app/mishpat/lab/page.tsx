@@ -763,7 +763,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   );
   const tableHeader = (
     <div
-      className="grid gap-2 px-2 h-7 sticky top-0 z-10 text-[13px] font-medium"
+      className="grid gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[13px] font-medium"
       style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       dir="rtl"
     >
