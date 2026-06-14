@@ -534,29 +534,45 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
-// Dense single-line row for the compact / table layout
-function DocRowCompact({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+// Dense single-line row for the table layout. Reveals more columns (summary, related) as width allows.
+function DocRowCompact({ doc, isDark, markNew, active, showSummary, showRelated, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showSummary?: boolean; showRelated?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#243047" : "#eaf2fd";
+  const metaCol = isDark ? dk.textMuted : c.textLight;
+  const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-2 px-2 h-9 rounded-md cursor-pointer transition-colors border"
-      style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg, boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
+      className="relative flex items-center gap-2 px-2 h-9 rounded-md cursor-pointer transition-colors border"
+      style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
+      {/* "New" — straight takhelet line on the right edge (no rounding) */}
+      {markNew && <span className="absolute top-0 bottom-0 right-0 w-[2px]" style={{ backgroundColor: "rgba(0,115,234,0.55)" }} />}
       <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+      {/* Date — rightmost data column */}
+      <span className="text-[12px] flex-shrink-0 w-[60px] text-right" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+      {/* Submitter tag — right-aligned next to the date */}
+      <span className="text-[12px] flex-shrink-0 rounded px-1.5 py-px whitespace-nowrap" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span>
+      {/* Name */}
       <span className="doc-link flex-1 min-w-0 truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
       {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
       {doc.pending && <Gavel size={12} style={{ transform: "scaleX(-1)", color: c.iconGray, flexShrink: 0 }} />}
-      <span className="text-[12px] flex-shrink-0 rounded px-1.5 py-px whitespace-nowrap" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined)}>{doc.submitter}</span>
-      <span className="text-[12px] flex-shrink-0 w-[56px] text-left" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-      <span className="text-[12px] flex-shrink-0 w-[40px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+      {/* Summary — appears when there is room */}
+      {showSummary && <span className="text-[12px] truncate" style={{ flex: "1.6 1 0", color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
+      {/* Related docs — appears when there is even more room */}
+      {showRelated && doc.related.length > 0 && (
+        <span className="flex items-center gap-1 flex-shrink-0 text-[12px]" style={{ color: metaCol }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
+          <Link size={11} />{doc.related.length}
+        </span>
+      )}
+      {/* Words — leftmost column */}
+      <span className="text-[12px] flex-shrink-0 w-[44px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
     </div>
   );
 }
@@ -642,6 +658,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
+  const tableSummary = panelWidth >= 520; // table rows reveal the summary once there is room
+  const tableRelated = panelWidth >= 760; // …and related docs when there is even more
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
@@ -795,6 +813,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           {/* View controls (left) — grouping (order) + layout (density), only when a case is open */}
           {openCaseId && (
             <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Layout: cards / table (single toggle) — to the right of the grouping segment */}
+              <button
+                onClick={() => setLayout((l) => (l === "cards" ? "table" : "cards"))}
+                className="size-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
+                style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
+                title={layout === "cards" ? "מעבר לתצוגת טבלה" : "מעבר לתצוגת כרטיסים"}
+              >
+                {layout === "cards" ? <Rows3 size={15} /> : <LayoutGrid size={15} />}
+              </button>
               {/* Grouping: chronological / by type */}
               <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
                 {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
@@ -813,15 +840,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                   </button>
                 ))}
               </div>
-              {/* Layout: cards / table (single toggle) */}
-              <button
-                onClick={() => setLayout((l) => (l === "cards" ? "table" : "cards"))}
-                className="size-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
-                style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
-                title={layout === "cards" ? "מעבר לתצוגת טבלה" : "מעבר לתצוגת כרטיסים"}
-              >
-                {layout === "cards" ? <Rows3 size={15} /> : <LayoutGrid size={15} />}
-              </button>
             </div>
           )}
         </div>
@@ -897,7 +915,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {layout === "table" && grouping === "chrono" && (
           <div className="flex flex-col gap-1">
             {lensed.map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -913,7 +931,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                 <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
               </div>
               {typeDocs.map((doc) => (
-                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showSummary={tableSummary} showRelated={tableRelated} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
               ))}
             </div>
           );
