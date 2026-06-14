@@ -542,6 +542,7 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
+  const [relPos, setRelPos] = useState<{ top: number; right: number } | null>(null); // +N related popover
   return (
     <div
       ref={rowRef}
@@ -567,9 +568,9 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
       </span>
       {/* Summary — main text color, right-aligned */}
       {showSummary && <span className="text-[14px] truncate text-right min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
-      {/* Related docs — comma-separated links (no icon), right-aligned; +N opens the rest (does not trigger the row) */}
+      {/* Related docs — comma-separated links (no icon), right-aligned; +N opens a popover with the full list */}
       {showRelated && (
-        <span className="text-[13px] truncate text-right block" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
+        <span className="text-[13px] truncate text-right block w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
           {doc.related.slice(0, 2).map((r, i, a) => (
             <span key={r}>
               <button onClick={(e) => e.stopPropagation()} className="doc-link" title="פתיחת המסמך">{r}</button>
@@ -577,9 +578,31 @@ function DocRowCompact({ doc, isDark, markNew, active, zebra, showSummary, showR
             </span>
           ))}
           {doc.related.length > 2 && (
-            <button onClick={(e) => e.stopPropagation()} className="hover:opacity-80" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`עוד מסמכים קשורים: ${doc.related.slice(2).join(" · ")}`}>+{doc.related.length - 2}</button>
+            <button
+              onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setRelPos(relPos ? null : { top: r.bottom + 4, right: window.innerWidth - r.right }); }}
+              className="hover:opacity-80"
+              style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              title="כל המסמכים הקשורים"
+            >+{doc.related.length - 2}</button>
           )}
         </span>
+      )}
+      {/* +N popover — full related list */}
+      {relPos && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={(e) => { e.stopPropagation(); setRelPos(null); }} />
+          <div
+            className="fixed z-[200] rounded-lg py-1 shadow-xl"
+            style={{ top: relPos.top, right: relPos.right, minWidth: "200px", maxWidth: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}` }}
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-1.5 text-[12px]" style={{ color: metaCol, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים ({doc.related.length})</div>
+            {doc.related.map((r) => (
+              <button key={r} onClick={(e) => { e.stopPropagation(); }} className="doc-link block w-full text-right px-3 py-1.5 text-[13px] truncate transition-colors" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="פתיחת המסמך" onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : c.hoverBg; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>{r}</button>
+            ))}
+          </div>
+        </>
       )}
       {/* Words — leftmost column */}
       <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
