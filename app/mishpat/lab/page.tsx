@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
@@ -534,6 +534,33 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
+// Dense single-line row for the compact / table layout
+function DocRowCompact({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray };
+  const baseBg = isDark ? dk.input : "white";
+  const activeBg = isDark ? "#243047" : "#eaf2fd";
+  return (
+    <div
+      ref={rowRef}
+      className="flex items-center gap-2 px-2 h-9 rounded-md cursor-pointer transition-colors border"
+      style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg, boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
+      dir="rtl"
+      title="פתיחת המסמך לצפייה"
+      onClick={onOpenDoc}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
+    >
+      <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+      <span className="doc-link flex-1 min-w-0 truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
+      {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+      {doc.pending && <Gavel size={12} style={{ transform: "scaleX(-1)", color: c.iconGray, flexShrink: 0 }} />}
+      <span className="text-[12px] flex-shrink-0 rounded px-1.5 py-px whitespace-nowrap" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined)}>{doc.submitter}</span>
+      <span className="text-[12px] flex-shrink-0 w-[56px] text-left" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+      <span className="text-[12px] flex-shrink-0 w-[40px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+    </div>
+  );
+}
+
 // ── Mock document viewer (opens as a third pane next to the chat) ────────────
 const MOCK_DOC_PARAS = [
   "1. בהתאם להחלטת בית המשפט מיום 12.4.2026, ולאחר שהוגשו כתבי הטענות מטעם הצדדים, מתכבד הח״מ להגיש מסמך זה לעיון בית המשפט הנכבד.",
@@ -620,7 +647,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
-  const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono");
+  const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // order/grouping axis
+  const [layout, setLayout]       = useState<"cards" | "table">("cards");   // density/layout axis
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
@@ -764,24 +792,36 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             </button>
           </div>
 
-          {/* Grouping toggle (left) — only relevant when a case is open */}
+          {/* View controls (left) — grouping (order) + layout (density), only when a case is open */}
           {openCaseId && (
-            <div className="flex items-center gap-0.5 p-0.5 rounded-md flex-shrink-0" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
-              {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
-                <button
-                  key={key}
-                  onClick={() => setGrouping(key)}
-                  className="size-7 flex items-center justify-center rounded transition-colors"
-                  style={{
-                    backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
-                    color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.iconGray),
-                    boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                  }}
-                  title={label}
-                >
-                  <Ico size={15} />
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Grouping: chronological / by type */}
+              <div className="flex items-center gap-0.5 p-0.5 rounded-md" style={{ backgroundColor: isDark ? dk.input : c.hoverBg }}>
+                {([["chrono", "כרונולוגית", Clock], ["type", "לפי סוג", FolderOpen]] as const).map(([key, label, Ico]) => (
+                  <button
+                    key={key}
+                    onClick={() => setGrouping(key)}
+                    className="size-7 flex items-center justify-center rounded transition-colors"
+                    style={{
+                      backgroundColor: grouping === key ? (isDark ? dk.surface : "white") : "transparent",
+                      color: grouping === key ? c.primary : (isDark ? dk.textMuted : c.iconGray),
+                      boxShadow: grouping === key ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                    }}
+                    title={label}
+                  >
+                    <Ico size={15} />
+                  </button>
+                ))}
+              </div>
+              {/* Layout: cards / table (single toggle) */}
+              <button
+                onClick={() => setLayout((l) => (l === "cards" ? "table" : "cards"))}
+                className="size-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
+                style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
+                title={layout === "cards" ? "מעבר לתצוגת טבלה" : "מעבר לתצוגת כרטיסים"}
+              >
+                {layout === "cards" ? <Rows3 size={15} /> : <LayoutGrid size={15} />}
+              </button>
             </div>
           )}
         </div>
@@ -844,9 +884,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           </div>
         )}
 
-        {/* Chronological view — newest first; uniform heights (grid auto-rows 1fr); two cols when wide; "new" divider */}
-        {/* Chronological — one continuous list; new docs marked by a blue edge (same in 1 / many columns) */}
-        {grouping === "chrono" && (
+        {/* Cards · chronological — one continuous list; new docs marked by a blue edge (same in 1 / many columns) */}
+        {layout === "cards" && grouping === "chrono" && (
           <div className={multiCol ? "grid gap-1.5 items-stretch" : "flex flex-col gap-1.5"} style={multiCol ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined}>
             {lensed.map((doc) => (
               <DocRow key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
@@ -854,8 +893,34 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           </div>
         )}
 
-        {/* Folder view — grouped by document type */}
-        {grouping === "type" && typesInData.map((type) => {
+        {/* Table · chronological — dense flat rows */}
+        {layout === "table" && grouping === "chrono" && (
+          <div className="flex flex-col gap-1">
+            {lensed.map((doc) => (
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+            ))}
+          </div>
+        )}
+
+        {/* Table · by type — dense rows under type headers */}
+        {layout === "table" && grouping === "type" && typesInData.map((type) => {
+          const typeDocs = lensed.filter((d) => d.type === type);
+          return (
+            <div key={type} className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
+                <FolderOpen size={13} style={{ color: c.iconGray, flexShrink: 0 }} />
+                <span className="text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+              </div>
+              {typeDocs.map((doc) => (
+                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              ))}
+            </div>
+          );
+        })}
+
+        {/* Cards · by type — folder accordion */}
+        {layout === "cards" && grouping === "type" && typesInData.map((type) => {
           const typeDocs = lensed.filter((d) => d.type === type);
           const open = openType === type;
           const allOn = typeDocs.every((d) => d.checked);
