@@ -712,6 +712,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
               ממתין להחלטה
             </button>
+            {filterActive && (
+              <button
+                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
+                className="flex items-center gap-1 h-8 px-2 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0 hover:bg-black/5"
+                style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                title="ניקוי כל הסינונים"
+              >
+                <X size={14} />
+                נקה סינון
+              </button>
+            )}
           </div>
           {/* Wide / expanded: a spacer pushes the expand button to the far-left end of the row */}
           {headerWide && <><div className="flex-1" />{expandBtn}</>}
@@ -784,7 +795,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
                 <button className="flex items-start justify-between flex-1 text-right min-w-0 gap-2" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
-                  <span className="flex items-start gap-1.5 min-w-0">
+                  <span className="flex items-start gap-1.5 min-w-0 flex-1">
                     <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                     <span className="flex flex-col min-w-0 gap-0.5">
                       <span className="flex items-center gap-1.5 text-[17px] font-bold leading-snug" style={{ color: isDark ? dk.text : c.text }}>
@@ -803,7 +814,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                           </span>
                         )}
                       </span>
-                      <span className="text-[14px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{cf.parties}</span>
+                      <span className="text-[14px] leading-snug truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={cf.parties}>{cf.parties}</span>
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5 flex-shrink-0">
