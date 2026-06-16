@@ -194,7 +194,7 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשה בתיק", submitter: "תובע",
     date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "420",
-    summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים.",
+    summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים. הנתבע טרם הגיב.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
   {
@@ -224,7 +224,7 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשה בתיק", submitter: "תובע",
     date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
-    summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים.",
+    summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים. הנתבע מתנגד חלקית לבקשה.",
     related: ["כתב תביעה"], checked: false,
   },
   {
@@ -282,7 +282,7 @@ const CASE_DOCS_2: CaseDoc[] = [
   { id: "e1", name: "כתב תביעה", type: "כתב תביעה", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
     summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשה בתיק", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
-    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק.", related: [], checked: false },
+    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false },
   { id: "e3", name: "כתב הגנה", type: "כתב הגנה", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
     summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטה", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
@@ -1596,7 +1596,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               className="text-right text-[22px] font-medium mb-2"
               style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
             >
-              שלום, דניאל. במה אוכל לעזור?
+              שלום, טל. במה אוכל לעזור?
             </p>
             {renderInput()}
             {renderDisclaimer()}
@@ -1671,9 +1671,9 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>דד</div>
+            <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>טח</div>
             <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דניאל דמביץ</span>
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>טל חבקין</span>
             </div>
           </button>
 

@@ -48,7 +48,7 @@ const MOCK_BETAS: Beta[] = [
   { id: "3", name: "v1-new-sidebar", status: "open",   users: [],                          updatedAt: "15.05.2026" },
 ];
 
-const CURRENT_ADMIN = { initials: "דד", name: "דניאל דמביץ" };
+const CURRENT_ADMIN = { initials: "טח", name: "טל חבקין" };
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<BetaStatus, {
