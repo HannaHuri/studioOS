@@ -1040,10 +1040,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
               const typeDocs = lensed.filter((d) => d.type === type);
               return (
                 <div key={type} className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
-                    <FolderOpen size={13} style={{ color: c.iconGray, flexShrink: 0 }} />
-                    <span className="text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                    <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                  <div className="flex items-center gap-1.5 px-2 pt-2.5 pb-1">
+                    <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                    <span className="text-[14px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                    <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
                   {sortDocs(typeDocs).map((doc) => (
                     <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} submitterTag={tableSubmitterTag} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
