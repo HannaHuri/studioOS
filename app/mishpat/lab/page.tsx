@@ -812,7 +812,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
-  const LAST_VISIT = "2026-05-31";
+  const LAST_VISIT = "2026-06-01";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
