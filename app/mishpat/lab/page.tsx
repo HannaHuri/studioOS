@@ -129,7 +129,8 @@ interface CaseDoc {
 // Type filter chips with aggregate word counts (real case data)
 const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
   { type: "הכל",                       words: "237K" },
-  { type: "תצהיר",                     words: "113.5K" },
+  { type: "חוות דעת",                  words: "13.5K" },
+  { type: "תצהיר",                     words: "100K" },
   { type: "כתב הגנה",                  words: "76.8K" },
   { type: "כתב תביעה",                 words: "15.7K" },
   { type: "פרוטוקול",                  words: "14.6K" },
@@ -186,7 +187,7 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["כתב הגנה מתוקן"], checked: false,
   },
   {
-    id: "d8", name: "חוות דעת אקטוארית", type: "תצהיר", submitter: "תובע",
+    id: "d8", name: "חוות דעת אקטוארית", type: "חוות דעת", submitter: "תובע",
     date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
@@ -234,7 +235,7 @@ const CASE_DOCS: CaseDoc[] = [
     related: ["בקשה לגילוי מסמכים"], checked: false,
   },
   {
-    id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "תצהיר", submitter: "בית המשפט",
+    id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
     related: ["החלטה על מינוי מומחה"], checked: false,
