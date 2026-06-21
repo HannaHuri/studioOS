@@ -1459,7 +1459,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              12345-67-89 • יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
+              {`${CASES_META[0].type} • ${CASES_META[0].number} ${CASES_META[0].parties}`}
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
           </button>
