@@ -253,7 +253,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           style={{ borderColor: borderCol }}
           title={generating ? "מפיק תקצירים…" : "הפק תקצירים"}
         >
-          {generating ? <RotateCw size={14} className="animate-spin" style={{ color: c.primary }} /> : <Zap size={14} style={{ color: c.iconGray }} />}
+          <Zap size={14} className={generating ? "animate-pulse" : ""} style={{ color: generating ? c.primary : c.iconGray }} />
         </button>
 
         <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="רענון">
