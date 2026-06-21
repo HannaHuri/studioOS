@@ -198,7 +198,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: grayCol }}>
               {isCaseOpen ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
             </span>
-            <p className="text-[15px] leading-[18px]" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>12345-67-89</p>
+            <p className="text-[15px] leading-[18px]" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>ת&quot;א • 12345-67-89</p>
             <p className="text-[14px] leading-[17px] mx-auto" style={{ color: grayCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", maxWidth: "180px" }}>
               יעקב אברמוב נגד המרכז הרפואי קדם בע&quot;מ
             </p>
@@ -592,7 +592,9 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           >
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              ת&quot;א • 12345-67-89 יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
+              ת&quot;א • 12345-67-89
+              <span className="inline-block align-middle" style={{ width: "1px", height: "12px", margin: "0 6px", backgroundColor: isDark ? dk.border : "#c9cfdb" }} />
+              יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
           </button>
