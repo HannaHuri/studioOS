@@ -6,7 +6,7 @@ import {
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
-  Split, Sun, ThumbsDown, ThumbsUp, X, Zap,
+  Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 
@@ -98,15 +98,65 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
-const initialDocs = [
-  { name: "כתב תביעה", count: "320K", checked: false },
-  { name: "כתב הגנה", count: "200K", checked: false },
-  { name: "תצהיר", count: "12.2K", checked: true },
-  { name: "פרוטוקול", count: "761", checked: false },
-  { name: "עתירה", count: "654", checked: true },
-  { name: "בקשה", count: "940", checked: false },
-  { name: "חוות דעת", count: "9K", checked: false },
+type DocItem = { name: string; words: string; summary: string };
+const initialDocs: { name: string; count: string; checked: boolean; items: DocItem[] }[] = [
+  { name: "כתב תביעה", count: "320K", checked: false, items: [
+    { name: "כתב תביעה מתוקן", words: "180K", summary: "כתב התביעה המתוקן המפרט את עילות התביעה, העובדות הנטענות, הבסיס המשפטי והסעדים הכספיים המבוקשים מבית המשפט." },
+    { name: "כתב תביעה מקורי", words: "140K", summary: "כתב התביעה המקורי שהוגש בפתיחת ההליך, טרם תיקונו בעקבות החלטת בית המשפט להוספת ראשי נזק." },
+  ] },
+  { name: "כתב הגנה", count: "200K", checked: false, items: [
+    { name: "כתב הגנה מתוקן", words: "120K", summary: "הנתבע דוחה את מלוא טענות התביעה, כופר בקשר הסיבתי וטוען לאשם תורם מצד התובע ולהתיישנות חלקית." },
+    { name: "כתב הגנה מקורי", words: "80K", summary: "כתב ההגנה הראשון מטעם הנתבע, ובו הכחשה גורפת של העובדות והעלאת טענות מקדמיות לסילוק על הסף." },
+  ] },
+  { name: "תצהיר", count: "12.2K", checked: true, items: [
+    { name: "תצהיר עדות ראשית — התובע", words: "7.1K", summary: "תצהיר עדותו הראשית של התובע, המתאר את השתלשלות האירועים, הטיפול שקיבל והנזקים הגופניים והכלכליים שנגרמו לו." },
+    { name: "תצהיר עדות — עד מומחה", words: "5.1K", summary: "תצהיר עד מומחה מטעם התובע, המבסס את הקשר הסיבתי בין ההתרשלות הנטענת לבין הנזק שנגרם בפועל." },
+  ] },
+  { name: "פרוטוקול", count: "761", checked: false, items: [
+    { name: "פרוטוקול קדם משפט", words: "761", summary: "תיעוד ישיבת קדם המשפט: גיבוש הפלוגתאות, הסכמות דיוניות בין הצדדים וקביעת לוח הזמנים להגשת הראיות." },
+  ] },
+  { name: "עתירה", count: "654", checked: true, items: [
+    { name: "עתירה מנהלית", words: "654", summary: "עתירה לביטול החלטת הוועדה, בטענה לפגמים בהליך קבלת ההחלטה ולחריגה מסמכות מצד הרשות המוסמכת." },
+  ] },
+  { name: "בקשה", count: "940", checked: false, items: [
+    { name: "בקשה לדחיית מועד דיון", words: "540", summary: "בקשת הנתבע לדחיית מועד הדיון בשל היעדרות עד מרכזי מהארץ, בצירוף הצעה למועד חלופי. התובע מתנגד." },
+    { name: "בקשה לגילוי מסמכים", words: "400", summary: "בקשת התובע לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח הרלוונטיים לבירור התביעה." },
+  ] },
+  { name: "חוות דעת", count: "9K", checked: false, items: [
+    { name: "חוות דעת מומחה מטעם בית המשפט", words: "6K", summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת שיעור נכות צמיתה וקשר סיבתי חלקי לאירוע הנדון." },
+    { name: "חוות דעת אקטוארית", words: "3K", summary: "חישוב הפסדי ההשתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בתוספת הפסדי פנסיה וזכויות סוציאליות." },
+  ] },
 ];
+
+// Inner document row (inside an expanded type folder) — hover shows a summary bubble + open-in-new-tab
+function DocItemRow({ item, isDark }: { item: DocItem; isDark: boolean }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  return (
+    <div
+      className="flex items-center justify-between gap-2 py-0.5"
+      style={{ paddingRight: "40px", paddingLeft: "20px" }}
+      dir="rtl"
+      onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPos({ top: r.top, left: Math.min(window.innerWidth - 268, r.right + 8) }); }}
+      onMouseLeave={() => setPos(null)}
+    >
+      <span className="doc-link text-[13px] truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: isDark ? dk.text : c.textGray }} title={item.name}>{item.name}</span>
+      <span className="rounded-full px-2 py-px text-[12px] whitespace-nowrap flex-shrink-0" style={{ color: c.text, backgroundColor: isDark ? dk.input : "white", fontFamily: "Figtree, sans-serif" }}>{item.words}</span>
+      {pos && (
+        <div
+          className="fixed z-[300] rounded-lg p-3"
+          style={{ top: pos.top, left: pos.left, width: "256px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 6px 24px rgba(0,0,0,0.16)" }}
+          dir="rtl"
+        >
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <button onClick={(e) => e.stopPropagation()} className="size-6 flex items-center justify-center rounded hover:bg-black/5 flex-shrink-0 transition-colors" style={{ color: c.iconGray }} title="פתיחה בחלון חדש"><ExternalLink size={14} /></button>
+            <span className="doc-link text-[14px] font-medium truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title={item.name}>{item.name}</span>
+          </div>
+          <p className="text-[13px] leading-snug" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{item.summary}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Document panel (open) ──────────────────────────────────────────────────
 function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
@@ -118,6 +168,17 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const autoRef = useRef<HTMLButtonElement>(null);
   const caseCardRef = useRef<HTMLDivElement>(null);
   const [tipPos, setTipPos] = useState({ top: 0 });
+  const [showSearch, setShowSearch] = useState(false);
+  const [search, setSearch] = useState("");
+  const [openType, setOpenType] = useState<string | null>(null);
+
+  const q = search.trim();
+  const visibleDocs = docs
+    .map((d) => {
+      const matchItems = q ? d.items.filter((it) => it.name.includes(q) || it.summary.includes(q)) : d.items;
+      return { ...d, matchItems, typeMatch: q === "" || d.name.includes(q) || matchItems.length > 0 };
+    })
+    .filter((d) => d.typeMatch);
 
   const bg = isDark ? dk.surface : "white";
   const panelBg = isDark ? dk.bg : (isAuto ? c.panelBg : "white");
@@ -186,10 +247,32 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
         <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="רענון">
           <RotateCw size={14} style={{ color: c.iconGray }} />
         </button>
-        <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="חיפוש">
-          <Search size={14} style={{ color: c.iconGray }} />
+        <button
+          onClick={() => setShowSearch((v) => !v)}
+          className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0"
+          style={{ borderColor: showSearch ? c.primary : borderCol, backgroundColor: showSearch ? (isDark ? "#22304a" : c.primaryLight) : "transparent" }}
+          title="חיפוש"
+        >
+          <Search size={14} style={{ color: showSearch ? c.primary : c.iconGray }} />
         </button>
       </div>
+
+      {/* Search field — opens below the buttons row */}
+      {showSearch && (
+        <div className="px-3 pb-2" dir="rtl">
+          <div className="relative">
+            <Search size={14} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              placeholder="חיפוש בתקציר המסמך"
+              className="w-full h-8 rounded-md text-[13px] outline-none"
+              style={{ border: `1px solid ${borderCol}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "30px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Case box */}
       <div className="mx-3 mb-3" ref={caseCardRef}>
@@ -215,20 +298,35 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
                 <div className="bg-white rounded-full px-2 py-px text-[12px]" style={{ color: c.text, fontFamily: "Figtree, sans-serif" }}>855.7K</div>
               </div>
 
-              {/* Individual rows — indented both sides */}
-              <div className="mt-1 flex flex-col gap-2.5" dir="rtl">
-                {docs.map((doc) => (
-                  <div key={doc.name} className="flex items-center justify-between" style={{ paddingRight: "20px", paddingLeft: "20px" }}>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <CheckboxBlue checked={doc.checked} onToggle={() => toggleDoc(doc.name)} />
-                      <span className="text-[14px] whitespace-nowrap" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+              {/* Type folders — expandable to inner documents */}
+              <div className="mt-1 flex flex-col gap-1.5" dir="rtl">
+                {visibleDocs.map((doc) => {
+                  const open = openType === doc.name || (q !== "" && doc.matchItems.length > 0);
+                  return (
+                    <div key={doc.name} className="flex flex-col">
+                      <div className="flex items-center justify-between" style={{ paddingRight: "20px", paddingLeft: "20px" }}>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span onClick={(e) => e.stopPropagation()}><CheckboxBlue checked={doc.checked} onToggle={() => toggleDoc(doc.name)} /></span>
+                          <button onClick={() => setOpenType((o) => (o === doc.name ? null : doc.name))} className="text-[14px] whitespace-nowrap" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</button>
+                        </div>
+                        <button onClick={() => setOpenType((o) => (o === doc.name ? null : doc.name))} className="flex items-center gap-1" title="פתיחת התיקייה">
+                          <ChevronDown size={14} style={{ color: grayCol, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                          <div className="bg-white rounded-full px-2 py-px text-[12px] whitespace-nowrap" style={{ color: c.text, fontFamily: "Figtree, sans-serif" }}>{doc.count}</div>
+                        </button>
+                      </div>
+                      {open && (
+                        <div className="mt-1 mb-0.5 flex flex-col gap-1">
+                          {doc.matchItems.map((it) => (
+                            <DocItemRow key={it.name} item={it} isDark={isDark} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <ChevronDown size={14} style={{ color: grayCol }} />
-                      <div className="bg-white rounded-full px-2 py-px text-[12px] whitespace-nowrap" style={{ color: c.text, fontFamily: "Figtree, sans-serif" }}>{doc.count}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {visibleDocs.length === 0 && (
+                  <div className="text-center py-4 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>לא נמצאו מסמכים תואמים</div>
+                )}
               </div>
             </div>
           )}
@@ -240,7 +338,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
 
 function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
   return (
-    <div className="h-full flex flex-col items-center pt-12 gap-3" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
+    <div className="h-full flex flex-col items-center pt-12 gap-3" style={{ backgroundColor: isDark ? dk.surface : "white", borderRight: `1px solid ${isDark ? dk.border : "#e6e9f0"}` }}>
       <FileText size={18} style={{ color: c.iconGray }} />
       <span style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px", writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", userSelect: "none" }}>
         מסמכים
@@ -593,7 +691,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
             <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
               ת&quot;א • 12345-67-89
-              <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 7px", backgroundColor: isDark ? dk.border : "#c9cfdb" }} />
+              <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
               יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
             </span>
             <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
