@@ -171,6 +171,7 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState("");
   const [openType, setOpenType] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false); // temporary "generate summaries" helper (interim phase)
 
   const q = search.trim();
   const visibleDocs = docs
@@ -273,6 +274,20 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           </div>
         </div>
       )}
+
+      {/* Temporary helper — generate summaries (interim phase, before summaries are embedded) */}
+      <div className="px-3 pb-2">
+        <button
+          onClick={() => { setGenerating(true); setTimeout(() => setGenerating(false), 1800); }}
+          disabled={generating}
+          className="w-full h-8 rounded-md flex items-center justify-center gap-1.5 text-[13px] transition-opacity hover:opacity-90 disabled:opacity-70"
+          style={{ border: `1px solid ${c.primary}`, color: c.primary, backgroundColor: isDark ? "#22304a" : c.primaryLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          title="הפקת תקצירים אוטומטית למסמכי התיק"
+        >
+          <Zap size={14} />
+          {generating ? "מפיק תקצירים…" : "הפק תקצירים"}
+        </button>
+      </div>
 
       {/* Case box */}
       <div className="mx-3 mb-3" ref={caseCardRef}>
