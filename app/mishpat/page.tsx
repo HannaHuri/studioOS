@@ -245,6 +245,17 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           </div>
         )}
 
+        {/* Temporary helper — generate summaries (interim phase) */}
+        <button
+          onClick={() => { setGenerating(true); setTimeout(() => setGenerating(false), 1800); }}
+          disabled={generating}
+          className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0"
+          style={{ borderColor: borderCol }}
+          title={generating ? "מפיק תקצירים…" : "הפק תקצירים"}
+        >
+          {generating ? <RotateCw size={14} className="animate-spin" style={{ color: c.primary }} /> : <Zap size={14} style={{ color: c.iconGray }} />}
+        </button>
+
         <button className="size-7 flex items-center justify-center rounded border hover:bg-black/5 transition-colors flex-shrink-0" style={{ borderColor: borderCol }} title="רענון">
           <RotateCw size={14} style={{ color: c.iconGray }} />
         </button>
@@ -274,20 +285,6 @@ function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
           </div>
         </div>
       )}
-
-      {/* Temporary helper — generate summaries (interim phase, before summaries are embedded) */}
-      <div className="px-3 pb-2">
-        <button
-          onClick={() => { setGenerating(true); setTimeout(() => setGenerating(false), 1800); }}
-          disabled={generating}
-          className="w-full h-8 rounded-md flex items-center justify-center gap-1.5 text-[13px] transition-opacity hover:opacity-90 disabled:opacity-70"
-          style={{ border: `1px solid ${c.primary}`, color: c.primary, backgroundColor: isDark ? "#22304a" : c.primaryLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-          title="הפקת תקצירים אוטומטית למסמכי התיק"
-        >
-          <Zap size={14} />
-          {generating ? "מפיק תקצירים…" : "הפק תקצירים"}
-        </button>
-      </div>
 
       {/* Case box */}
       <div className="mx-3 mb-3" ref={caseCardRef}>
