@@ -536,9 +536,9 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 }
 
 // Two-tier table row: a scan line (grid, aligns with the header) + the full summary below.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
-  const baseBg = markNew ? (isDark ? "#1b2740" : "#f3f8ff") : (isDark ? dk.input : "white"); // "new" → faint row tint instead of an edge line
+  const baseBg = isDark ? dk.input : "white"; // "new" highlighting paused for now (re-enable via markNew later)
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -557,9 +557,12 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onTo
       {/* Tier 1 — scan line (grid, aligns with the column header): date · name · submitter · type · words */}
       <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+        <span className="flex flex-col items-end leading-tight" style={{ fontFamily: "Figtree, sans-serif" }}>
+          <span className="text-[12px]" style={{ color: metaCol }}>{doc.date}</span>
+          {showTime && doc.time && <span className="text-[11px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
+        </span>
         <span className="flex items-center gap-2 min-w-0">
-          <span className={`doc-link truncate text-[13px] ${markNew ? "font-bold" : "font-medium"}`} title={doc.name}>{doc.name}</span>
+          <span className="doc-link truncate text-[13px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
           {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Submitter — colored text, no chip */}
@@ -570,7 +573,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onTo
       </div>
 
       {/* Tier 2 — full summary (always visible), aligned to start under the document name */}
-      <p className="text-[14px] leading-snug text-right px-2 pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "100px" }}>{doc.summary}</p>
+      <p className="text-[14px] leading-snug text-right pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "108px", paddingInlineEnd: "8px" }}>{doc.summary}</p>
     </div>
   );
 }
@@ -773,6 +776,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
+  const dateCount: Record<string, number> = {}; // how many docs share each date → show the time to disambiguate
+  lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   const expandBtn = onToggleFocus ? (
@@ -984,7 +989,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           <div className="flex flex-col gap-1">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1003,7 +1008,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
                   {sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
