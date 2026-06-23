@@ -547,14 +547,14 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
-// Two-tier table row: a scan line (grid, aligns with the header) + the full summary below.
-function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
+// Title-led row (config A): line 1 = name (anchor) + date · line 2 = full summary · line 3 = type tag + submitter.
+function DocRowCompact({ doc, isDark, markNew, active, showTime, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white"; // "new" highlighting paused for now (re-enable via markNew later)
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
-  const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
+  const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
+  const INDENT = "32px"; // align summary/meta under the document name (past the checkbox)
   return (
     <div
       ref={rowRef}
@@ -566,31 +566,28 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
-      {/* Tier 1 — scan line (single line; date sits on the same line as the name) */}
-      <div className="grid items-center gap-2 px-2 pt-2.5" style={{ gridTemplateColumns: gridCols }}>
+      {/* Line 1 — name (anchor) + date/time */}
+      <div className="flex items-center gap-2 px-2 pt-2.5">
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-        <span className="flex items-center gap-2 min-w-0">
-          <span className="doc-link truncate text-[15px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
-          {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        <span className="doc-link flex-1 min-w-0 truncate text-[16px] font-semibold" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+        {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        <span className="flex flex-col items-start leading-tight flex-shrink-0 text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
+          <span>{doc.date}</span>
+          {showTime && doc.time && <span>{doc.time}</span>}
         </span>
-        {/* Submitter — role — party name, regular main text color */}
-        <span className="text-[14px] truncate min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}{partyName ? ` — ${partyName}` : ""}</span>
-        {/* Type — colored tag */}
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: TYPE_COLORS[doc.type]?.bg ?? (isDark ? dk.input : "#eef1f4"), color: TYPE_COLORS[doc.type]?.color ?? (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
-        <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
 
-      {/* Time — hangs below the date column when several docs share the day */}
-      {showTime && doc.time && (
-        <div className="grid gap-2 px-2 pt-0.5" style={{ gridTemplateColumns: gridCols }}>
-          <span />
-          <span className="text-[12px] text-right" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.time}</span>
-        </div>
-      )}
+      {/* Line 2 — full summary (secondary) */}
+      <p className="text-[13px] leading-snug text-right pt-1" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: INDENT, paddingInlineEnd: "8px" }}>{doc.summary}</p>
 
-      {/* Tier 2 — full summary (always visible), aligned to start under the document name */}
-      <p className="text-[14px] leading-snug text-right pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "108px", paddingInlineEnd: "8px" }}>{doc.summary}</p>
+      {/* Line 3 — quiet meta: type tag + submitter */}
+      <div className="flex items-center gap-2 pt-1.5 pb-2.5" style={{ paddingInlineStart: INDENT, paddingInlineEnd: "8px" }}>
+        <span className="text-[12px] rounded px-1.5 py-px flex-shrink-0" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.type}</span>
+        <span className="text-[12px] truncate min-w-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}{partyName ? ` · ${partyName}` : ""}</span>
+        {doc.missing
+          ? <span className="text-[12px] flex-shrink-0 mr-auto" style={{ color: "#d83a52", fontFamily: "Figtree, sans-serif" }} title="המסמך ללא תוכן">{doc.words}</span>
+          : <span className="text-[12px] flex-shrink-0 mr-auto" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מילים">{doc.words}</span>}
+      </div>
     </div>
   );
 }
@@ -715,10 +712,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     try { localStorage.setItem("njm_tableHintCount", String(count + 1)); } catch {}
   }, [isFocus, layout, openCaseId]);
 
-  // Table scan-line grid (RTL → first track is rightmost): checkbox · date · submitter · type · name · words.
-  // The full summary renders on a second tier below each row, so it isn't a grid column.
-  const tableTemplate = "22px 62px minmax(0,1fr) 150px 96px 50px";
-
   function toggleSort(key: "date" | "name" | "words" | "submitter" | "type") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir(key === "date" || key === "words" ? "desc" : "asc"); } // names/submitter/type a→ב; dates/words high→low
@@ -734,24 +727,23 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
-  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
-    <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
-      <span>{label}</span>
-      {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
-    </button>
-  );
-  const tableHeader = (
-    <div
-      className="grid gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[13px] font-medium"
-      style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-      dir="rtl"
-    >
-      <span />
-      {sortHead("date", "תאריך")}
-      {sortHead("name", "שם המסמך")}
-      {sortHead("submitter", "מגיש")}
-      {sortHead("type", "סוג")}
-      {sortHead("words", "מילים")}
+  const sortChip = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => {
+    const on = sortKey === key;
+    return (
+      <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-7 px-2 rounded-md text-[13px] flex-shrink-0 transition-colors" style={{ border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`, color: on ? c.primary : (isDark ? dk.textMuted : c.textGray), backgroundColor: on ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
+        {label}
+        {on && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+      </button>
+    );
+  };
+  const sortBar = (
+    <div className="flex items-center gap-1.5 flex-wrap px-2 py-1.5 sticky top-0 z-10" style={{ backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }} dir="rtl">
+      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מיון:</span>
+      {sortChip("date", "תאריך")}
+      {sortChip("name", "שם")}
+      {sortChip("type", "סוג")}
+      {sortChip("submitter", "מגיש")}
+      {sortChip("words", "מילים")}
     </div>
   );
 
@@ -1001,31 +993,31 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           </div>
         )}
 
-        {/* Table · chronological — dense flat rows under a sticky header */}
+        {/* Table · chronological — title-led list under a sort bar */}
         {layout === "table" && grouping === "chrono" && (
-          <div className="flex flex-col gap-1">
-            {tableHeader}
+          <div className="flex flex-col">
+            {sortBar}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
 
-        {/* Table · by type — dense rows under type sub-headers, one sticky column header */}
+        {/* Table · by type — title-led rows under type sub-headers + a sort bar */}
         {layout === "table" && grouping === "type" && (
-          <div className="flex flex-col gap-1">
-            {tableHeader}
+          <div className="flex flex-col">
+            {sortBar}
             {typesInData.map((type) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               return (
-                <div key={type} className="flex flex-col gap-1">
+                <div key={type} className="flex flex-col">
                   <div className="flex items-center gap-1.5 px-2 pt-2.5 pb-1">
                     <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
                     <span className="text-[14px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                     <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
                   {sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
