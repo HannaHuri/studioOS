@@ -874,25 +874,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
           </div>
 
-          {/* View controls (left) — show columns / group by type */}
-          <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
-            {!isFocus && (
-              <button
-                onClick={() => onSetWidth?.(compactCols ? 660 : 470)}
-                className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
-                style={{
-                  border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
-                  color: !compactCols ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                  backgroundColor: !compactCols ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
-                  fontFamily: "Noto Sans Hebrew, sans-serif",
-                }}
-                title={compactCols ? "הצגת כל העמודות (הפאנל יתרחב)" : "חזרה לתצוגה מצומצמת"}
-              >
-                <Columns3 size={14} />
-                {compactCols ? "הצג עמודות" : "מצב מצומצם"}
-              </button>
-            )}
-            {openCaseId && (
+          {/* View controls (left) — only when a case is open: group by type, then "show more" (left-most) */}
+          {openCaseId && (
+            <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
               <button
                 onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
                 className="flex items-center gap-1.5 h-7 whitespace-nowrap hover:opacity-80 transition-colors"
@@ -900,10 +884,26 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 title="קיבוץ המסמכים לפי סוג"
               >
                 <List size={16} />
-                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
+                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>לפי סוג</span>
               </button>
-            )}
-          </div>
+              {!isFocus && (
+                <button
+                  onClick={() => onSetWidth?.(compactCols ? 660 : 385)}
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+                  style={{
+                    border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
+                    color: !compactCols ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                    backgroundColor: !compactCols ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+                    fontFamily: "Noto Sans Hebrew, sans-serif",
+                  }}
+                  title={compactCols ? "הצגת עמודות נוספות (הפאנל יתרחב)" : "חזרה לתצוגה מצומצמת"}
+                >
+                  <Columns3 size={14} />
+                  {compactCols ? "הצג עוד" : "הצג פחות"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1651,7 +1651,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(470); // opens compact (date + document) but wide enough for the filters row; "show columns" widens further
+  const [panelWidth, setPanelWidth] = useState(385); // opens compact — wide enough for the filters row to end just after the pending-decision button; "show more" widens further
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
