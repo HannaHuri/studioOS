@@ -478,7 +478,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const baseBg = isDark ? dk.input : "white";
-  const activeBg = isDark ? "#243047" : "#eaf2fd"; // gentle takhelet tint for the currently-open document
+  const activeBg = isDark ? "#212c42" : "#f1f6fd"; // gentle takhelet tint for the currently-open document
   return (
     <div
       ref={rowRef}
@@ -550,7 +550,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 // Column-table row: "document" column (name + summary) + aligned meta columns (date · type · submitter · words).
 function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white"; // "new" is shown via a bold summary only (see below)
-  const activeBg = isDark ? "#243047" : "#eaf2fd";
+  const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
@@ -563,7 +563,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e7f0fb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
       {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
