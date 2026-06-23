@@ -583,8 +583,8 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
         </span>
         {/* Type tag */}
         <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
-        {/* Submitter — role (full party in tooltip) */}
-        <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter}</span>
+        {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
+        <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
         {/* Words */}
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
@@ -728,7 +728,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     });
   };
   // Table column layout (RTL → first track rightmost): checkbox · document(name+summary) · date · type · submitter · words
-  const tableTemplate = "22px minmax(0,1fr) 70px 104px 84px 46px";
+  const tableTemplate = "22px minmax(0,1fr) 70px 104px 64px 46px";
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
