@@ -450,16 +450,16 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string; dot: string 
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f", dot: "#74b58f" }, // green
 };
 
-// Per-document-type text colors (give the table its color cue via the type)
-const TYPE_COLORS: Record<string, string> = {
-  "כתבי טענות": "#1a6dc4",
-  "בקשות והוראות": "#7a4ec2",
-  "תצהירים": "#2f7d4f",
-  "חוות דעת": "#b06a14",
-  "החלטות בתיק": "#3949ab",
-  "פסקי דין": "#a3322a",
-  "פרוטוקולים": "#557099",
-  "מוצגים": "#6b7a2e",
+// Per-document-type tag colors (light bg + readable text) — the type tag carries the color cue
+const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
+  "כתבי טענות":    { bg: "#e6f0fb", color: "#1a6dc4" }, // blue
+  "בקשות והוראות": { bg: "#f1eafc", color: "#7a4ec2" }, // purple
+  "תצהירים":       { bg: "#e7f4ea", color: "#2f7d4f" }, // green
+  "חוות דעת":      { bg: "#fdecd9", color: "#b9670c" }, // orange
+  "החלטות בתיק":   { bg: "#e8eafc", color: "#3949ab" }, // indigo
+  "פסקי דין":      { bg: "#fbe5e3", color: "#b23a2c" }, // red
+  "פרוטוקולים":    { bg: "#e0f0ef", color: "#287d75" }, // teal
+  "מוצגים":        { bg: "#fbf3d3", color: "#8a6d12" }, // yellow
 };
 
 // Specific party name per case + side (shown on hover; useful when a side has several)
@@ -566,21 +566,21 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
-      {/* Tier 1 — scan line (grid, aligns with the column header): date · name · submitter · type · words */}
-      <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
-        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+      {/* Tier 1 — scan line (grid; top-aligned so all columns share the same line, time hangs below the date) */}
+      <div className="grid items-start gap-2 px-2 pt-2.5 text-[14px]" style={{ gridTemplateColumns: gridCols }}>
+        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "3px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         <span className="flex flex-col leading-tight text-right" style={{ fontFamily: "Figtree, sans-serif" }}>
           <span className="text-[12px]" style={{ color: metaCol }}>{doc.date}</span>
-          {showTime && doc.time && <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
+          {showTime && doc.time && <span className="text-[12px] mt-0.5" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
         </span>
-        <span className="flex items-center gap-2 min-w-0">
-          <span className="doc-link truncate text-[13px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
-          {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        <span className="flex items-baseline gap-2 min-w-0">
+          <span className="doc-link truncate text-[15px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+          {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Submitter — role — party name, regular main text color */}
         <span className="text-[14px] truncate min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}{partyName ? ` — ${partyName}` : ""}</span>
-        {/* Type — colored text (color cue), no chip */}
-        <span className="text-[13px] truncate min-w-0" style={{ color: TYPE_COLORS[doc.type] ?? (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span>
+        {/* Type — colored tag */}
+        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: TYPE_COLORS[doc.type]?.bg ?? (isDark ? dk.input : "#eef1f4"), color: TYPE_COLORS[doc.type]?.color ?? (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
 
