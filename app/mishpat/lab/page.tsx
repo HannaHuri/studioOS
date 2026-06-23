@@ -558,22 +558,19 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
   return (
     <div
       ref={rowRef}
-      className="relative rounded cursor-pointer transition-colors border"
-      style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
+      className="relative cursor-pointer transition-colors"
+      style={{ borderBottom: `1px solid ${active ? c.primary : (isDark ? dk.border : "#eef1f4")}`, backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
-      {/* Tier 1 — scan line (grid; top-aligned so all columns share the same line, time hangs below the date) */}
-      <div className="grid items-start gap-2 px-2 pt-2.5 text-[14px]" style={{ gridTemplateColumns: gridCols }}>
-        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "3px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        <span className="flex flex-col leading-tight text-right" style={{ fontFamily: "Figtree, sans-serif" }}>
-          <span className="text-[12px]" style={{ color: metaCol }}>{doc.date}</span>
-          {showTime && doc.time && <span className="text-[12px] mt-0.5" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
-        </span>
-        <span className="flex items-baseline gap-2 min-w-0">
+      {/* Tier 1 — scan line (single line; date sits on the same line as the name) */}
+      <div className="grid items-center gap-2 px-2 pt-2.5" style={{ gridTemplateColumns: gridCols }}>
+        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+        <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
+        <span className="flex items-center gap-2 min-w-0">
           <span className="doc-link truncate text-[15px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
           {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
@@ -583,6 +580,14 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
         <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: TYPE_COLORS[doc.type]?.bg ?? (isDark ? dk.input : "#eef1f4"), color: TYPE_COLORS[doc.type]?.color ?? (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
+
+      {/* Time — hangs below the date column when several docs share the day */}
+      {showTime && doc.time && (
+        <div className="grid gap-2 px-2 pt-0.5" style={{ gridTemplateColumns: gridCols }}>
+          <span />
+          <span className="text-[12px] text-right" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.time}</span>
+        </div>
+      )}
 
       {/* Tier 2 — full summary (always visible), aligned to start under the document name */}
       <p className="text-[14px] leading-snug text-right pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "108px", paddingInlineEnd: "8px" }}>{doc.summary}</p>
