@@ -830,7 +830,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               title="הצג רק מסמכים הממתינים להחלטה"
             >
               <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
-              ממתין להחלטה
+              {headerWide ? "ממתין להחלטה" : "ממתין"}
             </button>
             {filterActive && (
               <button
@@ -870,7 +870,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
             <button className="flex items-center gap-1.5 min-w-0" onClick={() => toggleAllDocs(!allChecked)}>
               <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
-              <span className="text-[14px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
+              <span className="text-[14px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>{headerWide ? "בחר הכל לצ'ט" : "בחר הכל"}</span>
             </button>
           </div>
 
@@ -879,14 +879,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             {!isFocus && (
               <button
                 onClick={() => onSetWidth?.(compactCols ? 640 : 360)}
-                className="flex items-center gap-1.5 h-7 whitespace-nowrap transition-colors hover:opacity-85 rounded-md"
-                style={compactCols
-                  ? { color: c.primary, backgroundColor: isDark ? "#22304a" : "#eaf2fd", padding: "0 8px" }
-                  : { color: isDark ? dk.textMuted : c.textGray, padding: "0 2px" }}
+                className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+                style={{
+                  border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
+                  color: !compactCols ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                  backgroundColor: !compactCols ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+                  fontFamily: "Noto Sans Hebrew, sans-serif",
+                }}
                 title={compactCols ? "הצגת כל העמודות (הפאנל יתרחב)" : "חזרה לתצוגה מצומצמת"}
               >
-                <Columns3 size={16} />
-                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{compactCols ? "הצג עמודות" : "מצב מצומצם"}</span>
+                <Columns3 size={14} />
+                {compactCols ? "הצג עמודות" : "מצב מצומצם"}
               </button>
             )}
             {openCaseId && (
