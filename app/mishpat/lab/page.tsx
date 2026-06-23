@@ -860,21 +860,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             </button>
           </div>
 
-          {/* View control (left) — single "group by type" toggle, only when a case is open */}
+          {/* View control (left) — "group by type" switch, only when a case is open */}
           {openCaseId && (
             <button
-              onClick={() => setGrouping((g) => (g === "type" ? "chrono" : "type"))}
-              className="flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[13px] transition-colors flex-shrink-0 whitespace-nowrap"
-              style={{
-                border: `1px solid ${grouping === "type" ? c.primary : (isDark ? dk.border : c.border)}`,
-                color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
-                fontFamily: "Noto Sans Hebrew, sans-serif",
-              }}
+              onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
+              className="flex items-center gap-2 h-7 flex-shrink-0 whitespace-nowrap"
               title="קיבוץ המסמכים לפי סוג"
             >
-              <FolderOpen size={14} />
-              קבץ לפי סוג
+              <span className="text-[13px]" style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
+              <span className="relative transition-colors" style={{ width: "32px", height: "18px", borderRadius: "9px", backgroundColor: grouping === "type" ? c.primary : (isDark ? dk.border : "#cdd3df") }}>
+                <span className="absolute transition-all" style={{ top: "2px", width: "14px", height: "14px", borderRadius: "50%", backgroundColor: "white", insetInlineStart: grouping === "type" ? "16px" : "2px" }} />
+              </span>
             </button>
           )}
         </div>
@@ -953,14 +949,21 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             {tableHeader}
             {typesInData.map((type) => {
               const typeDocs = lensed.filter((d) => d.type === type);
+              const open = openType === type;
+              const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
+              const typeUsed = typeDocs.some((d) => d.used);
               return (
                 <div key={type} className="flex flex-col">
-                  <div className="flex items-center gap-1.5 px-2 pt-2.5 pb-1">
-                    <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-                    <span className="text-[14px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                    <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                  <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
+                    <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
+                    <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
+                      <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                      <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
+                      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
+                      {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                    </button>
                   </div>
-                  {sortDocs(typeDocs).map((doc) => (
+                  {open && sortDocs(typeDocs).map((doc) => (
                     <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
