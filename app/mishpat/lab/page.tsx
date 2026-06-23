@@ -549,7 +549,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 
 // Column-table row: "document" column (name + summary) + aligned meta columns (date · type · submitter · words).
 function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const baseBg = markNew ? (isDark ? "#1b2740" : "#f3f8ff") : (isDark ? dk.input : "white"); // "new" → faint row tint
+  const baseBg = isDark ? dk.input : "white"; // "new" is shown via a bold summary only (see below)
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
@@ -571,10 +571,10 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
         {/* Document — name (anchor) + full summary below */}
         <span className="flex flex-col min-w-0 gap-1">
           <span className="flex items-center gap-2 min-w-0">
-            <span className={`doc-link truncate text-[15px] ${markNew ? "font-bold" : "font-semibold"}`} title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+            <span className="doc-link truncate text-[15px] font-semibold" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
             {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           </span>
-          <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+          <span className={`text-[13px] leading-snug ${markNew ? "font-bold" : ""}`} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         </span>
         {/* Date (+ time) */}
         <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
@@ -634,9 +634,8 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {canExpand && (
-            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[13px] transition-opacity hover:opacity-85" style={{ backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-              {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-              {expanded ? "תצוגת עמודות" : "הרחבה"}
+            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}>
+              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
           )}
           <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>
@@ -780,8 +779,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const expandBtn = onToggleFocus ? (
     <button
       onClick={onToggleFocus}
-      className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
-      style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.textMuted : c.iconGray }}
+      className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
+      style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }}
       title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
     >
       {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -873,11 +872,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             <button
               onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
               className="flex items-center gap-1.5 h-7 flex-shrink-0 whitespace-nowrap hover:opacity-80 transition-colors"
-              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), marginInlineEnd: "2px" }}
-              title="קיבוץ המסמכים לפי סוג מסמך"
+              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), marginInlineEnd: "4px" }}
+              title="קיבוץ המסמכים לפי סוג"
             >
               <List size={16} />
-              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג מסמך</span>
+              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
             </button>
           )}
         </div>
@@ -1665,8 +1664,10 @@ export default function MishpatPage() {
   // chatSpace<360: the user dragged the viewer so wide the chat would get tiny → float, but keep the handle so they can drag back.
   const chatSpace = vw - 55 - viewerWidth - (isPanelOpen ? panelWidth : 40);
   const forceFloat = !!openDoc && (vw < 1100 || docExpanded);
-  const chatFloating = forceFloat || (!!openDoc && chatSpace < 360);
+  const chatFloating = forceFloat || (!!openDoc && chatSpace < 420);
   const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setChatMin(false); setChatPos(null); };
+  // Dock the floating chat back into its column while keeping the document open (shrinks the viewer if needed so the chat fits)
+  const dockChat = () => { setDocExpanded(false); setChatMin(false); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
 
   // Drag the floating chat by its header
   const startChatDrag = (e: ReactMouseEvent) => {
@@ -1750,7 +1751,7 @@ export default function MishpatPage() {
               <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
               <div className="flex items-center gap-0.5">
                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
-                <button onMouseDown={(e) => e.stopPropagation()} onClick={closeDoc} title="החזרת הצ׳אט למסך מלא" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט (המסמך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><X size={16} /></button>
               </div>
             </div>
           )}
