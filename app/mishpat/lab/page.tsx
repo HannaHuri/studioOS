@@ -559,13 +559,14 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
     <div
       ref={rowRef}
       className="relative cursor-pointer transition-colors"
-      style={{ borderBottom: `1px solid ${active ? c.primary : (isDark ? dk.border : "#eef1f4")}`, backgroundColor: active ? activeBg : baseBg }}
+      style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
+      {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
       <div className="grid items-start gap-2 px-2 py-2.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "2px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Document — name (anchor) + full summary below */}
