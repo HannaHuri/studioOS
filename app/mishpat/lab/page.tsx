@@ -954,13 +954,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {grouping === "type" && (
           <div className="flex flex-col">
             {tableHeader}
-            {typesInData.map((type, ti) => {
+            {typesInData.map((type) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
               const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
               const typeUsed = typeDocs.some((d) => d.used);
               return (
-                <div key={type} className="flex flex-col" style={ti > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#f0f2f5"}` } : undefined}>
+                <div key={type} className="flex flex-col">
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
