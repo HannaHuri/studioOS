@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Columns3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -548,7 +548,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 }
 
 // Column-table row: "document" column (name + summary) + aligned meta columns (date · type · submitter · words).
-function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compact, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; compact?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white"; // "new" is shown via a bold summary only (see below)
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -561,7 +561,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       className="relative cursor-pointer transition-colors"
       style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
-      title="פתיחת המסמך לצפייה"
+      title={compact ? `${doc.type} · ${doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}${partyName ? ` (${partyName})` : ""} · ${doc.words} מילים — פתיחה לצפייה` : "פתיחת המסמך לצפייה"}
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e7f0fb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
@@ -569,6 +569,11 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
       <div className="grid items-start gap-2 px-2 py-2.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "2px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+        {/* Date (+ time) — to the right of the document column */}
+        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
+          <span>{doc.date}</span>
+          {showTime && doc.time && <span className="mt-0.5">{doc.time}</span>}
+        </span>
         {/* Document — name (anchor) + full summary below */}
         <span className="flex flex-col min-w-0 gap-1">
           <span className="flex items-center gap-2 min-w-0">
@@ -577,17 +582,16 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
           </span>
           <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         </span>
-        {/* Date (+ time) */}
-        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
-          <span>{doc.date}</span>
-          {showTime && doc.time && <span className="mt-0.5">{doc.time}</span>}
-        </span>
-        {/* Type tag */}
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
-        {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
-        <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Words */}
-        <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+        {!compact && (
+          <>
+            {/* Type tag */}
+            <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+            {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
+            <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+            {/* Words */}
+            <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -670,7 +674,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
 }
 
 // ── Document panel (open) — table browser ────────────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenDoc, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onOpenDoc?: (doc: CaseDoc) => void; openDocId?: string }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; openDocId?: string }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // When a document is opened (and the panel narrows out of focus mode), bring its row into view
   useEffect(() => {
@@ -716,8 +720,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
-  // Table column layout (RTL → first track rightmost): checkbox · document(name+summary) · date · type · submitter · words
-  const tableTemplate = "22px minmax(0,1fr) 70px 104px 64px 46px";
+  // Below this width the table shows only the essentials (checkbox · date · document); wider reveals all columns
+  const compactCols = panelWidth < 520;
+  // Table column layout (RTL → first track rightmost): checkbox · date · document(name+summary) [· type · submitter · words]
+  const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 46px";
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
@@ -727,11 +733,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const tableHeader = (
     <div className="grid items-center gap-2 px-2 h-9 pb-1 sticky top-0 z-10 text-[13px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
-      {sortHead("name", "מסמך")}
       {sortHead("date", "תאריך")}
-      {sortHead("type", "סוג")}
-      {sortHead("submitter", "מגיש")}
-      {sortHead("words", "מילים")}
+      {sortHead("name", "מסמך")}
+      {!compactCols && sortHead("type", "סוג")}
+      {!compactCols && sortHead("submitter", "מגיש")}
+      {!compactCols && sortHead("words", "מילים")}
     </div>
   );
 
@@ -868,18 +874,33 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             </button>
           </div>
 
-          {/* View control (left) — "group by type": icon + label, stays active (blue) when on */}
-          {openCaseId && (
-            <button
-              onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
-              className="flex items-center gap-1.5 h-7 flex-shrink-0 whitespace-nowrap hover:opacity-80 transition-colors"
-              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), marginInlineEnd: "4px" }}
-              title="קיבוץ המסמכים לפי סוג"
-            >
-              <List size={16} />
-              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
-            </button>
-          )}
+          {/* View controls (left) — show columns / group by type */}
+          <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
+            {!isFocus && (
+              <button
+                onClick={() => onSetWidth?.(compactCols ? 640 : 360)}
+                className="flex items-center gap-1.5 h-7 whitespace-nowrap transition-colors hover:opacity-85 rounded-md"
+                style={compactCols
+                  ? { color: c.primary, backgroundColor: isDark ? "#22304a" : "#eaf2fd", padding: "0 8px" }
+                  : { color: isDark ? dk.textMuted : c.textGray, padding: "0 2px" }}
+                title={compactCols ? "הצגת כל העמודות (הפאנל יתרחב)" : "חזרה לתצוגה מצומצמת"}
+              >
+                <Columns3 size={16} />
+                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{compactCols ? "הצג עמודות" : "מצב מצומצם"}</span>
+              </button>
+            )}
+            {openCaseId && (
+              <button
+                onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
+                className="flex items-center gap-1.5 h-7 whitespace-nowrap hover:opacity-80 transition-colors"
+                style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                title="קיבוץ המסמכים לפי סוג"
+              >
+                <List size={16} />
+                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -945,7 +966,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -971,7 +992,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1627,7 +1648,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(640); // table view opens wide by default
+  const [panelWidth, setPanelWidth] = useState(360); // opens compact (date + document); "show columns" widens it
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
@@ -1788,7 +1809,7 @@ export default function MishpatPage() {
         >
           <div className="absolute inset-0" style={{ overflow: "visible" }}>
             {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
+              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
               : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
