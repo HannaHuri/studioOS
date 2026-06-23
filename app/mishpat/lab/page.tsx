@@ -893,7 +893,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                   title={compactCols ? "הצגת עמודות נוספות — סוג, מגיש ומספר מילים" : "חזרה לתצוגה מצומצמת"}
                 >
-                  {compactCols ? "+ הצג עוד" : "− הצג פחות"}
+                  {compactCols ? "כל העמודות" : "פחות עמודות"}
                 </button>
               )}
             </div>
