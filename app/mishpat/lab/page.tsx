@@ -543,7 +543,6 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onTo
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
-  const [relPos, setRelPos] = useState<{ top: number; right: number } | null>(null); // +N related popover
   return (
     <div
       ref={rowRef}
@@ -558,60 +557,21 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onTo
       {/* "New" — line on the right edge */}
       {markNew && <span className="absolute top-0 bottom-0 right-0 w-[2px] rounded-r" style={{ backgroundColor: "rgba(0,115,234,0.55)" }} />}
 
-      {/* Tier 1 — scan line (grid, aligns with the column header) */}
+      {/* Tier 1 — scan line (grid, aligns with the column header): date · name · submitter · type · words */}
       <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         <span className="flex items-center gap-2 min-w-0">
           <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
           {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
+        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
+        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
 
       {/* Tier 2 — full summary (always visible) */}
       <p className="text-[14px] leading-snug text-right px-2 pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "30px" }}>{doc.summary}</p>
-
-      {/* Related docs — below the summary, when present */}
-      {doc.related.length > 0 && (
-        <div className="flex items-center flex-wrap gap-x-1 gap-y-0.5 px-2 pb-2 text-[13px]" style={{ paddingInlineStart: "30px" }} dir="rtl">
-          <span className="flex-shrink-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>קשור:</span>
-          {doc.related.slice(0, 2).map((r, i, a) => (
-            <span key={r}>
-              <button onClick={(e) => e.stopPropagation()} className="doc-link" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="פתיחת המסמך">{r}</button>
-              {(i < a.length - 1 || doc.related.length > 2) && <span style={{ color: metaCol }}>,</span>}
-            </span>
-          ))}
-          {doc.related.length > 2 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setRelPos(relPos ? null : { top: r.bottom + 4, right: window.innerWidth - r.right }); }}
-              className="hover:opacity-80 flex-shrink-0"
-              style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-              title="עוד מסמכים קשורים"
-            >+{doc.related.length - 2}</button>
-          )}
-        </div>
-      )}
-
-      {/* +N popover — the extra related docs (beyond the two shown inline) */}
-      {relPos && (
-        <>
-          <div className="fixed inset-0 z-[190]" onClick={(e) => { e.stopPropagation(); setRelPos(null); }} />
-          <div
-            className="fixed z-[200] rounded-lg py-1 shadow-xl"
-            style={{ top: relPos.top, right: relPos.right, minWidth: "200px", maxWidth: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}` }}
-            dir="rtl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-3 py-1.5 text-[12px]" style={{ color: metaCol, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מסמכים קשורים נוספים ({doc.related.length - 2})</div>
-            {doc.related.slice(2).map((r) => (
-              <button key={r} onClick={(e) => { e.stopPropagation(); }} className="doc-link block w-full text-right px-3 py-1.5 text-[13px] truncate transition-colors" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="פתיחת המסמך" onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? dk.input : c.hoverBg; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}>{r}</button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -738,7 +698,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   // Table scan-line grid (RTL → first track is rightmost): checkbox · date · submitter · type · name · words.
   // The full summary renders on a second tier below each row, so it isn't a grid column.
-  const tableTemplate = "22px 62px 78px 96px minmax(0,1fr) 50px";
+  const tableTemplate = "22px 62px minmax(0,1fr) 78px 96px 50px";
 
   function toggleSort(key: "date" | "name" | "words" | "submitter" | "type") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -769,9 +729,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     >
       <span />
       {sortHead("date", "תאריך")}
+      {sortHead("name", "שם המסמך")}
       {sortHead("submitter", "מגיש")}
       {sortHead("type", "סוג")}
-      {sortHead("name", "שם המסמך")}
       {sortHead("words", "מילים")}
     </div>
   );
