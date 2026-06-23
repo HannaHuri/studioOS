@@ -888,7 +888,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               </button>
               {!isFocus && (
                 <button
-                  onClick={() => onSetWidth?.(compactCols ? 660 : 377)}
+                  onClick={() => onSetWidth?.(compactCols ? 660 : 381)}
                   className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
                   style={{
                     border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
@@ -1651,7 +1651,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(377); // opens compact — ends just after the pending-decision button; "show more" widens further
+  const [panelWidth, setPanelWidth] = useState(381); // opens compact — ends just after the pending-decision button; "show more" widens further
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
