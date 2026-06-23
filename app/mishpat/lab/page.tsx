@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
@@ -549,7 +549,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 
 // Column-table row: "document" column (name + summary) + aligned meta columns (date · type · submitter · words).
 function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const baseBg = isDark ? dk.input : "white"; // "new" highlighting paused for now (re-enable via markNew later)
+  const baseBg = markNew ? (isDark ? "#1b2740" : "#f3f8ff") : (isDark ? dk.input : "white"); // "new" → faint row tint
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
@@ -571,7 +571,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
         {/* Document — name (anchor) + full summary below */}
         <span className="flex flex-col min-w-0 gap-1">
           <span className="flex items-center gap-2 min-w-0">
-            <span className="doc-link truncate text-[15px] font-semibold" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+            <span className={`doc-link truncate text-[15px] ${markNew ? "font-bold" : "font-semibold"}`} title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
             {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           </span>
           <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
@@ -601,13 +601,13 @@ const MOCK_DOC_PARAS = [
   "5. שמורה לח״מ הזכות להוסיף ולטעון, להגיש ראיות משלימות ולהשלים טיעון בעל-פה במועד הדיון, ככל שבית המשפט הנכבד יורה על כך.",
 ];
 
-function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, canExpand, expanded, onToggleExpand }: { doc: CaseDoc; isDark: boolean; width: number; onWidthChange: (w: number) => void; onClose: () => void; fill?: boolean; canExpand?: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
+function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandle, canExpand, expanded, onToggleExpand }: { doc: CaseDoc; isDark: boolean; width: number; onWidthChange: (w: number) => void; onClose: () => void; fill?: boolean; showHandle?: boolean; canExpand?: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const rootRef = useRef<HTMLDivElement>(null);
   return (
     <div ref={rootRef} className={`relative flex flex-col ${fill ? "flex-1 min-w-0" : "flex-shrink-0"}`} style={{ ...(fill ? {} : { width: `${width}px` }), borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
-      {/* Drag handle — left edge: drag to resize the viewer width (hidden when the viewer fills the area) */}
-      {!fill && (
+      {/* Drag handle — left edge: drag to resize the viewer width (kept while floating-by-drag so the user can drag back; hidden only when the doc is force-expanded) */}
+      {showHandle && (
       <div
         onMouseDown={(e) => {
           e.preventDefault();
@@ -634,8 +634,9 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, canExpand
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {canExpand && (
-            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}>
-              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[13px] transition-opacity hover:opacity-85" style={{ backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              {expanded ? "תצוגת עמודות" : "הרחבה"}
             </button>
           )}
           <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>
@@ -872,11 +873,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             <button
               onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
               className="flex items-center gap-1.5 h-7 flex-shrink-0 whitespace-nowrap hover:opacity-80 transition-colors"
-              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-              title="קיבוץ המסמכים לפי סוג"
+              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), marginInlineEnd: "2px" }}
+              title="קיבוץ המסמכים לפי סוג מסמך"
             >
               <List size={16} />
-              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
+              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג מסמך</span>
             </button>
           )}
         </div>
@@ -963,14 +964,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
-                      <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                       <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                       {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                      <ChevronDown size={16} className="ms-auto" style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1633,6 +1634,9 @@ export default function MishpatPage() {
   const [viewerWidth, setViewerWidth] = useState(620);
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
   const [chatMin, setChatMin] = useState(false);         // floating chat minimized to its header
+  const [chatPos, setChatPos] = useState<{ x: number; y: number } | null>(null); // null = default bottom-left anchor
+  const [chatSize, setChatSize] = useState({ w: 380, h: 470 });
+  const layoutRef = useRef<HTMLDivElement>(null); // positioning context for the floating chat
   const [vw, setVw] = useState(1280);
   useEffect(() => {
     const u = () => setVw(window.innerWidth);
@@ -1656,15 +1660,51 @@ export default function MishpatPage() {
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const sidebarBg = isDark ? dk.surface : "white";
 
-  // #5 — chat floats over the document when there isn't room for all three (narrow), or when the user expanded the doc
-  const chatFloating = !!openDoc && (vw < 1100 || docExpanded);
-  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setChatMin(false); };
+  // #5 — chat floats over the document when there isn't room for all three.
+  // forceFloat: no room (narrow) or the user explicitly expanded the doc → viewer fills, no resize handle.
+  // chatSpace<360: the user dragged the viewer so wide the chat would get tiny → float, but keep the handle so they can drag back.
+  const chatSpace = vw - 55 - viewerWidth - (isPanelOpen ? panelWidth : 40);
+  const forceFloat = !!openDoc && (vw < 1100 || docExpanded);
+  const chatFloating = forceFloat || (!!openDoc && chatSpace < 360);
+  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setChatMin(false); setChatPos(null); };
+
+  // Drag the floating chat by its header
+  const startChatDrag = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    const row = layoutRef.current?.getBoundingClientRect();
+    const win = (e.currentTarget.parentElement as HTMLElement)?.getBoundingClientRect();
+    if (!row || !win) return;
+    const offX = e.clientX - win.left;
+    const offY = e.clientY - win.top;
+    const onMove = (ev: MouseEvent) => {
+      const maxX = row.width - win.width;
+      const maxY = row.height - 38; // keep at least the header in view
+      setChatPos({ x: Math.max(0, Math.min(maxX, ev.clientX - row.left - offX)), y: Math.max(0, Math.min(maxY, ev.clientY - row.top - offY)) });
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
+
+  // Resize the floating chat from its bottom-right corner
+  const startChatResize = (e: ReactMouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const sx = e.clientX, sy = e.clientY, w0 = chatSize.w, h0 = chatSize.h;
+    const onMove = (ev: MouseEvent) => {
+      setChatSize({ w: Math.max(300, Math.min(680, w0 + (ev.clientX - sx))), h: Math.max(280, Math.min(820, h0 + (ev.clientY - sy))) });
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={layoutRef} className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* Left icon bar */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-r" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
@@ -1693,27 +1733,39 @@ export default function MishpatPage() {
           </div>
         </div>
 
-        {/* Chat — in-flow column normally; a floating window over the document when there's no room for all three */}
+        {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
           className={chatFloating ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex min-w-0"}
-          style={chatFloating ? { bottom: "16px", insetInlineStart: "71px", width: "380px", height: chatMin ? "auto" : "470px", border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.bg : "white", boxShadow: "0 10px 34px rgba(0,0,0,0.22)" } : undefined}
+          style={chatFloating ? {
+            ...(chatPos ? { left: `${chatPos.x}px`, top: `${chatPos.y}px` } : { bottom: "16px", insetInlineStart: "71px" }),
+            width: `${chatSize.w}px`,
+            height: chatMin ? "auto" : `${chatSize.h}px`,
+            border: `1px solid ${isDark ? dk.border : c.border}`,
+            backgroundColor: isDark ? dk.bg : "white",
+            boxShadow: "0 10px 34px rgba(0,0,0,0.22)",
+          } : undefined}
         >
           {chatFloating && (
-            <div className="flex items-center justify-between px-3 flex-shrink-0" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: chatMin ? "none" : `1px solid ${isDark ? dk.border : "#e2e6ee"}` }} dir="rtl">
+            <div onMouseDown={startChatDrag} className="flex items-center justify-between px-3 flex-shrink-0 cursor-move select-none" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: chatMin ? "none" : `1px solid ${isDark ? dk.border : "#e2e6ee"}` }} dir="rtl">
               <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
               <div className="flex items-center gap-0.5">
-                <button onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
-                <button onClick={closeDoc} title="החזרת הצ׳אט למסך מלא" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={closeDoc} title="החזרת הצ׳אט למסך מלא" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
               </div>
             </div>
           )}
           <div className={`flex-1 flex min-w-0 ${chatFloating && chatMin ? "hidden" : ""}`}>
             <ChatArea isDark={isDark} conversationKey={convKey} />
           </div>
+          {chatFloating && !chatMin && (
+            <div onMouseDown={startChatResize} className="absolute bottom-0 right-0 z-10" style={{ width: "16px", height: "16px", cursor: "nwse-resize" }} title="גרירה לשינוי גודל">
+              <div className="absolute" style={{ right: "3px", bottom: "3px", width: "7px", height: "7px", borderRight: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}`, borderBottom: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}` }} />
+            </div>
+          )}
         </div>
 
         {/* Document viewer — third pane (fills the area when the chat is floating) */}
-        {openDoc && <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={closeDoc} fill={chatFloating} canExpand={vw >= 1100} expanded={docExpanded} onToggleExpand={() => setDocExpanded((v) => !v)} />}
+        {openDoc && <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={closeDoc} fill={chatFloating} showHandle={!forceFloat} canExpand={vw >= 1100} expanded={docExpanded} onToggleExpand={() => setDocExpanded((v) => !v)} />}
 
         {/* Focus backdrop — dims the chat behind the expanded documents */}
         {isPanelOpen && focusDocs && (
