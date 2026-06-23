@@ -1757,7 +1757,6 @@ export default function MishpatPage() {
               <div className="flex items-center gap-0.5">
                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
                 <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט למקומו (המסמך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
-                <button onMouseDown={(e) => e.stopPropagation()} onClick={closeDoc} title="סגירת המסמך" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><X size={16} /></button>
               </div>
             </div>
           )}
