@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Columns3,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
   type LucideIcon,
 } from "lucide-react";
 
@@ -887,20 +887,24 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>לפי סוג</span>
               </button>
               {!isFocus && (
-                <button
-                  onClick={() => onSetWidth?.(compactCols ? 660 : 381)}
-                  className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
-                  style={{
-                    border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
-                    color: !compactCols ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                    backgroundColor: !compactCols ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
-                    fontFamily: "Noto Sans Hebrew, sans-serif",
-                  }}
-                  title={compactCols ? "הצגת עמודות נוספות (הפאנל יתרחב)" : "חזרה לתצוגה מצומצמת"}
-                >
-                  <Columns3 size={14} />
-                  {compactCols ? "הצג עוד" : "הצג פחות"}
-                </button>
+                <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0 text-[13px]" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                  <button
+                    onClick={() => onSetWidth?.(381)}
+                    className="h-full px-2.5 transition-colors whitespace-nowrap"
+                    style={{ backgroundColor: compactCols ? c.primary : "transparent", color: compactCols ? "white" : (isDark ? dk.textMuted : c.textGray) }}
+                    title="תצוגה מצומצמת — תאריך ושם המסמך"
+                  >
+                    מצומצם
+                  </button>
+                  <button
+                    onClick={() => onSetWidth?.(660)}
+                    className="h-full px-2.5 transition-colors whitespace-nowrap"
+                    style={{ backgroundColor: !compactCols ? c.primary : "transparent", color: !compactCols ? "white" : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
+                    title="תצוגה מפורטת — כולל סוג, מגיש ומספר מילים"
+                  >
+                    מפורט
+                  </button>
+                </div>
               )}
             </div>
           )}
