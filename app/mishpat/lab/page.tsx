@@ -887,24 +887,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>לפי סוג</span>
               </button>
               {!isFocus && (
-                <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0 text-[13px]" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                  <button
-                    onClick={() => onSetWidth?.(381)}
-                    className="h-full px-2.5 transition-colors whitespace-nowrap"
-                    style={{ backgroundColor: compactCols ? c.primary : "transparent", color: compactCols ? "white" : (isDark ? dk.textMuted : c.textGray) }}
-                    title="תצוגה מצומצמת — תאריך ושם המסמך"
-                  >
-                    מצומצם
-                  </button>
-                  <button
-                    onClick={() => onSetWidth?.(660)}
-                    className="h-full px-2.5 transition-colors whitespace-nowrap"
-                    style={{ backgroundColor: !compactCols ? c.primary : "transparent", color: !compactCols ? "white" : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
-                    title="תצוגה מפורטת — כולל סוג, מגיש ומספר מילים"
-                  >
-                    מפורט
-                  </button>
-                </div>
+                <button
+                  onClick={() => onSetWidth?.(compactCols ? 660 : 381)}
+                  className="h-8 text-[13px] whitespace-nowrap flex-shrink-0 hover:underline transition-colors"
+                  style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  title={compactCols ? "הצגת עמודות נוספות — סוג, מגיש ומספר מילים" : "חזרה לתצוגה מצומצמת"}
+                >
+                  {compactCols ? "+ הצג עוד" : "− הצג פחות"}
+                </button>
               )}
             </div>
           )}
