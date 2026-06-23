@@ -574,7 +574,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
             <span className="doc-link truncate text-[15px] font-semibold" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
             {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           </span>
-          <span className={`text-[13px] leading-snug ${markNew ? "font-bold" : ""}`} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+          <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         </span>
         {/* Date (+ time) */}
         <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
@@ -953,20 +953,20 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
         {grouping === "type" && (
           <div className="flex flex-col">
             {tableHeader}
-            {typesInData.map((type) => {
+            {typesInData.map((type, ti) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
               const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
               const typeUsed = typeDocs.some((d) => d.used);
               return (
-                <div key={type} className="flex flex-col">
+                <div key={type} className="flex flex-col" style={ti > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#f0f2f5"}` } : undefined}>
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
                       <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
-                      {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
-                      <ChevronDown size={16} className="ms-auto" style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                      <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                      {typeUsed && <span className="size-2 rounded-full flex-shrink-0 ms-auto" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
@@ -1688,12 +1688,17 @@ export default function MishpatPage() {
     document.body.style.userSelect = "none";
   };
 
-  // Resize the floating chat from its bottom-right corner
+  // Resize the floating chat from its top-right corner (grows up/right; the bottom edge stays put)
   const startChatResize = (e: ReactMouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, w0 = chatSize.w, h0 = chatSize.h;
+    const topAnchored = chatPos != null;
+    const y0 = chatPos?.y ?? 0;
     const onMove = (ev: MouseEvent) => {
-      setChatSize({ w: Math.max(300, Math.min(680, w0 + (ev.clientX - sx))), h: Math.max(280, Math.min(820, h0 + (ev.clientY - sy))) });
+      const newW = Math.max(300, Math.min(680, w0 + (ev.clientX - sx)));
+      const newH = Math.max(280, Math.min(820, h0 - (ev.clientY - sy)));
+      setChatSize({ w: newW, h: newH });
+      if (topAnchored) setChatPos((p) => (p ? { x: p.x, y: y0 + (h0 - newH) } : p));
     };
     const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
     document.addEventListener("mousemove", onMove);
@@ -1751,7 +1756,8 @@ export default function MishpatPage() {
               <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
               <div className="flex items-center gap-0.5">
                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
-                <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט (המסמך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><X size={16} /></button>
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט למקומו (המסמך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={closeDoc} title="סגירת המסמך" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><X size={16} /></button>
               </div>
             </div>
           )}
@@ -1759,8 +1765,8 @@ export default function MishpatPage() {
             <ChatArea isDark={isDark} conversationKey={convKey} />
           </div>
           {chatFloating && !chatMin && (
-            <div onMouseDown={startChatResize} className="absolute bottom-0 right-0 z-10" style={{ width: "16px", height: "16px", cursor: "nwse-resize" }} title="גרירה לשינוי גודל">
-              <div className="absolute" style={{ right: "3px", bottom: "3px", width: "7px", height: "7px", borderRight: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}`, borderBottom: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}` }} />
+            <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
+              <div className="absolute" style={{ right: "5px", top: "5px", width: "7px", height: "7px", borderRight: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}`, borderTop: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}` }} />
             </div>
           )}
         </div>
