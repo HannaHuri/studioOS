@@ -538,7 +538,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 // Two-tier table row: a scan line (grid, aligns with the header) + the full summary below.
 function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
-  const baseBg = isDark ? dk.input : "white";
+  const baseBg = markNew ? (isDark ? "#1b2740" : "#f3f8ff") : (isDark ? dk.input : "white"); // "new" → faint row tint instead of an edge line
   const activeBg = isDark ? "#243047" : "#eaf2fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -554,24 +554,23 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onTo
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
-      {/* "New" — line on the right edge */}
-      {markNew && <span className="absolute top-0 bottom-0 right-0 w-[2px] rounded-r" style={{ backgroundColor: "rgba(0,115,234,0.55)" }} />}
-
       {/* Tier 1 — scan line (grid, aligns with the column header): date · name · submitter · type · words */}
       <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
         <span className="flex items-center gap-2 min-w-0">
-          <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
+          <span className={`doc-link truncate text-[13px] ${markNew ? "font-bold" : "font-medium"}`} title={doc.name}>{doc.name}</span>
           {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
-        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+        {/* Submitter — colored text, no chip */}
+        <span className="text-[12px] truncate min-w-0" style={{ color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span>
+        {/* Type — muted text, no chip */}
+        <span className="text-[12px] truncate min-w-0" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span>
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
 
-      {/* Tier 2 — full summary (always visible) */}
-      <p className="text-[14px] leading-snug text-right px-2 pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "30px" }}>{doc.summary}</p>
+      {/* Tier 2 — full summary (always visible), aligned to start under the document name */}
+      <p className="text-[14px] leading-snug text-right px-2 pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "100px" }}>{doc.summary}</p>
     </div>
   );
 }
