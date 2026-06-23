@@ -570,14 +570,14 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
       <div className="grid items-start gap-2 px-2 py-2.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "2px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Date (+ time) — to the right of the document column; nudged to sit on the name's line */}
-        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif", marginTop: "2px" }}>
+        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif", marginTop: "3px" }}>
           <span>{doc.date}</span>
           {showTime && doc.time && <span className="mt-0.5">{doc.time}</span>}
         </span>
         {/* Document — name (anchor) + full summary below */}
         <span className="flex flex-col min-w-0 gap-1">
           <span className="flex items-center gap-2 min-w-0">
-            <span className="doc-link truncate text-[15px] font-semibold" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+            <span className="doc-link truncate text-[15px] font-semibold leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
             {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           </span>
           <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
@@ -888,7 +888,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               </button>
               {!isFocus && (
                 <button
-                  onClick={() => onSetWidth?.(compactCols ? 660 : 385)}
+                  onClick={() => onSetWidth?.(compactCols ? 660 : 377)}
                   className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
                   style={{
                     border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
@@ -1651,7 +1651,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(385); // opens compact — wide enough for the filters row to end just after the pending-decision button; "show more" widens further
+  const [panelWidth, setPanelWidth] = useState(377); // opens compact — ends just after the pending-decision button; "show more" widens further
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
