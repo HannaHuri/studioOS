@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
   type LucideIcon,
 } from "lucide-react";
 
@@ -860,17 +860,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
             </button>
           </div>
 
-          {/* View control (left) — "group by type" switch, only when a case is open */}
+          {/* View control (left) — "group by type": icon + label, stays active (blue) when on */}
           {openCaseId && (
             <button
               onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
-              className="flex items-center gap-2 h-7 flex-shrink-0 whitespace-nowrap"
+              className="flex items-center gap-1.5 h-7 flex-shrink-0 whitespace-nowrap hover:opacity-80 transition-colors"
+              style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
               title="קיבוץ המסמכים לפי סוג"
             >
-              <span className="text-[13px]" style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
-              <span className="relative transition-colors" style={{ width: "32px", height: "18px", borderRadius: "9px", backgroundColor: grouping === "type" ? c.primary : (isDark ? dk.border : "#cdd3df") }}>
-                <span className="absolute transition-all" style={{ top: "2px", width: "14px", height: "14px", borderRadius: "50%", backgroundColor: "white", insetInlineStart: grouping === "type" ? "16px" : "2px" }} />
-              </span>
+              <List size={16} />
+              <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
             </button>
           )}
         </div>
