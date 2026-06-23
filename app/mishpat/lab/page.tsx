@@ -569,8 +569,8 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
       {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
       <div className="grid items-start gap-2 px-2 py-2.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0" style={{ marginTop: "2px" }}><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        {/* Date (+ time) — to the right of the document column */}
-        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>
+        {/* Date (+ time) — to the right of the document column; nudged to sit on the name's line */}
+        <span className="flex flex-col leading-tight text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif", marginTop: "2px" }}>
           <span>{doc.date}</span>
           {showTime && doc.time && <span className="mt-0.5">{doc.time}</span>}
         </span>
@@ -830,7 +830,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               title="הצג רק מסמכים הממתינים להחלטה"
             >
               <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
-              {headerWide ? "ממתין להחלטה" : "ממתין"}
+              ממתין להחלטה
             </button>
             {filterActive && (
               <button
@@ -870,7 +870,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
             <button className="flex items-center gap-1.5 min-w-0" onClick={() => toggleAllDocs(!allChecked)}>
               <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
-              <span className="text-[14px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>{headerWide ? "בחר הכל לצ'ט" : "בחר הכל"}</span>
+              <span className="text-[14px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
             </button>
           </div>
 
@@ -878,7 +878,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
             {!isFocus && (
               <button
-                onClick={() => onSetWidth?.(compactCols ? 640 : 360)}
+                onClick={() => onSetWidth?.(compactCols ? 660 : 470)}
                 className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
                 style={{
                   border: `1px solid ${!compactCols ? c.primary : (isDark ? dk.border : c.border)}`,
@@ -1651,7 +1651,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(360); // opens compact (date + document); "show columns" widens it
+  const [panelWidth, setPanelWidth] = useState(470); // opens compact (date + document) but wide enough for the filters row; "show columns" widens further
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
