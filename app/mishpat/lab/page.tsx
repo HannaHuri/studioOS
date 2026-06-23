@@ -194,7 +194,7 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
-    date: "02.06.26", iso: "2026-06-02", bucket: "today", words: "420",
+    date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "420",
     summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים. הנתבע טרם הגיב.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
   },
@@ -450,6 +450,18 @@ const SUBMITTER_COLORS: Record<string, { bg: string; color: string; dot: string 
   "בית המשפט": { bg: "#eaf3ec", color: "#2f7d4f", dot: "#74b58f" }, // green
 };
 
+// Per-document-type text colors (give the table its color cue via the type)
+const TYPE_COLORS: Record<string, string> = {
+  "כתבי טענות": "#1a6dc4",
+  "בקשות והוראות": "#7a4ec2",
+  "תצהירים": "#2f7d4f",
+  "חוות דעת": "#b06a14",
+  "החלטות בתיק": "#3949ab",
+  "פסקי דין": "#a3322a",
+  "פרוטוקולים": "#557099",
+  "מוצגים": "#6b7a2e",
+};
+
 // Specific party name per case + side (shown on hover; useful when a side has several)
 const PARTY_NAMES: Record<string, Record<string, string>> = {
   c1: { "תובע": "יעקב אברמוב", "נתבע": "המרכז הרפואי קדם בע״מ" },
@@ -557,18 +569,18 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, onOpe
       {/* Tier 1 — scan line (grid, aligns with the column header): date · name · submitter · type · words */}
       <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        <span className="flex flex-col items-end leading-tight" style={{ fontFamily: "Figtree, sans-serif" }}>
+        <span className="flex flex-col leading-tight text-right" style={{ fontFamily: "Figtree, sans-serif" }}>
           <span className="text-[12px]" style={{ color: metaCol }}>{doc.date}</span>
-          {showTime && doc.time && <span className="text-[11px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
+          {showTime && doc.time && <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{doc.time}</span>}
         </span>
         <span className="flex items-center gap-2 min-w-0">
           <span className="doc-link truncate text-[13px] font-medium" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
           {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
-        {/* Submitter — colored text, no chip */}
-        <span className="text-[12px] truncate min-w-0" style={{ color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span>
-        {/* Type — muted text, no chip */}
-        <span className="text-[12px] truncate min-w-0" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span>
+        {/* Submitter — role — party name, regular main text color */}
+        <span className="text-[14px] truncate min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}{partyName ? ` — ${partyName}` : ""}</span>
+        {/* Type — colored text (color cue), no chip */}
+        <span className="text-[13px] truncate min-w-0" style={{ color: TYPE_COLORS[doc.type] ?? (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span>
         <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
 
@@ -700,7 +712,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
 
   // Table scan-line grid (RTL → first track is rightmost): checkbox · date · submitter · type · name · words.
   // The full summary renders on a second tier below each row, so it isn't a grid column.
-  const tableTemplate = "22px 62px minmax(0,1fr) 78px 96px 50px";
+  const tableTemplate = "22px 62px minmax(0,1fr) 150px 96px 50px";
 
   function toggleSort(key: "date" | "name" | "words" | "submitter" | "type") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
