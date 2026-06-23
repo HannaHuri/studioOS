@@ -535,8 +535,8 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
-// Dense table row (CSS grid so columns align with the header). Reveals summary / related as width allows.
-function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary, showRelated, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; submitterTag?: boolean; showSummary?: boolean; showRelated?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+// Two-tier table row: a scan line (grid, aligns with the header) + the full summary below.
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const sub = SUBMITTER_COLORS[doc.submitter] ?? { bg: "#eef1f8", color: c.iconGray, dot: c.iconGray };
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#243047" : "#eaf2fd";
@@ -547,51 +547,54 @@ function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary
   return (
     <div
       ref={rowRef}
-      className="relative grid items-center gap-2 px-2 h-9 rounded cursor-pointer transition-colors border"
-      style={{ gridTemplateColumns: gridCols, borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
+      className="relative rounded cursor-pointer transition-colors border"
+      style={{ borderColor: active ? c.primary : "transparent", backgroundColor: active ? activeBg : baseBg }}
       dir="rtl"
       title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
-      {/* "New" — straight line on the right edge (no rounding) */}
-      {markNew && <span className="absolute top-0 bottom-0 right-0 w-[2px]" style={{ backgroundColor: "rgba(0,115,234,0.55)" }} />}
-      <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-      {/* Date — rightmost data column */}
-      <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
-      {/* Submitter — full tag when wide; a small rounded SQUARE (distinct from the round "used" dot) when narrow */}
-      {submitterTag ? (
+      {/* "New" — line on the right edge */}
+      {markNew && <span className="absolute top-0 bottom-0 right-0 w-[2px] rounded-r" style={{ backgroundColor: "rgba(0,115,234,0.55)" }} />}
+
+      {/* Tier 1 — scan line (grid, aligns with the column header) */}
+      <div className="grid items-center gap-2 px-2 pt-2" style={{ gridTemplateColumns: gridCols }}>
+        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
+        <span className="text-[12px] text-right truncate" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>{doc.date}</span>
         <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: sub.bg, color: sub.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName}>{doc.submitter}</span></span>
-      ) : (
-        <span className="flex items-center" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}><span className="rounded-[2px] flex-shrink-0" style={{ width: "11px", height: "11px", backgroundColor: sub.bg, border: `1.5px solid ${sub.dot}` }} /></span>
-      )}
-      {/* Name (+ used dot, vertically centered with a little breathing room) */}
-      <span className="flex items-center gap-2 min-w-0">
-        <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
-        {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      </span>
-      {/* Summary — main text color, right-aligned */}
-      {showSummary && <span className="text-[14px] truncate text-right min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.summary}>{doc.summary}</span>}
-      {/* Related docs — comma-separated links (no icon), right-aligned; +N opens a popover with the extra ones */}
-      {showRelated && (
-        <span className="text-[13px] truncate text-right min-w-0" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מסמכים קשורים: ${doc.related.join(" · ")}`}>
+        <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="doc-link truncate text-[13px] font-medium" title={doc.name}>{doc.name}</span>
+          {doc.used && <span className="size-2 rounded-full flex-shrink-0 self-center" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        </span>
+        <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+      </div>
+
+      {/* Tier 2 — full summary (always visible) */}
+      <p className="text-[14px] leading-snug text-right px-2 pt-1 pb-2" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "30px" }}>{doc.summary}</p>
+
+      {/* Related docs — below the summary, when present */}
+      {doc.related.length > 0 && (
+        <div className="flex items-center flex-wrap gap-x-1 gap-y-0.5 px-2 pb-2 text-[13px]" style={{ paddingInlineStart: "30px" }} dir="rtl">
+          <span className="flex-shrink-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>קשור:</span>
           {doc.related.slice(0, 2).map((r, i, a) => (
             <span key={r}>
-              <button onClick={(e) => e.stopPropagation()} className="doc-link" title="פתיחת המסמך">{r}</button>
-              {(i < a.length - 1 || doc.related.length > 2) && <span style={{ color: metaCol }}>, </span>}
+              <button onClick={(e) => e.stopPropagation()} className="doc-link" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="פתיחת המסמך">{r}</button>
+              {(i < a.length - 1 || doc.related.length > 2) && <span style={{ color: metaCol }}>,</span>}
             </span>
           ))}
           {doc.related.length > 2 && (
             <button
               onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setRelPos(relPos ? null : { top: r.bottom + 4, right: window.innerWidth - r.right }); }}
-              className="hover:opacity-80"
+              className="hover:opacity-80 flex-shrink-0"
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
               title="עוד מסמכים קשורים"
             >+{doc.related.length - 2}</button>
           )}
-        </span>
+        </div>
       )}
+
       {/* +N popover — the extra related docs (beyond the two shown inline) */}
       {relPos && (
         <>
@@ -609,8 +612,6 @@ function DocRowCompact({ doc, isDark, markNew, active, submitterTag, showSummary
           </div>
         </>
       )}
-      {/* Words — leftmost column */}
-      <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
     </div>
   );
 }
@@ -699,18 +700,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
-  const tableSubmitterTag = panelWidth >= 460; // narrow: submitter shows as a color dot; wider: full tag
-  const tableSummary = panelWidth >= 520; // table rows reveal the summary once there is room
-  const tableRelated = panelWidth >= 760; // …and related docs when there is even more
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // order/grouping axis
-  const [layout, setLayout]       = useState<"cards" | "table">("cards");   // density/layout axis
+  const [layout, setLayout]       = useState<"cards" | "table">("table");   // density/layout axis (table is the default)
   const [tableHint, setTableHint] = useState(false); // one-per-session nudge to try table view in expanded mode
-  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | null>(null); // table column sort
+  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
@@ -738,13 +736,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     try { localStorage.setItem("njm_tableHintCount", String(count + 1)); } catch {}
   }, [isFocus, layout, openCaseId]);
 
-  // Table grid template (RTL → first track is rightmost). Summary is the flexible filler that soaks up
-  // spare width; related sizes to its (capped) content so there's no dead whitespace before "words".
-  const tableTemplate = ["22px", "62px", tableSubmitterTag ? "78px" : "20px", tableSummary ? "minmax(140px,1fr)" : "minmax(0,1fr)", ...(tableSummary ? ["minmax(0,2fr)"] : []), ...(tableRelated ? ["minmax(0,1fr)"] : []), "50px"].join(" ");
+  // Table scan-line grid (RTL → first track is rightmost): checkbox · date · submitter · type · name · words.
+  // The full summary renders on a second tier below each row, so it isn't a grid column.
+  const tableTemplate = "22px 62px 78px 96px minmax(0,1fr) 50px";
 
-  function toggleSort(key: "date" | "name" | "words" | "submitter") {
+  function toggleSort(key: "date" | "name" | "words" | "submitter" | "type") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir(key === "date" || key === "words" ? "desc" : "asc"); } // names/submitter a→ב; dates/words high→low
+    else { setSortKey(key); setSortDir(key === "date" || key === "words" ? "desc" : "asc"); } // names/submitter/type a→ב; dates/words high→low
   }
   const sortDocs = (arr: CaseDoc[]) => {
     if (!sortKey) return arr;
@@ -752,11 +750,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     return [...arr].sort((a, b) => {
       if (sortKey === "name") return a.name.localeCompare(b.name, "he") * dir;
       if (sortKey === "submitter") return a.submitter.localeCompare(b.submitter, "he") * dir;
+      if (sortKey === "type") return a.type.localeCompare(b.type, "he") * dir;
       if (sortKey === "words") return (parseWords(a.words) - parseWords(b.words)) * dir;
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
-  const sortHead = (key: "date" | "name" | "words" | "submitter", label: string) => (
+  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
@@ -770,10 +769,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
     >
       <span />
       {sortHead("date", "תאריך")}
-      {tableSubmitterTag ? sortHead("submitter", "מגיש") : <span />}
+      {sortHead("submitter", "מגיש")}
+      {sortHead("type", "סוג")}
       {sortHead("name", "שם המסמך")}
-      {tableSummary && <span className="flex items-center h-full">תקציר</span>}
-      {tableRelated && <span className="flex items-center h-full">קשורים</span>}
       {sortHead("words", "מילים")}
     </div>
   );
@@ -1027,7 +1025,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
           <div className="flex flex-col gap-1">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} submitterTag={tableSubmitterTag} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1046,7 +1044,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onOpenD
                     <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span>
                   </div>
                   {sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} submitterTag={tableSubmitterTag} showSummary={tableSummary} showRelated={tableRelated} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} active={openDocId === doc.id} gridCols={tableTemplate} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1742,7 +1740,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(380);
+  const [panelWidth, setPanelWidth] = useState(640); // table view opens wide by default
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
