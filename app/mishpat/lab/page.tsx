@@ -582,12 +582,12 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
           </span>
           <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
           {compact && (
-            <span className="flex items-center flex-wrap gap-x-1.5 gap-y-1 text-[12px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[12px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               <span className="rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color }}>{doc.type}</span>
-              <span style={{ opacity: 0.4 }}>·</span>
-              <span className="truncate" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : (partyName ? `${doc.submitter} — ${partyName}` : doc.submitter)}</span>
-              <span style={{ opacity: 0.4 }}>·</span>
-              <span style={{ fontFamily: "Figtree, sans-serif" }}>{doc.words} מילים</span>
+              <span style={{ opacity: 0.55 }}>·</span>
+              <span title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+              <span style={{ opacity: 0.55 }}>·</span>
+              <span style={{ fontFamily: "Figtree, sans-serif" }} title="מספר מילים">{doc.words}</span>
             </span>
           )}
         </span>
@@ -899,11 +899,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               {!isFocus && (
                 <button
                   onClick={() => { const next = !tableView; setTableView(next); if (next && panelWidth < 560) onSetWidth?.(660); }}
-                  className="flex items-center justify-center size-7 rounded-md hover:bg-black/5 transition-colors"
-                  style={{ color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                  className="flex items-center justify-center size-8 rounded-md transition-colors"
+                  style={{
+                    border: `1px solid ${tableView ? c.primary : (isDark ? dk.border : c.border)}`,
+                    color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray),
+                    backgroundColor: tableView ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+                  }}
                   title={tableView ? "תצוגת רשימה" : "תצוגת טבלה (עמודות מיושרות)"}
                 >
-                  <Table size={17} />
+                  <Table size={16} />
                 </button>
               )}
             </div>
