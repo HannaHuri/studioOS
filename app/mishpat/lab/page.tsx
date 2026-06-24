@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
-  Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
+  ArrowUp, Bookmark, ChevronDown, ChevronRight, ChevronUp,
+  Clock, Copy, Eye, EyeClosed, FileText, FolderOpen,
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
-  Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
   type LucideIcon,
@@ -998,17 +998,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   );
 }
 
-function DocumentPanelClosed({ isDark }: { isDark: boolean }) {
-  return (
-    <div className="h-full flex flex-col items-center gap-2" style={{ backgroundColor: isDark ? dk.surface : "white", paddingTop: "76px" /* clears the open-chevron circle (ends at 68px) with a small gap */ }}>
-      <FileText size={18} style={{ color: c.iconGray }} />
-      <span style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px", writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", userSelect: "none" }}>
-        מסמכים
-      </span>
-    </div>
-  );
-}
-
 // ── Dislike feedback modal ─────────────────────────────────────────────────
 const REASONS = [
   "תשובה כוללת המצאות",
@@ -1653,18 +1642,6 @@ export default function MishpatPage() {
     return () => window.removeEventListener("resize", u);
   }, []);
 
-  const topIcons = [
-    { Icon: Clock, label: "היסטוריה" },
-    { Icon: Bookmark, label: "סימניות" },
-    { Icon: MessageSquare, label: "הודעות" },
-    { Icon: Paperclip, label: "קבצים מצורפים" },
-    { Icon: FileText, label: "מסמכים" },
-  ];
-  const botIcons = [
-    { Icon: HelpCircle, label: "עזרה" },
-    { Icon: Globe, label: "רשת" },
-    { Icon: FileText, label: "דוחות" },
-  ];
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const sidebarBg = isDark ? dk.surface : "white";
 
@@ -1720,39 +1697,11 @@ export default function MishpatPage() {
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
       <div ref={layoutRef} className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
-        {/* Left icon bar */}
-        <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-r" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
-          <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
-            className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: c.primary, color: "white" }}
-            title="שיחה חדשה"
-          >
-            <Plus size={16} />
-          </button>
-          <div className="flex flex-col items-center gap-2">
-            {topIcons.map(({ Icon, label }) => (
-              <button key={label} className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title={label}>
-                <Icon size={19} />
-              </button>
-            ))}
-          </div>
-          <div className="flex-1" />
-          <div className="w-9 border-t mb-3" style={{ borderColor: isDark ? dk.border : c.border }} />
-          <div className="flex flex-col items-center gap-2">
-            {botIcons.map(({ Icon, label }) => (
-              <button key={label} className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title={label}>
-                <Icon size={19} />
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
           className={chatFloating ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex min-w-0"}
           style={chatFloating ? {
-            ...(chatPos ? { left: `${chatPos.x}px`, top: `${chatPos.y}px` } : { bottom: "16px", insetInlineStart: "71px" }),
+            ...(chatPos ? { left: `${chatPos.x}px`, top: `${chatPos.y}px` } : { bottom: "16px", insetInlineStart: "16px" }),
             width: `${chatSize.w}px`,
             height: chatMin ? "auto" : `${chatSize.h}px`,
             border: `1px solid ${isDark ? dk.border : c.border}`,
@@ -1787,56 +1736,87 @@ export default function MishpatPage() {
           <div onClick={() => setFocusDocs(false)} className="absolute inset-0 z-30" style={{ backgroundColor: "rgba(0,0,0,0.3)" }} />
         )}
 
-        {/* Panel wrapper — column normally; wide overlay in focus mode */}
-        <div
-          className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
-          style={focusDocs
-            ? { right: 0, left: "72px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
-            : { width: isPanelOpen ? `${panelWidth}px` : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
-        >
-          <div className="absolute inset-0" style={{ overflow: "visible" }}>
-            {isPanelOpen
-              ? <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
-              : <DocumentPanelClosed isDark={isDark} />}
-          </div>
-
-          {/* Resize handle — column mode only */}
-          {isPanelOpen && !focusDocs && (
-            <div
-              onMouseDown={(e) => {
-                e.preventDefault();
-                setResizing(true);
-                const onMove = (ev: MouseEvent) =>
-                  setPanelWidth(Math.min(720, Math.max(320, window.innerWidth - ev.clientX)));
-                const onUp = () => {
-                  setResizing(false);
-                  document.removeEventListener("mousemove", onMove);
-                  document.removeEventListener("mouseup", onUp);
-                  document.body.style.userSelect = "";
-                };
-                document.addEventListener("mousemove", onMove);
-                document.addEventListener("mouseup", onUp);
-                document.body.style.userSelect = "none";
-              }}
-              className="absolute top-0 bottom-0 left-0 z-10"
-              style={{ width: "8px", cursor: "ew-resize" }}
-              title="גרירה לשינוי רוחב"
-            >
-              <div className="absolute top-0 bottom-0 left-0" style={{ width: "2px", backgroundColor: resizing ? c.primary : "#dbe7f7" }} />
-            </div>
-          )}
-
-          {/* Toggle button — pokes out on the LEFT edge (panel is on the right). In focus mode it closes the panel directly. */}
-          <button
-            onClick={() => { if (focusDocs) { setFocusDocs(false); setIsPanelOpen(false); } else setIsPanelOpen((v) => !v); }}
-            className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
-            style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
-            title={focusDocs ? "סגור מסמכים" : (isPanelOpen ? "סגור מסמכים" : "פתח מסמכים")}
+        {/* Document panel — opens to the left of the right rail; toggled by the rail's documents button */}
+        {isPanelOpen && (
+          <div
+            className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+            style={focusDocs
+              ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
+              : { width: `${panelWidth}px`, overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
           >
-            {(isPanelOpen || focusDocs)
-              ? <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
-              : <ChevronLeft size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />}
+            <div className="absolute inset-0" style={{ overflow: "visible" }}>
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
+            </div>
+
+            {/* Resize handle — left edge (panel sits to the left of the rail) */}
+            {!focusDocs && (
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setResizing(true);
+                  const onMove = (ev: MouseEvent) =>
+                    setPanelWidth(Math.min(720, Math.max(320, window.innerWidth - 60 - ev.clientX)));
+                  const onUp = () => {
+                    setResizing(false);
+                    document.removeEventListener("mousemove", onMove);
+                    document.removeEventListener("mouseup", onUp);
+                    document.body.style.userSelect = "";
+                  };
+                  document.addEventListener("mousemove", onMove);
+                  document.addEventListener("mouseup", onUp);
+                  document.body.style.userSelect = "none";
+                }}
+                className="absolute top-0 bottom-0 left-0 z-10"
+                style={{ width: "8px", cursor: "ew-resize" }}
+                title="גרירה לשינוי רוחב"
+              >
+                <div className="absolute top-0 bottom-0 left-0" style={{ width: "2px", backgroundColor: resizing ? c.primary : "#dbe7f7" }} />
+              </div>
+            )}
+
+            {/* Close button — pokes out on the LEFT edge */}
+            <button
+              onClick={() => { setFocusDocs(false); setIsPanelOpen(false); }}
+              className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
+              title="סגור מסמכים"
+            >
+              <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+            </button>
+          </div>
+        )}
+
+        {/* Right icon rail — new conversation, documents (elevated), then secondary nav; help + model + version at the bottom */}
+        <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-5 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
+          <button
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
+            className="size-9 flex items-center justify-center rounded-lg mb-3 hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: c.primary, color: "white" }}
+            title="שיחה חדשה"
+          >
+            <Plus size={18} />
           </button>
+          {/* Documents — elevated (subtle takhelet), toggles the panel */}
+          <button
+            onClick={() => { setIsPanelOpen((v) => !v); setFocusDocs(false); }}
+            className="size-9 flex items-center justify-center rounded-lg transition-colors"
+            style={{ backgroundColor: isPanelOpen ? (isDark ? "#2c3e5e" : "#d3e6fb") : (isDark ? "#22304a" : "#e6f1fb"), color: c.primary }}
+            title="מסמכים"
+          >
+            <FileText size={20} />
+          </button>
+          <div className="w-8 border-t my-3" style={{ borderColor: isDark ? dk.border : c.border }} />
+          <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שיחות אחרונות"><Clock size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שאלות מועדפות"><Bookmark size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><MessageSquare size={19} /></button>
+          </div>
+          <div className="flex-1" />
+          <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title="עזרה"><HelpCircle size={19} /></button>
+          <div className="mt-2 text-center leading-tight" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>
+            <div style={{ fontSize: "11px" }}>Opus 4.8</div>
+            <div style={{ fontSize: "10px", opacity: 0.7 }}>v2.3</div>
+          </div>
         </div>
       </div>
     </div>
