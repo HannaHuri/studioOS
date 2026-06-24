@@ -1762,7 +1762,7 @@ export default function MishpatPage() {
             className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
             style={focusDocs
               ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
-              : { width: `${panelWidth}px`, overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
+              : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
               <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
