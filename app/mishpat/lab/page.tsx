@@ -1652,9 +1652,6 @@ export default function MishpatPage() {
   const forceFloat = !!openDoc && (vw < 1100 || docExpanded);
   const chatFloating = forceFloat || (!!openDoc && chatSpace < 420);
   const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setChatMin(false); setChatPos(null); };
-  // Small screens: the panel slides over the chat as a drawer (it doesn't squeeze the layout)
-  const drawerMode = isPanelOpen && !focusDocs && vw < 1000;
-  const drawerW = Math.max(320, Math.min(panelWidth, vw - 120));
   // Dock the floating chat back into its column while keeping the document open (shrinks the viewer if needed so the chat fits)
   const dockChat = () => { setDocExpanded(false); setChatMin(false); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
 
@@ -1742,15 +1739,13 @@ export default function MishpatPage() {
         {/* Document panel — opens to the left of the right rail; toggled by the rail's documents button */}
         {isPanelOpen && (
           <div
-            className={focusDocs ? "absolute top-0 bottom-0 z-40" : drawerMode ? "absolute top-0 bottom-0 z-30" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+            className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
             style={focusDocs
               ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
-              : drawerMode
-              ? { right: "60px", width: `${drawerW}px`, overflow: "visible", backgroundColor: isDark ? dk.surface : "white", boxShadow: "-10px 0 30px rgba(0,0,0,0.20)" }
               : { width: `${panelWidth}px`, overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (drawerMode ? drawerW : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail) */}
@@ -1795,7 +1790,7 @@ export default function MishpatPage() {
         <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-5 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
           <button
             onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
-            className="size-9 flex items-center justify-center rounded-md mb-3 hover:opacity-90 transition-opacity"
+            className="w-10 h-10 flex items-center justify-center rounded mb-3 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
           >
@@ -1804,7 +1799,7 @@ export default function MishpatPage() {
           {/* Documents — elevated (subtle takhelet), toggles the panel */}
           <button
             onClick={() => { setIsPanelOpen((v) => !v); setFocusDocs(false); }}
-            className="size-9 flex items-center justify-center rounded-md transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded transition-colors"
             style={{ backgroundColor: isPanelOpen ? (isDark ? "#2c3e5e" : "#d3e6fb") : (isDark ? "#22304a" : "#e6f1fb"), color: c.primary }}
             title="מסמכים"
           >
