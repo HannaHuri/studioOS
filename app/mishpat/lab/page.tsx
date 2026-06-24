@@ -898,16 +898,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               </button>
               {!isFocus && (
                 <button
-                  onClick={() => { const next = !tableView; setTableView(next); if (next && panelWidth < 560) onSetWidth?.(660); }}
-                  className="flex items-center justify-center size-8 rounded-md transition-colors"
-                  style={{
-                    border: `1px solid ${tableView ? c.primary : (isDark ? dk.border : c.border)}`,
-                    color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                    backgroundColor: tableView ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
-                  }}
+                  onClick={() => { const next = !tableView; setTableView(next); onSetWidth?.(next ? 660 : 420); }}
+                  className="flex items-center justify-center size-7 rounded-md hover:bg-black/5 transition-colors"
+                  style={{ color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
                   title={tableView ? "תצוגת רשימה" : "תצוגת טבלה (עמודות מיושרות)"}
                 >
-                  <Table size={16} />
+                  <Table size={17} />
                 </button>
               )}
             </div>
