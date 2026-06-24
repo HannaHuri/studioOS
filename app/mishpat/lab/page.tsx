@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronRight, ChevronUp,
-  Clock, Copy, Eye, EyeClosed, FileText, FolderOpen,
-  HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
+  Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
+  HelpCircle, Info, Layers, Link, BookOpen, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
@@ -1796,20 +1796,20 @@ export default function MishpatPage() {
           >
             <Plus size={16} />
           </button>
-          {/* Documents — elevated (subtle takhelet), toggles the panel */}
+          {/* Documents — same icon language as the rest; turns blue when its panel is open. Distinguished only by position + divider */}
           <button
             onClick={() => { setIsPanelOpen((v) => !v); setFocusDocs(false); }}
-            className="w-8 h-8 flex items-center justify-center rounded transition-colors"
-            style={{ backgroundColor: isPanelOpen ? (isDark ? "#2c3e5e" : "#d3e6fb") : (isDark ? "#22304a" : "#e6f1fb"), color: c.primary }}
+            className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+            style={{ color: isPanelOpen ? c.primary : iconCol }}
             title="מסמכים"
           >
-            <FileText size={18} />
+            <Files size={19} />
           </button>
           <div className="w-8 border-t my-3" style={{ borderColor: isDark ? dk.border : c.border }} />
           <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שיחות אחרונות"><Clock size={19} /></button>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שאלות מועדפות"><Bookmark size={19} /></button>
-            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><MessageSquare size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><BookOpen size={19} /></button>
           </div>
           <div className="flex-1" />
           <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title="עזרה"><HelpCircle size={19} /></button>
