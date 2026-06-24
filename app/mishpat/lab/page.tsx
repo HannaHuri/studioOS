@@ -1790,20 +1790,20 @@ export default function MishpatPage() {
         <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-5 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
           <button
             onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
-            className="w-10 h-10 flex items-center justify-center rounded mb-3 hover:opacity-90 transition-opacity"
+            className="w-8 h-8 flex items-center justify-center rounded mb-3 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
           >
-            <Plus size={18} />
+            <Plus size={16} />
           </button>
           {/* Documents — elevated (subtle takhelet), toggles the panel */}
           <button
             onClick={() => { setIsPanelOpen((v) => !v); setFocusDocs(false); }}
-            className="w-10 h-10 flex items-center justify-center rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded transition-colors"
             style={{ backgroundColor: isPanelOpen ? (isDark ? "#2c3e5e" : "#d3e6fb") : (isDark ? "#22304a" : "#e6f1fb"), color: c.primary }}
             title="מסמכים"
           >
-            <FileText size={20} />
+            <FileText size={18} />
           </button>
           <div className="w-8 border-t my-3" style={{ borderColor: isDark ? dk.border : c.border }} />
           <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
