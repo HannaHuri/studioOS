@@ -884,7 +884,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 title="קיבוץ המסמכים לפי סוג"
               >
                 <List size={16} />
-                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>לפי סוג</span>
+                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
               </button>
             </div>
           )}
