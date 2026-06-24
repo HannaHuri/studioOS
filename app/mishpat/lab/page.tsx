@@ -584,8 +584,8 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
         </span>
         {!compact && (
           <>
-            {/* Type tag — wraps to 2 lines to keep the column narrow */}
-            <span className="min-w-0 flex"><span className="text-[12px] rounded px-1.5 py-0.5 leading-[1.15] text-center" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+            {/* Type tag */}
+            <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
             {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
             <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
             {/* Words */}
@@ -723,7 +723,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Below this width the table shows only the essentials (checkbox · date · document); wider reveals all columns
   const compactCols = panelWidth < 520;
   // Table column layout (RTL → first track rightmost): checkbox · date · document(name+summary) [· type · submitter · words]
-  const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 72px 64px 46px";
+  const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 46px";
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
@@ -886,16 +886,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <List size={16} />
                 <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>לפי סוג</span>
               </button>
-              {!isFocus && (
-                <button
-                  onClick={() => onSetWidth?.(compactCols ? 640 : 381)}
-                  className="h-8 text-[13px] whitespace-nowrap flex-shrink-0 hover:underline transition-colors"
-                  style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                  title={compactCols ? "הצגת עמודות נוספות — סוג, מגיש ומספר מילים" : "חזרה לתצוגה מצומצמת"}
-                >
-                  {compactCols ? "כל העמודות" : "פחות עמודות"}
-                </button>
-              )}
             </div>
           )}
         </div>
