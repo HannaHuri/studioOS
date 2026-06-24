@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, BookOpen, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
   type LucideIcon,
 } from "lucide-react";
 
@@ -581,6 +581,15 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
             {doc.used && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           </span>
           <span className="text-[13px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+          {compact && (
+            <span className="flex items-center flex-wrap gap-x-1.5 gap-y-1 text-[12px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              <span className="rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color }}>{doc.type}</span>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span className="truncate" title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : (partyName ? `${doc.submitter} — ${partyName}` : doc.submitter)}</span>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span style={{ fontFamily: "Figtree, sans-serif" }}>{doc.words} מילים</span>
+            </span>
+          )}
         </span>
         {!compact && (
           <>
@@ -691,6 +700,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // chrono (flat) or grouped by type
+  const [tableView, setTableView] = useState(false); // false = list (meta under summary), true = aligned columns
   const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   const [isAuto, setIsAuto]       = useState(true);
@@ -720,8 +730,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
-  // Below this width the table shows only the essentials (checkbox · date · document); wider reveals all columns
-  const compactCols = panelWidth < 520;
+  // List view (default) shows essentials + a meta line under the summary; table view spreads to aligned columns
+  const compactCols = !tableView;
   // Table column layout (RTL → first track rightmost): checkbox · date · document(name+summary) [· type · submitter · words]
   const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 46px";
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
@@ -874,7 +884,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
           </div>
 
-          {/* View controls (left) — only when a case is open: group by type, then "show more" (left-most) */}
+          {/* View controls (left) — group by type, then the list/table toggle (left-most) */}
           {openCaseId && (
             <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
               <button
@@ -886,6 +896,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <List size={16} />
                 <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
               </button>
+              {!isFocus && (
+                <button
+                  onClick={() => { const next = !tableView; setTableView(next); if (next && panelWidth < 560) onSetWidth?.(660); }}
+                  className="flex items-center justify-center size-7 rounded-md hover:bg-black/5 transition-colors"
+                  style={{ color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                  title={tableView ? "תצוגת רשימה" : "תצוגת טבלה (עמודות מיושרות)"}
+                >
+                  <Table size={17} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1624,7 +1644,7 @@ export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
-  const [panelWidth, setPanelWidth] = useState(640); // opens wide (all columns) by default; "fewer columns" narrows to compact
+  const [panelWidth, setPanelWidth] = useState(420); // opens as a narrow list; the table toggle widens it for aligned columns
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
