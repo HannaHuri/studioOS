@@ -989,21 +989,22 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         {grouping === "type" && (
           <div className="flex flex-col">
             {openType && tableHeader}
-            {typesInData.map((type) => {
+            {typesInData.map((type, ti) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
               const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
               const typeWords = formatWords(typeDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
               const typeUsed = typeDocs.some((d) => d.used);
               return (
-                <div key={type} className="flex flex-col">
+                <div key={type} className="flex flex-col" style={ti > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` } : undefined}>
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סה״כ מילים בקטגוריה">({typeWords} מילים)</span>
+                      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סה״כ מילים בקטגוריה">{typeWords}</span>
+                      {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
+                      <span className="flex-1" />
                       <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
-                      {typeUsed && <span className="size-2 rounded-full flex-shrink-0 ms-auto" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
