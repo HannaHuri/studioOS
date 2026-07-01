@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
-  HelpCircle, Info, Layers, Link, BookOpen, Microscope, Minimize2,
+  HelpCircle, Info, Layers, Link, Puzzle, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
@@ -1829,7 +1829,7 @@ export default function MishpatPage() {
           <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שיחות אחרונות"><Clock size={19} /></button>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שאלות מועדפות"><Bookmark size={19} /></button>
-            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><BookOpen size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><Puzzle size={19} /></button>
           </div>
           <div className="flex-1" />
           <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title="עזרה"><HelpCircle size={19} /></button>
