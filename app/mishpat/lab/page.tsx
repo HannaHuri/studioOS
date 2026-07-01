@@ -1001,9 +1001,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type}</span>
-                      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סה״כ מילים בקטגוריה">{typeWords}</span>
                       {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       <span className="flex-1" />
+                      <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סה״כ מילים בקטגוריה">{typeWords}</span>
                       <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                     </button>
                   </div>
