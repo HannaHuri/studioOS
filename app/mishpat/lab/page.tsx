@@ -661,7 +661,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
       </div>
       {/* Body — a real PDF (iframe) when the mock doc has a file, otherwise the generated mock pages */}
       {doc.file ? (
-        <iframe src={`${doc.file}#navpanes=0&${expanded ? "zoom=150" : "view=FitH"}`} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
+        <iframe key={expanded ? "expanded" : "default"} src={`${doc.file}#navpanes=0&${expanded ? "zoom=150" : "view=FitH"}`} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
       ) : (
         <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
           <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
