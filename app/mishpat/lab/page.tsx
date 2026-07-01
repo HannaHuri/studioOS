@@ -985,10 +985,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           </div>
         )}
 
-        {/* By type — column-table rows under type sub-headers */}
+        {/* By type — column-table rows under type sub-headers; the column header only shows once a folder is open */}
         {grouping === "type" && (
           <div className="flex flex-col">
-            {tableHeader}
+            {openType && tableHeader}
             {typesInData.map((type) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
@@ -1756,7 +1756,24 @@ export default function MishpatPage() {
         </div>
 
         {/* Document viewer — third pane (fills the area when the chat is floating) */}
-        {openDoc && <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={closeDoc} fill={chatFloating} showHandle={!forceFloat} canExpand={vw >= 1100} expanded={docExpanded} onToggleExpand={() => setDocExpanded((v) => !v)} />}
+        {openDoc && (
+          <DocViewer
+            doc={openDoc}
+            isDark={isDark}
+            width={viewerWidth}
+            onWidthChange={setViewerWidth}
+            onClose={closeDoc}
+            fill={chatFloating}
+            showHandle={!forceFloat}
+            canExpand={vw >= 1100}
+            expanded={chatFloating}
+            onToggleExpand={() => {
+              // Collapse (whether the fill came from the explicit expand button or from dragging the viewer very wide) back to the actual default: reset both the flag and the manually-dragged width.
+              if (chatFloating) { setDocExpanded(false); setViewerWidth(620); }
+              else setDocExpanded(true);
+            }}
+          />
+        )}
 
         {/* Focus backdrop — dims the chat behind the expanded documents */}
         {isPanelOpen && focusDocs && (
