@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronRight, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
-  HelpCircle, Info, Layers, Link, Puzzle, Microscope, Minimize2,
+  HelpCircle, Info, Layers, Link, GraduationCap, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
@@ -147,20 +147,20 @@ const CASE_DOCS: CaseDoc[] = [
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
-    isNew: true, pending: true, file: "/docs/motion-1.pdf",
+    isNew: true, pending: true, file: "/studioOS/docs/motion-1.pdf",
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהירים", submitter: "תובע", submitterName: "יעקב אברמוב",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
-    key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו", file: "/docs/affidavit-1.pdf",
+    key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו", file: "/studioOS/docs/affidavit-1.pdf",
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשות והוראות", submitter: "תובע",
     date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
-    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/docs/motion-2.pdf",
+    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/studioOS/docs/motion-2.pdf",
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -173,7 +173,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d5", name: "כתב הגנה מתוקן", type: "כתבי טענות", submitter: "נתבע",
     date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבע דוחה את כל טענות הרשלנות, טוען להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
-    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/docs/defense-1.pdf",
+    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/defense-1.pdf",
   },
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
@@ -185,13 +185,13 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
     date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבע בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
-    related: ["כתב הגנה מתוקן"], checked: false, file: "/docs/claim-1.pdf",
+    related: ["כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-1.pdf",
   },
   {
     id: "d8", name: "חוות דעת אקטוארית", type: "חוות דעת", submitter: "תובע",
     date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
-    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/docs/expert-opinion-1.pdf",
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/expert-opinion-1.pdf",
   },
   {
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
@@ -209,7 +209,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהירים", submitter: "נתבע",
     date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
     summary: "תצהיר עדה מטעם הנתבע בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
-    related: ["כתב הגנה מתוקן"], checked: false, file: "/docs/affidavit-2.pdf",
+    related: ["כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/affidavit-2.pdf",
   },
   {
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
@@ -239,7 +239,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
-    related: ["החלטה על מינוי מומחה"], checked: false, file: "/docs/expert-opinion-2.pdf",
+    related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf",
   },
   {
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
@@ -1836,7 +1836,7 @@ export default function MishpatPage() {
           <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שיחות אחרונות"><Clock size={19} /></button>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שאלות מועדפות"><Bookmark size={19} /></button>
-            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><Puzzle size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><GraduationCap size={19} /></button>
           </div>
           <div className="flex-1" />
           <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title="עזרה"><HelpCircle size={19} /></button>
