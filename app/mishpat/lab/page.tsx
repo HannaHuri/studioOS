@@ -167,7 +167,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "18.05.26", time: "14:22", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
     related: ["החלטה על מינוי מומחה"], checked: false, used: true,
-    key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק",
+    key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק", file: "/studioOS/docs/protocol-1.pdf",
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתבי טענות", submitter: "נתבע",
@@ -179,7 +179,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false,
+    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf",
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
@@ -197,7 +197,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
     date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "420",
     summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים. הנתבע טרם הגיב.",
-    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/motion-3.pdf",
   },
   {
     id: "d10", name: "בקשה לזימון עד", type: "בקשות והוראות", submitter: "נתבע",
@@ -215,25 +215,25 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "27.05.26", iso: "2026-05-27", bucket: "week", words: "390",
     summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
-    related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false,
+    related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false, file: "/studioOS/docs/decision-2.pdf",
   },
   {
     id: "d13", name: "פרוטוקול ישיבת קדם משפט", type: "פרוטוקולים", submitter: "בית המשפט",
     date: "15.05.26", iso: "2026-05-15", bucket: "month", words: "5.8K",
     summary: "תיעוד ישיבת קדם המשפט, לרבות עמדות הצדדים והחלטות ביניים בנוגע לגילוי מסמכים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false,
+    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/protocol-2.pdf",
   },
   {
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשות והוראות", submitter: "תובע",
     date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
     summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים. הנתבע מתנגד חלקית לבקשה.",
-    related: ["כתב תביעה"], checked: false,
+    related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/motion-4.pdf",
   },
   {
     id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשות והוראות", submitter: "נתבע",
     date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
     summary: "הנתבע מתנגד חלקית לגילוי וטוען לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
-    related: ["בקשה לגילוי מסמכים"], checked: false,
+    related: ["בקשה לגילוי מסמכים"], checked: false, file: "/studioOS/docs/motion-1.pdf",
   },
   {
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
@@ -245,50 +245,50 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
     date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבע מגיש תביעה שכנגד בטענה להוצאות שנגרמו לו עקב הגשת התביעה בחוסר תום לב.",
-    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false,
+    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf",
   },
   {
     id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתבי טענות", submitter: "תובע",
     date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
     summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
-    related: ["כתב תביעה שכנגד"], checked: false,
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf",
   },
   {
     id: "d19", name: "החלטה על איחוד דיון", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "25.03.26", iso: "2026-03-25", bucket: "older", words: "640",
     summary: "בית המשפט מורה על איחוד הדיון בתביעה ובתביעה שכנגד לשם יעילות דיונית.",
-    related: ["כתב תביעה שכנגד"], checked: false,
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf",
   },
   {
     id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקולים", submitter: "בית המשפט",
     date: "10.04.26", iso: "2026-04-10", bucket: "older", words: "11.2K",
     summary: "תיעוד דיון ההוכחות הראשון, לרבות חקירת התובע ועד מטעמו וטענות הצדדים.",
-    related: ["פרוטוקול ישיבת קדם משפט"], checked: false,
+    related: ["פרוטוקול ישיבת קדם משפט"], checked: false, file: "/studioOS/docs/protocol-1.pdf",
   },
   {
     id: "d21", name: "סיכומי התובע", type: "כתבי טענות", submitter: "תובע",
     date: "18.04.26", iso: "2026-04-18", bucket: "older", words: "7.3K",
     summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבע לנזקים שנגרמו.",
-    related: [], checked: false,
+    related: [], checked: false, file: "/studioOS/docs/claim-1.pdf",
   },
   {
     id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "300",
     summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.",
-    related: ["הודעה על הגשת ראיות נוספות"], checked: false,
+    related: ["הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
   },
 ];
 
 // Second case (mock) — documents for a different file
 const CASE_DOCS_2: CaseDoc[] = [
   { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
-    summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false },
+    summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false, file: "/studioOS/docs/claim-1.pdf" },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
-    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false },
+    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf" },
   { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
-    summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false },
+    summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/defense-1.pdf" },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
-    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true },
+    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf" },
 ];
 
 // Case metadata (number + parties)
