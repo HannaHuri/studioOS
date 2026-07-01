@@ -124,6 +124,7 @@ interface CaseDoc {
   isNew?: boolean;       // new since the judge's last visit
   pending?: boolean;     // awaiting the judge's decision
   caseId?: string;       // which case this document belongs to
+  file?: string;         // path to a real PDF under /public — shown instead of the mock pages when present
 }
 
 // Type filter chips with aggregate word counts (real case data)
@@ -146,20 +147,20 @@ const CASE_DOCS: CaseDoc[] = [
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
-    isNew: true, pending: true,
+    isNew: true, pending: true, file: "/docs/motion-1.pdf",
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהירים", submitter: "תובע", submitterName: "יעקב אברמוב",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
-    key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו",
+    key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו", file: "/docs/affidavit-1.pdf",
   },
   {
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשות והוראות", submitter: "תובע",
     date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
-    related: ["בקשה לדחיית מועד דיון"], checked: false,
+    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/docs/motion-2.pdf",
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -172,7 +173,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d5", name: "כתב הגנה מתוקן", type: "כתבי טענות", submitter: "נתבע",
     date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבע דוחה את כל טענות הרשלנות, טוען להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
-    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/docs/defense-1.pdf",
   },
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
@@ -184,13 +185,13 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
     date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבע בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
-    related: ["כתב הגנה מתוקן"], checked: false,
+    related: ["כתב הגנה מתוקן"], checked: false, file: "/docs/claim-1.pdf",
   },
   {
     id: "d8", name: "חוות דעת אקטוארית", type: "חוות דעת", submitter: "תובע",
     date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
-    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false,
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/docs/expert-opinion-1.pdf",
   },
   {
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
@@ -208,7 +209,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהירים", submitter: "נתבע",
     date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
     summary: "תצהיר עדה מטעם הנתבע בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
-    related: ["כתב הגנה מתוקן"], checked: false,
+    related: ["כתב הגנה מתוקן"], checked: false, file: "/docs/affidavit-2.pdf",
   },
   {
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
@@ -238,7 +239,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
-    related: ["החלטה על מינוי מומחה"], checked: false,
+    related: ["החלטה על מינוי מומחה"], checked: false, file: "/docs/expert-opinion-2.pdf",
   },
   {
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
@@ -652,32 +653,38 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
               {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
           )}
-          <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>
+          {doc.file
+            ? <a href={doc.file} target="_blank" rel="noopener noreferrer" title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></a>
+            : <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>}
           <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={19} /></button>
         </div>
       </div>
-      {/* Pages — outer ltr puts scrollbar on the right */}
-      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-        <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
-          {[1, 2].map((p) => (
-            <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
-              {p === 1 && (
-                <div className="text-center mb-7">
-                  <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
-                  <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
-                  <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
-                  <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
-                </div>
-              )}
-              <p className="text-[14px] leading-[1.95]" style={{ color: "#2b3340" }}>{doc.summary}</p>
-              {MOCK_DOC_PARAS.map((t, i) => (
-                <p key={i} className="text-[14px] leading-[1.95] mt-3.5" style={{ color: "#2b3340" }}>{t}</p>
-              ))}
-              <div className="text-center text-[11px] mt-9" style={{ color: "#aab2c0" }}>— {p} —</div>
-            </div>
-          ))}
+      {/* Body — a real PDF (iframe) when the mock doc has a file, otherwise the generated mock pages */}
+      {doc.file ? (
+        <iframe src={doc.file} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
+      ) : (
+        <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+          <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
+            {[1, 2].map((p) => (
+              <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
+                {p === 1 && (
+                  <div className="text-center mb-7">
+                    <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
+                    <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
+                    <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
+                    <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
+                  </div>
+                )}
+                <p className="text-[14px] leading-[1.95]" style={{ color: "#2b3340" }}>{doc.summary}</p>
+                {MOCK_DOC_PARAS.map((t, i) => (
+                  <p key={i} className="text-[14px] leading-[1.95] mt-3.5" style={{ color: "#2b3340" }}>{t}</p>
+                ))}
+                <div className="text-center text-[11px] mt-9" style={{ color: "#aab2c0" }}>— {p} —</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
