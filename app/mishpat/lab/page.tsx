@@ -125,6 +125,8 @@ interface CaseDoc {
   pending?: boolean;     // awaiting the judge's decision
   caseId?: string;       // which case this document belongs to
   file?: string;         // path to a real PDF under /public — shown instead of the mock pages when present
+  processId?: number;    // groups documents that belong to the same thread/topic (motion → response → decision)
+  processLabel?: string; // short topic name for the process — shown in the process badge's tooltip
 }
 
 // Type filter chips with aggregate word counts (real case data)
@@ -147,7 +149,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
-    isNew: true, pending: true, file: "/studioOS/docs/motion-1.pdf",
+    isNew: true, pending: true, file: "/studioOS/docs/motion-1.pdf", processId: 1, processLabel: "דחיית מועד דיון",
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהירים", submitter: "תובע", submitterName: "יעקב אברמוב",
@@ -160,7 +162,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשות והוראות", submitter: "תובע",
     date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
-    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/studioOS/docs/motion-2.pdf",
+    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1, processLabel: "דחיית מועד דיון",
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -179,7 +181,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf",
+    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf", processId: 2, processLabel: "מינוי מומחה וחוות דעת",
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
@@ -197,7 +199,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
     date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "420",
     summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים. הנתבע טרם הגיב.",
-    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/motion-3.pdf",
+    related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/motion-3.pdf", processId: 3, processLabel: "הגשת ראיות נוספות",
   },
   {
     id: "d10", name: "בקשה לזימון עד", type: "בקשות והוראות", submitter: "נתבע",
@@ -227,37 +229,37 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשות והוראות", submitter: "תובע",
     date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
     summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים. הנתבע מתנגד חלקית לבקשה.",
-    related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/motion-4.pdf",
+    related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/motion-4.pdf", processId: 4, processLabel: "גילוי מסמכים",
   },
   {
     id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשות והוראות", submitter: "נתבע",
     date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
     summary: "הנתבע מתנגד חלקית לגילוי וטוען לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
-    related: ["בקשה לגילוי מסמכים"], checked: false, file: "/studioOS/docs/motion-1.pdf",
+    related: ["בקשה לגילוי מסמכים"], checked: false, file: "/studioOS/docs/motion-1.pdf", processId: 4, processLabel: "גילוי מסמכים",
   },
   {
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
-    related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf",
+    related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf", processId: 2, processLabel: "מינוי מומחה וחוות דעת",
   },
   {
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
     date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבע מגיש תביעה שכנגד בטענה להוצאות שנגרמו לו עקב הגשת התביעה בחוסר תום לב.",
-    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf",
+    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf", processId: 5, processLabel: "תביעה שכנגד",
   },
   {
     id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתבי טענות", submitter: "תובע",
     date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
     summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
-    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf",
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf", processId: 5, processLabel: "תביעה שכנגד",
   },
   {
     id: "d19", name: "החלטה על איחוד דיון", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "25.03.26", iso: "2026-03-25", bucket: "older", words: "640",
     summary: "בית המשפט מורה על איחוד הדיון בתביעה ובתביעה שכנגד לשם יעילות דיונית.",
-    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf",
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf", processId: 5, processLabel: "תביעה שכנגד",
   },
   {
     id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -274,7 +276,7 @@ const CASE_DOCS: CaseDoc[] = [
   {
     id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "300",
-    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.",
+    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.", processId: 3, processLabel: "הגשת ראיות נוספות",
     related: ["הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
   },
 ];
@@ -284,11 +286,11 @@ const CASE_DOCS_2: CaseDoc[] = [
   { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
     summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false, file: "/studioOS/docs/claim-1.pdf" },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
-    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf" },
+    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 6, processLabel: "בקשה לסעד זמני" },
   { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
     summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/defense-1.pdf" },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
-    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf" },
+    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 6, processLabel: "בקשה לסעד זמני" },
 ];
 
 // Case metadata (number + parties)
@@ -587,6 +589,12 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
               <span className="rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color }}>{doc.type}</span>
               <span style={{ opacity: 0.55 }}>·</span>
               <span title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+              {doc.processId != null && (
+                <>
+                  <span style={{ opacity: 0.55 }}>·</span>
+                  <span className="rounded px-1 py-px" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Figtree, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{`תהליך ${doc.processId}`}</span>
+                </>
+              )}
               <span style={{ opacity: 0.55 }}>·</span>
               <span style={{ fontFamily: "Figtree, sans-serif" }} title="מספר מילים">{doc.words}</span>
             </span>
@@ -598,6 +606,8 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
             <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
             {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
             <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+            {/* Process — badge with the topic in the tooltip; before the words column */}
+            <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Figtree, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{doc.processId != null ? `#${doc.processId}` : ""}</span>
             {/* Words */}
             <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
           </>
@@ -704,6 +714,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
+  const [activeProcess, setActiveProcess] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // chrono (flat) or grouped by type
@@ -740,7 +751,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // List view (default) shows essentials + a meta line under the summary; table view spreads to aligned columns
   const compactCols = !tableView;
   // Table column layout (RTL → first track rightmost): checkbox · date · document(name+summary) [· type · submitter · words]
-  const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 46px";
+  const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 44px 46px";
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
@@ -754,6 +765,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       {sortHead("name", "מסמך")}
       {!compactCols && sortHead("type", "סוג")}
       {!compactCols && sortHead("submitter", "מגיש")}
+      {!compactCols && <span className="truncate" title="תהליך">תהליך</span>}
       {!compactCols && sortHead("words", "מילים")}
     </div>
   );
@@ -778,6 +790,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const matchesFilters = (d: CaseDoc) =>
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
+    (activeProcess === "הכל" || `תהליך ${d.processId}` === activeProcess) &&
     (!dateFrom || d.iso >= dateFrom) &&
     (!dateTo || d.iso <= dateTo) &&
     (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()));
@@ -785,7 +798,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "pending" || d.pending);
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
-    activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
+    activeType !== "הכל" || activeSubmitter !== "הכל" || activeProcess !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
 
   // Filtering — scoped to the currently open case
   const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
@@ -796,6 +809,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
+  // Process filter — only offered when this case actually has documents grouped into a process/thread
+  const caseDocsAll = docs.filter((d) => d.caseId === openCaseId);
+  const processIdsInCase = Array.from(new Set(caseDocsAll.filter((d) => d.processId != null).map((d) => d.processId!))).sort((a, b) => a - b);
+  const PROCESS_OPTIONS = ["הכל", ...processIdsInCase.map((id) => `תהליך ${id}`)];
+  const processSubLabels: Record<string, string> = Object.fromEntries(
+    processIdsInCase.map((id) => [`תהליך ${id}`, caseDocsAll.find((d) => d.processId === id)?.processLabel ?? ""])
+  );
   const dateCount: Record<string, number> = {}; // how many docs share each date → show the time to disambiguate
   lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
@@ -834,6 +854,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
             <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
+            {processIdsInCase.length > 0 && (
+              <FilterDropdown label="תהליך" value={activeProcess} options={PROCESS_OPTIONS} onChange={setActiveProcess} subLabels={processSubLabels} isDark={isDark} />
+            )}
             <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
             <button
               onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
@@ -851,7 +874,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
             {filterActive && (
               <button
-                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
+                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setActiveProcess("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
                 className="flex items-center gap-1 h-8 px-2 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0 hover:bg-black/5"
                 style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 title="ניקוי כל הסינונים"
