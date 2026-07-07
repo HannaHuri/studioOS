@@ -592,7 +592,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
               {doc.processId != null && (
                 <>
                   <span style={{ opacity: 0.55 }}>·</span>
-                  <span className="rounded px-1 py-px" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Figtree, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{`תהליך ${doc.processId}`}</span>
+                  <span className="rounded px-1 py-px" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{`תהליך ${doc.processId}`}</span>
                 </>
               )}
               <span style={{ opacity: 0.55 }}>·</span>
@@ -714,12 +714,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [search, setSearch]       = useState("");
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
-  const [activeProcess, setActiveProcess] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // chrono (flat) or grouped by type
   const [tableView, setTableView] = useState(false); // false = list (meta under summary), true = aligned columns
-  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | null>(null); // table column sort
+  const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | "process" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   const [isAuto, setIsAuto]       = useState(true);
   // Auto mode is the default → all documents start selected
@@ -733,7 +732,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
 
   const bg = isDark ? dk.surface : "white";
 
-  function toggleSort(key: "date" | "name" | "words" | "submitter" | "type") {
+  function toggleSort(key: "date" | "name" | "words" | "submitter" | "type" | "process") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir(key === "date" || key === "words" ? "desc" : "asc"); } // names/submitter/type a→ב; dates/words high→low
   }
@@ -745,6 +744,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       if (sortKey === "submitter") return a.submitter.localeCompare(b.submitter, "he") * dir;
       if (sortKey === "type") return a.type.localeCompare(b.type, "he") * dir;
       if (sortKey === "words") return (parseWords(a.words) - parseWords(b.words)) * dir;
+      if (sortKey === "process") return ((a.processId ?? -1) - (b.processId ?? -1)) * dir;
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
@@ -752,7 +752,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const compactCols = !tableView;
   // Table column layout (RTL → first track rightmost): checkbox · date · document(name+summary) [· type · submitter · words]
   const tableTemplate = compactCols ? "22px 70px minmax(0,1fr)" : "22px 70px minmax(0,1fr) 104px 64px 44px 46px";
-  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type", label: string) => (
+  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string) => (
     <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
@@ -765,7 +765,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       {sortHead("name", "מסמך")}
       {!compactCols && sortHead("type", "סוג")}
       {!compactCols && sortHead("submitter", "מגיש")}
-      {!compactCols && <span className="truncate" title="תהליך">תהליך</span>}
+      {!compactCols && sortHead("process", "תהליך")}
       {!compactCols && sortHead("words", "מילים")}
     </div>
   );
@@ -790,7 +790,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const matchesFilters = (d: CaseDoc) =>
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
-    (activeProcess === "הכל" || `תהליך ${d.processId}` === activeProcess) &&
     (!dateFrom || d.iso >= dateFrom) &&
     (!dateTo || d.iso <= dateTo) &&
     (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()));
@@ -798,7 +797,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "pending" || d.pending);
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
-    activeType !== "הכל" || activeSubmitter !== "הכל" || activeProcess !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
+    activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
 
   // Filtering — scoped to the currently open case
   const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
@@ -809,13 +808,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
-  // Process filter — only offered when this case actually has documents grouped into a process/thread
-  const caseDocsAll = docs.filter((d) => d.caseId === openCaseId);
-  const processIdsInCase = Array.from(new Set(caseDocsAll.filter((d) => d.processId != null).map((d) => d.processId!))).sort((a, b) => a - b);
-  const PROCESS_OPTIONS = ["הכל", ...processIdsInCase.map((id) => `תהליך ${id}`)];
-  const processSubLabels: Record<string, string> = Object.fromEntries(
-    processIdsInCase.map((id) => [`תהליך ${id}`, caseDocsAll.find((d) => d.processId === id)?.processLabel ?? ""])
-  );
   const dateCount: Record<string, number> = {}; // how many docs share each date → show the time to disambiguate
   lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
@@ -854,9 +846,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
             <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
             <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
-            {processIdsInCase.length > 0 && (
-              <FilterDropdown label="תהליך" value={activeProcess} options={PROCESS_OPTIONS} onChange={setActiveProcess} subLabels={processSubLabels} isDark={isDark} />
-            )}
             <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
             <button
               onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
@@ -874,7 +863,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </button>
             {filterActive && (
               <button
-                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setActiveProcess("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
+                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
                 className="flex items-center gap-1 h-8 px-2 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0 hover:bg-black/5"
                 style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 title="ניקוי כל הסינונים"
