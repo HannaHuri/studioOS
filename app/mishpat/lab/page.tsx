@@ -744,7 +744,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       if (sortKey === "submitter") return a.submitter.localeCompare(b.submitter, "he") * dir;
       if (sortKey === "type") return a.type.localeCompare(b.type, "he") * dir;
       if (sortKey === "words") return (parseWords(a.words) - parseWords(b.words)) * dir;
-      if (sortKey === "process") return ((a.processId ?? -1) - (b.processId ?? -1)) * dir;
+      if (sortKey === "process") {
+        // Documents with no process always sort last, regardless of direction — only tagged docs reverse order between clicks
+        if (a.processId == null && b.processId == null) return 0;
+        if (a.processId == null) return 1;
+        if (b.processId == null) return -1;
+        return (a.processId - b.processId) * dir;
+      }
       return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
     });
   };
