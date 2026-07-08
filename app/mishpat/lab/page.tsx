@@ -38,7 +38,7 @@ const dk = {
 
 function Logo() {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[26px] w-auto" />;
+  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[23px] w-auto" />;
 }
 
 // ── Checkbox ───────────────────────────────────────────────────────────────
@@ -1950,7 +1950,7 @@ export default function MishpatPage() {
               : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); if (openDoc?.id === doc.id) closeDoc(); else setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail) */}
