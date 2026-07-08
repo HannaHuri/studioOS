@@ -8,7 +8,7 @@ import {
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
-  ChevronsUp, ChevronsDown, ZoomIn, ZoomOut, GripHorizontal, PanelLeftClose,
+  ZoomIn, ZoomOut, GripHorizontal, PanelLeftClose,
   type LucideIcon,
 } from "lucide-react";
 
@@ -771,12 +771,10 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         {/* Reference only — rotate / page nav / zoom, styled for the dev team to implement against the real PDF engine (not wired up here) */}
         <div className="flex flex-col items-center">
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="סיבוב (תצוגה בלבד — לצוות הפיתוח)"><RotateCw size={17} /></button>
-          <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד ראשון (תצוגה בלבד)"><ChevronsUp size={17} /></button>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד קודם (תצוגה בלבד)"><ChevronUp size={17} /></button>
-          <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "2px", lineHeight: "1", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי (תצוגה בלבד)">1</span>
-          <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "6px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים (תצוגה בלבד)">3</span>
+          <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "4px", lineHeight: "1", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי — ניתן להקליד מספר עמוד (תצוגה בלבד)">1</span>
+          <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "8px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים (תצוגה בלבד)">3</span>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד הבא (תצוגה בלבד)"><ChevronDown size={17} /></button>
-          <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד אחרון (תצוגה בלבד)"><ChevronsDown size={17} /></button>
         </div>
         <div className="w-5 border-t my-0.5" style={{ borderColor: isDark ? dk.border : c.border }} />
         <button className="size-9 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="הגדלה (תצוגה בלבד)"><ZoomIn size={18} /></button>
@@ -1968,14 +1966,14 @@ export default function MishpatPage() {
               </div>
             )}
 
-            {/* Close button — pokes out on the LEFT edge; a dedicated panel icon (not a plain X) so it can't be mistaken for the document viewer's own close button */}
+            {/* Close button — pokes out on the LEFT edge; a bare icon (no circle/background) so it can be larger without feeling heavy; a dedicated panel icon (not a plain X) so it can't be mistaken for the document viewer's own close button */}
             <button
               onClick={() => { setFocusDocs(false); setIsPanelOpen(false); }}
-              className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
-              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
+              className="absolute z-20 size-8 flex items-center justify-center rounded-full transition-colors hover:bg-black/5"
+              style={{ top: "40px", left: "-14px" }}
               title="סגור מסמכים"
             >
-              <PanelLeftClose size={13} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+              <PanelLeftClose size={18} style={{ color: isDark ? dk.textMuted : c.iconGray, transform: "rotate(180deg)" }} />
             </button>
           </div>
         )}
