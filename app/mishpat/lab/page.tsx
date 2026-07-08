@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronRight, ChevronUp,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
@@ -818,12 +818,19 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
+  // Single size control — cycles forward through the 3 rungs (default → table → full-screen → default…), same widths the table toggle itself uses.
+  // No branching decision for the user: the button always just "grows" the panel one step, wrapping back to the start from full-screen.
+  const cycleSize = () => {
+    if (isFocus) { onToggleFocus?.(); setTableView(false); onSetWidth?.(420); }
+    else if (tableView) { onToggleFocus?.(); }
+    else { setTableView(true); onSetWidth?.(660); }
+  };
   const expandBtn = onToggleFocus ? (
     <button
-      onClick={onToggleFocus}
+      onClick={cycleSize}
       className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
       style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }}
-      title={isFocus ? "צא ממצב מורחב" : "הרחבת המסמכים"}
+      title={isFocus ? "חזרה לתצוגה הרגילה" : tableView ? "הרחבה למסך מלא" : "הרחבה לתצוגת טבלה"}
     >
       {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
     </button>
@@ -1838,14 +1845,14 @@ export default function MishpatPage() {
               </div>
             )}
 
-            {/* Close button — pokes out on the LEFT edge */}
+            {/* Close button — pokes out on the LEFT edge; a plain X so it reads unambiguously as "close", not another size control */}
             <button
               onClick={() => { setFocusDocs(false); setIsPanelOpen(false); }}
               className="absolute z-20 size-6 flex items-center justify-center rounded-full shadow-md transition-colors"
               style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.surface : "white", top: "44px", left: "-12px" }}
               title="סגור מסמכים"
             >
-              <ChevronRight size={16} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+              <X size={14} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
             </button>
           </div>
         )}
