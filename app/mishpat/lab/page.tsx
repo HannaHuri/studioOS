@@ -589,10 +589,11 @@ function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { pr
       </button>
       {open && pos && (
         <>
-          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div className="fixed inset-0 z-40" title="" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div
             onClick={(e) => e.stopPropagation()}
             className="fixed z-50 rounded overflow-hidden"
+            title=""
             style={{ top: pos.top, right: pos.right, width: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
             dir="rtl"
           >
@@ -1801,7 +1802,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 
       <div className="flex items-center gap-2" dir="rtl">
         <Logo />
-        <span className="font-medium text-[20px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: "1" }}>נט המשפט</span>
+        <span className="font-medium text-[18px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: "1" }}>נט המשפט</span>
       </div>
     </header>
   );
