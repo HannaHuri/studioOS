@@ -550,8 +550,89 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
+// A small numbered chip for a document's process/thread. Click opens a popover with the thread's status (open/resolved) and its documents.
+function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { processId: number; processLabel?: string; docs: CaseDoc[]; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  const sorted = [...docs].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+  const isResolution = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
+  const resolvedDoc = [...sorted].reverse().find(isResolution);
+
+  const toggle = (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    setOpen((v) => !v);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={toggle}
+        className="flex items-center justify-center rounded-full flex-shrink-0 transition-colors"
+        style={{
+          width: "19px", height: "19px", fontSize: "11px",
+          border: `1px solid ${open ? c.primary : (isDark ? dk.border : c.border)}`,
+          color: open ? c.primary : (isDark ? dk.textMuted : c.textGray),
+          backgroundColor: open ? (isDark ? "#22304a" : "#eff4ff") : "transparent",
+          fontFamily: "Figtree, sans-serif",
+        }}
+        title={processLabel ? `תהליך: ${processLabel}` : "תהליך"}
+      >
+        {processId}
+      </button>
+      {open && pos && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 rounded-lg overflow-hidden"
+            style={{ top: pos.top, right: pos.right, width: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
+            dir="rtl"
+          >
+            <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
+              <div className="text-[13px] font-semibold" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{processLabel ?? `תהליך ${processId}`}</div>
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                <span>{sorted.length} מסמכים</span>
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span>נפתח <span style={{ fontFamily: "Figtree, sans-serif" }}>{sorted[0]?.date}</span></span>
+                {resolvedDoc && (
+                  <>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span style={{ color: "#0f8a5f", fontWeight: 500 }}>הוכרע <span style={{ fontFamily: "Figtree, sans-serif" }}>{resolvedDoc.date}</span></span>
+                  </>
+                )}
+              </div>
+              {!resolvedDoc && (
+                <div className="mt-1 text-[12px] font-medium" style={{ color: "#b9670c", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להכרעה</div>
+              )}
+            </div>
+            <div className="max-h-[260px] overflow-y-auto docs-scroll">
+              {sorted.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => { onOpenDoc?.(d); setOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-right transition-colors hover:bg-black/5"
+                >
+                  <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{d.date}</span>
+                  <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{d.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // Column-table row: "document" column (name + summary) + aligned meta columns (date · type · submitter · words).
-function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compact, onOpenDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; compact?: boolean; onOpenDoc?: () => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compact, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; showTime?: boolean; gridCols: string; compact?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white"; // "new" is shown via a bold summary only (see below)
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -592,7 +673,7 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
               {doc.processId != null && (
                 <>
                   <span style={{ opacity: 0.55 }}>·</span>
-                  <span className="rounded px-1 py-px" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{`תהליך ${doc.processId}`}</span>
+                  <ProcessBadge processId={doc.processId} processLabel={doc.processLabel} docs={processDocs ?? []} isDark={isDark} onOpenDoc={onOpenAnyDoc} />
                 </>
               )}
               <span style={{ opacity: 0.55 }}>·</span>
@@ -606,8 +687,10 @@ function DocRowCompact({ doc, isDark, markNew, active, showTime, gridCols, compa
             <span className="min-w-0 flex"><span className="text-[12px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
             {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
             <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-            {/* Process — badge with the topic in the tooltip; before the words column */}
-            <span className="text-[12px] truncate min-w-0" style={{ color: subCol, fontFamily: "Figtree, sans-serif" }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : undefined}>{doc.processId != null ? `#${doc.processId}` : ""}</span>
+            {/* Process — numbered badge, click for the thread's status and documents; before the words column */}
+            <span className="min-w-0 flex">
+              {doc.processId != null && <ProcessBadge processId={doc.processId} processLabel={doc.processLabel} docs={processDocs ?? []} isDark={isDark} onOpenDoc={onOpenAnyDoc} />}
+            </span>
             {/* Words */}
             <span className="text-[12px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
           </>
@@ -814,6 +897,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
   const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
+  // Process badge popovers show the whole thread regardless of active filters — grouped from all of this case's documents
+  const processDocsById: Record<number, CaseDoc[]> = {};
+  docs.filter((d) => d.caseId === openCaseId && d.processId != null).forEach((d) => {
+    (processDocsById[d.processId!] ??= []).push(d);
+  });
   const dateCount: Record<string, number> = {}; // how many docs share each date → show the time to disambiguate
   lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
@@ -1005,7 +1093,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1033,7 +1121,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} onOpenDoc={() => onOpenDoc?.(doc)} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} showTime={dateCount[doc.iso] > 1} gridCols={tableTemplate} compact={compactCols} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1600,7 +1688,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
   }, []);
 
   return (
-    <header className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
+    <header className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
       <div className="flex items-center gap-3">
 
         {/* User avatar + name — clickable for admin */}
@@ -1750,7 +1838,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div ref={layoutRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={layoutRef} className="absolute top-14 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
           className={chatFloating ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex min-w-0"}
