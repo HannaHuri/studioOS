@@ -8,6 +8,7 @@ import {
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
+  ChevronsUp, ChevronsDown, ZoomIn, ZoomOut,
   type LucideIcon,
 } from "lucide-react";
 
@@ -730,24 +731,28 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
       </div>
       )}
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-3 flex-shrink-0" style={{ height: "52px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
-        <div className="flex items-center gap-2 min-w-0">
-          <FileText size={17} style={{ color: iconCol, flexShrink: 0 }} />
-          <span className="truncate text-[14px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
-          <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
-        </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {canExpand && (
-            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}>
-              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-          )}
-          {doc.file
-            ? <a href={doc.file} target="_blank" rel="noopener noreferrer" title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></a>
-            : <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>}
-          <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={19} /></button>
-        </div>
+      {/* Floating action panel — no gray toolbar bar; real controls (expand/link/close) up top, then a spec-only mock of page/zoom/rotate controls below for the dev team to wire to the real PDF engine */}
+      <div className="absolute z-30 flex flex-col items-center gap-0.5 p-1" style={{ top: "12px", insetInlineStart: "12px", borderRadius: "8px", backgroundColor: isDark ? "rgba(30,38,58,0.92)" : "rgba(255,255,255,0.92)", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.18)", backdropFilter: "blur(4px)" }} title={`${doc.name}${doc.date ? ` · ${doc.date}${doc.time ? ` ${doc.time}` : ""}` : ""}`}>
+        {canExpand && (
+          <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}>
+            {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
+        )}
+        {doc.file
+          ? <a href={doc.file} target="_blank" rel="noopener noreferrer" title="פתיחה בלשונית חדשה" className="size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={15} /></a>
+          : <button title="פתיחה בלשונית חדשה" className="size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={15} /></button>}
+        <button onClick={onClose} title="סגירת המסמך" className="size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={17} /></button>
+        <div className="w-5 border-t my-0.5" style={{ borderColor: isDark ? dk.border : c.border }} />
+        {/* Reference only — rotate / page nav / zoom, styled for the dev team to implement against the real PDF engine (not wired up here) */}
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="סיבוב (תצוגה בלבד — לצוות הפיתוח)"><RotateCw size={14} /></span>
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="עמוד ראשון (תצוגה בלבד)"><ChevronsUp size={14} /></span>
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="עמוד קודם (תצוגה בלבד)"><ChevronUp size={14} /></span>
+        <span className="flex items-center justify-center rounded text-[11px]" style={{ width: "24px", height: "20px", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי (תצוגה בלבד)">1</span>
+        <span className="flex items-center justify-center rounded text-[10px] mt-0.5" style={{ width: "28px", height: "18px", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Figtree, sans-serif" }} title="אחוז תקריב (תצוגה בלבד)">100%</span>
+        <span className="size-7 flex items-center justify-center rounded-md mt-0.5" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="עמוד הבא (תצוגה בלבד)"><ChevronDown size={14} /></span>
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="עמוד אחרון (תצוגה בלבד)"><ChevronsDown size={14} /></span>
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="הגדלה (תצוגה בלבד)"><ZoomIn size={14} /></span>
+        <span className="size-7 flex items-center justify-center rounded-md" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "default" }} title="הקטנה (תצוגה בלבד)"><ZoomOut size={14} /></span>
       </div>
       {/* Body — a real PDF (iframe) when the mock doc has a file, otherwise the generated mock pages */}
       {doc.file ? (
