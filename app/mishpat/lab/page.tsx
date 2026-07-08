@@ -630,7 +630,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const rootRef = useRef<HTMLDivElement>(null);
   return (
-    <div ref={rootRef} className={`relative flex ${fill ? "flex-1 min-w-0" : "flex-shrink-0"}`} style={{ ...(fill ? {} : { width: `${width}px` }), borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
+    <div ref={rootRef} className={`relative flex flex-col ${fill ? "flex-1 min-w-0" : "flex-shrink-0"}`} style={{ ...(fill ? {} : { width: `${width}px` }), borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, borderInlineEnd: `1px solid ${isDark ? dk.border : "#e6ebf3"}`, backgroundColor: isDark ? dk.bg : "#eef1f6" }} dir="rtl">
       {/* Drag handle — left edge: drag to resize the viewer width (kept while floating-by-drag so the user can drag back; hidden only when the doc is force-expanded) */}
       {showHandle && (
       <div
@@ -650,50 +650,51 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
       </div>
       )}
-      {/* Vertical action strip — replaces the old horizontal toolbar, freeing its height for the document itself */}
-      <div className="flex flex-col items-center gap-1 py-3 flex-shrink-0" style={{ width: "44px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderInlineEnd: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
-        <span className="size-8 flex items-center justify-center flex-shrink-0" title={`${doc.name}${doc.date ? ` · ${doc.date}${doc.time ? ` ${doc.time}` : ""}` : ""}`}>
-          <FileText size={16} style={{ color: iconCol }} />
-        </span>
-        {canExpand && (
-          <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}>
-            {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        )}
-        {doc.file
-          ? <a href={doc.file} target="_blank" rel="noopener noreferrer" title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}><ExternalLink size={16} /></a>
-          : <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}><ExternalLink size={16} /></button>}
-        <div className="flex-1" />
-        <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5 flex-shrink-0" style={{ color: iconCol }}><X size={18} /></button>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-2 px-3 flex-shrink-0" style={{ height: "52px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={17} style={{ color: iconCol, flexShrink: 0 }} />
+          <span className="truncate text-[14px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+          <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
+        </div>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {canExpand && (
+            <button onClick={onToggleExpand} title={expanded ? "החזרת תצוגת עמודות" : "הרחבת המסמך (הצ׳אט יהפוך למרחף)"} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}>
+              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          )}
+          {doc.file
+            ? <a href={doc.file} target="_blank" rel="noopener noreferrer" title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></a>
+            : <button title="פתיחה בלשונית חדשה" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><ExternalLink size={16} /></button>}
+          <button onClick={onClose} title="סגירת המסמך" className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: iconCol }}><X size={19} /></button>
+        </div>
       </div>
       {/* Body — a real PDF (iframe) when the mock doc has a file, otherwise the generated mock pages */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        {doc.file ? (
-          <iframe key={expanded ? "expanded" : "default"} src={`${doc.file}#navpanes=0&${expanded ? "zoom=150" : "view=FitH"}`} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
-        ) : (
-          <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-            <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
-              {[1, 2].map((p) => (
-                <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
-                  {p === 1 && (
-                    <div className="text-center mb-7">
-                      <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
-                      <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
-                      <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
-                      <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
-                    </div>
-                  )}
-                  <p className="text-[14px] leading-[1.95]" style={{ color: "#2b3340" }}>{doc.summary}</p>
-                  {MOCK_DOC_PARAS.map((t, i) => (
-                    <p key={i} className="text-[14px] leading-[1.95] mt-3.5" style={{ color: "#2b3340" }}>{t}</p>
-                  ))}
-                  <div className="text-center text-[11px] mt-9" style={{ color: "#aab2c0" }}>— {p} —</div>
-                </div>
-              ))}
-            </div>
+      {doc.file ? (
+        <iframe key={expanded ? "expanded" : "default"} src={`${doc.file}#navpanes=0&${expanded ? "zoom=150" : "view=FitH"}`} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
+      ) : (
+        <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+          <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
+            {[1, 2].map((p) => (
+              <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
+                {p === 1 && (
+                  <div className="text-center mb-7">
+                    <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
+                    <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
+                    <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
+                    <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
+                  </div>
+                )}
+                <p className="text-[14px] leading-[1.95]" style={{ color: "#2b3340" }}>{doc.summary}</p>
+                {MOCK_DOC_PARAS.map((t, i) => (
+                  <p key={i} className="text-[14px] leading-[1.95] mt-3.5" style={{ color: "#2b3340" }}>{t}</p>
+                ))}
+                <div className="text-center text-[11px] mt-9" style={{ color: "#aab2c0" }}>— {p} —</div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
