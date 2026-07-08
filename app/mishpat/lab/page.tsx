@@ -37,7 +37,7 @@ const dk = {
 
 function Logo() {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[30px] w-auto" />;
+  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[26px] w-auto" />;
 }
 
 // ── Checkbox ───────────────────────────────────────────────────────────────
@@ -574,7 +574,7 @@ function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { pr
       <button
         ref={btnRef}
         onClick={toggle}
-        className="flex items-center justify-center rounded-full flex-shrink-0 transition-colors"
+        className="flex items-center justify-center rounded flex-shrink-0 transition-colors"
         style={{
           width: "19px", height: "19px", fontSize: "11px",
           border: `1px solid ${open ? c.primary : (isDark ? dk.border : c.border)}`,
@@ -591,33 +591,30 @@ function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { pr
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div
             onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 rounded-lg overflow-hidden"
+            className="fixed z-50 rounded overflow-hidden"
             style={{ top: pos.top, right: pos.right, width: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
             dir="rtl"
           >
             <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
               <div className="text-[13px] font-semibold" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{processLabel ?? `תהליך ${processId}`}</div>
-              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                 <span>{sorted.length} מסמכים</span>
                 <span style={{ opacity: 0.5 }}>·</span>
                 <span>נפתח <span style={{ fontFamily: "Figtree, sans-serif" }}>{sorted[0]?.date}</span></span>
-                {resolvedDoc && (
-                  <>
-                    <span style={{ opacity: 0.5 }}>·</span>
-                    <span style={{ color: "#0f8a5f", fontWeight: 500 }}>הוכרע <span style={{ fontFamily: "Figtree, sans-serif" }}>{resolvedDoc.date}</span></span>
-                  </>
+                <span style={{ opacity: 0.5 }}>·</span>
+                {resolvedDoc ? (
+                  <span style={{ color: "#0f8a5f", fontWeight: 500 }}>הוכרע <span style={{ fontFamily: "Figtree, sans-serif" }}>{resolvedDoc.date}</span></span>
+                ) : (
+                  <span style={{ color: "#b9670c", fontWeight: 500 }}>ממתין להכרעה</span>
                 )}
               </div>
-              {!resolvedDoc && (
-                <div className="mt-1 text-[12px] font-medium" style={{ color: "#b9670c", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ממתין להכרעה</div>
-              )}
             </div>
             <div className="max-h-[260px] overflow-y-auto docs-scroll">
               {sorted.map((d) => (
                 <button
                   key={d.id}
                   onClick={() => { onOpenDoc?.(d); setOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-right transition-colors hover:bg-black/5"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-right transition-colors hover:bg-black/5"
                 >
                   <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{d.date}</span>
                   <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{d.name}</span>
@@ -1688,7 +1685,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
   }, []);
 
   return (
-    <header className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
+    <header className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
       <div className="flex items-center gap-3">
 
         {/* User avatar + name — clickable for admin */}
@@ -1698,7 +1695,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>טח</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>טח</div>
             <div className="flex flex-col leading-tight text-right">
               <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>טל חבקין</span>
             </div>
@@ -1747,9 +1744,9 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
         </div>
 
         {/* Dark mode toggle */}
-        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-7 px-2 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
-          {isDark ? <Sun size={14} style={{ color: "#FCD34D" }} /> : <Moon size={14} style={{ color: "#4A5568" }} />}
-          <div className="size-[18px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
+        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-6 px-1.5 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
+          {isDark ? <Sun size={12} style={{ color: "#FCD34D" }} /> : <Moon size={12} style={{ color: "#4A5568" }} />}
+          <div className="size-[15px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
         </button>
       </div>
 
@@ -1838,7 +1835,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div ref={layoutRef} className="absolute top-14 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={layoutRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
           className={chatFloating ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex min-w-0"}
