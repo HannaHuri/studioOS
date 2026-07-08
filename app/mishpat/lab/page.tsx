@@ -8,7 +8,7 @@ import {
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
-  ZoomIn, ZoomOut, GripHorizontal, PanelLeftClose,
+  ZoomIn, ZoomOut, GripHorizontal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -762,7 +762,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         className="absolute z-20 flex flex-col items-center gap-0.5 p-1"
         style={{
           top: "50%", left: "12px",
-          transform: `translateY(-50%) translate(${panelOffset.x}px, ${panelOffset.y}px)`,
+          transform: `translateY(calc(-50% - 24px)) translate(${panelOffset.x}px, ${panelOffset.y}px)`,
           borderRadius: "8px", backgroundColor: isDark ? "rgba(30,38,58,0.92)" : "rgba(255,255,255,0.92)",
           border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.18)", backdropFilter: "blur(4px)",
         }}
@@ -772,7 +772,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         <div className="flex flex-col items-center">
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="סיבוב (תצוגה בלבד — לצוות הפיתוח)"><RotateCw size={17} /></button>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד קודם (תצוגה בלבד)"><ChevronUp size={17} /></button>
-          <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "4px", lineHeight: "1", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי — ניתן להקליד מספר עמוד (תצוגה בלבד)">1</span>
+          <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "4px", lineHeight: "1", paddingTop: "2px", boxSizing: "border-box", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי — ניתן להקליד מספר עמוד (תצוגה בלבד)">1</span>
           <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "8px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים (תצוגה בלבד)">3</span>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד הבא (תצוגה בלבד)"><ChevronDown size={17} /></button>
         </div>
@@ -816,7 +816,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
 }
 
 // ── Document panel (open) — table browser ────────────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; openDocId?: string }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, onClosePanel, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; onClosePanel?: () => void; openDocId?: string }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // When a document is opened (and the panel narrows out of focus mode), bring its row into view
   useEffect(() => {
@@ -946,15 +946,28 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     else if (tableView) { onToggleFocus?.(); }
     else { setTableView(true); onSetWidth?.(660); }
   };
+  const lightBlueBtnStyle = { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary };
   const expandBtn = onToggleFocus ? (
-    <button
-      onClick={cycleSize}
-      className="size-9 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
-      style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }}
-      title={isFocus ? "חזרה לתצוגה הרגילה" : tableView ? "הרחבה למסך מלא" : "הרחבה לתצוגת טבלה"}
-    >
-      {isFocus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-    </button>
+    <div className="flex items-center gap-1.5 flex-shrink-0">
+      <button
+        onClick={cycleSize}
+        className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
+        style={lightBlueBtnStyle}
+        title={isFocus ? "חזרה לתצוגה הרגילה" : tableView ? "הרחבה למסך מלא" : "הרחבה לתצוגת טבלה"}
+      >
+        {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      </button>
+      {onClosePanel && (
+        <button
+          onClick={onClosePanel}
+          className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
+          style={lightBlueBtnStyle}
+          title="סגירת המסמכים"
+        >
+          <X size={15} />
+        </button>
+      )}
+    </div>
   ) : null;
 
   return (
@@ -1937,7 +1950,7 @@ export default function MishpatPage() {
               : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail) */}
@@ -1966,15 +1979,6 @@ export default function MishpatPage() {
               </div>
             )}
 
-            {/* Close button — pokes out on the LEFT edge; a bare icon (no circle/background) so it can be larger without feeling heavy; a dedicated panel icon (not a plain X) so it can't be mistaken for the document viewer's own close button */}
-            <button
-              onClick={() => { setFocusDocs(false); setIsPanelOpen(false); }}
-              className="absolute z-20 size-8 flex items-center justify-center rounded-full transition-colors hover:bg-black/5"
-              style={{ top: "40px", left: "-14px" }}
-              title="סגור מסמכים"
-            >
-              <PanelLeftClose size={18} style={{ color: isDark ? dk.textMuted : c.iconGray, transform: "rotate(180deg)" }} />
-            </button>
           </div>
         )}
 
