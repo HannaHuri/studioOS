@@ -1072,10 +1072,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           {/* View controls (left) — group by type, then the list/table toggle (left-most) */}
           {openCaseId && (
             <div className="flex items-center gap-1.5 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
-              <div className="flex items-center h-7 rounded-md overflow-hidden flex-shrink-0 text-[13px]" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              <div className="flex items-center h-7 rounded-md overflow-hidden flex-shrink-0 text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                 <button
                   onClick={() => setGrouping("chrono")}
-                  className="h-full px-2.5 transition-colors"
+                  className="h-full px-2.5 rounded-md transition-colors"
                   style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
                   title="תצוגה כרונולוגית"
                 >
@@ -1083,8 +1083,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 </button>
                 <button
                   onClick={() => { setGrouping("type"); setOpenType(null); }}
-                  className="h-full px-2.5 transition-colors"
-                  style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
+                  className="h-full px-2.5 rounded-md transition-colors"
+                  style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
                   title="קיבוץ המסמכים לפי סוג"
                 >
                   לפי סוג
