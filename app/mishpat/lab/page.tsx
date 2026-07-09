@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronRight, ChevronLeft,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
@@ -964,7 +964,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMin ? 0.35 : 1, cursor: atMin ? "default" : "pointer" }}
           title="הקטנת החלונית"
         >
-          <ChevronDown size={15} />
+          <ChevronRight size={15} />
         </button>
         <button
           onClick={growSize}
@@ -973,7 +973,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMax ? 0.35 : 1, cursor: atMax ? "default" : "pointer", borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
           title="הרחבת החלונית"
         >
-          <ChevronUp size={15} />
+          <ChevronLeft size={15} />
         </button>
       </div>
       {onClosePanel && (
@@ -1076,7 +1076,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <button
                   onClick={() => setGrouping("chrono")}
                   className="h-full px-2.5 transition-colors"
-                  style={{ backgroundColor: grouping === "chrono" ? c.primary : "transparent", color: grouping === "chrono" ? "white" : (isDark ? dk.textMuted : c.textGray) }}
+                  style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
                   title="תצוגה כרונולוגית"
                 >
                   כרונולוגי
@@ -1084,7 +1084,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <button
                   onClick={() => { setGrouping("type"); setOpenType(null); }}
                   className="h-full px-2.5 transition-colors"
-                  style={{ backgroundColor: grouping === "type" ? c.primary : "transparent", color: grouping === "type" ? "white" : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
+                  style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
                   title="קיבוץ המסמכים לפי סוג"
                 >
                   לפי סוג
@@ -1093,8 +1093,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               {!isFocus && (
                 <button
                   onClick={() => { const next = !tableView; setTableView(next); onSetWidth?.(next ? 660 : 420); }}
-                  className="flex items-center justify-center size-7 rounded-md hover:bg-black/5 transition-colors"
-                  style={{ color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                  className="flex items-center justify-center size-7 rounded-md transition-colors"
+                  style={{ backgroundColor: tableView ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                  onMouseEnter={(e) => { if (!tableView) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+                  onMouseLeave={(e) => { if (!tableView) e.currentTarget.style.backgroundColor = "transparent"; }}
                   title={tableView ? "תצוגת רשימה" : "תצוגת טבלה (עמודות מיושרות)"}
                 >
                   <Table size={17} />
