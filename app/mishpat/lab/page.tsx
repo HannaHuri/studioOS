@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronRight, ChevronLeft,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
@@ -964,7 +964,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMin ? 0.35 : 1, cursor: atMin ? "default" : "pointer" }}
           title="הקטנת החלונית"
         >
-          <ChevronRight size={15} />
+          <Minimize2 size={14} />
         </button>
         <button
           onClick={growSize}
@@ -973,7 +973,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMax ? 0.35 : 1, cursor: atMax ? "default" : "pointer", borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
           title="הרחבת החלונית"
         >
-          <ChevronLeft size={15} />
+          <Maximize2 size={14} />
         </button>
       </div>
       {onClosePanel && (
