@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, List, Table,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Table,
   ZoomIn, ZoomOut, GripHorizontal,
   type LucideIcon,
 } from "lucide-react";
@@ -1054,15 +1054,24 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           {/* View controls (left) — group by type, then the list/table toggle (left-most) */}
           {openCaseId && (
             <div className="flex items-center gap-3 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
-              <button
-                onClick={() => setGrouping((g) => { const next = g === "type" ? "chrono" : "type"; if (next === "type") setOpenType(null); return next; })}
-                className="flex items-center gap-1.5 h-7 whitespace-nowrap hover:opacity-80 transition-colors"
-                style={{ color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-                title="קיבוץ המסמכים לפי סוג"
-              >
-                <List size={16} />
-                <span className="text-[13px]" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>קבץ לפי סוג</span>
-              </button>
+              <div className="flex items-center h-7 rounded-md overflow-hidden flex-shrink-0 text-[13px]" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                <button
+                  onClick={() => setGrouping("chrono")}
+                  className="h-full px-2.5 transition-colors"
+                  style={{ backgroundColor: grouping === "chrono" ? c.primary : "transparent", color: grouping === "chrono" ? "white" : (isDark ? dk.textMuted : c.textGray) }}
+                  title="תצוגה כרונולוגית"
+                >
+                  כרונולוגי
+                </button>
+                <button
+                  onClick={() => { setGrouping("type"); setOpenType(null); }}
+                  className="h-full px-2.5 transition-colors"
+                  style={{ backgroundColor: grouping === "type" ? c.primary : "transparent", color: grouping === "type" ? "white" : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? dk.border : c.border}` }}
+                  title="קיבוץ המסמכים לפי סוג"
+                >
+                  לפי סוג
+                </button>
+              </div>
               {!isFocus && (
                 <button
                   onClick={() => { const next = !tableView; setTableView(next); onSetWidth?.(next ? 660 : 420); }}
