@@ -5,7 +5,7 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
-  Moon, MoreHorizontal, Minus, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Table,
   ZoomIn, ZoomOut, GripHorizontal,
@@ -940,42 +940,19 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   lensed.forEach((d) => { dateCount[d.iso] = (dateCount[d.iso] || 0) + 1; });
   const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
-  // Size stepper — 3 rungs (default → table → full-screen), same widths the table toggle itself uses.
-  // Two independent directions: growing steps default→table→full-screen; shrinking steps full-screen→table→default. Neither wraps — at an end, the matching button is a no-op.
-  const atMin = !tableView && !isFocus;
-  const atMax = isFocus;
-  const growSize = () => {
-    if (isFocus) return;
-    if (tableView) onToggleFocus?.();
-    else { setTableView(true); onSetWidth?.(660); }
-  };
-  const shrinkSize = () => {
-    if (isFocus) { onToggleFocus?.(); return; } // drops to table (tableView stays true)
-    if (tableView) { setTableView(false); onSetWidth?.(420); }
-  };
+  // Size control — binary only (default <-> full-screen). "Table" already has its own direct, independent toggle right next to this one,
+  // so it is not a rung here; a single swapping icon (like a video player's fullscreen button) is unambiguous with just two states.
   const lightBlueBtnStyle = { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary };
   const expandBtn = onToggleFocus ? (
     <div className="flex items-center gap-1.5 flex-shrink-0">
-      <div className="flex items-center rounded-md overflow-hidden flex-shrink-0" style={lightBlueBtnStyle}>
-        <button
-          onClick={shrinkSize}
-          disabled={atMin}
-          className="size-8 flex items-center justify-center transition-opacity hover:opacity-85"
-          style={{ opacity: atMin ? 0.35 : 1, cursor: atMin ? "default" : "pointer" }}
-          title="הקטנת החלונית"
-        >
-          <Minus size={15} />
-        </button>
-        <button
-          onClick={growSize}
-          disabled={atMax}
-          className="size-8 flex items-center justify-center transition-opacity hover:opacity-85"
-          style={{ opacity: atMax ? 0.35 : 1, cursor: atMax ? "default" : "pointer", borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
-          title="הרחבת החלונית"
-        >
-          <Plus size={15} />
-        </button>
-      </div>
+      <button
+        onClick={onToggleFocus}
+        className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85"
+        style={lightBlueBtnStyle}
+        title={isFocus ? "חזרה לתצוגה הרגילה" : "הרחבה למסך מלא"}
+      >
+        {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      </button>
       {onClosePanel && (
         <button
           onClick={onClosePanel}
