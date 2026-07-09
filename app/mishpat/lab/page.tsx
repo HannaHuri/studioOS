@@ -5,7 +5,7 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
-  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, Minus, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Table,
   ZoomIn, ZoomOut, GripHorizontal,
@@ -964,7 +964,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMin ? 0.35 : 1, cursor: atMin ? "default" : "pointer" }}
           title="הקטנת החלונית"
         >
-          <Minimize2 size={14} />
+          <Minus size={15} />
         </button>
         <button
           onClick={growSize}
@@ -973,7 +973,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           style={{ opacity: atMax ? 0.35 : 1, cursor: atMax ? "default" : "pointer", borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
           title="הרחבת החלונית"
         >
-          <Maximize2 size={14} />
+          <Plus size={15} />
         </button>
       </div>
       {onClosePanel && (
