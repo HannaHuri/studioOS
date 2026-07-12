@@ -147,7 +147,7 @@ const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
 const CASE_DOCS: CaseDoc[] = [
   {
     id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשות והוראות", submitter: "נתבע", submitterName: "המרכז הרפואי קדם בע״מ",
-    date: "02.06.26", time: "09:14", iso: "2026-06-02", bucket: "today", words: "1.1K",
+    date: "27.05.26", time: "09:14", iso: "2026-05-27", bucket: "week", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
     isNew: true, pending: true, file: "/studioOS/docs/motion-1.pdf", processId: 1, processLabel: "דחיית מועד דיון",
@@ -198,7 +198,7 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d9", name: "הודעה על הגשת ראיות נוספות", type: "בקשות והוראות", submitter: "תובע",
-    date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "420",
+    date: "01.06.26", time: "13:20", iso: "2026-06-01", bucket: "week", words: "420",
     summary: "התובע מודיע על כוונתו להגיש תיעוד רפואי עדכני שהצטבר לאחר הגשת התצהירים. הנתבע טרם הגיב.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/motion-3.pdf", processId: 3, processLabel: "הגשת ראיות נוספות",
   },
@@ -216,7 +216,7 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
-    date: "27.05.26", iso: "2026-05-27", bucket: "week", words: "390",
+    date: "02.06.26", time: "10:15", iso: "2026-06-02", bucket: "today", words: "390",
     summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
     related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false, file: "/studioOS/docs/decision-2.pdf",
   },
@@ -276,7 +276,7 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטות בתיק", submitter: "בית המשפט",
-    date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "300",
+    date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "300",
     summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.", processId: 3, processLabel: "הגשת ראיות נוספות",
     related: ["הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
   },
