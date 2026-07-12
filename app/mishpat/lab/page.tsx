@@ -868,7 +868,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         if (b.processId == null) return -1;
         return (a.processId - b.processId) * dir;
       }
-      return (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0) * dir; // date
+      // date — same-day docs also order by time (falls back to "00:00" when no time is set)
+      const at = `${a.iso} ${a.time ?? "00:00"}`, bt = `${b.iso} ${b.time ?? "00:00"}`;
+      return (at < bt ? -1 : at > bt ? 1 : 0) * dir;
     });
   };
   // List view (default) shows essentials + a meta line under the summary; table view spreads to aligned columns
@@ -925,7 +927,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Filtering — scoped to the currently open case
   const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
 
-  const filteredSorted = [...filtered].sort((a, b) => b.iso.localeCompare(a.iso)); // newest first
+  const filteredSorted = [...filtered].sort((a, b) => `${b.iso} ${b.time ?? "00:00"}`.localeCompare(`${a.iso} ${a.time ?? "00:00"}`)); // newest first, same-day ties broken by time
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-06-01";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
@@ -1074,7 +1076,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   style={{ backgroundColor: tableView ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: tableView ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
                   onMouseEnter={(e) => { if (!tableView) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
                   onMouseLeave={(e) => { if (!tableView) e.currentTarget.style.backgroundColor = "transparent"; }}
-                  title={tableView ? "תצוגת רשימה" : "תצוגת טבלה (עמודות מיושרות)"}
+                  title={tableView ? "תצוגת רשימה" : "הרחב לטבלה"}
                 >
                   <Table size={17} />
                 </button>
