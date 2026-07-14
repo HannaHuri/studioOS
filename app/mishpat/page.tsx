@@ -717,14 +717,14 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             style={{
               backgroundColor: agentMode ? c.primaryLight : "transparent",
               border: "none",
-              color: agentMode ? c.primary : c.iconGray,
+              color: c.iconGray,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
-            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.border; }}
+            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = "#DCDFEC"; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
           >
-            <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "1px" }} />
+            <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />
             <span>סוכנים</span>
           </button>
 
