@@ -709,26 +709,29 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <ArrowUp size={17} />
           </button>
 
-          {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Agent-mode toggle — grouped with citations (same size/style family), right before it */}
+          {/* Agent-mode chip — icon + label, deliberately not icon-only so it doesn't read as "just another small toggle" like citations */}
           <button
             onClick={() => setAgentMode((v) => !v)}
-            className="size-6 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            dir="rtl"
+            className="flex items-center gap-1 h-7 px-2.5 rounded-full flex-shrink-0 text-[12.5px] transition-colors"
             style={{
               backgroundColor: agentMode ? c.primaryLight : "transparent",
               border: `1px solid ${agentMode ? c.primary : c.border}`,
-              color: c.iconGray,
+              color: agentMode ? c.primary : c.iconGray,
+              fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
             onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
           >
-            <Bot size={16} />
+            <Bot size={14} />
+            סוכנים
           </button>
+
+          {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
+
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* Citations toggle — left of case info */}
           <button
