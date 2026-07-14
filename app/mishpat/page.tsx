@@ -713,19 +713,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           <button
             onClick={() => setAgentMode((v) => !v)}
             dir="rtl"
-            className="flex items-center gap-1 h-7 px-2.5 rounded-lg flex-shrink-0 text-[12.5px] transition-colors"
+            className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
             style={{
               backgroundColor: agentMode ? c.primaryLight : "transparent",
-              border: `1px solid ${agentMode ? c.primary : c.border}`,
+              border: "none",
               color: agentMode ? c.primary : c.iconGray,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
-            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.border; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
           >
-            <Bot size={14} style={{ flexShrink: 0, display: "block" }} />
-            <span style={{ lineHeight: 1 }}>סוכנים</span>
+            <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "1px" }} />
+            <span>סוכנים</span>
           </button>
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
