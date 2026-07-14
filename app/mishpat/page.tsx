@@ -562,12 +562,12 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
 // Agent-mode progress steps — dev team: replace the fixed timers with real step transitions from the backend
-const AGENT_STEPS: { Icon: LucideIcon; text: string }[] = [
-  { Icon: Search, text: "בודק את נתוני התיק..." },
-  { Icon: ClipboardList, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: Layers, text: "מאתר מידע רלוונטי בתיק..." },
-  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
-  { Icon: Sparkles, text: "מסכם את המסקנות..." },
+const AGENT_STEPS: { Icon: LucideIcon; text: string; doneText?: string }[] = [
+  { Icon: Search, text: "בודק את נתוני התיק...", doneText: "התיק נסרק בהצלחה" },
+  { Icon: ClipboardList, text: "מגבש תכנית עבודה למענה...", doneText: "תכנית עבודה מוכנה" },
+  { Icon: Layers, text: "מאתר מידע רלוונטי בתיק...", doneText: "נמצאו נתונים רלוונטיים" },
+  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." }, // no confirmation beat — moves straight to the last step
+  { Icon: Sparkles, text: "מסכם את המסקנות..." }, // no confirmation beat — replaced directly by the final answer
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
@@ -592,14 +592,20 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of fixed delays)
   useEffect(() => {
     if (!agentRunning) return;
+    const step = AGENT_STEPS[agentStep];
     if (agentStepDone) {
+      // Confirmation beat (check + doneText) before advancing — only steps with a doneText get one
       const t = setTimeout(() => {
         if (agentStep < AGENT_STEPS.length - 1) { setAgentStep((s) => s + 1); setAgentStepDone(false); }
         else setAgentRunning(false);
-      }, 500);
+      }, 900);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setAgentStepDone(true), 1100);
+    const t = setTimeout(() => {
+      if (step.doneText) { setAgentStepDone(true); return; } // show confirmation beat
+      if (agentStep < AGENT_STEPS.length - 1) setAgentStep((s) => s + 1); // no confirmation — go straight to next step
+      else setAgentRunning(false); // last step, no confirmation — reveal the final answer
+    }, 1800);
     return () => clearTimeout(t);
   }, [agentRunning, agentStep, agentStepDone]);
 
@@ -641,22 +647,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
 
   // Live step-tracker shown in place of the answer while an agent-mode message is still processing
   function renderAgentProgress() {
-    const { Icon, text } = AGENT_STEPS[agentStep];
+    const step = AGENT_STEPS[agentStep];
+    const showDone = agentStepDone && !!step.doneText;
+    const Icon = step.Icon;
     return (
       <div className="flex items-center gap-2" dir="rtl">
-        {agentStepDone
-          ? <Check size={16} style={{ color: c.iconGray, flexShrink: 0 }} />
-          : <Icon size={17} style={{ color: c.primary, flexShrink: 0, animation: "agentPulse 1.4s ease-in-out infinite" }} />}
+        {showDone
+          ? <Check size={16} style={{ color: "#0f8a5f", flexShrink: 0 }} />
+          : <Icon size={17} style={{ color: c.primary, flexShrink: 0, animation: "agentPulse 1.8s ease-in-out infinite" }} />}
         <span
           className="text-[15px]"
-          style={{
-            color: agentStepDone ? c.textLight : textCol,
-            textDecoration: agentStepDone ? "line-through" : "none",
-            textDecorationColor: c.border,
-            fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
-          }}
+          style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
         >
-          {text}
+          {showDone ? step.doneText : step.text}
         </span>
         <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>
           ({agentStep + 1}/{AGENT_STEPS.length})
@@ -706,6 +709,22 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <ArrowUp size={17} />
           </button>
 
+          {/* Agent-mode toggle — right next to send; independent of scope, can run alongside any scope level */}
+          <button
+            onClick={() => setAgentMode((v) => !v)}
+            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            style={{
+              backgroundColor: agentMode ? c.primaryLight : "transparent",
+              border: `1px solid ${agentMode ? c.primary : c.border}`,
+              color: agentMode ? c.primary : c.iconGray,
+            }}
+            title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
+            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
+          >
+            <Bot size={16} />
+          </button>
+
           {/* Scope selector — plain text + chevron, no frame */}
           <button
             ref={scopeBtnRef}
@@ -727,22 +746,6 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               size={11}
               style={{ transition: "transform 0.15s", transform: scopeOpen ? "rotate(180deg)" : "none" }}
             />
-          </button>
-
-          {/* Agent-mode toggle — independent of scope, can run alongside any scope level */}
-          <button
-            onClick={() => setAgentMode((v) => !v)}
-            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{
-              backgroundColor: agentMode ? c.primaryLight : "transparent",
-              border: `1px solid ${agentMode ? c.primary : c.border}`,
-              color: agentMode ? c.primary : c.iconGray,
-            }}
-            title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
-            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
-          >
-            <Bot size={16} />
           </button>
 
           {/* Spacer */}
