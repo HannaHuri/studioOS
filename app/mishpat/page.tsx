@@ -725,28 +725,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <Bot size={16} />
           </button>
 
-          {/* Scope selector — plain text + chevron, no frame */}
-          <button
-            ref={scopeBtnRef}
-            onClick={handleScopeToggle}
-            dir="rtl"
-            className="flex items-center gap-0.5 h-8 pl-1 pr-2 rounded flex-shrink-0 text-[14px]"
-            style={{
-              color: isDark ? dk.textMuted : c.textGray,
-              backgroundColor: "transparent",
-              border: "none",
-              fontFamily: "Noto Sans Hebrew, sans-serif",
-              cursor: "pointer",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = isDark ? dk.text : c.text; e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.color = isDark ? dk.textMuted : c.textGray; e.currentTarget.style.backgroundColor = "transparent"; }}
-          >
-            {scope}
-            <ChevronDown
-              size={11}
-              style={{ transition: "transform 0.15s", transform: scopeOpen ? "rotate(180deg)" : "none" }}
-            />
-          </button>
+          {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
 
           {/* Spacer */}
           <div className="flex-1" />
