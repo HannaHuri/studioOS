@@ -941,9 +941,9 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   </div>
                   <div>
                     <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
-                      {msg.isFirst ? renderFirstAnswer()
-                        : showingAgentProgress ? renderAgentProgress()
+                      {showingAgentProgress ? renderAgentProgress()
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
+                        : msg.isFirst ? renderFirstAnswer()
                         : <p>מעבד את שאלתך...</p>}
                     </div>
                     {!showingAgentProgress && <MessageActions isDark={isDark} showBadges={showBadges} onToggleBadges={() => setShowBadges((v) => !v)} />}
