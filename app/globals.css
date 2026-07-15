@@ -37,6 +37,11 @@ button:not(:disabled) { cursor: pointer; }
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.45; }
 }
+/* Subtle size pulse — grows by only a few px (not the earlier 1.15) to keep the blur from scaling minimal */
+@keyframes agentPulseSize {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

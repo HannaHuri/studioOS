@@ -562,11 +562,10 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
-const AGENT_STEPS: { Icon: LucideIcon; text: string }[] = [
+const AGENT_STEPS: { Icon: LucideIcon; text: string; subIcon?: LucideIcon; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק..." },
   { Icon: Route, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: ChartScatter, text: "מנתח את מורכבות הבקשה..." },
-  { Icon: CircleCheckBig, text: "הבקשה תטופל כמשימה אחת מרוכזת" },
+  { Icon: ChartScatter, text: "מנתח את מורכבות הבקשה...", subIcon: CircleCheckBig, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
   { Icon: FolderSearch, text: "מאתר מידע רלוונטי בתיק..." },
   { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
   { Icon: Sparkles, text: "מסכם את המסקנות..." },
@@ -589,17 +588,26 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentMode, setAgentMode] = useState(false);      // independent of scope — can run alongside any scope level
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
+  const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
-  // No per-step confirmation — each step's icon/text simply holds, then the next one replaces it.
   useEffect(() => {
     if (!agentRunning) return;
+    const step = AGENT_STEPS[agentStep];
+    if (agentSub) {
+      const t = setTimeout(() => {
+        if (agentStep < AGENT_STEPS.length - 1) { setAgentStep((s) => s + 1); setAgentSub(false); }
+        else setAgentRunning(false);
+      }, 1400);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => {
+      if (step.subText) { setAgentSub(true); return; } // hold on a static sub-line before advancing
       if (agentStep < AGENT_STEPS.length - 1) setAgentStep((s) => s + 1);
       else setAgentRunning(false); // last step done — reveal the final answer
     }, 3200);
     return () => clearTimeout(t);
-  }, [agentRunning, agentStep]);
+  }, [agentRunning, agentStep, agentSub]);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -634,21 +642,31 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentRunning(true); }
   }
 
   // Live step-tracker shown in place of the answer while an agent-mode message is still processing
   function renderAgentProgress() {
     const step = AGENT_STEPS[agentStep];
-    const Icon = step.Icon;
+    const showSub = agentSub && !!step.subIcon;
+    const Icon = showSub ? step.subIcon! : step.Icon;
     return (
-      <div className="flex items-center gap-2" dir="rtl">
-        <Icon size={19} strokeWidth={2.1} style={{ color: c.primary, flexShrink: 0, animation: "agentPulseFade 1.8s ease-in-out infinite" }} />
+      <div className="flex items-center gap-2" dir="rtl" style={{ marginTop: "8px" }}>
+        <Icon
+          size={19}
+          strokeWidth={1.8}
+          style={{
+            color: c.primary,
+            flexShrink: 0,
+            willChange: "transform",
+            animation: showSub ? "none" : "agentPulseSize 1.8s ease-in-out infinite",
+          }}
+        />
         <span
-          className="text-[15px]"
-          style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
+          className="text-[14px]"
+          style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
         >
-          {step.text}
+          {showSub ? step.subText : step.text}
         </span>
         <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>
           ({agentStep + 1}/{AGENT_STEPS.length})
