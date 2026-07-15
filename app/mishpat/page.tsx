@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Sparkles, Target, SpellCheck,
+  Bot, Sparkles, Target, Brain, Merge,
   type LucideIcon,
 } from "lucide-react";
 
@@ -565,7 +565,8 @@ type Message = { q: string; isFirst: boolean; agent?: boolean };
 const AGENT_STEPS: { Icon: LucideIcon; text: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק..." },
   { Icon: Target, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: SpellCheck, text: "מבצע הגהה לטקסט שצירפת..." },
+  { Icon: Brain, text: "מנתח את מורכבות הבקשה..." },
+  { Icon: Merge, text: "הבקשה תטופל כמשימה אחת מרוכזת" },
   { Icon: Link, text: "מאתר מידע רלוונטי בתיק..." },
   { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
   { Icon: Sparkles, text: "מסכם את המסקנות..." },
@@ -642,7 +643,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     const Icon = step.Icon;
     return (
       <div className="flex items-center gap-2" dir="rtl">
-        <Icon size={17} style={{ color: c.iconGray, flexShrink: 0, animation: "agentPulse 1.8s ease-in-out infinite" }} />
+        <Icon size={19} strokeWidth={2.4} style={{ color: c.primary, flexShrink: 0, animation: "agentPulseFade 1.8s ease-in-out infinite" }} />
         <span
           className="text-[15px]"
           style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
