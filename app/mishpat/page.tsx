@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Compass, Gauge, Database, Flag,
+  Bot, Compass, Scale, Database, Flag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -565,7 +565,7 @@ type Message = { q: string; isFirst: boolean; agent?: boolean };
 const AGENT_STEPS: { Icon: LucideIcon; text: string; subIcon?: LucideIcon; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק..." },
   { Icon: Compass, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: Gauge, text: "מנתח את מורכבות הבקשה...", subIcon: Check, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
+  { Icon: Scale, text: "מנתח את מורכבות הבקשה...", subIcon: Check, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
   { Icon: Database, text: "מאתר מידע רלוונטי בתיק..." },
   { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
   { Icon: Flag, text: "מסכם את המסקנות..." },
