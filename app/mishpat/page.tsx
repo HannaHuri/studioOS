@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, ClipboardList, Sparkles,
+  Bot, Sparkles, Target, SpellCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -561,13 +561,14 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
-// Agent-mode progress steps — dev team: replace the fixed timers with real step transitions from the backend
-const AGENT_STEPS: { Icon: LucideIcon; text: string; doneText?: string }[] = [
-  { Icon: Search, text: "בודק את נתוני התיק...", doneText: "התיק נסרק בהצלחה" },
-  { Icon: ClipboardList, text: "מגבש תכנית עבודה למענה...", doneText: "תכנית עבודה מוכנה" },
-  { Icon: Layers, text: "מאתר מידע רלוונטי בתיק...", doneText: "נמצאו נתונים רלוונטיים" },
-  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." }, // no confirmation beat — moves straight to the last step
-  { Icon: Sparkles, text: "מסכם את המסקנות..." }, // no confirmation beat — replaced directly by the final answer
+// Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
+const AGENT_STEPS: { Icon: LucideIcon; text: string }[] = [
+  { Icon: Search, text: "בודק את נתוני התיק..." },
+  { Icon: Target, text: "מגבש תכנית עבודה למענה..." },
+  { Icon: SpellCheck, text: "מבצע הגהה לטקסט שצירפת..." },
+  { Icon: Link, text: "מאתר מידע רלוונטי בתיק..." },
+  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
+  { Icon: Sparkles, text: "מסכם את המסקנות..." },
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
@@ -587,27 +588,17 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentMode, setAgentMode] = useState(false);      // independent of scope — can run alongside any scope level
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
-  const [agentStepDone, setAgentStepDone] = useState(false); // brief checkmark beat before advancing to the next step
 
-  // Demo-only timer chain (dev team: drive this from real step-completion events instead of fixed delays)
+  // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
+  // No per-step confirmation — each step's icon/text simply holds, then the next one replaces it.
   useEffect(() => {
     if (!agentRunning) return;
-    const step = AGENT_STEPS[agentStep];
-    if (agentStepDone) {
-      // Confirmation beat (check + doneText) before advancing — only steps with a doneText get one
-      const t = setTimeout(() => {
-        if (agentStep < AGENT_STEPS.length - 1) { setAgentStep((s) => s + 1); setAgentStepDone(false); }
-        else setAgentRunning(false);
-      }, 900);
-      return () => clearTimeout(t);
-    }
     const t = setTimeout(() => {
-      if (step.doneText) { setAgentStepDone(true); return; } // show confirmation beat
-      if (agentStep < AGENT_STEPS.length - 1) setAgentStep((s) => s + 1); // no confirmation — go straight to next step
-      else setAgentRunning(false); // last step, no confirmation — reveal the final answer
-    }, 1800);
+      if (agentStep < AGENT_STEPS.length - 1) setAgentStep((s) => s + 1);
+      else setAgentRunning(false); // last step done — reveal the final answer
+    }, 3200);
     return () => clearTimeout(t);
-  }, [agentRunning, agentStep, agentStepDone]);
+  }, [agentRunning, agentStep]);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -642,24 +633,21 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentStepDone(false); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentRunning(true); }
   }
 
   // Live step-tracker shown in place of the answer while an agent-mode message is still processing
   function renderAgentProgress() {
     const step = AGENT_STEPS[agentStep];
-    const showDone = agentStepDone && !!step.doneText;
     const Icon = step.Icon;
     return (
       <div className="flex items-center gap-2" dir="rtl">
-        {showDone
-          ? <Check size={16} style={{ color: "#0f8a5f", flexShrink: 0 }} />
-          : <Icon size={17} style={{ color: c.primary, flexShrink: 0, animation: "agentPulse 1.8s ease-in-out infinite" }} />}
+        <Icon size={17} style={{ color: c.iconGray, flexShrink: 0, animation: "agentPulse 1.8s ease-in-out infinite" }} />
         <span
           className="text-[15px]"
           style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
         >
-          {showDone ? step.doneText : step.text}
+          {step.text}
         </span>
         <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>
           ({agentStep + 1}/{AGENT_STEPS.length})
