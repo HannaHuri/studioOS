@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Sparkles, Route, ChartScatter, CircleCheckBig, FolderSearch,
+  Bot, Compass, Gauge, Database, Flag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -564,11 +564,11 @@ type Message = { q: string; isFirst: boolean; agent?: boolean };
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const AGENT_STEPS: { Icon: LucideIcon; text: string; subIcon?: LucideIcon; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק..." },
-  { Icon: Route, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: ChartScatter, text: "מנתח את מורכבות הבקשה...", subIcon: CircleCheckBig, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
-  { Icon: FolderSearch, text: "מאתר מידע רלוונטי בתיק..." },
+  { Icon: Compass, text: "מגבש תכנית עבודה למענה..." },
+  { Icon: Gauge, text: "מנתח את מורכבות הבקשה...", subIcon: Check, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
+  { Icon: Database, text: "מאתר מידע רלוונטי בתיק..." },
   { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
-  { Icon: Sparkles, text: "מסכם את המסקנות..." },
+  { Icon: Flag, text: "מסכם את המסקנות..." },
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
@@ -598,7 +598,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       const t = setTimeout(() => {
         if (agentStep < AGENT_STEPS.length - 1) { setAgentStep((s) => s + 1); setAgentSub(false); }
         else setAgentRunning(false);
-      }, 1400);
+      }, 2800);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
