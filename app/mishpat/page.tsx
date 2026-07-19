@@ -99,6 +99,15 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
+// ── Response-mode selector (agents vs. direct chat) ─────────────────────────
+type ResponseMode = "agents" | "direct";
+const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct"];
+const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
+  agents: { label: "סוכנים",   desc: "ניתוח מעמיק למקרים מורכבים",   Icon: Bot },
+  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות כלליות",      Icon: MessageSquare },
+};
+const RESPONSE_MODE_TITLE = "שיטת המענה המועדפת";
+
 type DocItem = { name: string; words: string; summary: string };
 const initialDocs: { name: string; count: string; checked: boolean; items: DocItem[] }[] = [
   { name: "כתב תביעה", count: "320K", checked: false, items: [
@@ -585,7 +594,11 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [sendPressed, setSendPressed] = useState(false);
-  const [agentMode, setAgentMode] = useState(false);      // independent of scope — can run alongside any scope level
+  const [responseMode, setResponseMode] = useState<ResponseMode>("direct"); // independent of scope — can run alongside any scope level
+  const [modeOpen, setModeOpen] = useState(false);
+  const modeBtnRef = useRef<HTMLButtonElement>(null);
+  const [modePos, setModePos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const agentMode = responseMode === "agents";
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -623,6 +636,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     setScopeOpen(v => !v);
   }
 
+  function handleModeToggle() {
+    if (!modeOpen && modeBtnRef.current) {
+      const r = modeBtnRef.current.getBoundingClientRect();
+      const rightEdge = window.innerWidth - r.right;
+      if (isEmpty) {
+        setModePos({ top: r.bottom + 4, right: rightEdge });
+      } else {
+        setModePos({ bottom: window.innerHeight - r.top + 4, right: rightEdge });
+      }
+    }
+    setModeOpen(v => !v);
+  }
+
   useEffect(() => {
     setShowCitations(true);
     setShowBadges(true);
@@ -645,32 +671,42 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentRunning(true); }
   }
 
-  // Live step-tracker shown in place of the answer while an agent-mode message is still processing
+  // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
+  // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
-    const step = AGENT_STEPS[agentStep];
-    const showSub = agentSub && !!step.subIcon;
-    const Icon = showSub ? step.subIcon! : step.Icon;
     return (
-      <div className="flex items-center gap-2" dir="rtl" style={{ marginTop: "8px" }}>
-        <Icon
-          size={19}
-          strokeWidth={1.8}
-          style={{
-            color: c.primary,
-            flexShrink: 0,
-            willChange: "transform",
-            animation: showSub ? "none" : "agentPulseSize 1.8s ease-in-out infinite",
-          }}
-        />
-        <span
-          className="text-[14px]"
-          style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
-        >
-          {showSub ? step.subText : step.text}
-        </span>
-        <span className="text-[12px]" style={{ color: c.textLight, fontFamily: "Figtree, sans-serif" }}>
-          ({agentStep + 1}/{AGENT_STEPS.length})
-        </span>
+      <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
+        {AGENT_STEPS.map((step, i) => {
+          const done = i < agentStep;
+          const isCurrent = i === agentStep;
+          const showSub = isCurrent && agentSub && !!step.subIcon;
+          const Icon = done ? Check : showSub ? step.subIcon! : step.Icon;
+          const label = showSub ? step.subText : step.text;
+          const color = done ? "#00c875" : isCurrent ? c.primary : c.textLight;
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <Icon
+                size={17}
+                strokeWidth={done ? 2.3 : 1.8}
+                style={{
+                  color,
+                  flexShrink: 0,
+                  willChange: "transform",
+                  animation: isCurrent && !showSub ? "agentPulseSize 1.8s ease-in-out infinite" : "none",
+                }}
+              />
+              <span
+                className="text-[14px]"
+                style={{
+                  color: isCurrent ? c.textGray : done ? c.textGray : c.textLight,
+                  fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -716,9 +752,10 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <ArrowUp size={17} />
           </button>
 
-          {/* Agent-mode chip — icon + label, deliberately not icon-only so it doesn't read as "just another small toggle" like citations */}
+          {/* Response-mode selector — icon + label + chevron, opens a dropdown to pick agents vs. direct chat */}
           <button
-            onClick={() => setAgentMode((v) => !v)}
+            ref={modeBtnRef}
+            onClick={handleModeToggle}
             dir="rtl"
             className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
             style={{
@@ -727,12 +764,16 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               color: c.iconGray,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
-            title={agentMode ? "מענה בסוכנים מופעל — מענה מעמיק בכמה שלבים, עשוי לקחת מספר דקות" : "מענה בסוכנים כבוי"}
+            title="שיטת המענה"
             onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = "#DCDFEC"; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
           >
             <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />
             <span>סוכנים</span>
+            <ChevronDown
+              size={11}
+              style={{ transition: "transform 0.15s", transform: modeOpen ? "rotate(180deg)" : "none" }}
+            />
           </button>
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
@@ -896,6 +937,78 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     );
   }
 
+  // ── Response-mode dropdown (portal-like, fixed position) ────────────────
+  function renderModeDropdown() {
+    if (!modeOpen || !modePos) return null;
+    return (
+      <>
+        {/* Overlay */}
+        <div className="fixed inset-0 z-[190]" onClick={() => setModeOpen(false)} />
+        {/* Dropdown */}
+        <div
+          style={{
+            position: "fixed",
+            ...(modePos.top !== undefined ? { top: modePos.top } : { bottom: modePos.bottom }),
+            right: modePos.right,
+            zIndex: 200,
+            backgroundColor: "white",
+            borderRadius: "12px",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+            width: "300px",
+            overflow: "hidden",
+          }}
+          dir="rtl"
+        >
+          {/* Header */}
+          <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}`, lineHeight: 1.3 }}>
+            <span className="text-[14px] font-medium" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {RESPONSE_MODE_TITLE}
+            </span>
+          </div>
+          {/* Options */}
+          {RESPONSE_MODE_ORDER.map(opt => {
+            const isCurrent = opt === responseMode;
+            const { label, desc, Icon } = RESPONSE_MODE_CONFIG[opt];
+            return (
+              <button
+                key={opt}
+                onClick={() => { setResponseMode(opt); setModeOpen(false); }}
+                className="w-full flex items-start justify-between px-4 py-3 text-right"
+                style={{ backgroundColor: "transparent", cursor: "pointer" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span
+                    className="flex items-center gap-1.5 text-[14px]"
+                    style={{
+                      fontWeight: isCurrent ? 600 : 400,
+                      color: isCurrent ? c.primary : c.text,
+                      fontFamily: "Noto Sans Hebrew, sans-serif",
+                    }}
+                  >
+                    <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0 }} />
+                    {label}
+                  </span>
+                  <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                    {desc}
+                  </span>
+                </div>
+                {isCurrent && (
+                  <div className="flex-shrink-0 mt-0.5">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M2 7L5.5 10.5L12 3.5" stroke={c.primary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
   // ── Empty state ────────────────────────────────────────────────────────
   if (isEmpty) {
     return (
@@ -913,6 +1026,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           </div>
         </div>
         {renderScopeDropdown()}
+        {renderModeDropdown()}
       </>
     );
   }
@@ -954,6 +1068,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         </div>
       </div>
       {renderScopeDropdown()}
+      {renderModeDropdown()}
     </>
   );
 }
