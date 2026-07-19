@@ -104,7 +104,7 @@ type ResponseMode = "agents" | "direct";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
   agents: { label: "סוכנים",   desc: "ניתוח מעמיק למקרים מורכבים",   Icon: Bot },
-  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות כלליות",      Icon: MessageSquare },
+  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות כלליות",      Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 
@@ -567,17 +567,37 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
   );
 }
 
+// ── Animated "..." — shown next to the agent step currently in progress ────
+function AgentDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          className="inline-block rounded-full"
+          style={{
+            width: 3.5,
+            height: 3.5,
+            backgroundColor: c.primary,
+            animation: `agentDotPulse 1.2s ease-in-out ${i * 0.15}s infinite`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
-const AGENT_STEPS: { Icon: LucideIcon; text: string; subIcon?: LucideIcon; subText?: string }[] = [
-  { Icon: Search, text: "בודק את נתוני התיק..." },
-  { Icon: Compass, text: "מגבש תכנית עבודה למענה..." },
-  { Icon: Scale, text: "מנתח את מורכבות הבקשה...", subIcon: Check, subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
-  { Icon: Database, text: "מאתר מידע רלוונטי בתיק..." },
-  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע..." },
-  { Icon: Flag, text: "מסכם את המסקנות..." },
+const AGENT_STEPS: { Icon: LucideIcon; text: string; subText?: string }[] = [
+  { Icon: Search, text: "בודק את נתוני התיק" },
+  { Icon: Compass, text: "מגבש תכנית עבודה למענה" },
+  { Icon: Scale, text: "מנתח את מורכבות הבקשה", subText: "התשובה תינתן בחלק אחד" },
+  { Icon: Database, text: "מאתר מידע רלוונטי בתיק" },
+  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
+  { Icon: Flag, text: "מכין את התשובה הסופית" },
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
@@ -679,9 +699,8 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         {AGENT_STEPS.map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
-          const showSub = isCurrent && agentSub && !!step.subIcon;
-          const Icon = done ? Check : showSub ? step.subIcon! : step.Icon;
-          const label = showSub ? step.subText : step.text;
+          const showSub = isCurrent && agentSub && !!step.subText;
+          const Icon = done ? Check : step.Icon;
           const color = done ? "#00c875" : isCurrent ? c.primary : c.textLight;
           return (
             <div key={i} className="flex items-center gap-2">
@@ -692,7 +711,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   color,
                   flexShrink: 0,
                   willChange: "transform",
-                  animation: isCurrent && !showSub ? "agentPulseSize 1.8s ease-in-out infinite" : "none",
+                  animation: isCurrent ? "agentPulseSize 1.8s ease-in-out infinite" : "none",
                 }}
               />
               <span
@@ -702,8 +721,10 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
                 }}
               >
-                {label}
+                {step.text}
+                {showSub && <> — {step.subText}</>}
               </span>
+              {isCurrent && <AgentDots />}
             </div>
           );
         })}
