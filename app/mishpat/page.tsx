@@ -106,7 +106,7 @@ const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; 
   agents: { label: "סוכנים",   desc: "ניתוח מעמיק למקרים מורכבים",   Icon: Bot },
   direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות כלליות",      Icon: MessageSquare },
 };
-const RESPONSE_MODE_TITLE = "שיטת המענה המועדפת";
+const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 
 type DocItem = { name: string; words: string; summary: string };
 const initialDocs: { name: string; count: string; checked: boolean; items: DocItem[] }[] = [
@@ -594,7 +594,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [sendPressed, setSendPressed] = useState(false);
-  const [responseMode, setResponseMode] = useState<ResponseMode>("direct"); // independent of scope — can run alongside any scope level
+  const [responseMode, setResponseMode] = useState<ResponseMode>("agents"); // independent of scope — can run alongside any scope level
   const [modeOpen, setModeOpen] = useState(false);
   const modeBtnRef = useRef<HTMLButtonElement>(null);
   const [modePos, setModePos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
@@ -759,14 +759,14 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             dir="rtl"
             className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
             style={{
-              backgroundColor: agentMode ? c.primaryLight : "transparent",
+              backgroundColor: "transparent",
               border: "none",
               color: c.iconGray,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title="שיטת המענה"
-            onMouseEnter={e => { if (!agentMode) e.currentTarget.style.backgroundColor = "#DCDFEC"; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = agentMode ? c.primaryLight : "transparent"; }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
             <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />
             <span>סוכנים</span>
@@ -961,7 +961,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         >
           {/* Header */}
           <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}`, lineHeight: 1.3 }}>
-            <span className="text-[14px] font-medium" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {RESPONSE_MODE_TITLE}
             </span>
           </div>
