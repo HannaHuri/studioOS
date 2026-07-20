@@ -7,9 +7,21 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, SortDesc, Activity, Folder, Loader, Send,
+  Bot, Activity, Folder, Terminal, Send,
   type LucideIcon,
 } from "lucide-react";
+
+// list-sort-descending — not yet published in our installed lucide-react version;
+// hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
+function ListSortDescendingIcon({ size = 24, strokeWidth = 2, style }: { size?: number; strokeWidth?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M15 12H3" />
+      <path d="M3 5h18" />
+      <path d="M9 19H3" />
+    </svg>
+  );
+}
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const c = {
@@ -591,12 +603,13 @@ function AgentEllipsis() {
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
-const AGENT_STEPS: { Icon: LucideIcon; text: string; subText?: string }[] = [
+type StepIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
+const AGENT_STEPS: { Icon: StepIcon; text: string; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
-  { Icon: SortDesc, text: "מגבש תכנית עבודה למענה" },
+  { Icon: ListSortDescendingIcon, text: "מגבש תכנית עבודה למענה" },
   { Icon: Activity, text: "מנתח את מורכבות הבקשה", subText: "התשובה תינתן בחלק אחד" },
   { Icon: Folder, text: "מאתר מידע רלוונטי בתיק" },
-  { Icon: Loader, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
+  { Icon: Terminal, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
   { Icon: Send, text: "מכין את התשובה הסופית" },
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
@@ -705,7 +718,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           const color = done ? "#00854d" : c.textLight;
           return (
-            <div key={i} className="flex items-center gap-0.5">
+            <div key={i} className="flex items-center gap-1">
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
