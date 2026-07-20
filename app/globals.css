@@ -42,6 +42,11 @@ button:not(:disabled) { cursor: pointer; }
   0%, 80%, 100% { transform: scale(0.6); }
   40%           { transform: scale(1); }
 }
+/* Each agent step row fades/slides in as it's revealed, one at a time */
+@keyframes agentRowIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

@@ -580,7 +580,7 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 }
 
 // ── "Thinking" dots — Gemini-style: solid grey balls bouncing in scale, never fading — shown next to the step in progress ──
-function AgentEllipsis({ marginInlineStart = 8 }: { marginInlineStart?: number }) {
+function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number }) {
   return (
     <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart }}>
       {[0, 1, 2].map(i => (
@@ -636,12 +636,20 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before the step list itself appears
+  const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time once the intro ends
 
   useEffect(() => {
     if (!agentRunning || !agentIntro) return;
     const t = setTimeout(() => setAgentIntro(false), 1400);
     return () => clearTimeout(t);
   }, [agentRunning, agentIntro]);
+
+  // Stagger the rows in — one line, a short beat, the next line, etc. — instead of dropping the whole list at once.
+  useEffect(() => {
+    if (!agentRunning || agentIntro || revealedSteps >= AGENT_STEPS.length) return;
+    const t = setTimeout(() => setRevealedSteps((n) => n + 1), 220);
+    return () => clearTimeout(t);
+  }, [agentRunning, agentIntro, revealedSteps]);
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
@@ -708,7 +716,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentIntro(true); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentIntro(true); setRevealedSteps(0); setAgentRunning(true); }
   }
 
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
@@ -723,7 +731,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     }
     return (
       <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
-        {AGENT_STEPS.map((step, i) => {
+        {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
           // Once the "one-part answer" note has appeared, it stays — it doesn't ride along with agentSub anymore.
@@ -732,7 +740,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           const color = done ? "#00854d" : c.textLight;
           return (
-            <div key={i} className="flex items-center gap-1.5">
+            <div key={i} className="flex items-center gap-1.5" style={{ animation: "agentRowIn 0.25s ease-out" }}>
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
