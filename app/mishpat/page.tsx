@@ -24,6 +24,8 @@ function ListSortDescendingIcon({ size = 24, strokeWidth = 2, style }: { size?: 
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────
+const FOOTER_HEIGHT = 48; // page-level disclaimer footer
+
 const c = {
   primary: "#0073ea",
   primaryLight: "#cce5ff",
@@ -879,17 +881,6 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     );
   }
 
-  function renderDisclaimer() {
-    return (
-      <p
-        className="text-[14px] mt-2"
-        style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", textAlign: "center" }}
-      >
-        תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
-      </p>
-    );
-  }
-
   function renderFirstAnswer() {
     const showNum = showCitations && showBadges;
     return (
@@ -1083,7 +1074,6 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               שלום, טל. במה אוכל לעזור?
             </p>
             {renderInput()}
-            {renderDisclaimer()}
           </div>
         </div>
         {renderScopeDropdown()}
@@ -1124,7 +1114,6 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         <div className="px-6 pb-4 pt-2 flex flex-col items-center">
           <div className="w-full max-w-[768px]">
             {renderInput()}
-            {renderDisclaimer()}
           </div>
         </div>
       </div>
@@ -1331,7 +1320,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div className="absolute top-16 left-0 right-0 flex" style={{ bottom: FOOTER_HEIGHT }} dir="ltr">
         {/* ── LEFT: Documents — column that PUSHES the chat (push mode); a 40px rail launcher in drawer mode ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
@@ -1443,6 +1432,25 @@ export default function MishpatPage() {
           <span style={{ color: c.textLight }}>·</span>
           <span style={{ color: c.textLight }}>{vw}px</span>
         </div>
+      </div>
+
+      {/* ── Page footer — legal disclaimer, pinned once for the whole page (not repeated per chat state) ── */}
+      <div
+        className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center gap-0.5 px-4"
+        style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
+      >
+        <p
+          className="text-[12px] text-center"
+          style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+        >
+          תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
+        </p>
+        <p
+          className="text-[12px] text-center"
+          style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+        >
+          הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
+        </p>
       </div>
     </div>
   );
