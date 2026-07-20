@@ -591,7 +591,7 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
             width: 6,
             height: 6,
             backgroundColor: c.iconGray,
-            animation: `agentDotBounce 1.2s ease-in-out ${i * 0.16}s infinite`,
+            animation: `agentDotBounce 1.9s ease-in-out ${i * 0.28}s infinite`,
           }}
         />
       ))}
@@ -635,15 +635,22 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
-  const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts
-  const stepsReady = revealedSteps >= AGENT_STEPS.length; // once every row is on screen, the current step starts "thinking" (dots) and progressing
+  const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
+  const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
+  const stepsReady = revealedSteps >= AGENT_STEPS.length; // once every row is on screen, the current step resumes "thinking" (dots) and progressing
+
+  useEffect(() => {
+    if (!agentRunning || !agentIntro) return;
+    const t = setTimeout(() => setAgentIntro(false), 1400);
+    return () => clearTimeout(t);
+  }, [agentRunning, agentIntro]);
 
   // Stagger the rows in — one line, a beat, the next line, etc. — instead of dropping the whole list at once.
   useEffect(() => {
-    if (!agentRunning || stepsReady) return;
+    if (!agentRunning || agentIntro || stepsReady) return;
     const t = setTimeout(() => setRevealedSteps((n) => n + 1), 350);
     return () => clearTimeout(t);
-  }, [agentRunning, stepsReady, revealedSteps]);
+  }, [agentRunning, agentIntro, stepsReady, revealedSteps]);
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
@@ -710,12 +717,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
 
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
   // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
+    if (agentIntro) {
+      return (
+        <div dir="rtl" style={{ marginTop: "8px" }}>
+          <AgentEllipsis marginInlineStart={0} />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
         {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
