@@ -648,7 +648,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
 
   useEffect(() => {
     if (!agentRunning || !stepsReady) { setDotsReady(false); return; }
-    const t = setTimeout(() => setDotsReady(true), 650);
+    const t = setTimeout(() => setDotsReady(true), 1100);
     return () => clearTimeout(t);
   }, [agentRunning, stepsReady]);
 
