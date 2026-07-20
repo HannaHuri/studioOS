@@ -117,8 +117,8 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 type ResponseMode = "agents" | "direct";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
-  agents: { label: "סוכנים",   desc: "ניתוח מעמיק למקרים מורכבים",   Icon: Bot },
-  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות כלליות",      Icon: Zap },
+  agents: { label: "סוכנים",   desc: "ניתוח מעמיק לשאלות מורכבות",   Icon: Bot },
+  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות ממוקדות",     Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 
