@@ -591,7 +591,7 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
             width: 6,
             height: 6,
             backgroundColor: c.iconGray,
-            animation: `agentDotBounce 1.9s ease-in-out ${i * 0.28}s infinite`,
+            animation: `agentDotBounce 1.5s ease-in-out ${i * 0.22}s infinite`,
           }}
         />
       ))}
@@ -637,13 +637,20 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
-  const stepsReady = revealedSteps >= AGENT_STEPS.length; // once every row is on screen, the current step resumes "thinking" (dots) and progressing
+  const stepsReady = revealedSteps >= AGENT_STEPS.length; // every row is on screen
+  const [dotsReady, setDotsReady] = useState(false); // a beat after stepsReady — the current step resumes "thinking" (dots) and progressing
 
   useEffect(() => {
     if (!agentRunning || !agentIntro) return;
     const t = setTimeout(() => setAgentIntro(false), 1400);
     return () => clearTimeout(t);
   }, [agentRunning, agentIntro]);
+
+  useEffect(() => {
+    if (!agentRunning || !stepsReady) { setDotsReady(false); return; }
+    const t = setTimeout(() => setDotsReady(true), 650);
+    return () => clearTimeout(t);
+  }, [agentRunning, stepsReady]);
 
   // Stagger the rows in — one line, a beat, the next line, etc. — instead of dropping the whole list at once.
   useEffect(() => {
@@ -654,7 +661,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
-    if (!agentRunning || !stepsReady) return;
+    if (!agentRunning || !dotsReady) return;
     const step = AGENT_STEPS[agentStep];
     if (agentSub) {
       const t = setTimeout(() => {
@@ -669,7 +676,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       else setAgentRunning(false); // last step done — reveal the final answer
     }, 3200);
     return () => clearTimeout(t);
-  }, [agentRunning, agentStep, agentSub, stepsReady]);
+  }, [agentRunning, agentStep, agentSub, dotsReady]);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -751,7 +758,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                 }}
               >
                 {step.text}
-                {isCurrent && stepsReady && <AgentEllipsis />}
+                {isCurrent && dotsReady && <AgentEllipsis />}
                 {subRevealed && (
                   <span className="text-[12.5px] italic" style={{ color: c.textLight }}>
                     {" "}— {step.subText}
