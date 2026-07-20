@@ -567,21 +567,17 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
   );
 }
 
-// ── Animated "..." — shown next to the agent step currently in progress ────
-function AgentDots() {
+// ── Animated "..." — the trailing dots of the step currently in progress reveal one at a time ──
+function AgentEllipsis() {
   return (
-    <span className="inline-flex items-center gap-0.5">
+    <span aria-hidden="true">
       {[0, 1, 2].map(i => (
         <span
           key={i}
-          className="inline-block rounded-full"
-          style={{
-            width: 3.5,
-            height: 3.5,
-            backgroundColor: c.primary,
-            animation: `agentDotPulse 1.2s ease-in-out ${i * 0.15}s infinite`,
-          }}
-        />
+          style={{ display: "inline-block", animation: `agentDotFade 1.4s ease-in-out ${i * 0.25}s infinite` }}
+        >
+          .
+        </span>
       ))}
     </span>
   );
@@ -699,32 +695,25 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         {AGENT_STEPS.map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
-          const showSub = isCurrent && agentSub && !!step.subText;
+          // Once the "one-part answer" note has appeared, it stays — it doesn't ride along with agentSub anymore.
+          const subRevealed = !!step.subText && (done || (isCurrent && agentSub));
           const Icon = done ? Check : step.Icon;
-          const color = done ? "#00c875" : isCurrent ? c.primary : c.textLight;
+          // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
+          const color = done ? "#00854d" : c.textLight;
           return (
             <div key={i} className="flex items-center gap-2">
-              <Icon
-                size={17}
-                strokeWidth={done ? 2.3 : 1.8}
-                style={{
-                  color,
-                  flexShrink: 0,
-                  willChange: "transform",
-                  animation: isCurrent ? "agentPulseSize 1.8s ease-in-out infinite" : "none",
-                }}
-              />
+              <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
                 style={{
-                  color: isCurrent ? c.textGray : done ? c.textGray : c.textLight,
+                  color: isCurrent || done ? c.textGray : c.textLight,
                   fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
                 }}
               >
                 {step.text}
-                {showSub && <> — {step.subText}</>}
+                {isCurrent && <AgentEllipsis />}
+                {subRevealed && <> — {step.subText}</>}
               </span>
-              {isCurrent && <AgentDots />}
             </div>
           );
         })}
