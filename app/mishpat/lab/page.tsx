@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
@@ -11,6 +12,9 @@ import {
   ZoomIn, ZoomOut, GripHorizontal,
   type LucideIcon,
 } from "lucide-react";
+
+// react-pdf/pdfjs-dist touches browser-only APIs (DOMMatrix) at module-evaluation time, so it must never be evaluated during SSR
+const PdfViewer = dynamic(() => import("./pdf-viewer"), { ssr: false });
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const c = {
@@ -711,6 +715,9 @@ const MOCK_DOC_PARAS = [
 function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandle, canExpand, expanded, onToggleExpand }: { doc: CaseDoc; isDark: boolean; width: number; onWidthChange: (w: number) => void; onClose: () => void; fill?: boolean; showHandle?: boolean; canExpand?: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const rootRef = useRef<HTMLDivElement>(null);
+  // Real page count of the loaded PDF (null while parsing / no file) — feeds the reference-only panel's page-total display
+  const [numPages, setNumPages] = useState<number | null>(null);
+  useEffect(() => { setNumPages(null); }, [doc.file]);
   // Floating action panel — draggable from its grip; offset is relative to its default position (vertically centered on the left edge)
   const [panelOffset, setPanelOffset] = useState({ x: 0, y: 0 });
   const startPanelDrag = (e: ReactMouseEvent) => {
@@ -774,7 +781,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="סיבוב (תצוגה בלבד — לצוות הפיתוח)"><RotateCw size={17} /></button>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד קודם (תצוגה בלבד)"><ChevronUp size={17} /></button>
           <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "4px", lineHeight: "1", paddingTop: "2px", boxSizing: "border-box", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי — ניתן להקליד מספר עמוד (תצוגה בלבד)">1</span>
-          <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "8px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים (תצוגה בלבד)">3</span>
+          <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "8px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים">{doc.file ? (numPages ?? "…") : 2}</span>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד הבא (תצוגה בלבד)"><ChevronDown size={17} /></button>
         </div>
         <div className="w-5 border-t my-0.5" style={{ borderColor: isDark ? dk.border : c.border }} />
@@ -786,9 +793,13 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
           <GripHorizontal size={14} style={{ color: isDark ? dk.textMuted : c.textLight }} />
         </div>
       </div>
-      {/* Body — a real PDF (iframe) when the mock doc has a file, otherwise the generated mock pages */}
+      {/* Body — a real PDF (canvas-rendered via react-pdf) when the mock doc has a file, otherwise the generated mock pages. Rendering to canvas ourselves (rather than the browser's native PDF plugin in an iframe) is what lets the surrounding background actually be styled. */}
       {doc.file ? (
-        <iframe key={expanded ? "expanded" : "default"} src={`${doc.file}#toolbar=0&navpanes=0&${expanded ? "zoom=150" : "view=FitH"}`} title={doc.name} className="flex-1 w-full" style={{ border: "none", backgroundColor: "#525659" }} />
+        <div className="flex-1 overflow-y-auto docs-scroll" style={{ backgroundColor: isDark ? dk.bg : "#f1f3f4" }}>
+          <div className="flex flex-col items-center gap-4 py-5 px-4">
+            <PdfViewer file={doc.file} numPages={numPages} pageWidth={expanded ? 820 : 640} onLoadSuccess={setNumPages} />
+          </div>
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
           <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
