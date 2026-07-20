@@ -24,7 +24,7 @@ function ListSortDescendingIcon({ size = 24, strokeWidth = 2, style }: { size?: 
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────
-const FOOTER_HEIGHT = 48; // page-level disclaimer footer
+const FOOTER_HEIGHT = 90; // page-level disclaimer footer — 3 lines at 14px + 20px bottom padding
 
 const c = {
   primary: "#0073ea",
@@ -609,7 +609,7 @@ type StepIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style
 const AGENT_STEPS: { Icon: StepIcon; text: string; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
   { Icon: ListSortDescendingIcon, text: "מגבש תכנית עבודה למענה" },
-  { Icon: Activity, text: "מנתח את מורכבות הבקשה", subText: "התשובה תינתן בחלק אחד" },
+  { Icon: Activity, text: "מנתח את מורכבות הבקשה", subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
   { Icon: Folder, text: "מאתר מידע רלוונטי בתיק" },
   { Icon: Terminal, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
   { Icon: Send, text: "מכין את התשובה הסופית" },
@@ -1436,21 +1436,23 @@ export default function MishpatPage() {
 
       {/* ── Page footer — legal disclaimer, pinned once for the whole page (not repeated per chat state) ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center gap-0.5 px-4"
+        className="absolute bottom-0 left-0 right-0 flex justify-center px-6"
         style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
       >
-        <p
-          className="text-[12px] text-center"
-          style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
-        >
-          תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
-        </p>
-        <p
-          className="text-[12px] text-center"
-          style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
-        >
-          הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
-        </p>
+        <div className="w-full max-w-[768px] flex flex-col items-center justify-end gap-0.5" style={{ paddingBottom: "20px" }}>
+          <p
+            className="text-[14px] text-center"
+            style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+          >
+            תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
+          </p>
+          <p
+            className="text-[14px] text-center"
+            style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+          >
+            הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
+          </p>
+        </div>
       </div>
     </div>
   );
