@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Compass, Scale, Database, Flag,
+  Bot, SortDesc, Activity, Folder, Loader, Send,
   type LucideIcon,
 } from "lucide-react";
 
@@ -570,7 +570,7 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── "Thinking" dots — Gemini-style: solid grey balls bouncing in scale, never fading — shown next to the step in progress ──
 function AgentEllipsis() {
   return (
-    <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart: "6px" }}>
+    <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart: "8px" }}>
       {[0, 1, 2].map(i => (
         <span
           key={i}
@@ -593,11 +593,11 @@ type Message = { q: string; isFirst: boolean; agent?: boolean };
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const AGENT_STEPS: { Icon: LucideIcon; text: string; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
-  { Icon: Compass, text: "מגבש תכנית עבודה למענה" },
-  { Icon: Scale, text: "מנתח את מורכבות הבקשה", subText: "התשובה תינתן בחלק אחד" },
-  { Icon: Database, text: "מאתר מידע רלוונטי בתיק" },
-  { Icon: Zap, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
-  { Icon: Flag, text: "מכין את התשובה הסופית" },
+  { Icon: SortDesc, text: "מגבש תכנית עבודה למענה" },
+  { Icon: Activity, text: "מנתח את מורכבות הבקשה", subText: "התשובה תינתן בחלק אחד" },
+  { Icon: Folder, text: "מאתר מידע רלוונטי בתיק" },
+  { Icon: Loader, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
+  { Icon: Send, text: "מכין את התשובה הסופית" },
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
@@ -705,7 +705,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           const color = done ? "#00854d" : c.textLight;
           return (
-            <div key={i} className="flex items-center gap-1">
+            <div key={i} className="flex items-center gap-0.5">
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
