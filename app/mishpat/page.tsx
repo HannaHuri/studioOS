@@ -874,11 +874,13 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             <Quote size={16} strokeWidth={2} />
           </button>
 
-          {/* Case info — aligned to the right, hoverable; marginInlineStart nudges the gap from citations to exactly 8px (row gap is 6px) */}
+          {/* Case info — aligned to the right, hoverable; marginInlineStart nudges the gap from citations to exactly 8px (row gap is 6px).
+              paddingInlineStart trimmed vs. paddingInlineEnd (dir=rtl, so inline-start = the right side) so the folder icon sits closer
+              to the input text above it, without losing the hover-box padding on the other side. */}
           <button
-            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 px-2 rounded transition-colors"
+            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 rounded transition-colors"
             dir="rtl"
-            style={{ backgroundColor: "transparent", marginInlineStart: "2px" }}
+            style={{ backgroundColor: "transparent", marginInlineStart: "2px", paddingInlineStart: "5px", paddingInlineEnd: "8px" }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
