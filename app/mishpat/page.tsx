@@ -841,8 +841,8 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <Bot size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />
-            <span>סוכנים</span>
+            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />; })()}
+            <span>{RESPONSE_MODE_CONFIG[responseMode].label}</span>
             <ChevronDown
               size={11}
               style={{ transition: "transform 0.15s", transform: modeOpen ? "rotate(180deg)" : "none" }}
