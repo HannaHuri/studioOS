@@ -629,6 +629,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [sendPressed, setSendPressed] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null); // messages container — auto-scrolled to bottom as agent-step rows appear
   const [responseMode, setResponseMode] = useState<ResponseMode>("agents"); // independent of scope — can run alongside any scope level
   const [modeOpen, setModeOpen] = useState(false);
   const modeBtnRef = useRef<HTMLButtonElement>(null);
@@ -662,6 +663,13 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     const t = setTimeout(() => setRevealedSteps((n) => n + 1), delay);
     return () => clearTimeout(t);
   }, [agentRunning, agentIntro, stepsReady, revealedSteps]);
+
+  // Keep the growing step list in view — scroll the conversation down as each row/answer lands.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [revealedSteps, agentStep, agentSub, agentIntro, agentRunning, messages]);
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
@@ -1088,7 +1096,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
-        <div className="flex-1 overflow-y-auto docs-scroll">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll">
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => {
               const isLast = i === messages.length - 1;
