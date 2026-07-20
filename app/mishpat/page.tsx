@@ -635,25 +635,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
-  const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before the step list itself appears
-  const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time once the intro ends
+  const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts
+  const stepsReady = revealedSteps >= AGENT_STEPS.length; // once every row is on screen, the current step starts "thinking" (dots) and progressing
 
+  // Stagger the rows in — one line, a beat, the next line, etc. — instead of dropping the whole list at once.
   useEffect(() => {
-    if (!agentRunning || !agentIntro) return;
-    const t = setTimeout(() => setAgentIntro(false), 1400);
+    if (!agentRunning || stepsReady) return;
+    const t = setTimeout(() => setRevealedSteps((n) => n + 1), 350);
     return () => clearTimeout(t);
-  }, [agentRunning, agentIntro]);
-
-  // Stagger the rows in — one line, a short beat, the next line, etc. — instead of dropping the whole list at once.
-  useEffect(() => {
-    if (!agentRunning || agentIntro || revealedSteps >= AGENT_STEPS.length) return;
-    const t = setTimeout(() => setRevealedSteps((n) => n + 1), 220);
-    return () => clearTimeout(t);
-  }, [agentRunning, agentIntro, revealedSteps]);
+  }, [agentRunning, stepsReady, revealedSteps]);
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
-    if (!agentRunning || agentIntro) return;
+    if (!agentRunning || !stepsReady) return;
     const step = AGENT_STEPS[agentStep];
     if (agentSub) {
       const t = setTimeout(() => {
@@ -668,7 +662,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       else setAgentRunning(false); // last step done — reveal the final answer
     }, 3200);
     return () => clearTimeout(t);
-  }, [agentRunning, agentStep, agentSub, agentIntro]);
+  }, [agentRunning, agentStep, agentSub, stepsReady]);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -716,19 +710,12 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentIntro(true); setRevealedSteps(0); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentRunning(true); }
   }
 
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
   // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
-    if (agentIntro) {
-      return (
-        <div dir="rtl" style={{ marginTop: "8px" }}>
-          <AgentEllipsis marginInlineStart={0} />
-        </div>
-      );
-    }
     return (
       <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
         {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
@@ -750,7 +737,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                 }}
               >
                 {step.text}
-                {isCurrent && <AgentEllipsis />}
+                {isCurrent && stepsReady && <AgentEllipsis />}
                 {subRevealed && (
                   <span className="text-[12.5px] italic" style={{ color: c.textLight }}>
                     {" "}— {step.subText}
