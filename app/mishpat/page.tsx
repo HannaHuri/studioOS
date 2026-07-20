@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
-  HelpCircle, Info, Layers, Link, MessageSquare, Microscope, Minimize2,
+  HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Bot, Activity, Folder, Terminal, Send,
@@ -655,9 +655,11 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   }, [agentRunning, stepsReady]);
 
   // Stagger the rows in — one line, a beat, the next line, etc. — instead of dropping the whole list at once.
+  // The pause after the very first row is a bit longer than the rest, so it doesn't feel like the list dumps in right behind it.
   useEffect(() => {
     if (!agentRunning || agentIntro || stepsReady) return;
-    const t = setTimeout(() => setRevealedSteps((n) => n + 1), 350);
+    const delay = revealedSteps === 1 ? 650 : 350;
+    const t = setTimeout(() => setRevealedSteps((n) => n + 1), delay);
     return () => clearTimeout(t);
   }, [agentRunning, agentIntro, stepsReady, revealedSteps]);
 
@@ -1304,9 +1306,7 @@ export default function MishpatPage() {
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
     { Icon: Bookmark, label: "סימניות" },
-    { Icon: MessageSquare, label: "הודעות" },
-    { Icon: Paperclip, label: "קבצים מצורפים" },
-    { Icon: FileText, label: "מסמכים" },
+    { Icon: Paperclip, label: "דוגמאות" },
   ];
   const botIcons = [
     { Icon: HelpCircle, label: "עזרה" },
@@ -1320,7 +1320,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 left-0 right-0 flex" style={{ bottom: FOOTER_HEIGHT }} dir="ltr">
+      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* ── LEFT: Documents — column that PUSHES the chat (push mode); a 40px rail launcher in drawer mode ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
@@ -1344,7 +1344,7 @@ export default function MishpatPage() {
         </div>
 
         {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode ── */}
-        <div className="flex-1 flex min-w-0 relative">
+        <div className="flex-1 flex min-w-0 relative" style={{ paddingBottom: FOOTER_HEIGHT }}>
           <ChatArea isDark={isDark} conversationKey={convKey} />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
@@ -1375,6 +1375,27 @@ export default function MishpatPage() {
               </button>
             </div>
           )}
+
+          {/* ── Page footer — legal disclaimer, pinned once for the chat column (not repeated per chat state) ── */}
+          <div
+            className="absolute bottom-0 left-0 right-0 flex justify-center px-6 z-40"
+            style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
+          >
+            <div className="w-full max-w-[768px] flex flex-col items-center justify-end gap-0.5" style={{ paddingBottom: "20px" }}>
+              <p
+                className="text-[14px] text-center"
+                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+              >
+                תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
+              </p>
+              <p
+                className="text-[14px] text-center"
+                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+              >
+                הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
@@ -1424,34 +1445,13 @@ export default function MishpatPage() {
 
         {/* ── Responsive-mode indicator (demo aid — resize the window to watch it switch) ── */}
         <div
-          className="absolute bottom-3 left-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] shadow-md"
-          style={{ transform: "translateX(-50%)", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${c.border}`, color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+          className="absolute left-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] shadow-md"
+          style={{ bottom: FOOTER_HEIGHT + 12, transform: "translateX(-50%)", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${c.border}`, color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
         >
           <span className="size-2 rounded-full" style={{ backgroundColor: narrow ? "#d83a52" : canBoth ? c.primary : "#e0a000" }} />
           <span>{narrow ? "מגירה (Drawer)" : canBoth ? "שני פאנלים אפשריים" : "פאנל אחד בכל פעם"}</span>
           <span style={{ color: c.textLight }}>·</span>
           <span style={{ color: c.textLight }}>{vw}px</span>
-        </div>
-      </div>
-
-      {/* ── Page footer — legal disclaimer, pinned once for the whole page (not repeated per chat state) ── */}
-      <div
-        className="absolute bottom-0 left-0 right-0 flex justify-center px-6"
-        style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
-      >
-        <div className="w-full max-w-[768px] flex flex-col items-center justify-end gap-0.5" style={{ paddingBottom: "20px" }}>
-          <p
-            className="text-[14px] text-center"
-            style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
-          >
-            תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
-          </p>
-          <p
-            className="text-[14px] text-center"
-            style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
-          >
-            הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
-          </p>
         </div>
       </div>
     </div>
