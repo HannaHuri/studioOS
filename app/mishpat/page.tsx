@@ -863,40 +863,42 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Citations toggle — left of case info */}
-          <button
-            onClick={() => setShowCitations((v) => !v)}
-            className="size-6 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{
-              backgroundColor: showCitations ? c.primaryLight : "transparent",
-              border: `1px solid ${showCitations ? c.primary : c.border}`,
-              color: c.iconGray,
-            }}
-            title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-            onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
-          >
-            <Quote size={16} strokeWidth={2} />
-          </button>
+          {/* Citations + case info — wrapped together and nudged right so the case-info icon lines up with the input text
+              above it, while both buttons keep their full, comfortable hover padding (not trimmed on one side). */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0" style={{ marginInlineEnd: "-8px" }}>
+            {/* Citations toggle — left of case info */}
+            <button
+              onClick={() => setShowCitations((v) => !v)}
+              className="size-6 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+              style={{
+                backgroundColor: showCitations ? c.primaryLight : "transparent",
+                border: `1px solid ${showCitations ? c.primary : c.border}`,
+                color: c.iconGray,
+              }}
+              title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
+              onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
+            >
+              <Quote size={16} strokeWidth={2} />
+            </button>
 
-          {/* Case info — aligned to the right, hoverable; marginInlineStart nudges the gap from citations to exactly 8px (row gap is 6px).
-              paddingInlineStart trimmed vs. paddingInlineEnd (dir=rtl, so inline-start = the right side) so the folder icon sits closer
-              to the input text above it, without losing the hover-box padding on the other side. */}
-          <button
-            className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 rounded transition-colors"
-            dir="rtl"
-            style={{ backgroundColor: "transparent", marginInlineStart: "2px", paddingInlineStart: "3px", paddingInlineEnd: "8px" }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-          >
-            <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-            <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-              ת&quot;א • 12345-67-89
-              <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
-              יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
-            </span>
-            <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
-          </button>
+            {/* Case info — aligned to the right, hoverable */}
+            <button
+              className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
+              dir="rtl"
+              style={{ backgroundColor: "transparent" }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+            >
+              <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+              <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+                ת&quot;א • 12345-67-89
+                <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
+                יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
+              </span>
+              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
+            </button>
+          </div>
         </div>
       </div>
     );
