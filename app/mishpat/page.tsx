@@ -567,23 +567,21 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
   );
 }
 
-// ── Animated "..." — the trailing dots of the step currently in progress reveal one at a time ──
+// ── "Thinking" dots — Gemini-style: solid grey balls bouncing in scale, never fading — shown next to the step in progress ──
 function AgentEllipsis() {
   return (
-    <span aria-hidden="true" style={{ marginInlineStart: "3px" }}>
+    <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart: "6px" }}>
       {[0, 1, 2].map(i => (
         <span
           key={i}
+          className="inline-block rounded-full flex-shrink-0"
           style={{
-            display: "inline-block",
-            fontSize: "1.3em",
-            lineHeight: 0,
-            color: c.primary,
-            animation: `agentDotFade 1.4s ease-in-out ${i * 0.25}s infinite`,
+            width: 6,
+            height: 6,
+            backgroundColor: c.iconGray,
+            animation: `agentDotBounce 1.2s ease-in-out ${i * 0.16}s infinite`,
           }}
-        >
-          .
-        </span>
+        />
       ))}
     </span>
   );
@@ -707,7 +705,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           const color = done ? "#00854d" : c.textLight;
           return (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center gap-1">
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
@@ -718,7 +716,11 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
               >
                 {step.text}
                 {isCurrent && <AgentEllipsis />}
-                {subRevealed && <> — {step.subText}</>}
+                {subRevealed && (
+                  <span className="text-[12.5px] italic" style={{ color: c.textLight }}>
+                    {" "}— {step.subText}
+                  </span>
+                )}
               </span>
             </div>
           );
