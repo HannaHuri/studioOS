@@ -723,6 +723,11 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     setCitCollapsed(true);
     setInputText("");
     setMessages([]);          // start fresh — empty state
+    setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
+    setAgentStep(0);
+    setAgentSub(false);
+    setAgentIntro(false);
+    setRevealedSteps(0);
   }, [conversationKey]);
 
   const isEmpty = messages.length === 0;
@@ -880,7 +885,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           <button
             className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[55%] h-8 rounded transition-colors"
             dir="rtl"
-            style={{ backgroundColor: "transparent", marginInlineStart: "2px", paddingInlineStart: "5px", paddingInlineEnd: "8px" }}
+            style={{ backgroundColor: "transparent", marginInlineStart: "2px", paddingInlineStart: "3px", paddingInlineEnd: "8px" }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
