@@ -570,11 +570,17 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Animated "..." — the trailing dots of the step currently in progress reveal one at a time ──
 function AgentEllipsis() {
   return (
-    <span aria-hidden="true">
+    <span aria-hidden="true" style={{ marginInlineStart: "3px" }}>
       {[0, 1, 2].map(i => (
         <span
           key={i}
-          style={{ display: "inline-block", animation: `agentDotFade 1.4s ease-in-out ${i * 0.25}s infinite` }}
+          style={{
+            display: "inline-block",
+            fontSize: "1.3em",
+            lineHeight: 0,
+            color: c.primary,
+            animation: `agentDotFade 1.4s ease-in-out ${i * 0.25}s infinite`,
+          }}
         >
           .
         </span>
