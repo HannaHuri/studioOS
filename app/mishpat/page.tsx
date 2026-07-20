@@ -580,9 +580,9 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 }
 
 // ── "Thinking" dots — Gemini-style: solid grey balls bouncing in scale, never fading — shown next to the step in progress ──
-function AgentEllipsis() {
+function AgentEllipsis({ marginInlineStart = 8 }: { marginInlineStart?: number }) {
   return (
-    <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart: "8px" }}>
+    <span aria-hidden="true" className="inline-flex items-center gap-1" style={{ marginInlineStart }}>
       {[0, 1, 2].map(i => (
         <span
           key={i}
@@ -635,10 +635,17 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
+  const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before the step list itself appears
+
+  useEffect(() => {
+    if (!agentRunning || !agentIntro) return;
+    const t = setTimeout(() => setAgentIntro(false), 1400);
+    return () => clearTimeout(t);
+  }, [agentRunning, agentIntro]);
 
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
-    if (!agentRunning) return;
+    if (!agentRunning || agentIntro) return;
     const step = AGENT_STEPS[agentStep];
     if (agentSub) {
       const t = setTimeout(() => {
@@ -653,7 +660,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       else setAgentRunning(false); // last step done — reveal the final answer
     }, 3200);
     return () => clearTimeout(t);
-  }, [agentRunning, agentStep, agentSub]);
+  }, [agentRunning, agentStep, agentSub, agentIntro]);
 
   function handleScopeToggle() {
     if (!scopeOpen && scopeBtnRef.current) {
@@ -701,12 +708,19 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
       { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
     ]);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentRunning(true); }
+    if (agentMode) { setAgentStep(0); setAgentSub(false); setAgentIntro(true); setAgentRunning(true); }
   }
 
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
   // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
+    if (agentIntro) {
+      return (
+        <div dir="rtl" style={{ marginTop: "8px" }}>
+          <AgentEllipsis marginInlineStart={0} />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
         {AGENT_STEPS.map((step, i) => {
@@ -718,7 +732,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           const color = done ? "#00854d" : c.textLight;
           return (
-            <div key={i} className="flex items-center gap-1">
+            <div key={i} className="flex items-center gap-1.5">
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
