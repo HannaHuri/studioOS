@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Activity, Folder, Terminal, Send,
+  Bot, Activity, Folder, Terminal, Send, Equal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -739,6 +739,10 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
 
+  function handleStop() {
+    setAgentRunning(false);
+  }
+
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
   // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
@@ -807,22 +811,22 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
-          {/* Send button — default / hover / press states */}
+          {/* Send button — becomes a stop button while an agent run is in progress */}
           <button
-            onClick={handleSend}
+            onClick={agentRunning ? handleStop : handleSend}
             className="size-8 flex items-center justify-center rounded border flex-shrink-0 transition-colors"
             style={{
               borderColor: sendPressed ? c.primary : (isDark ? dk.border : c.border),
               backgroundColor: "transparent",
               color: c.iconGray,
             }}
-            title="שלח"
+            title={agentRunning ? "עצור" : "שלח"}
             onMouseEnter={e => { if (!sendPressed) e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setSendPressed(false); }}
             onMouseDown={() => { setSendPressed(true); }}
             onMouseUp={() => setSendPressed(false)}
           >
-            <ArrowUp size={17} />
+            {agentRunning ? <Equal size={17} style={{ transform: "rotate(90deg)" }} /> : <ArrowUp size={17} />}
           </button>
 
           {/* Response-mode selector — icon + label + chevron, opens a dropdown to pick agents vs. direct chat */}
