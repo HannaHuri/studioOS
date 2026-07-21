@@ -8,7 +8,7 @@ import {
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip,
   ZoomIn, ZoomOut, GripHorizontal,
   type LucideIcon,
 } from "lucide-react";
@@ -121,6 +121,7 @@ interface CaseDoc {
   words: string;         // word count
   summary: string;       // תקציר
   related: string[];     // related document names
+  attachments?: string[]; // files attached to this document (exhibits, certificates, etc.)
   checked: boolean;      // selected for chat
   used?: boolean;        // referenced by the chat's answer
   missing?: boolean;     // document has no text / not processed (0 words)
@@ -161,6 +162,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
     related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
+    attachments: ["נספח א — תעודת התמחות ד״ר לוי", "נספח ב — צילומי MRI"],
     key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו", file: "/studioOS/docs/affidavit-1.pdf",
   },
   {
@@ -632,8 +634,72 @@ function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { pr
   );
 }
 
-// Dense table row — one line per document: checkbox · date · process · name · summary · type · submitter · words.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+// Attachments / related documents — paperclip icon, click for a popover split into two sections (attachments on top, related below).
+function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const attachments = doc.attachments ?? [];
+  const related = doc.related;
+
+  const toggle = (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    setOpen((v) => !v);
+  };
+
+  const section = (title: string, items: string[]) => (
+    <div className="px-3 py-2">
+      <div className="text-[12px] font-semibold mb-1" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{title}</div>
+      {items.length === 0 ? (
+        <div className="text-[12.5px] py-1" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>אין {title}</div>
+      ) : (
+        items.map((name) => (
+          <div key={name} className="flex items-center gap-2 py-1 text-right">
+            <FileText size={12} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+            <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={toggle}
+        className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
+        style={{ color: open ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+        title="נספחים ומסמכים קשורים"
+      >
+        <Paperclip size={13} />
+      </button>
+      {open && pos && (
+        <>
+          <div className="fixed inset-0 z-40" title="" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 rounded overflow-hidden"
+            title=""
+            style={{ top: pos.top, right: pos.right, width: "260px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
+            dir="rtl"
+          >
+            {section("נספחים", attachments)}
+            <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
+            {section("קשורים", related)}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; showType?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -652,7 +718,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, processDocs, on
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
       {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
-      <div className="grid items-center gap-2 px-2 py-1.5" style={{ gridTemplateColumns: gridCols }}>
+      <div className="grid items-center gap-1.5 px-2 py-1.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Date — time (when present) shown only on hover, so every row stays a single line */}
         <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
@@ -667,13 +733,15 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, processDocs, on
         </span>
         {/* Summary — single line, truncated; full text on hover */}
         <span className="truncate text-[13px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
-        {/* Type tag */}
-        <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+        {/* Type tag — omitted inside a type-grouped folder, since the folder already says the type */}
+        {showType && (
+          <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+        )}
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
         <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Attachments / related documents — icon only when there are any */}
-        <span className="flex justify-center flex-shrink-0" title={doc.related.length > 0 ? `נספחים ומסמכים קשורים: ${doc.related.join(", ")}` : undefined}>
-          {doc.related.length > 0 && <FileText size={13} style={{ color: metaCol }} />}
+        {/* Attachments / related documents — paperclip only when there are any, opens a popover */}
+        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
         </span>
         {/* Words */}
         <span className="text-[11.5px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
@@ -862,11 +930,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       return (at < bt ? -1 : at > bt ? 1 : 0) * dir;
     });
   };
-  // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · type · submitter · attachments · words
-  // Date is trimmed to its actual content width so the process column sits right against it; type gives up some width too (truncated is still legible) — both go to the name.
-  const tableTemplate = isFocus
-    ? "18px 56px 36px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 22px 48px" // widened panel — still favor the summary, but less steeply
-    : "18px 56px 36px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 22px 40px"; // docked panel — name gets a bit more than summary
+  // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · [type] · submitter · attachments · words
+  // Date is trimmed to its actual content width so the process column sits right against it. Inside a type-grouped folder the type column is redundant (the folder already says the type), so it's dropped and its width goes to the name.
+  const tableTemplate = (showType: boolean) => isFocus
+    ? (showType ? "18px 56px 34px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 22px 48px" : "18px 56px 34px minmax(0,1.05fr) minmax(0,1.65fr) 62px 22px 48px")
+    : (showType ? "18px 56px 34px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 22px 40px" : "18px 56px 34px minmax(0,1.35fr) minmax(0,1.1fr) 58px 22px 40px");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -874,19 +942,21 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       {!opts?.hideIcon && sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
   );
-  const tableHeader = (
-    <div className="grid items-center gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
+  const makeTableHeader = (showType: boolean) => (
+    <div className="grid items-center gap-1.5 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
       {sortHead("date", "תאריך")}
       {sortHead("process", "תהליך", { center: true, hideIcon: true })}
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
-      {sortHead("type", "סוג")}
+      {showType && sortHead("type", "סוג")}
       {sortHead("submitter", "מגיש")}
       <span />
       {sortHead("words", "מילים")}
     </div>
   );
+  const tableHeader = makeTableHeader(true);
+  const tableHeaderNoType = makeTableHeader(false);
 
   function toggleDoc(id: string) {
     setDocs((p) => p.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)));
@@ -1127,7 +1197,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1135,7 +1205,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         {/* By type — column-table rows under type sub-headers; the column header only shows once a folder is open */}
         {grouping === "type" && (
           <div className="flex flex-col">
-            {openType && tableHeader}
+            {openType && tableHeaderNoType}
             {typesInData.map((type, ti) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
@@ -1155,7 +1225,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                     </button>
                   </div>
                   {open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
