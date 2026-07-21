@@ -655,24 +655,24 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, processDocs, on
       <div className="grid items-center gap-2 px-2 py-1.5" style={{ gridTemplateColumns: gridCols }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Date — time (when present) shown only on hover, so every row stays a single line */}
-        <span className="text-right text-[14px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
+        <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
         {/* Process — bold number, click for the thread's status and documents */}
         <span className="min-w-0 flex justify-center">
           {doc.processId != null && <ProcessBadge processId={doc.processId} processLabel={doc.processLabel} docs={processDocs ?? []} isDark={isDark} onOpenDoc={onOpenAnyDoc} />}
         </span>
         {/* Document name */}
         <span className="flex items-center gap-1.5 min-w-0">
-          <span className="doc-link truncate text-[14px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+          <span className="doc-link truncate text-[13.5px] font-semibold leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
-        <span className="truncate text-[14px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+        <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         {/* Type tag */}
-        <span className="min-w-0 flex"><span className="text-[14px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+        <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
-        <span className="text-[14px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
         {/* Words */}
-        <span className="text-[14px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+        <span className="text-[11.5px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
     </div>
   );
@@ -868,7 +868,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     </button>
   );
   const tableHeader = (
-    <div className="grid items-center gap-2 px-2 h-9 pb-1 sticky top-0 z-10 text-[14px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
+    <div className="grid items-center gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
       {sortHead("date", "תאריך")}
       {sortHead("process", "תהליך")}
