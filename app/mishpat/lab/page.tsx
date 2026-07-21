@@ -634,13 +634,11 @@ function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { pr
   );
 }
 
-// Attachments / related documents — paperclip icon, click for a popover split into two sections (attachments on top, related below).
-function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
+// A single icon trigger + its own popover listing one kind of items (used for both related docs and attachments — click is independent per icon).
+function DocLinksBadge({ icon: Icon, title, items, isDark }: { icon: LucideIcon; title: string; items: string[]; isDark: boolean }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const attachments = doc.attachments ?? [];
-  const related = doc.related;
 
   const toggle = (e: ReactMouseEvent) => {
     e.stopPropagation();
@@ -651,29 +649,16 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
     setOpen((v) => !v);
   };
 
-  const section = (title: string, items: string[]) => items.length === 0 ? null : (
-    <div className="px-3 py-2">
-      <div className="text-[12px] font-semibold mb-1" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{title}</div>
-      {items.map((name) => (
-        <div key={name} className="flex items-center gap-2 py-1 text-right">
-          <FileText size={12} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
-          <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <>
       <button
         ref={btnRef}
         onClick={toggle}
-        className="flex items-center justify-center gap-1 flex-shrink-0 rounded transition-colors hover:opacity-75"
+        className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
         style={{ color: open ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-        title="נספחים ומסמכים קשורים"
+        title={title}
       >
-        {related.length > 0 && <Link size={12} />}
-        {attachments.length > 0 && <Paperclip size={12} />}
+        <Icon size={12} />
       </button>
       {open && pos && (
         <>
@@ -685,13 +670,31 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
             style={{ top: pos.top, right: pos.right, width: "260px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
             dir="rtl"
           >
-            {section("קשורים", related)}
-            {related.length > 0 && attachments.length > 0 && <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />}
-            {section("נספחים", attachments)}
+            <div className="px-3 py-2">
+              <div className="text-[12px] font-semibold mb-1" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{title}</div>
+              {items.map((name) => (
+                <div key={name} className="flex items-center gap-2 py-1 text-right">
+                  <FileText size={12} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+                  <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}
     </>
+  );
+}
+
+// Related + attachments — two independent icon triggers, each opening its own popover (clicking one never shows the other's list).
+function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
+  const attachments = doc.attachments ?? [];
+  const related = doc.related;
+  return (
+    <span className="flex items-center gap-1">
+      {related.length > 0 && <DocLinksBadge icon={Link} title="קשורים" items={related} isDark={isDark} />}
+      {attachments.length > 0 && <DocLinksBadge icon={Paperclip} title="נספחים" items={attachments} isDark={isDark} />}
+    </span>
   );
 }
 
@@ -730,17 +733,17 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
-        <span className="truncate text-[12px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+        <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+        {/* Attachments / related documents — right after the summary, so type/submitter/words stay adjacent and words keeps its true left-edge position */}
+        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
+        </span>
         {/* Type tag — omitted inside a type-grouped folder, since the folder already says the type */}
         {showType && (
           <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         )}
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
         <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Attachments / related documents — paperclip only when there are any, opens a popover */}
-        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
-        </span>
         {/* Words */}
         <span className="text-[11.5px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
@@ -936,9 +939,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // fixed width, so as the panel is widened — whether by dragging or the full-screen toggle — they grow along with name/summary instead of staying pinned small.
   // Type/submitter/words are capped at their real max-content width (not an open-ended fr share) — once fully shown they stop growing,
   // so extra room never sits as dead space in a column that's already displaying everything. All leftover space goes to name/summary.
+  // Attachments/related icons sit right after the summary — keeping type/submitter/words adjacent to each other so words always lands on the true left edge.
+  // Type's floor shrinks in the docked view specifically (in favor of the summary) but still grows to its full content width once there's room.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? "18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) minmax(80px,92px) minmax(62px,64px) 30px minmax(44px,52px)" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 30px minmax(44px,52px)")
-    : (showType ? "18px 56px 34px 5px minmax(0,1.2fr) minmax(0,1fr) minmax(68px,92px) minmax(58px,64px) 30px minmax(40px,52px)" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) minmax(58px,64px) 30px minmax(40px,52px)");
+    ? (showType ? "18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) 26px minmax(80px,92px) minmax(62px,64px) minmax(44px,52px)" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) 26px minmax(62px,64px) minmax(44px,52px)")
+    : (showType ? "18px 56px 34px 5px minmax(0,1.2fr) minmax(0,1fr) 26px minmax(56px,92px) minmax(58px,64px) minmax(40px,52px)" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) 26px minmax(58px,64px) minmax(40px,52px)");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -954,9 +959,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       <span />
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
+      <span />
       {showType && sortHead("type", "סוג")}
       {sortHead("submitter", "מגיש")}
-      <span />
       {sortHead("words", "מילים")}
     </div>
   );
@@ -1096,12 +1101,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
-              className="h-7 px-2.5 rounded-md text-[12.5px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
+              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
               style={{
-                minWidth: "50px",
-                backgroundColor: isAuto ? (isDark ? "#22304a" : "#eaf2fd") : "transparent",
-                color: isAuto ? c.primary : (isDark ? dk.textMuted : c.iconGray),
-                border: `1px solid ${isAuto ? (isDark ? "#2f4a6e" : "#cfe1f7") : (isDark ? dk.border : c.border)}`,
+                minWidth: "54px",
+                backgroundColor: isAuto ? c.primary : "transparent",
+                color: isAuto ? "white" : (isDark ? dk.textMuted : c.iconGray),
+                border: `1.5px solid ${isAuto ? c.primary : (isDark ? dk.border : c.border)}`,
                 fontFamily: "Noto Sans Hebrew, sans-serif",
               }}
               title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
