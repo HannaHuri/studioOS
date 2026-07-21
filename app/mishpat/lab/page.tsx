@@ -658,7 +658,7 @@ function DocLinksBadge({ icon: Icon, title, items, isDark }: { icon: LucideIcon;
         style={{ color: open ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
         title={title}
       >
-        <Icon size={12} />
+        <Icon size={11} />
       </button>
       {open && pos && (
         <>
@@ -691,7 +691,7 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
   const attachments = doc.attachments ?? [];
   const related = doc.related;
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex items-center gap-0.5">
       {related.length > 0 && <DocLinksBadge icon={Link} title="קשורים" items={related} isDark={isDark} />}
       {attachments.length > 0 && <DocLinksBadge icon={Paperclip} title="נספחים" items={attachments} isDark={isDark} />}
     </span>
@@ -740,8 +740,8 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         )}
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
         <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Attachments / related documents — just before words, so words stays the last column on the table's true left edge */}
-        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {/* Attachments / related documents — just before words; aligned toward the submitter so its gap there is a uniform 4px (rather than centered, which pads both sides) */}
+        <span className="flex justify-start flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
         </span>
         {/* Words — flush to the table's left edge */}
@@ -941,9 +941,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // only then does it grow to fully show the longest type label. That keeps the docked table favoring name/summary while still showing type in full when there's space.
   const roomy = isFocus || panelWidth >= 720;
   const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
+  // Icons (22px) and words (max 36px) are trimmed close to their real content so the empty space in those cells doesn't read as an oversized gap around the
+  // icons; the reclaimed width flows to name/summary via the fr columns.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} minmax(62px,64px) 26px minmax(40px,48px)` : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 26px minmax(40px,48px)")
-    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} minmax(58px,64px) 26px minmax(36px,48px)` : "18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) minmax(58px,64px) 26px minmax(36px,48px)");
+    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} minmax(62px,64px) 24px minmax(32px,38px)` : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 24px minmax(32px,38px)")
+    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} minmax(58px,64px) 24px minmax(30px,36px)` : "18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) minmax(58px,64px) 24px minmax(30px,36px)");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
