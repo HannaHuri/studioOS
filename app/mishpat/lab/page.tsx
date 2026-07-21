@@ -666,7 +666,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, processDocs, on
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
-        <span className="truncate text-[13.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+        <span className="truncate text-[13px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         {/* Type tag */}
         <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
@@ -859,13 +859,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     });
   };
   // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · type · submitter · words
-  // Name gets less relative width than summary — a short document name doesn't need as much room, and the widened panel should favor the summary instead.
+  // Process is a narrow, centered column right after the date; the width it gives up goes to the name.
   const tableTemplate = isFocus
-    ? "18px 66px 54px minmax(0,0.75fr) minmax(0,1.6fr) 100px 62px 48px" // widened panel — favor the summary over the name
-    : "18px 66px 54px minmax(0,1fr) minmax(0,1fr) 84px 58px 40px"; // docked panel — even split so the name stays legible
-  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string) => (
-    <button onClick={() => toggleSort(key)} className="flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80" style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
-      <span>{label}</span>
+    ? "18px 66px 32px minmax(0,0.9fr) minmax(0,1.5fr) 100px 62px 48px" // widened panel — still favor the summary, but less steeply
+    : "18px 66px 32px minmax(0,1.2fr) minmax(0,1fr) 84px 58px 40px"; // docked panel — name gets a bit more than summary
+  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { display?: string; center?: boolean }) => (
+    <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
+      <span>{opts?.display ?? label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
   );
@@ -873,7 +873,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     <div className="grid items-center gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
       {sortHead("date", "תאריך")}
-      {sortHead("process", "תהליך")}
+      {sortHead("process", "תהליך", { display: "#", center: true })}
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
       {sortHead("type", "סוג")}
