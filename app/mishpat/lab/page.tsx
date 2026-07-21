@@ -861,8 +861,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · type · submitter · words
   // Date is trimmed to its actual content width so the process column sits right against it; type gives up some width too (truncated is still legible) — both go to the name.
   const tableTemplate = isFocus
-    ? "18px 56px 58px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 48px" // widened panel — still favor the summary, but less steeply
-    : "18px 56px 58px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 40px"; // docked panel — name gets a bit more than summary
+    ? "18px 56px 40px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 48px" // widened panel — still favor the summary, but less steeply
+    : "18px 56px 40px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 40px"; // docked panel — name gets a bit more than summary
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
