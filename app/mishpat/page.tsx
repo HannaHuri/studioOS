@@ -605,6 +605,7 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 type Message = { q: string; isFirst: boolean; agent?: boolean };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
+const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
 type StepIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
 const AGENT_STEPS: { Icon: StepIcon; text: string; subText?: string }[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
@@ -767,14 +768,15 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
           const subRevealed = !!step.subText && (done || (isCurrent && agentSub));
           const Icon = done ? Check : step.Icon;
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
-          const color = done ? "#00854d" : c.textLight;
+          // Pending (not-yet-started) rows use a lighter grey than the current row, so it reads as "further away".
+          const color = done ? "#00854d" : isCurrent ? c.textLight : PENDING_GRAY;
           return (
             <div key={i} className="flex items-center gap-1.5" style={{ animation: "agentRowIn 0.25s ease-out" }}>
               <Icon size={17} strokeWidth={done ? 2.3 : 1.8} style={{ color, flexShrink: 0 }} />
               <span
                 className="text-[14px]"
                 style={{
-                  color: isCurrent || done ? c.textGray : c.textLight,
+                  color: isCurrent || done ? c.textGray : PENDING_GRAY,
                   fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
                 }}
               >
