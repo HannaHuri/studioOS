@@ -668,11 +668,12 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
       <button
         ref={btnRef}
         onClick={toggle}
-        className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
+        className="flex items-center justify-center gap-1 flex-shrink-0 rounded transition-colors hover:opacity-75"
         style={{ color: open ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
         title="נספחים ומסמכים קשורים"
       >
-        <Paperclip size={13} />
+        {related.length > 0 && <Link size={12} />}
+        {attachments.length > 0 && <Paperclip size={12} />}
       </button>
       {open && pos && (
         <>
@@ -729,13 +730,13 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
-        <span className="truncate text-[13px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+        <span className="truncate text-[12px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
         {/* Type tag — omitted inside a type-grouped folder, since the folder already says the type */}
         {showType && (
           <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         )}
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
-        <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
         {/* Attachments / related documents — paperclip only when there are any, opens a popover */}
         <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
@@ -933,9 +934,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // the only way to give process breathing room from the name without shrinking the name column itself. Inside a type-grouped folder the type column is
   // redundant (the folder already says the type), so it's dropped. Type/submitter are flexible (a minimum plus a share of any extra room) rather than a flat
   // fixed width, so as the panel is widened — whether by dragging or the full-screen toggle — they grow along with name/summary instead of staying pinned small.
+  // Type/submitter/words are capped at their real max-content width (not an open-ended fr share) — once fully shown they stop growing,
+  // so extra room never sits as dead space in a column that's already displaying everything. All leftover space goes to name/summary.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? "18px 56px 34px 5px minmax(0,0.7fr) minmax(0,1.1fr) minmax(86px,0.9fr) minmax(62px,0.4fr) 22px 48px" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,0.35fr) 22px 48px")
-    : (showType ? "18px 56px 34px 5px minmax(0,1fr) minmax(0,0.85fr) minmax(76px,0.9fr) minmax(58px,0.4fr) 22px 40px" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) minmax(58px,0.3fr) 22px 40px");
+    ? (showType ? "18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) minmax(80px,92px) minmax(62px,64px) 30px minmax(44px,52px)" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 30px minmax(44px,52px)")
+    : (showType ? "18px 56px 34px 5px minmax(0,1.2fr) minmax(0,1fr) minmax(68px,92px) minmax(58px,64px) 30px minmax(40px,52px)" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) minmax(58px,64px) 30px minmax(40px,52px)");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -1093,12 +1096,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
-              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
+              className="h-7 px-2.5 rounded-md text-[12.5px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
               style={{
-                minWidth: "54px",
-                backgroundColor: isAuto ? c.primary : "transparent",
-                color: isAuto ? "white" : (isDark ? dk.textMuted : c.iconGray),
-                border: `1.5px solid ${isAuto ? c.primary : (isDark ? dk.border : c.border)}`,
+                minWidth: "50px",
+                backgroundColor: isAuto ? (isDark ? "#22304a" : "#eaf2fd") : "transparent",
+                color: isAuto ? c.primary : (isDark ? dk.textMuted : c.iconGray),
+                border: `1px solid ${isAuto ? (isDark ? "#2f4a6e" : "#cfe1f7") : (isDark ? dk.border : c.border)}`,
                 fontFamily: "Noto Sans Hebrew, sans-serif",
               }}
               title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
