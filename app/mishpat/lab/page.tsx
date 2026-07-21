@@ -859,13 +859,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     });
   };
   // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · type · submitter · words
-  // Process is a narrow, centered column right after the date; the width it gives up goes to the name.
+  // Date is trimmed to its actual content width so the process column sits right against it; type gives up some width too (truncated is still legible) — both go to the name.
   const tableTemplate = isFocus
-    ? "18px 66px 32px minmax(0,0.9fr) minmax(0,1.5fr) 100px 62px 48px" // widened panel — still favor the summary, but less steeply
-    : "18px 66px 32px minmax(0,1.2fr) minmax(0,1fr) 84px 58px 40px"; // docked panel — name gets a bit more than summary
-  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { display?: string; center?: boolean }) => (
+    ? "18px 56px 58px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 48px" // widened panel — still favor the summary, but less steeply
+    : "18px 56px 58px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 40px"; // docked panel — name gets a bit more than summary
+  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
-      <span>{opts?.display ?? label}</span>
+      <span>{label}</span>
       {sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
   );
@@ -873,7 +873,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     <div className="grid items-center gap-2 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
       {sortHead("date", "תאריך")}
-      {sortHead("process", "תהליך", { display: "#", center: true })}
+      {sortHead("process", "תהליך", { center: true })}
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
       {sortHead("type", "סוג")}
