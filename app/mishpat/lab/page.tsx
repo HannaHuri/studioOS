@@ -722,6 +722,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         <span className="min-w-0 flex justify-center">
           {doc.processId != null && <ProcessBadge processId={doc.processId} processLabel={doc.processLabel} docs={processDocs ?? []} isDark={isDark} onOpenDoc={onOpenAnyDoc} />}
         </span>
+        <span />
         {/* Document name */}
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="doc-link truncate text-[13px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
@@ -927,11 +928,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       return (at < bt ? -1 : at > bt ? 1 : 0) * dir;
     });
   };
-  // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · document · summary · [type] · submitter · attachments · words
-  // Date is trimmed to its actual content width so the process column sits right against it. Inside a type-grouped folder the type column is redundant (the folder already says the type), so it's dropped and its width goes to the name.
+  // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · spacer · document · summary · [type] · submitter · attachments · words
+  // Date is trimmed to its actual content width so the process column sits right against it. A small dedicated spacer sits between process and the name — it's
+  // the only way to give process breathing room from the name without shrinking the name column itself. Inside a type-grouped folder the type column is
+  // redundant (the folder already says the type), so it's dropped. Type/submitter are flexible (a minimum plus a share of any extra room) rather than a flat
+  // fixed width, so as the panel is widened — whether by dragging or the full-screen toggle — they grow along with name/summary instead of staying pinned small.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? "18px 56px 34px minmax(0,0.9fr) minmax(0,1.5fr) 80px 62px 22px 48px" : "18px 56px 34px minmax(0,1.05fr) minmax(0,1.65fr) 62px 22px 48px")
-    : (showType ? "18px 56px 34px minmax(0,1.2fr) minmax(0,1fr) 68px 58px 22px 40px" : "18px 56px 34px minmax(0,1.35fr) minmax(0,1.1fr) 58px 22px 40px");
+    ? (showType ? "18px 56px 34px 5px minmax(0,0.7fr) minmax(0,1.1fr) minmax(86px,0.9fr) minmax(62px,0.4fr) 22px 48px" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,0.35fr) 22px 48px")
+    : (showType ? "18px 56px 34px 5px minmax(0,1fr) minmax(0,0.85fr) minmax(76px,0.9fr) minmax(58px,0.4fr) 22px 40px" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) minmax(58px,0.3fr) 22px 40px");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -944,6 +948,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       <span />
       {sortHead("date", "תאריך")}
       {sortHead("process", "תהליך", { center: true, hideIcon: true })}
+      <span />
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
       {showType && sortHead("type", "סוג")}
@@ -1241,7 +1246,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                               <div className="flex items-center gap-2 py-1.5" style={{ paddingInlineStart: "28px", paddingInlineEnd: "8px" }}>
                                 <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={pAllOn} onToggle={() => setDocs((p) => p.map((d) => (d.processId === pid ? { ...d, checked: !pAllOn } : d)))} /></span>
                                 <button onClick={() => setOpenProcess((o) => (o === pid ? null : pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={pOpen ? "כיווץ" : "פתיחה"}>
-                                  <span className="text-[13px] font-medium truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{pDocs[0].processLabel ?? `תהליך ${pid}`} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span></span>
+                                  <span className="text-[13px] font-medium truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                                    <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {pDocs[0].processLabel ?? `תהליך ${pid}`} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
+                                  </span>
                                   <span className="flex-1" />
                                   <ChevronDown size={15} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: pOpen ? "rotate(180deg)" : "none" }} />
                                 </button>
@@ -2053,7 +2060,9 @@ export default function MishpatPage() {
                   const onMove = (ev: MouseEvent) =>
                     // 480 is the floor: below it the table's fixed-width columns (checkbox/date/process/type/submitter/attachments/words) alone
                     // exceed the panel width, and the name/summary columns get squeezed to nothing and overlap their neighbors.
-                    setPanelWidth(Math.min(720, Math.max(480, window.innerWidth - 60 - ev.clientX)));
+                    // The ceiling scales with the window instead of a flat 720, so the panel can be dragged as wide as the user wants
+                    // while still leaving the chat pane at least ~380px.
+                    setPanelWidth(Math.min(vw - 380 - 60, Math.max(480, window.innerWidth - 60 - ev.clientX)));
                   const onUp = () => {
                     setResizing(false);
                     document.removeEventListener("mousemove", onMove);
