@@ -734,18 +734,18 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         </span>
         {/* Summary — single line, truncated; full text on hover */}
         <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
-        {/* Attachments / related documents — right after the summary, so type/submitter/words stay adjacent and words keeps its true left-edge position */}
-        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
-        </span>
         {/* Type tag — omitted inside a type-grouped folder, since the folder already says the type */}
         {showType && (
           <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         )}
         {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
         <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Words */}
-        <span className="text-[11.5px] text-right" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+        {/* Attachments / related documents — just before words, so words stays the last column on the table's true left edge */}
+        <span className="flex justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
+        </span>
+        {/* Words — flush to the table's left edge */}
+        <span className="text-[11.5px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
     </div>
   );
@@ -935,18 +935,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · spacer · document · summary · [type] · submitter · attachments · words
   // Date is trimmed to its actual content width so the process column sits right against it. A small dedicated spacer sits between process and the name — it's
   // the only way to give process breathing room from the name without shrinking the name column itself. Inside a type-grouped folder the type column is
-  // redundant (the folder already says the type), so it's dropped. Type/submitter are flexible (a minimum plus a share of any extra room) rather than a flat
-  // fixed width, so as the panel is widened — whether by dragging or the full-screen toggle — they grow along with name/summary instead of staying pinned small.
-  // Type/submitter/words are capped at their real max-content width (not an open-ended fr share) — once fully shown they stop growing,
-  // so extra room never sits as dead space in a column that's already displaying everything. All leftover space goes to name/summary.
-  // Attachments/related icons sit right after the summary — keeping type/submitter/words adjacent to each other so words always lands on the true left edge.
-  // Type's floor shrinks in the docked view specifically (in favor of the summary) but still grows to its full content width once there's room.
+  // redundant (the folder already says the type), so it's dropped. The icons track sits just before words (last column), so words stays on the table's true
+  // left edge. Type is the trickiest column: a grid track with a px max always claims that max before the flexible name/summary columns get any spare space,
+  // so to make type *yield* to name/summary when the panel is narrow, its max is capped low until the panel is actually roomy (widened by drag, or full-screen) —
+  // only then does it grow to fully show the longest type label. That keeps the docked table favoring name/summary while still showing type in full when there's space.
+  const roomy = isFocus || panelWidth >= 720;
+  const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? "18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) 26px minmax(80px,92px) minmax(62px,64px) minmax(44px,52px)" : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) 26px minmax(62px,64px) minmax(44px,52px)")
-    : (showType ? "18px 56px 34px 5px minmax(0,1.2fr) minmax(0,1fr) 26px minmax(56px,92px) minmax(58px,64px) minmax(40px,52px)" : "18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) 26px minmax(58px,64px) minmax(40px,52px)");
+    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} minmax(62px,64px) 26px minmax(40px,48px)` : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 26px minmax(40px,48px)")
+    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} minmax(58px,64px) 26px minmax(36px,48px)` : "18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) minmax(58px,64px) 26px minmax(36px,48px)");
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
-  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean }) => (
-    <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
+  const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
+    <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {!opts?.hideIcon && sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
@@ -959,10 +959,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       <span />
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
-      <span />
       {showType && sortHead("type", "סוג")}
       {sortHead("submitter", "מגיש")}
-      {sortHead("words", "מילים")}
+      <span />
+      {sortHead("words", "מילים", { alignLeft: true })}
     </div>
   );
   const tableHeader = makeTableHeader(true);
