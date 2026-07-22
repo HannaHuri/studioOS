@@ -607,10 +607,16 @@ type Message = { q: string; isFirst: boolean; agent?: boolean };
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
 type StepIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
-const AGENT_STEPS: { Icon: StepIcon; text: string; subText?: string }[] = [
+const AGENT_STEPS: {
+  Icon: StepIcon; text: string; subText?: string;
+  altIcon?: StepIcon; altText?: string; // "מגבש תכנית עבודה" and "מנתח את מורכבות" are the same real step — swap in place instead of two rows
+}[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
-  { Icon: ListSortDescendingIcon, text: "מגבש תכנית עבודה למענה" },
-  { Icon: Activity, text: "מנתח את מורכבות הבקשה", subText: "הבקשה תטופל כמשימה אחת מרוכזת" },
+  {
+    Icon: ListSortDescendingIcon, text: "מגבש תכנית עבודה למענה",
+    altIcon: Activity, altText: "מנתח את מורכבות הבקשה",
+    subText: "הבקשה תטופל כמשימה אחת מרוכזת",
+  },
   { Icon: Folder, text: "מאתר מידע רלוונטי בתיק" },
   { Icon: Terminal, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
   { Icon: Send, text: "מכין את התשובה הסופית" },
@@ -764,9 +770,12 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
+          // The "alt" phase (in-place swap) kicks in with the same timing that used to only reveal subText.
+          const inAlt = (isCurrent && agentSub) || done;
+          const displayText = inAlt && step.altText ? step.altText : step.text;
           // Once the "one-part answer" note has appeared, it stays — it doesn't ride along with agentSub anymore.
           const subRevealed = !!step.subText && (done || (isCurrent && agentSub));
-          const Icon = done ? Check : step.Icon;
+          const Icon = done ? Check : inAlt && step.altIcon ? step.altIcon : step.Icon;
           // Icons stay put and grey for current/pending — only the trailing dots signal what's active.
           // Pending (not-yet-started) rows use a lighter grey than the current row, so it reads as "further away".
           const color = done ? "#00854d" : isCurrent ? c.textLight : PENDING_GRAY;
@@ -780,7 +789,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                   fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif",
                 }}
               >
-                {step.text}
+                {displayText}
                 {isCurrent && dotsReady && <AgentEllipsis />}
                 {subRevealed && (
                   <span className="text-[12.5px] italic" style={{ color: c.textLight }}>
