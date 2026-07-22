@@ -770,8 +770,9 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
-          // The "alt" phase (in-place swap) kicks in with the same timing that used to only reveal subText.
-          const inAlt = (isCurrent && agentSub) || done;
+          // The "alt" phase (in-place swap) only applies while the step is actively being worked — once
+          // it's done, the label reverts to the primary step name (that's the one that "really" happened).
+          const inAlt = isCurrent && agentSub;
           const displayText = inAlt && step.altText ? step.altText : step.text;
           // Once the "one-part answer" note has appeared, it stays — it doesn't ride along with agentSub anymore.
           const subRevealed = !!step.subText && (done || (isCurrent && agentSub));
