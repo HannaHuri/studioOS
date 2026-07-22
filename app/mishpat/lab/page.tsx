@@ -328,6 +328,8 @@ function formatWords(n: number): string {
   return String(n);
 }
 const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבע", "בית המשפט"];
+// Single-letter role, shown in the compact (narrow) table so the column can shrink; full text stays in the tooltip
+const SUBMITTER_SHORT: Record<string, string> = { "תובע": "ת", "נתבע": "נ", "בית המשפט": "ב" };
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
@@ -699,7 +701,7 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
 }
 
 // Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; showType?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true, compact = false, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; showType?: boolean; compact?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -729,7 +731,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         <span />
         {/* Document name */}
         <span className="flex items-center gap-1.5 min-w-0">
-          <span className="doc-link truncate text-[13px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
@@ -738,8 +740,10 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         {showType && (
           <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
         )}
-        {/* Submitter — short role (full name in tooltip); court abbreviated to save space */}
-        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+        {/* Extra breathing room after the type tag (empty spacer track) so the pill isn't cramped against the submitter */}
+        {showType && <span />}
+        {/* Submitter — compact view shows just the role's initial (full text in tooltip); court abbreviated otherwise */}
+        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{compact ? (SUBMITTER_SHORT[doc.submitter] ?? doc.submitter.charAt(0)) : (doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter)}</span>
         {/* Attachments / related documents — just before words; aligned toward the submitter so its gap there is a uniform 4px (rather than centered, which pads both sides) */}
         <span className="flex justify-start flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
@@ -941,11 +945,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // only then does it grow to fully show the longest type label. That keeps the docked table favoring name/summary while still showing type in full when there's space.
   const roomy = isFocus || panelWidth >= 720;
   const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
+  // Submitter shrinks to a single-letter role in the compact view; in a roomy panel it grows back to show the full word.
+  const submitterTrack = roomy ? "minmax(58px,64px)" : "44px";
+  // A bare spacer track after the type tag: flanked by two 4px grid gaps it turns the type→submitter gap into 8px, so the pill isn't cramped (showType views only).
+  const typeGap = "0px";
   // Icons (22px) and words (max 36px) are trimmed close to their real content so the empty space in those cells doesn't read as an oversized gap around the
   // icons; the reclaimed width flows to name/summary via the fr columns.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} minmax(62px,64px) 24px minmax(32px,38px)` : "18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) minmax(62px,64px) 24px minmax(32px,38px)")
-    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} minmax(58px,64px) 24px minmax(30px,36px)` : "18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) minmax(58px,64px) 24px minmax(30px,36px)");
+    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(32px,38px)` : `18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) ${submitterTrack} 24px minmax(32px,38px)`)
+    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(30px,36px)` : `18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) ${submitterTrack} 24px minmax(30px,36px)`);
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -962,6 +970,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       {sortHead("name", "שם מסמך")}
       <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
       {showType && sortHead("type", "סוג")}
+      {showType && <span />}
       {sortHead("submitter", "מגיש")}
       <span />
       {sortHead("words", "מילים", { alignLeft: true })}
@@ -1209,7 +1218,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} compact={!roomy} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1264,18 +1273,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} processDocs={processDocsById[pid]} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={processDocsById[pid]} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} processDocs={undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
