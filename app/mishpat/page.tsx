@@ -113,12 +113,13 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
-// ── Response-mode selector (agents vs. direct chat) ─────────────────────────
-type ResponseMode = "agents" | "direct";
-const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct"];
+// ── Response-mode selector (agents / direct chat / fast chat) ───────────────
+type ResponseMode = "agents" | "direct" | "fast";
+const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
-  agents: { label: "סוכנים",   desc: "ניתוח מעמיק לשאלות מורכבות",   Icon: Bot },
-  direct: { label: "צ'ט ישיר", desc: "מענה מהיר לשאלות ממוקדות",     Icon: Zap },
+  agents: { label: "סוכנים",    desc: "מענה לבקשות מורכבות ע\"י ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
+  direct: { label: "צ'ט ישיר",  desc: "מענה לבקשות ע\"י שליחת הבקשה ישירות",                   Icon: Send },
+  fast:   { label: "צ'ט מהיר",  desc: "מענה מהיר לבקשות ממוקדות",                              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 
