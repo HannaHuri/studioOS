@@ -117,8 +117,8 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
-  agents: { label: "סוכנים",    desc: "מענה לבקשות מורכבות ע\"י ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
-  direct: { label: "צ'ט ישיר",  desc: "מענה לבקשות ע\"י שליחת הבקשה ישירות",                   Icon: Send },
+  agents: { label: "סוכנים",    desc: "מענה לבקשות מורכבות על-ידי ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
+  direct: { label: "צ'ט ישיר",  desc: "מענה לבקשות על-ידי שליחת הבקשה ישירות",                   Icon: Send },
   fast:   { label: "צ'ט מהיר",  desc: "מענה מהיר לבקשות ממוקדות",                              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
@@ -863,7 +863,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, position: "relative", top: "-2px" }} />; })()}
+            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, transform: responseMode === "direct" ? "scaleX(-1)" : undefined }} />; })()}
             <span>{RESPONSE_MODE_CONFIG[responseMode].label}</span>
             <ChevronDown
               size={11}
@@ -1075,7 +1075,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
                       fontFamily: "Noto Sans Hebrew, sans-serif",
                     }}
                   >
-                    <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0 }} />
+                    <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0, transform: opt === "direct" ? "scaleX(-1)" : undefined }} />
                     {label}
                   </span>
                   <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
