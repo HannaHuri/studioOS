@@ -1094,22 +1094,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 נקה סינון
               </button>
             )}
-          </div>
-          {/* Wide / expanded: a spacer pushes the expand button to the far-left end of the row */}
-          {headerWide && <><div className="flex-1" />{expandBtn}</>}
-        </div>
-
-        {/* Thin separator between the filter controls and the view controls */}
-        <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
-
-        {/* View-controls zone: grouping toggle (left). Per-case/per-type checkboxes handle chat selection. */}
-        <div className="flex items-center justify-between gap-3" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <div className="flex-1" />
-
-          {/* View controls (left) — group by type, then the list/table toggle (left-most) */}
-          {openCaseId && (
-            <div className="flex items-center gap-1.5 flex-shrink-0" style={{ marginInlineEnd: "4px" }}>
-              <div className="flex items-center h-7 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
+            {/* View toggle — chrono / group-by-type; sits inline at the end of the filter row */}
+            {openCaseId && (
+              <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
                 <button
                   onClick={() => setGrouping("chrono")}
                   className="h-full w-7 flex items-center justify-center transition-colors"
@@ -1127,8 +1114,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   <FolderOpen size={15} />
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          {/* Wide / expanded: a spacer pushes the expand button to the far-left end of the row */}
+          {headerWide && <><div className="flex-1" />{expandBtn}</>}
         </div>
       </div>
 
