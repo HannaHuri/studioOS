@@ -899,8 +899,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // chrono (flat) or grouped by type
   const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | "process" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
-  const [isAuto, setIsAuto]       = useState(true);
-  // Auto mode is the default → all documents start selected
+  // Documents start selected by default
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
     ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
@@ -985,9 +984,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   function toggleTypeAll(type: string, next: boolean) {
     setDocs((p) => p.map((d) => (d.type === type ? { ...d, checked: next } : d)));
   }
-  function toggleAllDocs(next: boolean) {
-    setDocs((p) => p.map((d) => ({ ...d, checked: next })));
-  }
   function toggleBucketAll(bucket: DocBucket, next: boolean) {
     setDocs((p) => p.map((d) => (d.bucket === bucket ? { ...d, checked: next } : d)));
   }
@@ -1022,7 +1018,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   docs.filter((d) => d.caseId === openCaseId && d.processId != null).forEach((d) => {
     (processDocsById[d.processId!] ??= []).push(d);
   });
-  const allChecked = docs.length > 0 && docs.every((d) => d.checked);
 
   // Size control — binary only (default <-> full-screen). "Table" already has its own direct, independent toggle right next to this one,
   // so it is not a rung here; a single swapping icon (like a video player's fullscreen button) is unambiguous with just two states.
@@ -1104,31 +1099,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           {headerWide && <><div className="flex-1" />{expandBtn}</>}
         </div>
 
-        {/* Thin separator between the filter controls and the checkbox controls */}
+        {/* Thin separator between the filter controls and the view controls */}
         <div className="h-px" style={{ backgroundColor: isDark ? dk.border : "#eef1f4" }} />
 
-        {/* Chat-selection zone: auto/manual + select-all (right) · view controls — grouping + expand (left) */}
+        {/* View-controls zone: grouping toggle (left). Per-case/per-type checkboxes handle chat selection. */}
         <div className="flex items-center justify-between gap-3" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setIsAuto((v) => { const next = !v; if (next) toggleAllDocs(true); return next; })}
-              className="h-7 px-2.5 rounded-full text-[13px] leading-none transition-colors flex items-center justify-center flex-shrink-0"
-              style={{
-                minWidth: "54px",
-                backgroundColor: isAuto ? c.primary : "transparent",
-                color: isAuto ? "white" : (isDark ? dk.textMuted : c.iconGray),
-                border: `1.5px solid ${isAuto ? c.primary : (isDark ? dk.border : c.border)}`,
-                fontFamily: "Noto Sans Hebrew, sans-serif",
-              }}
-              title={isAuto ? "בחירת מסמכים אוטומטית — לחצו למעבר לבחירה ידנית" : "בחירת מסמכים ידנית — לחצו למעבר לאוטומטית"}
-            >
-              {isAuto ? "אוטו׳" : "ידני"}
-            </button>
-            <button className="flex items-center gap-1.5 min-w-0" onClick={() => toggleAllDocs(!allChecked)}>
-              <CheckboxBlue checked={allChecked} onToggle={() => toggleAllDocs(!allChecked)} />
-              <span className="text-[14px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>בחר הכל לצ'ט</span>
-            </button>
-          </div>
+          <div className="flex-1" />
 
           {/* View controls (left) — group by type, then the list/table toggle (left-most) */}
           {openCaseId && (
@@ -2063,7 +2039,7 @@ export default function MishpatPage() {
           <div
             className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
             style={focusDocs
-              ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }
+              ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white" }
               : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
