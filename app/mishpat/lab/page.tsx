@@ -8,7 +8,7 @@ import {
   HelpCircle, Info, Layers, Link, Sparkles, Microscope, Minimize2,
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip,
+  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal,
   type LucideIcon,
 } from "lucide-react";
@@ -328,8 +328,6 @@ function formatWords(n: number): string {
   return String(n);
 }
 const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבע", "בית המשפט"];
-// Single-letter role, shown in the compact (narrow) table so the column can shrink; full text stays in the tooltip
-const SUBMITTER_SHORT: Record<string, string> = { "תובע": "ת", "נתבע": "נ", "בית המשפט": "ב" };
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
@@ -701,7 +699,7 @@ function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
 }
 
 // Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true, compact = false, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; showType?: boolean; compact?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", showType = true, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; showType?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -720,7 +718,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
     >
       {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
-      <div className="grid items-center gap-1 px-2 py-1.5" style={{ gridTemplateColumns: gridCols }}>
+      <div className="grid items-center px-2 py-1.5" style={{ gridTemplateColumns: gridCols, columnGap: colGap }}>
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Date — time (when present) shown only on hover, so every row stays a single line */}
         <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
@@ -742,8 +740,8 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, showType = true
         )}
         {/* Extra breathing room after the type tag (empty spacer track) so the pill isn't cramped against the submitter */}
         {showType && <span />}
-        {/* Submitter — compact view shows just the role's initial (full text in tooltip); court abbreviated otherwise */}
-        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{compact ? (SUBMITTER_SHORT[doc.submitter] ?? doc.submitter.charAt(0)) : (doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter)}</span>
+        {/* Submitter — short label (court abbreviated to ביהמ״ש); full party name in the tooltip */}
+        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
         {/* Attachments / related documents — just before words; aligned toward the submitter so its gap there is a uniform 4px (rather than centered, which pads both sides) */}
         <span className="flex justify-start flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
@@ -890,8 +888,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   }, [openDocId, panelWidth]);
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
-  const headerWide = panelWidth >= 640; // filters move up onto the search row (wait for a meaningful width so search isn't cramped)
   const [search, setSearch]       = useState("");
+  const [searchOpen, setSearchOpen]   = useState(false); // minimal (no case open): search collapses to an icon until opened
+  const [filtersOpen, setFiltersOpen] = useState(false); // minimal (no case open): refine filters (type/submitter/date) collapse behind a filter icon
   const [activeType, setActiveType] = useState("הכל");
   const [activeSubmitter, setActiveSubmitter] = useState("הכל");
   const [dateFrom, setDateFrom]   = useState("");
@@ -944,14 +943,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // only then does it grow to fully show the longest type label. That keeps the docked table favoring name/summary while still showing type in full when there's space.
   const roomy = isFocus || panelWidth >= 720;
   const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
-  // Submitter shrinks to a single-letter role in the compact view; in a roomy panel it grows back to show the full word.
-  const submitterTrack = roomy ? "minmax(58px,64px)" : "44px";
+  // Submitter shows the short label (תובע / נתבע / ביהמ״ש) — wide enough for the word in both views, a touch roomier when expanded.
+  const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
   // A bare spacer track after the type tag: flanked by two 4px grid gaps it turns the type→submitter gap into 8px, so the pill isn't cramped (showType views only).
   const typeGap = "0px";
-  // Icons (22px) and words (max 36px) are trimmed close to their real content so the empty space in those cells doesn't read as an oversized gap around the
-  // icons; the reclaimed width flows to name/summary via the fr columns.
+  // Expanded (focus) view: name is capped so its cell doesn't balloon on a wide screen (that was the big name→summary gap); the summary is the
+  // single flexible column that soaks up all remaining width, so the table always fills the panel edge-to-edge with no empty area.
+  // Compact/wide (non-focus) view keeps fr name/summary so it fills the narrower panel.
   const tableTemplate = (showType: boolean) => isFocus
-    ? (showType ? `18px 56px 34px 5px minmax(0,0.9fr) minmax(0,1.3fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(32px,38px)` : `18px 56px 34px 5px minmax(0,1fr) minmax(0,1.5fr) ${submitterTrack} 24px minmax(32px,38px)`)
+    ? (showType ? `18px 56px 34px 5px minmax(170px,240px) minmax(0,1fr) ${typeTrack} ${typeGap} ${submitterTrack} 28px minmax(36px,42px)` : `18px 56px 34px 5px minmax(170px,260px) minmax(0,1fr) ${submitterTrack} 28px minmax(36px,42px)`)
     : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(30px,36px)` : `18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) ${submitterTrack} 24px minmax(30px,36px)`);
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
@@ -961,7 +961,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     </button>
   );
   const makeTableHeader = (showType: boolean) => (
-    <div className="grid items-center gap-1 px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
+    <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: isFocus ? "8px" : "4px", backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       <span />
       {sortHead("date", "תאריך")}
       {sortHead("process", "תהליך", { center: true, hideIcon: true })}
@@ -1003,6 +1003,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
     activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
+  // The three "refine" filters only (type / submitter / date) — these are what collapse behind the filter icon on the case list
+  const refineCount = (activeType !== "הכל" ? 1 : 0) + (activeSubmitter !== "הכל" ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
+  const refineActive = refineCount > 0;
+  // Minimal on the case list; everything unfolds once a case is open (or when the user opens/uses a control). An active
+  // filter always keeps its control visible, so the list is never narrowed by something the user can't see.
+  const searchExpanded  = !!openCaseId || searchOpen || search.trim() !== "";
+  const filtersExpanded = !!openCaseId || filtersOpen || refineActive;
 
   // Filtering — scoped to the currently open case
   const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
@@ -1045,79 +1052,130 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     </div>
   ) : null;
 
+  // ממתין להחלטה — task-oriented lens. Lives inline on the top row while on the case list; moves into the filter row once a case is open.
+  const pendingBtn = (
+    <button
+      onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
+      className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
+      style={{
+        border: `1px solid ${lens === "pending" ? c.primary : (isDark ? dk.border : c.border)}`,
+        color: lens === "pending" ? c.primary : (isDark ? dk.textMuted : c.textGray),
+        backgroundColor: lens === "pending" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+        fontFamily: "Noto Sans Hebrew, sans-serif",
+      }}
+      title="הצג רק מסמכים הממתינים להחלטה"
+    >
+      <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
+      ממתין להחלטה
+    </button>
+  );
+
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
-        {/* Search + filters — stacked when narrow; one row when the panel is widened (saves height) */}
-        <div className={headerWide ? "flex items-center gap-1.5" : "flex flex-col gap-2.5"}>
-          <div className={`flex items-center gap-1.5 min-w-0 ${headerWide ? "" : "flex-1"}`} style={headerWide ? { width: "360px" } : undefined}>
-            <div className="relative flex-1 min-w-0">
-              <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="חיפוש שם מסמך או תקציר"
-                className="w-full h-9 rounded-md text-[13px] outline-none"
-                style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
-              />
-            </div>
-            {/* Narrow: expand sits next to the search field */}
-            {!headerWide && expandBtn}
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
-            <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
-            <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
-            <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
-            <button
-              onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
-              className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
-              style={{
-                border: `1px solid ${lens === "pending" ? c.primary : (isDark ? dk.border : c.border)}`,
-                color: lens === "pending" ? c.primary : (isDark ? dk.textMuted : c.textGray),
-                backgroundColor: lens === "pending" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
-                fontFamily: "Noto Sans Hebrew, sans-serif",
-              }}
-              title="הצג רק מסמכים הממתינים להחלטה"
-            >
-              <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
-              ממתין להחלטה
-            </button>
-            {filterActive && (
-              <button
-                onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); }}
-                className="flex items-center gap-1 h-8 px-2 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0 hover:bg-black/5"
-                style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                title="ניקוי כל הסינונים"
-              >
-                <X size={14} />
-                נקה סינון
+        {/* Search + filters — minimal (icons) on the case list; unfolds once a case is open */}
+        <div className="flex flex-col gap-2.5">
+          {/* Row A (always one line): search (icon → field) · on the case list also the filter + ממתין controls · window controls pinned to the far end */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {searchExpanded ? (
+              <div className="relative flex-1 min-w-0">
+                <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
+                <input
+                  value={search}
+                  autoFocus={searchOpen && !openCaseId}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onBlur={() => { if (!openCaseId && search.trim() === "") setSearchOpen(false); }}
+                  placeholder="חיפוש שם מסמך או תקציר"
+                  className="w-full h-8 rounded-md text-[13px] outline-none"
+                  style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: !openCaseId ? "30px" : "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                />
+                {!openCaseId && (
+                  <button onClick={() => { setSearch(""); setSearchOpen(false); }} title="סגירת החיפוש" className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center hover:opacity-70" style={{ left: "8px", color: c.iconGray }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button onClick={() => setSearchOpen(true)} title="חיפוש" className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray, border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white" }}>
+                <Search size={16} />
               </button>
             )}
-            {/* View toggle — chrono / group-by-type; sits inline at the end of the filter row */}
-            {openCaseId && (
-              <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
+            {/* Case list: the filter toggle + ממתין sit up here on the top row, beside the search (not on a second row) */}
+            {!openCaseId && (
+              <>
                 <button
-                  onClick={() => setGrouping("chrono")}
-                  className="h-full w-7 flex items-center justify-center transition-colors"
-                  style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-                  title="תצוגה כרונולוגית"
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  title="סינון"
+                  className="relative size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-colors hover:bg-black/5"
+                  style={{
+                    color: filtersExpanded ? c.primary : (isDark ? dk.textMuted : c.iconGray),
+                    border: `1px solid ${filtersExpanded ? c.primary : (isDark ? dk.border : c.border)}`,
+                    backgroundColor: filtersExpanded ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+                  }}
                 >
-                  <Clock size={15} />
+                  <SlidersHorizontal size={16} />
+                  {refineActive && (
+                    <span className="absolute flex items-center justify-center rounded-full text-[10px] font-semibold leading-none" style={{ top: "-5px", left: "-5px", minWidth: "15px", height: "15px", padding: "0 3px", backgroundColor: c.primary, color: "white", fontFamily: "Figtree, sans-serif" }}>{refineCount}</span>
+                  )}
                 </button>
-                <button
-                  onClick={() => { setGrouping("type"); setOpenType(null); }}
-                  className="h-full w-7 flex items-center justify-center transition-colors"
-                  style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
-                  title="קיבוץ המסמכים לפי סוג"
-                >
-                  <FolderOpen size={15} />
-                </button>
-              </div>
+                {pendingBtn}
+              </>
             )}
+            {/* Window controls pinned to the far (left) end — the growing search field already pushes them there, so the spacer is only needed when search is a small icon */}
+            {!searchExpanded && <div className="flex-1" />}
+            {expandBtn}
           </div>
-          {/* Wide / expanded: a spacer pushes the expand button to the far-left end of the row */}
-          {headerWide && <><div className="flex-1" />{expandBtn}</>}
+
+          {/* Row B — only when there are refine dropdowns to show (case list: user opened the filter / a filter is active) or a case is open */}
+          {(filtersExpanded || openCaseId) && (
+            <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
+              {filtersExpanded && (
+                <>
+                  <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
+                  <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
+                  <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
+                </>
+              )}
+
+              {/* Inside an open case ממתין joins the filter row (on the case list it lives up on Row A instead) */}
+              {openCaseId && pendingBtn}
+
+              {filterActive && (
+                <button
+                  onClick={() => { setActiveType("הכל"); setActiveSubmitter("הכל"); setDateFrom(""); setDateTo(""); setSearch(""); setLens("all"); setSearchOpen(false); setFiltersOpen(false); }}
+                  className="flex items-center gap-1 h-8 px-2 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0 hover:bg-black/5"
+                  style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  title="ניקוי כל הסינונים"
+                >
+                  <X size={14} />
+                  נקה סינון
+                </button>
+              )}
+
+              {/* View toggle — chrono / group-by-type; only inside an open case */}
+              {openCaseId && (
+                <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
+                  <button
+                    onClick={() => setGrouping("chrono")}
+                    className="h-full w-7 flex items-center justify-center transition-colors"
+                    style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+                    title="תצוגה כרונולוגית"
+                  >
+                    <Clock size={15} />
+                  </button>
+                  <button
+                    onClick={() => { setGrouping("type"); setOpenType(null); }}
+                    className="h-full w-7 flex items-center justify-center transition-colors"
+                    style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
+                    title="קיבוץ המסמכים לפי סוג"
+                  >
+                    <FolderOpen size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1138,7 +1196,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => setOpenCaseId(caseOpen ? null : cf.id)}>
+                <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => { const closing = caseOpen; setOpenCaseId(closing ? null : cf.id); if (closing) { setSearchOpen(false); setFiltersOpen(false); } }}>
                   {/* Row A: title (right) + word count · chevron (left edge) */}
                   <span className="flex items-center justify-between gap-2 w-full min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
@@ -1183,7 +1241,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} compact={!roomy} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1238,18 +1296,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={processDocsById[pid]} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={processDocsById[pid]} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} showType={false} compact={!roomy} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -2091,7 +2149,7 @@ export default function MishpatPage() {
           <div className="flex flex-col items-center gap-2.5" style={{ color: iconCol }}>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שיחות אחרונות"><Clock size={19} /></button>
             <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="שאלות מועדפות"><Bookmark size={19} /></button>
-            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><Sparkles size={19} /></button>
+            <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" title="דוגמאות"><Paperclip size={19} /></button>
           </div>
           <div className="flex-1" />
           <button className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: iconCol }} title="עזרה"><HelpCircle size={19} /></button>
