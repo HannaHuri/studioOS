@@ -9,7 +9,7 @@ import {
   Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, Zap,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
-  ZoomIn, ZoomOut, GripHorizontal,
+  ZoomIn, ZoomOut, GripHorizontal, GripVertical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -188,7 +188,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf", processId: 2, processLabel: "מינוי מומחה וחוות דעת",
+    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf",
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
@@ -248,25 +248,25 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
     date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
-    related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf", processId: 2, processLabel: "מינוי מומחה וחוות דעת",
+    related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf",
   },
   {
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
     date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבע מגיש תביעה שכנגד בטענה להוצאות שנגרמו לו עקב הגשת התביעה בחוסר תום לב.",
-    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf", processId: 5, processLabel: "תביעה שכנגד",
+    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf",
   },
   {
     id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתבי טענות", submitter: "תובע",
     date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
     summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
-    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf", processId: 5, processLabel: "תביעה שכנגד",
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf",
   },
   {
     id: "d19", name: "החלטה על איחוד דיון", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "25.03.26", iso: "2026-03-25", bucket: "older", words: "640",
     summary: "בית המשפט מורה על איחוד הדיון בתביעה ובתביעה שכנגד לשם יעילות דיונית.",
-    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf", processId: 5, processLabel: "תביעה שכנגד",
+    related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf",
   },
   {
     id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -557,179 +557,201 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   );
 }
 
-// A small numbered chip for a document's process/thread. Click opens a popover with the thread's status (open/resolved) and its documents.
-function ProcessBadge({ processId, processLabel, docs, isDark, onOpenDoc }: { processId: number; processLabel?: string; docs: CaseDoc[]; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-
-  const sorted = [...docs].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
-  const isResolution = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
-  const resolvedDoc = [...sorted].reverse().find(isResolution);
-
-  const toggle = (e: ReactMouseEvent) => {
-    e.stopPropagation();
-    if (!open && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
-    }
-    setOpen((v) => !v);
-  };
-
+// A compact icon/number trigger inside a table row (process number · 🔗 related · 📎 attachments).
+// Clicking it toggles an inline detail row that opens in place (RowDetail) — no floating popover.
+function RowIconTrigger({ children, active, onClick, title, isDark }: { children: React.ReactNode; active: boolean; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
   return (
-    <>
-      <button
-        ref={btnRef}
-        onClick={toggle}
-        className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
-        style={{
-          fontSize: "13px", fontWeight: 600, lineHeight: 1,
-          color: open ? c.primary : (isDark ? dk.textMuted : c.textGray),
-          fontFamily: "Figtree, sans-serif",
-        }}
-        title={processLabel ? `תהליך: ${processLabel}` : "תהליך"}
-      >
-        {processId}
-      </button>
-      {open && pos && (
-        <>
-          <div className="fixed inset-0 z-40" title="" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 rounded overflow-hidden"
-            title=""
-            style={{ top: pos.top, right: pos.right, width: "300px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
-            dir="rtl"
-          >
-            <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
-              <div className="text-[13px] font-semibold" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{processLabel ?? `תהליך ${processId}`}</div>
-              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[12px] whitespace-nowrap" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                <span>{sorted.length} מסמכים</span>
-                <span style={{ opacity: 0.5 }}>·</span>
-                <span>נפתח <span style={{ fontFamily: "Figtree, sans-serif" }}>{sorted[0]?.date}</span></span>
-                <span style={{ opacity: 0.5 }}>·</span>
-                {resolvedDoc ? (
-                  <span style={{ color: "#0f8a5f", fontWeight: 500 }}>הוכרע <span style={{ fontFamily: "Figtree, sans-serif" }}>{resolvedDoc.date}</span></span>
-                ) : (
-                  <span style={{ color: "#b9670c", fontWeight: 500 }}>ממתין להכרעה</span>
-                )}
-              </div>
-            </div>
-            <div className="max-h-[260px] overflow-y-auto docs-scroll">
-              {sorted.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => { onOpenDoc?.(d); setOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-right transition-colors hover:bg-black/5"
-                >
-                  <span className="text-[12px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>{d.date}</span>
-                  <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{d.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </>
+    <button
+      onClick={onClick}
+      className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
+      style={{ color: active ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+      title={title}
+    >
+      {children}
+    </button>
   );
 }
 
-// A single icon trigger + its own popover listing one kind of items (used for both related docs and attachments — click is independent per icon).
-function DocLinksBadge({ icon: Icon, title, items, isDark }: { icon: LucideIcon; title: string; items: string[]; isDark: boolean }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-
-  const toggle = (e: ReactMouseEvent) => {
-    e.stopPropagation();
-    if (!open && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
-    }
-    setOpen((v) => !v);
-  };
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        onClick={toggle}
-        className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
-        style={{ color: open ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-        title={title}
-      >
-        <Icon size={11} />
-      </button>
-      {open && pos && (
-        <>
-          <div className="fixed inset-0 z-40" title="" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 rounded overflow-hidden"
-            title=""
-            style={{ top: pos.top, right: pos.right, width: "260px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
-            dir="rtl"
-          >
-            <div className="px-3 py-2">
-              <div className="text-[12px] font-semibold mb-1" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{title}</div>
-              {items.map((name) => (
-                <div key={name} className="flex items-center gap-2 py-1 text-right">
-                  <FileText size={12} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
-                  <span className="text-[13px] truncate flex-1 min-w-0" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
-// Related + attachments — two independent icon triggers, each opening its own popover (clicking one never shows the other's list).
-function AttachmentsBadge({ doc, isDark }: { doc: CaseDoc; isDark: boolean }) {
-  const attachments = doc.attachments ?? [];
-  const related = doc.related;
-  return (
-    <span className="flex items-center gap-0.5">
-      {related.length > 0 && <DocLinksBadge icon={Link} title="קשורים" items={related} isDark={isDark} />}
-      {attachments.length > 0 && <DocLinksBadge icon={Paperclip} title="נספחים" items={attachments} isDark={isDark} />}
-    </span>
-  );
-}
-
-// Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", showType = true, processDocs, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; showType?: boolean; processDocs?: CaseDoc[]; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
-  const baseBg = isDark ? dk.input : "white";
-  const activeBg = isDark ? "#212c42" : "#f1f6fd";
+// Inline detail panel that expands directly under a table row, in place of the old floating popovers.
+// One nested document rendered inside an expanded detail, using the SAME grid template as the parent
+// table so every field lines up under the same columns (date · process · name · summary · type · מגיש · מילים).
+// Read-only: the checkbox / trigger columns stay empty; clicking the row opens the document.
+function NestedDocRow({ doc, gridCols, colGap, showType, isDark, isOpen, isSelf, onOpenDoc }: { doc: CaseDoc; gridCols: string; colGap: string; showType: boolean; isDark: boolean; isOpen?: boolean; isSelf?: boolean; onOpenDoc?: (doc: CaseDoc) => void }) {
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
   return (
     <div
-      ref={rowRef}
-      className="relative cursor-pointer transition-colors"
-      style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: active ? activeBg : baseBg }}
-      dir="rtl"
+      className="grid items-center px-2 py-1 rounded transition-colors cursor-pointer"
+      style={{ gridTemplateColumns: gridCols, columnGap: colGap, backgroundColor: isOpen ? (isDark ? "rgba(0,115,234,0.10)" : "rgba(0,115,234,0.06)") : "transparent" }}
       title="פתיחת המסמך לצפייה"
-      onClick={onOpenDoc}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e7f0fb" : "#f6f9ff"); }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
+      onClick={() => onOpenDoc?.(doc)}
+      onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,60,140,0.045)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isOpen ? (isDark ? "rgba(0,115,234,0.10)" : "rgba(0,115,234,0.06)") : "transparent"; }}
     >
-      {active && <span className="absolute inset-y-0" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
-      <div className="grid items-center px-2 py-1.5" style={{ gridTemplateColumns: gridCols, columnGap: colGap }}>
+      <span className="flex-shrink-0" />
+      <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
+      <span className="min-w-0 flex justify-center text-[12px]" style={{ color: metaCol, fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>{doc.processId ?? ""}</span>
+      <span />
+      <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
+        {/* subtle nesting cue before the name */}
+        <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>
+        {/* Displayed doc → blue underline + "פעיל". The thread's own document (the row it was expanded from) → italic, distinct without looking disabled. */}
+        <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "3px" }}>{doc.name}</span>
+        {isOpen && <span className="text-[10.5px] flex-shrink-0" style={{ color: metaCol, fontStyle: "italic", fontFamily: "Noto Sans Hebrew, sans-serif" }}>· פעיל</span>}
+        {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+      </span>
+      <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+      {showType && (
+        <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
+      )}
+      {showType && <span />}
+      <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
+      <span />
+      <span className="text-[11.5px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+    </div>
+  );
+}
+
+// Renders one of three things depending on which row icon was clicked: the process thread (status + its
+// documents), the related documents, or the attachments. Related docs and process-thread docs are real
+// documents, so they render as full column-aligned rows (NestedDocRow). Attachments are exhibits, not case
+// documents, so they have no column data and stay a simple labeled list.
+function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, showType, openDocId, isDark, onOpenDoc, onClose }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; showType: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void }) {
+  const panelBg = isDark ? "#181f33" : "#f4f8fd";
+  const titleCol = isDark ? dk.textMuted : c.textLight;
+  const textCol = isDark ? dk.text : c.text;
+  const metaCol = isDark ? dk.textMuted : c.textLight;
+
+  let title = "";
+  let TitleIcon: LucideIcon = FileText;
+  let meta: React.ReactNode = null;
+  let body: React.ReactNode = null;
+
+  if (kind === "process") {
+    const docs = processDocs ?? [];
+    const sorted = [...docs].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    const isResolution = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
+    const closed = sorted.some(isResolution);
+    title = doc.processLabel ?? `תהליך ${doc.processId}`;
+    TitleIcon = Layers;
+    // Status only — open / closed (per feedback: drop doc-count and open/decision dates)
+    meta = (
+      <span className="text-[11px] rounded-full px-1.5 py-px whitespace-nowrap" style={{ fontWeight: 400, fontFamily: "Noto Sans Hebrew, sans-serif", backgroundColor: closed ? (isDark ? "#1c3a2c" : "#e5f4ec") : (isDark ? "#3a2e1c" : "#fbf0df"), color: closed ? "#0f8a5f" : "#b9670c" }}>
+        {closed ? "הושלם" : "פתוח"}
+      </span>
+    );
+    body = (
+      <div className="flex flex-col">
+        {sorted.map((d) => (
+          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} onOpenDoc={onOpenDoc} />
+        ))}
+      </div>
+    );
+  } else if (kind === "related") {
+    title = "מסמכים קשורים";
+    TitleIcon = Link;
+    // Resolve each related name to a real document in the same case (so we can show its full columns).
+    body = (
+      <div className="flex flex-col">
+        {doc.related.map((name) => {
+          const rel = siblingDocs?.find((d) => d.name === name);
+          return rel
+            ? <NestedDocRow key={name} doc={rel} gridCols={gridCols} colGap={colGap} showType={showType} isDark={isDark} isOpen={rel.id === openDocId} onOpenDoc={onOpenDoc} />
+            : (
+              <div key={name} className="flex items-center gap-2 py-1 px-2" style={{ paddingInlineStart: "40px" }}>
+                <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+                <span className="text-[12.5px] truncate min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
+                <span className="text-[11px] flex-shrink-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>אינו בתיק</span>
+              </div>
+            );
+        })}
+      </div>
+    );
+  } else {
+    title = "נספחים";
+    TitleIcon = Paperclip;
+    // Attachments are exhibits (not case documents) — no column data, so a simple labeled list.
+    body = (
+      <div className="flex flex-col" style={{ paddingInlineStart: "40px", paddingInlineEnd: "8px" }}>
+        {(doc.attachments ?? []).map((name) => (
+          <div key={name} className="flex items-center gap-2 py-1 text-right">
+            <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+            <span className="text-[12.5px] truncate flex-1 min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="pt-1.5 pb-2"
+      style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+      dir="rtl"
+    >
+      <div className="flex items-center justify-between mb-1 px-2" style={{ paddingInlineStart: "34px" }}>
+        <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <TitleIcon size={12} />
+          {title}
+          {meta && <><span style={{ opacity: 0.4 }}>·</span>{meta}</>}
+        </span>
+        <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
+      </div>
+      {body}
+    </div>
+  );
+}
+
+// Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", showType = true, lockProcess, processDocs, siblingDocs, openDocId, expandedKind, onToggleExpand, onOpenDoc, onOpenAnyDoc, onToggleCheck, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; showType?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKind?: "related" | "attachments" | "process" | null; onToggleExpand?: (kind: "related" | "attachments" | "process") => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+  const baseBg = isDark ? dk.input : "white";
+  const activeBg = isDark ? "#212c42" : "#f1f6fd";
+  const metaCol = isDark ? dk.textMuted : c.textLight;
+  const subCol = isDark ? dk.textMuted : c.textGray;
+  const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
+  const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
+  // Which inline detail (if any) is open for this row — state lives on the panel so only one row is expanded at a time (accordion)
+  const expanded = expandedKind ?? null;
+  const lit = active || expanded != null; // row is highlighted when it's the open doc or has a detail expanded
+  const restBg = lit ? activeBg : baseBg;
+  const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
+  return (
+    <div
+      ref={rowRef}
+      className="relative transition-colors"
+      style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: restBg }}
+      dir="rtl"
+    >
+      {lit && <span className="absolute inset-y-0 z-10" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
+      <div
+        className="grid items-center px-2 py-1.5 cursor-pointer"
+        style={{ gridTemplateColumns: gridCols, columnGap: colGap }}
+        title={expanded ? "לחצו לסגירת השרשור (שם המסמך פותח אותו)" : "פתיחת המסמך לצפייה"}
+        onClick={() => { if (expanded) onToggleExpand?.(expanded); else onOpenDoc?.(); }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (lit ? "#e7f0fb" : "#f6f9ff"); }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+      >
         <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
         {/* Date — time (when present) shown only on hover, so every row stays a single line */}
         <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
-        {/* Process — bold number, click for the thread's status and documents */}
-        <span className="min-w-0 flex justify-center">
-          {doc.processId != null && <ProcessBadge processId={doc.processId} processLabel={doc.processLabel} docs={processDocs ?? []} isDark={isDark} onOpenDoc={onOpenAnyDoc} />}
+        {/* Process — bold number; click opens the thread inline. Inside a process folder it's shown but not clickable (you're already in the thread). */}
+        <span className="min-w-0 flex justify-center" onClick={(e) => e.stopPropagation()}>
+          {doc.processId != null && (
+            lockProcess
+              ? <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : "תהליך"}>{doc.processId}</span>
+              : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={doc.processLabel ? `תהליך: ${doc.processLabel}` : "תהליך"} isDark={isDark}>
+                  <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif" }}>{doc.processId}</span>
+                </RowIconTrigger>
+          )}
         </span>
         <span />
-        {/* Document name */}
-        <span className="flex items-center gap-1.5 min-w-0">
-          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.name}</span>
+        {/* Document name — always opens the doc (even when the row's thread is expanded); marked blue + underline + "פעיל" when displayed */}
+        <span className="flex items-center gap-1.5 min-w-0" onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} title="פתיחת המסמך לצפייה">
+          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "3px" }}>{doc.name}</span>
+          {active && <span className="text-[10.5px] flex-shrink-0" style={{ color: metaCol, fontStyle: "italic", fontFamily: "Noto Sans Hebrew, sans-serif" }}>· פעיל</span>}
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
         {/* Summary — single line, truncated; full text on hover */}
@@ -742,13 +764,19 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         {showType && <span />}
         {/* Submitter — short label (court abbreviated to ביהמ״ש); full party name in the tooltip */}
         <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Attachments / related documents — just before words; aligned toward the submitter so its gap there is a uniform 4px (rather than centered, which pads both sides) */}
-        <span className="flex justify-start flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {(doc.attachments?.length || doc.related.length > 0) && <AttachmentsBadge doc={doc} isDark={isDark} />}
+        {/* Attachments / related documents — just before words; each icon toggles its own inline detail row */}
+        <span className="flex justify-start flex-shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
+          {doc.related.length > 0 && (
+            <RowIconTrigger active={expanded === "related"} onClick={toggle("related")} title="מסמכים קשורים" isDark={isDark}><Link size={11} /></RowIconTrigger>
+          )}
+          {(doc.attachments?.length ?? 0) > 0 && (
+            <RowIconTrigger active={expanded === "attachments"} onClick={toggle("attachments")} title="נספחים" isDark={isDark}><Paperclip size={11} /></RowIconTrigger>
+          )}
         </span>
         {/* Words — flush to the table's left edge */}
         <span className="text-[11.5px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
       </div>
+      {expanded && <RowDetail kind={expanded} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} showType={showType} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(expanded)} />}
     </div>
   );
 }
@@ -768,6 +796,20 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
   // Real page count of the loaded PDF (null while parsing / no file) — feeds the reference-only panel's page-total display
   const [numPages, setNumPages] = useState<number | null>(null);
   useEffect(() => { setNumPages(null); }, [doc.file]);
+  // Measure the pane's own width so the page fills it (no wasted grey margins on wide screens, in any layout mode)
+  const [paneW, setPaneW] = useState(0);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => { for (const e of entries) setPaneW(e.contentRect.width); });
+    ro.observe(el);
+    setPaneW(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+  // Page fills the pane minus a small symmetric margin; capped so a very wide pane still reads like a document.
+  // Use the known fixed width when the pane isn't flex-filling (reliable); measure only in fill mode.
+  const effectivePaneW = (!fill && width > 0) ? width : paneW;
+  const fitPageWidth = effectivePaneW > 0 ? Math.max(360, Math.min(960, Math.round(effectivePaneW - 56))) : (expanded ? 820 : 640);
   // Floating action panel — draggable from its grip; offset is relative to its default position (vertically centered on the left edge)
   const [panelOffset, setPanelOffset] = useState({ x: 0, y: 0 });
   const startPanelDrag = (e: ReactMouseEvent) => {
@@ -798,6 +840,13 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         title="גרירה לשינוי רוחב המסמך"
       >
         <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
+        {/* Grip-dots chip straddling the edge — reads clearly as a drag handle; turns blue on hover */}
+        <div
+          className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-md border transition-colors group-hover:!bg-[#0073ea] group-hover:!border-[#0073ea] group-hover:!text-white"
+          style={{ width: "15px", height: "30px", backgroundColor: isDark ? "#2a3350" : "#eef2f8", borderColor: isDark ? dk.border : "#cfd8e6", color: isDark ? dk.textMuted : "#8a97ad" }}
+        >
+          <GripVertical size={13} strokeWidth={2} />
+        </div>
       </div>
       )}
       {/* Real window controls — small, fixed, horizontal cluster pinned to the document's own top-left corner. Light-blue chrome; always in the same spot even if the reference panel below gets dragged away */}
@@ -847,14 +896,14 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
       {doc.file ? (
         <div className="flex-1 overflow-y-auto docs-scroll" style={{ backgroundColor: isDark ? dk.bg : "#f1f3f4" }}>
           <div className="flex flex-col items-center gap-4 py-5 px-4">
-            <PdfViewer file={doc.file} numPages={numPages} pageWidth={expanded ? 820 : 640} onLoadSuccess={setNumPages} />
+            <PdfViewer file={doc.file} numPages={numPages} pageWidth={fitPageWidth} onLoadSuccess={setNumPages} />
           </div>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
           <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
             {[1, 2].map((p) => (
-              <div key={p} className="w-full shadow-lg" style={{ maxWidth: "640px", backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
+              <div key={p} className="w-full shadow-lg" style={{ maxWidth: `${fitPageWidth}px`, backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
                 {p === 1 && (
                   <div className="text-center mb-7">
                     <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
@@ -880,12 +929,8 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
 // ── Document panel (open) — table browser ────────────────────────────────────
 function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, onClosePanel, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; onClosePanel?: () => void; openDocId?: string }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  // When a document is opened (and the panel narrows out of focus mode), bring its row into view
-  useEffect(() => {
-    if (!openDocId) return;
-    const el = rowRefs.current[openDocId];
-    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [openDocId, panelWidth]);
+  // Which row's inline detail is expanded (process / related / attachments) — single-open accordion across the whole table
+  const [expandedRow, setExpandedRow] = useState<{ id: string; kind: "related" | "attachments" | "process" } | null>(null);
   const cols = Math.min(4, Math.max(1, Math.floor(panelWidth / 290))); // more columns when there's room (min ~290px/card)
   const multiCol = cols > 1;
   const [search, setSearch]       = useState("");
@@ -907,6 +952,36 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
   const [openProcess, setOpenProcess] = useState<number | null>(null); // process sub-folder accordion, inside the "בקשות והוראות" type folder
   const [lens, setLens]             = useState<"all" | "new" | "pending">("all"); // status lens
+
+  // On (re)open of the panel while a document is already open, reveal it: expand its case and scroll its row into
+  // view (once). This only fires on mount — not while browsing — so it doesn't reintroduce the mid-navigation jump.
+  const didReveal = useRef(false);
+  useEffect(() => {
+    if (didReveal.current || !openDocId) return;
+    const d = docs.find((x) => x.id === openDocId);
+    if (!d?.caseId) { didReveal.current = true; return; }
+    if (openCaseId !== d.caseId) { setOpenCaseId(d.caseId); return; } // open its case first, then the next run scrolls
+    const el = rowRefs.current[openDocId];
+    if (el) { el.scrollIntoView({ block: "center" }); didReveal.current = true; }
+  });
+
+  // Opening a document collapses the expanded thread — UNLESS that document is one of the thread's own
+  // documents (then it stays open so the blue open-marker keeps showing which one is being viewed).
+  useEffect(() => {
+    if (!expandedRow || !openDocId) return;
+    const row = docs.find((d) => d.id === expandedRow.id);
+    let threadIds: string[] = [];
+    if (row) {
+      if (expandedRow.kind === "process" && row.processId != null) {
+        threadIds = docs.filter((d) => d.caseId === row.caseId && d.processId === row.processId).map((d) => d.id);
+      } else if (expandedRow.kind === "related") {
+        threadIds = docs.filter((d) => d.caseId === row.caseId && row.related.includes(d.name)).map((d) => d.id);
+      }
+      // attachments have no documents of their own → any opened doc collapses them
+    }
+    if (!threadIds.includes(openDocId)) setExpandedRow(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openDocId]);
 
   const bg = isDark ? dk.surface : "white";
 
@@ -947,10 +1022,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
   // A bare spacer track after the type tag: flanked by two 4px grid gaps it turns the type→submitter gap into 8px, so the pill isn't cramped (showType views only).
   const typeGap = "0px";
-  // Expanded (focus) view: name is capped so its cell doesn't balloon on a wide screen (that was the big name→summary gap); the summary is the
-  // single flexible column that soaks up all remaining width, so the table always fills the panel edge-to-edge with no empty area.
-  // Compact/wide (non-focus) view keeps fr name/summary so it fills the narrower panel.
-  const tableTemplate = (showType: boolean) => isFocus
+  // Roomy view (focus OR the docked table dragged wide): the name column is capped so it doesn't balloon on a wide
+  // panel — the summary is the single flexible column that soaks up all remaining width, so more of the summary shows
+  // and the name cell doesn't leave a big white gap. Narrow docked view keeps fr name/summary to fill the tight panel.
+  const tableTemplate = (showType: boolean) => roomy
     ? (showType ? `18px 56px 34px 5px minmax(170px,240px) minmax(0,1fr) ${typeTrack} ${typeGap} ${submitterTrack} 28px minmax(36px,42px)` : `18px 56px 34px 5px minmax(170px,260px) minmax(0,1fr) ${submitterTrack} 28px minmax(36px,42px)`)
     : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(30px,36px)` : `18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) ${submitterTrack} 24px minmax(30px,36px)`);
   // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
@@ -1241,7 +1316,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col">
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -1280,7 +1355,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                     return (
                       <>
                         {processIds.map((pid) => {
-                          const pDocs = byProcess[pid];
+                          // Show the FULL thread inside the folder (all types — incl. the decision) so no extra click is needed
+                          const pDocs = [...(processDocsById[pid] ?? byProcess[pid])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
                           const pOpen = openProcess === pid;
                           const pAllOn = pDocs.every((d) => d.checked);
                           return (
@@ -1296,18 +1372,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={processDocsById[pid]} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={doc.processId != null ? processDocsById[doc.processId] : undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
@@ -1527,8 +1603,9 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean };
 
-function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKey: number }) {
+function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
   const [showCitations, setShowCitations] = useState(true);
+  const [chatSubject, setChatSubject] = useState<"case" | "doc">("case"); // scope: whole case vs the open document — shown as a toggle above the input
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
   const [inputText, setInputText] = useState("");
@@ -1566,6 +1643,12 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   const isEmpty = messages.length === 0;
   const bg = isDark ? dk.bg : "white";
   const textCol = isDark ? dk.text : c.text;
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Tell the parent whether the conversation is empty — drives the minimal-bar vs. full-window reading-mode chat (#2)
+  useEffect(() => { onEmptyChange?.(isEmpty); }, [isEmpty, onEmptyChange]);
+  // Reset the auto-grown input height once it's cleared (e.g. after sending)
+  useEffect(() => { if (inputRef.current && inputText === "") inputRef.current.style.height = "auto"; }, [inputText]);
 
   function handleSend() {
     if (!inputText.trim()) return;
@@ -1578,6 +1661,39 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
 
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
+    // Over the document (floating window): a single-row input with just a send button — no scope / citations / case chip.
+    if (overDoc) {
+      return (
+        <div
+          className="rounded-lg border flex items-end gap-1.5 px-2 py-1.5"
+          style={{ borderColor: isDark ? dk.border : c.inputBorder, boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)", backgroundColor: isDark ? dk.input : "white" }}
+          dir="ltr"
+        >
+          <button
+            onClick={handleSend}
+            title="שלח"
+            className="size-8 flex items-center justify-center rounded-md border flex-shrink-0 transition-colors"
+            style={{ color: c.primary, borderColor: c.primary, backgroundColor: "transparent" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#e0ecfd")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <ArrowUp size={17} />
+          </button>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            dir="rtl"
+            className={`flex-1 bg-transparent outline-none text-right text-[15px] resize-none leading-6 overflow-y-auto py-1 ${isDark ? "dark-ph" : ""}`}
+            style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "140px" }}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            placeholder={isEmpty ? "הקלידו שאלה…" : ""}
+          />
+        </div>
+      );
+    }
     return (
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2 overflow-hidden"
@@ -1588,15 +1704,18 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
         }}
         dir="rtl"
       >
-        <input
-          className={`w-full bg-transparent outline-none text-right text-[16px] min-h-[24px] ${isDark ? "dark-ph" : ""}`}
-          style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        <textarea
+          ref={inputRef}
+          rows={1}
+          className={`w-full bg-transparent outline-none text-right text-[16px] resize-none leading-6 overflow-y-auto ${isDark ? "dark-ph" : ""}`}
+          style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "168px" }}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(168, t.scrollHeight) + "px"; }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
-          autoFocus={isEmpty}
+          placeholder={isEmpty || barMode ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          autoFocus={isEmpty || barMode}
         />
         <div className="flex items-center gap-1.5 min-w-0" dir="ltr">
           {/* Send button — default / hover / press states */}
@@ -1683,7 +1802,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   function renderDisclaimer() {
     return (
       <p
-        className="text-[14px] mt-2"
+        className="text-[12px] mt-1.5"
         style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", textAlign: "center" }}
       >
         תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
@@ -1799,18 +1918,97 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
     );
   }
 
+  // ── Bar mode (reading) — a single compact line in our blue: send (boxed, left) · question · enlarge + dock + drag-grip (right) ──
+  if (barMode) {
+    const barBtn = (onClick: (() => void) | undefined, title: string, node: React.ReactNode) => (
+      <button
+        onClick={onClick}
+        title={title}
+        className="size-7 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
+        style={{ color: isDark ? dk.textMuted : c.iconGray, backgroundColor: "transparent" }}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#e3edfb")}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+      >
+        {node}
+      </button>
+    );
+    return (
+      <>
+        <div
+          className="w-full flex items-end gap-1 rounded-xl border px-2 py-1.5"
+          style={{ borderColor: c.primary, backgroundColor: isDark ? dk.input : "#eef4ff", boxShadow: "0 4px 16px rgba(0,115,234,0.18)" }}
+          dir="ltr"
+        >
+          {/* Send — boxed so its up-arrow doesn't read like the enlarge chevron */}
+          <button
+            onClick={handleSend}
+            title="שליחת שאלה"
+            className="size-8 flex items-center justify-center rounded-md border flex-shrink-0 transition-colors"
+            style={{ color: c.primary, borderColor: c.primary, backgroundColor: "transparent" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#e0ecfd")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <ArrowUp size={17} />
+          </button>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            dir="rtl"
+            className={`flex-1 bg-transparent outline-none text-right text-[15px] resize-none leading-6 overflow-y-auto py-1 ${isDark ? "dark-ph" : ""}`}
+            style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "140px" }}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            placeholder="איך אפשר לעזור?"
+            autoFocus
+          />
+          {barBtn(onEnlarge, "הגדלת חלון הצ׳אט", <ChevronUp size={17} />)}
+          {barBtn(onDock, "עיגון הצ׳אט כטור", <Maximize2 size={15} />)}
+          {/* Drag grip — move the bar; rightmost */}
+          <div onMouseDown={onDragStart} title="גרירת השורה" className="size-7 flex items-center justify-center flex-shrink-0 cursor-move" style={{ color: isDark ? dk.textMuted : c.textLight }}>
+            <GripVertical size={16} />
+          </div>
+        </div>
+        {renderScopeDropdown()}
+      </>
+    );
+  }
+
   // ── Empty state ────────────────────────────────────────────────────────
   if (isEmpty) {
     return (
       <>
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
-            <p
-              className="text-right text-[22px] font-medium mb-2"
-              style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
-            >
-              שלום, טל. במה אוכל לעזור?
-            </p>
+            {overDoc ? (
+              // Over the document: a scope toggle sits right above the input.
+              <div className="flex items-center gap-2 flex-wrap" dir="rtl">
+                <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שיחה עם</span>
+                <div className="flex items-center rounded-md overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
+                  {([["case", "התיק"], ["doc", "מסמך זה"]] as const).map(([val, label], i) => {
+                    const sel = chatSubject === val;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => setChatSubject(val)}
+                        className="h-[26px] px-3 text-[13px]"
+                        style={{ backgroundColor: sel ? (isDark ? "#22304a" : c.primaryLight) : "transparent", color: sel ? c.primary : (isDark ? dk.textMuted : c.textGray), fontWeight: sel ? 500 : 400, fontFamily: "Noto Sans Hebrew, sans-serif", borderInlineStart: i > 0 ? `1px solid ${isDark ? dk.border : c.border}` : "none" }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p
+                className="text-right text-[22px] font-medium mb-2"
+                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+              >
+                שלום, טל. במה אוכל לעזור?
+              </p>
+            )}
             {renderInput()}
             {renderDisclaimer()}
           </div>
@@ -1958,10 +2156,12 @@ export default function MishpatPage() {
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
   const [viewerWidth, setViewerWidth] = useState(620);
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
-  const [chatMin, setChatMin] = useState(false);         // floating chat minimized to its header
+  const [readingDocW, setReadingDocW] = useState<number | null>(null); // manual doc/table split in reading mode (null = auto)
+  const [chatCollapsed, setChatCollapsed] = useState(true); // reading-mode chat: true = minimal one-line bar, false = floating window
   const [chatPos, setChatPos] = useState<{ x: number; y: number } | null>(null); // null = default bottom-left anchor
   const [chatSize, setChatSize] = useState({ w: 380, h: 470 });
   const layoutRef = useRef<HTMLDivElement>(null); // positioning context for the floating chat
+  const chatContainerRef = useRef<HTMLDivElement>(null); // the floating chat container (draggable from header or bar grip)
   const [vw, setVw] = useState(1280);
   useEffect(() => {
     const u = () => setVw(window.innerWidth);
@@ -1979,15 +2179,24 @@ export default function MishpatPage() {
   const chatSpace = vw - 55 - viewerWidth - (isPanelOpen ? panelWidth : 40);
   const forceFloat = !!openDoc && (vw < 1100 || docExpanded);
   const chatFloating = forceFloat || (!!openDoc && chatSpace < 420);
-  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setChatMin(false); setChatPos(null); };
+  // Reading mode (#1) — the user expanded the document: it's pinned at a comfortable reading width and the
+  // documents table absorbs the leftover width (instead of the viewer ballooning with grey side-margins).
+  const readingMode = !!openDoc && docExpanded;
+  // Doc width in reading mode — comfortable to read by default, capped, and never so wide the table drops below ~500px.
+  // The user can override the doc/table split by dragging the table's edge (readingDocW); we still clamp it to sane bounds.
+  const readingDefaultW = Math.max(600, Math.min(900, vw - 60 - 500));
+  const readingW = Math.max(480, Math.min(vw - 60 - 400, readingDocW ?? readingDefaultW));
+  // #2 — whenever the chat floats over the document it can collapse to a minimal question bar (any float, not just the expand-button reading mode).
+  const chatBar = chatFloating && chatCollapsed;
+  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatCollapsed(true); setChatPos(null); };
   // Dock the floating chat back into its column while keeping the document open (shrinks the viewer if needed so the chat fits)
-  const dockChat = () => { setDocExpanded(false); setChatMin(false); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
+  const dockChat = () => { setDocExpanded(false); setChatCollapsed(true); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
 
   // Drag the floating chat by its header
   const startChatDrag = (e: ReactMouseEvent) => {
     e.preventDefault();
     const row = layoutRef.current?.getBoundingClientRect();
-    const win = (e.currentTarget.parentElement as HTMLElement)?.getBoundingClientRect();
+    const win = chatContainerRef.current?.getBoundingClientRect();
     if (!row || !win) return;
     const offX = e.clientX - win.left;
     const offY = e.clientY - win.top;
@@ -2027,51 +2236,58 @@ export default function MishpatPage() {
       <div ref={layoutRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
-          className={chatFloating ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex min-w-0"}
+          ref={chatContainerRef}
+          className={chatFloating ? `absolute z-40 flex flex-col rounded-xl ${chatBar ? "" : "overflow-hidden"}` : "flex-1 flex min-w-0"}
           style={chatFloating ? {
-            ...(chatPos ? { left: `${chatPos.x}px`, top: `${chatPos.y}px` } : { bottom: "16px", insetInlineStart: "16px" }),
-            width: `${chatSize.w}px`,
-            height: chatMin ? "auto" : `${chatSize.h}px`,
-            border: `1px solid ${isDark ? dk.border : c.border}`,
-            backgroundColor: isDark ? dk.bg : "white",
-            boxShadow: "0 10px 34px rgba(0,0,0,0.22)",
+            ...(chatPos ? { left: `${chatPos.x}px`, top: `${chatPos.y}px` } : { bottom: "16px", insetInlineStart: "12px" }),
+            width: chatBar ? "min(360px, calc(100% - 32px))" : `${chatSize.w}px`,
+            height: chatBar ? "auto" : `${chatSize.h}px`,
+            border: chatBar ? "none" : `1px solid ${isDark ? dk.border : c.border}`,
+            backgroundColor: chatBar ? "transparent" : (isDark ? dk.bg : "white"),
+            boxShadow: chatBar ? "none" : "0 10px 34px rgba(0,0,0,0.22)",
           } : undefined}
         >
-          {chatFloating && (
-            <div onMouseDown={startChatDrag} className="flex items-center justify-between px-3 flex-shrink-0 cursor-move select-none" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: chatMin ? "none" : `1px solid ${isDark ? dk.border : "#e2e6ee"}` }} dir="rtl">
-              <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
+          {chatFloating && !chatBar && (
+            <div onMouseDown={startChatDrag} className="flex items-center justify-between px-2.5 flex-shrink-0 cursor-move select-none" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }} dir="rtl">
+              {/* Drag affordance — the whole bar is draggable; the dots make that clear */}
+              <GripHorizontal size={16} style={{ color: isDark ? dk.textMuted : c.textLight }} />
               <div className="flex items-center gap-0.5">
-                <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "הרחבה" : "מזעור"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}>{chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+                {/* Minimize back to the one-line bar — available on any floating chat window */}
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatCollapsed(true)} title="מזעור לשורה" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><ChevronDown size={16} /></button>
                 <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט למקומו (המסמך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: iconCol }}><Maximize2 size={15} /></button>
               </div>
             </div>
           )}
-          <div className={`flex-1 flex min-w-0 ${chatFloating && chatMin ? "hidden" : ""}`}>
-            <ChatArea isDark={isDark} conversationKey={convKey} />
+          <div className="flex-1 flex min-w-0">
+            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
           </div>
-          {chatFloating && !chatMin && (
+          {chatFloating && !chatBar && (
             <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
               <div className="absolute" style={{ right: "5px", top: "5px", width: "7px", height: "7px", borderRight: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}`, borderTop: `2px solid ${isDark ? dk.textMuted : "#b7c0cf"}` }} />
             </div>
           )}
         </div>
 
-        {/* Document viewer — third pane (fills the area when the chat is floating) */}
+        {/* Reading mode with the table closed → push the document to the right edge (against the rail) at its set size */}
+        {openDoc && readingMode && !isPanelOpen && <div className="flex-1" />}
+
+        {/* Document viewer — third pane. Normally fills the area when the chat floats; in reading mode it's a fixed
+            comfortable width (pinned left) so the documents table can absorb the leftover width instead. */}
         {openDoc && (
           <DocViewer
             doc={openDoc}
             isDark={isDark}
-            width={viewerWidth}
+            width={readingMode ? readingW : viewerWidth}
             onWidthChange={setViewerWidth}
             onClose={closeDoc}
-            fill={chatFloating}
+            fill={chatFloating && !readingMode}
             showHandle={!forceFloat}
             canExpand={vw >= 1100}
-            expanded={chatFloating}
+            expanded={readingMode}
             onToggleExpand={() => {
-              // Collapse (whether the fill came from the explicit expand button or from dragging the viewer very wide) back to the actual default: reset both the flag and the manually-dragged width.
-              if (chatFloating) { setDocExpanded(false); setViewerWidth(620); }
-              else setDocExpanded(true);
+              // Toggle reading mode (doc pinned + table absorbs the width + chat floats). Reset the manual width on exit.
+              if (readingMode) { setDocExpanded(false); setReadingDocW(null); setViewerWidth(620); }
+              else { setDocExpanded(true); setChatCollapsed(true); }
             }}
           />
         )}
@@ -2084,27 +2300,36 @@ export default function MishpatPage() {
         {/* Document panel — opens to the left of the right rail; toggled by the rail's documents button */}
         {isPanelOpen && (
           <div
-            className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative flex-shrink-0 ${resizing ? "" : "transition-all duration-300"}`}
+            className={focusDocs ? "absolute top-0 bottom-0 z-40" : `relative ${readingMode ? "flex-1 min-w-0" : "flex-shrink-0"}`}
             style={focusDocs
               ? { left: 0, right: "60px", backgroundColor: isDark ? dk.surface : "white" }
-              : { width: `${panelWidth}px`, overflow: "visible" }}
+              : readingMode
+                ? { overflow: "visible" }
+                : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : panelWidth} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); if (openDoc?.id === doc.id) closeDoc(); else setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); if (openDoc?.id === doc.id) closeDoc(); else setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
             </div>
 
-            {/* Resize handle — left edge (panel sits to the left of the rail) */}
+            {/* Resize handle — left edge (panel sits to the left of the rail). Normal mode: resize the table width.
+                Reading mode: the table is flex-1, so dragging adjusts the doc/table split (the doc's pinned-left width). */}
             {!focusDocs && (
               <div
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setResizing(true);
-                  const onMove = (ev: MouseEvent) =>
+                  const onMove = (ev: MouseEvent) => {
+                    if (readingMode) {
+                      // Doc is pinned to the left edge, so its right edge (the handle) sits at x = doc width; drag it to re-split.
+                      setReadingDocW(Math.max(480, Math.min(vw - 60 - 400, ev.clientX)));
+                      return;
+                    }
                     // 480 is the floor: below it the table's fixed-width columns (checkbox/date/process/type/submitter/attachments/words) alone
                     // exceed the panel width, and the name/summary columns get squeezed to nothing and overlap their neighbors.
                     // The ceiling scales with the window instead of a flat 720, so the panel can be dragged as wide as the user wants
                     // while still leaving the chat pane at least ~380px.
                     setPanelWidth(Math.min(vw - 380 - 60, Math.max(480, window.innerWidth - 60 - ev.clientX)));
+                  };
                   const onUp = () => {
                     setResizing(false);
                     document.removeEventListener("mousemove", onMove);
@@ -2115,11 +2340,18 @@ export default function MishpatPage() {
                   document.addEventListener("mouseup", onUp);
                   document.body.style.userSelect = "none";
                 }}
-                className="absolute top-0 bottom-0 left-0 z-10"
+                className="absolute top-0 bottom-0 left-0 z-10 group"
                 style={{ width: "8px", cursor: "ew-resize" }}
                 title="גרירה לשינוי רוחב"
               >
                 <div className="absolute top-0 bottom-0 left-0" style={{ width: "2px", backgroundColor: resizing ? c.primary : "#dbe7f7" }} />
+                {/* Grip-dots chip straddling the edge — reads clearly as a drag handle; turns blue on hover / while resizing */}
+                <div
+                  className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-md border transition-colors group-hover:!bg-[#0073ea] group-hover:!border-[#0073ea] group-hover:!text-white"
+                  style={{ width: "15px", height: "30px", backgroundColor: resizing ? c.primary : (isDark ? "#2a3350" : "#eef2f8"), borderColor: resizing ? c.primary : (isDark ? dk.border : "#cfd8e6"), color: resizing ? "white" : (isDark ? dk.textMuted : "#8a97ad") }}
+                >
+                  <GripVertical size={13} strokeWidth={2} />
+                </div>
               </div>
             )}
 
@@ -2129,7 +2361,7 @@ export default function MishpatPage() {
         {/* Right icon rail — new conversation, documents (elevated), then secondary nav; help + model + version at the bottom */}
         <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-5 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setChatCollapsed(true); }}
             className="w-8 h-8 flex items-center justify-center rounded mb-3 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
