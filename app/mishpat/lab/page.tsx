@@ -2243,6 +2243,19 @@ export default function MishpatPage() {
   const dockChat = () => { setDocExpanded(false); setChatCollapsed(true); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
   // Reverse of docking — float the chat back over the document (as a window), giving the document the wider reading width again.
   const floatChat = () => { setDocExpanded(true); setChatCollapsed(false); setChatPos(null); };
+  // Close the documents table. The table filled the space to the left of the document; if the chat is floating over the
+  // document, dock it into that freed space (a column beside the document) instead of leaving empty white space.
+  // (viewer width computed as if the panel is already closed — the 40px rail margin — since setIsPanelOpen is async here.)
+  const closePanel = () => {
+    setFocusDocs(false);
+    setIsPanelOpen(false);
+    if (openDoc && chatFloating) {
+      setDocExpanded(false);
+      setChatCollapsed(true);
+      setChatPos(null);
+      setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - 40 - 430)));
+    }
+  };
 
   // Drag the floating chat by its header
   const startChatDrag = (e: ReactMouseEvent) => {
@@ -2366,7 +2379,7 @@ export default function MishpatPage() {
                 : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={() => { setFocusDocs(false); setIsPanelOpen(false); }} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={closePanel} openDocId={openDoc?.id} />
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail). Normal mode: resize the table width.
@@ -2428,7 +2441,7 @@ export default function MishpatPage() {
           </button>
           {/* Documents — same icon language as the rest; turns blue when its panel is open. Distinguished only by position + divider */}
           <button
-            onClick={() => { setIsPanelOpen((v) => !v); setFocusDocs(false); }}
+            onClick={() => { if (isPanelOpen) closePanel(); else { setIsPanelOpen(true); setFocusDocs(false); } }}
             className="size-8 flex items-center justify-center rounded hover:bg-black/5 transition-colors"
             style={{ color: isPanelOpen ? c.primary : iconCol }}
             title="מסמכים"
