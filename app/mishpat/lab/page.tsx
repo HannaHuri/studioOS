@@ -135,18 +135,23 @@ interface CaseDoc {
   processIds?: number[]; // a document that belongs to several processes (appears in each thread/folder); overrides processId
 }
 
-// Process (thread) labels by id — the single source of truth for folder-header names, so a document that belongs to
-// several processes doesn't force us to derive the label from one (possibly multi-process) document.
-const PROCESS_LABELS: Record<number, string> = {
-  1: "בקשת הנתבע לדחיית מועד הדיון",
-  2: "הודעת התובע על הגשת ראיות נוספות",
-  3: "בקשת התובע לגילוי מסמכים",
-  4: "בקשת התובע לסעד זמני",
+// Process (thread) labels, per case and id — the single source of truth for folder-header names. Numbered per case
+// (each case's threads start at 1 and are unrelated to another case's), so the map is keyed by caseId then process id.
+const PROCESS_LABELS: Record<string, Record<number, string>> = {
+  c1: {
+    1: "בקשת הנתבע לדחיית מועד הדיון",
+    2: "הודעת התובע על הגשת ראיות נוספות",
+    3: "בקשת התובע לגילוי מסמכים",
+  },
+  c2: {
+    1: "בקשת התובע לסעד זמני",
+  },
 };
 // A document's processes — the multi-process array when present, otherwise the single processId (or none).
 const docProcessIds = (d: CaseDoc): number[] => d.processIds ?? (d.processId != null ? [d.processId] : []);
+const processLabel = (caseId: string | undefined, id: number): string => PROCESS_LABELS[caseId ?? ""]?.[id] ?? `תהליך ${id}`;
 const processTitle = (d: CaseDoc): string =>
-  docProcessIds(d).map((id) => PROCESS_LABELS[id] ?? `תהליך ${id}`).join(" · ") || "תהליך";
+  docProcessIds(d).map((id) => processLabel(d.caseId, id)).join(" · ") || "תהליך";
 
 // Type filter chips with aggregate word counts (real case data)
 const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
@@ -313,11 +318,11 @@ const CASE_DOCS_2: CaseDoc[] = [
   { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
     summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false, file: "/studioOS/docs/claim-1.pdf" },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
-    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 4 },
+    summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1 },
   { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
     summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/defense-1.pdf" },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
-    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 4 },
+    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 1 },
 ];
 
 // Case metadata (number + parties)
@@ -1398,7 +1403,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={pAllOn} onToggle={() => setDocs((p) => p.map((d) => (docProcessIds(d).includes(pid) ? { ...d, checked: !pAllOn } : d)))} /></span>
                                 <button onClick={() => setOpenProcess((o) => (o === pid ? null : pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={pOpen ? "כיווץ" : "פתיחה"}>
                                   <span className="text-[13px] font-medium truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                                    <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {PROCESS_LABELS[pid] ?? `תהליך ${pid}`} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
+                                    <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {processLabel(openCaseId, pid)} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
                                   </span>
                                   <span className="flex-1" />
                                   <ChevronDown size={15} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: pOpen ? "rotate(180deg)" : "none" }} />
