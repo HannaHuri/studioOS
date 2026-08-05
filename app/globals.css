@@ -14,10 +14,10 @@
 .docs-scroll::-webkit-scrollbar-thumb:hover { background: #c2c9d6; }
 .docs-scroll::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
 
-/* Document links: look like main-color text by default, tint on hover.
-   Underline is reserved for the active/displayed doc (set inline) so it stays a distinctive marker — hover only tints. */
-.doc-link { color: var(--doc-link-color, #323338); text-decoration: none; transition: color 0.12s; }
-.doc-link:hover { color: var(--doc-link-hover, #0073ea); }
+/* Document links: main-color text. The active/displayed doc is the ONLY one shown blue + underline (set inline),
+   so it's an unambiguous marker. No color transition — it stuck the inline blue at the old value; no hover tint —
+   it made non-active names blue too ("blue without underline"). Row hover is handled by the row background. */
+.doc-link { color: var(--doc-link-color, #323338); text-decoration: none; }
 
 /* Placeholder color in dark mode (inline styles can't target ::placeholder) */
 .dark-ph::placeholder { color: #6b7da3; opacity: 1; }
