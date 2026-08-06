@@ -919,13 +919,13 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
       {doc.file ? (
         // dir="ltr" so the scrollbar sits on the right edge (the PDF pages are centered, so direction doesn't affect them)
         <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr" style={{ backgroundColor: isDark ? dk.bg : "#f1f3f4" }}>
-          <div className="flex flex-col items-center gap-4 py-5 px-4">
+          <div className="flex flex-col items-center gap-4 pt-2.5 pb-5 px-4">
             <PdfViewer file={doc.file} numPages={numPages} pageWidth={fitPageWidth} onLoadSuccess={setNumPages} />
           </div>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-          <div className="flex flex-col items-center gap-4 py-5 px-4" dir="rtl">
+          <div className="flex flex-col items-center gap-4 pt-2.5 pb-5 px-4" dir="rtl">
             {[1, 2].map((p) => (
               <div key={p} className="w-full shadow-lg" style={{ maxWidth: `${fitPageWidth}px`, backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
                 {p === 1 && (
@@ -1361,7 +1361,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         {/* By type — column-table rows under type sub-headers; the column header only shows once a folder is open */}
         {grouping === "type" && (
           <div className="flex flex-col">
-            {openType && tableHeaderNoType}
             {typesInData.map((type, ti) => {
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
@@ -1380,6 +1379,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                       <ChevronDown size={16} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                     </button>
                   </div>
+                  {/* Column header sits at the head of each open folder, directly above its rows */}
+                  {open && tableHeaderNoType}
                   {/* "בקשות והוראות" — sub-grouped by process (each thread gets its own folder); docs with no process stay flat */}
                   {open && type === "בקשות והוראות" ? (() => {
                     const byProcess: Record<number, CaseDoc[]> = {};
@@ -1682,6 +1683,16 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
   const bg = isDark ? dk.bg : "white";
   const textCol = isDark ? dk.text : c.text;
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Keep the latest message in view (esp. in the compact floating window, which otherwise stays scrolled to the top).
+  // Re-run on the bar→window transition too (the scroll container mounts only then), and after a tick so the answer
+  // has laid out (setTimeout rather than rAF, which is paused when the tab isn't compositing).
+  useEffect(() => {
+    const toBottom = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; };
+    toBottom();
+    const id = setTimeout(toBottom, 60);
+    return () => clearTimeout(id);
+  }, [messages, barMode, overDoc]);
 
   // Tell the parent whether the conversation is empty — drives the minimal-bar vs. full-window reading-mode chat (#2).
   // Gate on the actual value: onEmptyChange is a fresh closure each parent render, so an ungated effect would re-fire
@@ -1846,9 +1857,11 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
   }
 
   function renderDisclaimer() {
+    // The compact floating window over the document skips the disclaimer — no room, and it's shown in the main chat anyway.
+    if (overDoc) return null;
     return (
       <p
-        className={`${overDoc ? "text-[12px]" : "text-[14px]"} mt-1.5`}
+        className={`text-[14px] mt-1.5`}
         style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", textAlign: "center" }}
       >
         תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
@@ -2068,7 +2081,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0" style={{ backgroundColor: bg }}>
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => (
               <div key={i} className="w-full max-w-[768px] min-w-0 flex flex-col gap-3">
@@ -2200,7 +2213,7 @@ export default function MishpatPage() {
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
-  const [viewerWidth, setViewerWidth] = useState(620);
+  const [viewerWidth, setViewerWidth] = useState(700); // doc pane a touch wider than the chat when all three panes are open
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
   const [readingDocW, setReadingDocW] = useState<number | null>(null); // manual doc/table split in reading mode (null = auto)
   const [chatCollapsed, setChatCollapsed] = useState(true); // reading-mode chat: true = minimal one-line bar, false = floating window
@@ -2357,7 +2370,7 @@ export default function MishpatPage() {
             expanded={readingMode}
             onToggleExpand={() => {
               // Toggle reading mode (doc pinned + table absorbs the width + chat floats). Reset the manual width on exit.
-              if (readingMode) { setDocExpanded(false); setReadingDocW(null); setViewerWidth(620); }
+              if (readingMode) { setDocExpanded(false); setReadingDocW(null); setViewerWidth(700); }
               else { setDocExpanded(true); setChatCollapsed(true); }
             }}
           />
