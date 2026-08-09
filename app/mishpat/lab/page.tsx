@@ -766,10 +766,8 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
-  // Whether any item in each nested group is picked for the chat — turns the collapsed row's trigger icon blue.
-  const relResolved = doc.related.map((name) => siblingDocs?.find((d) => d.name === name)).filter((d): d is CaseDoc => !!d);
-  const relPicked = relResolved.some((d) => d.checked);
-  const procPicked = (processDocs ?? []).some((d) => d.checked);
+  // Only the attachments icon reflects selection (attachments are opt-in and shown nowhere else in the collapsed row).
+  // Related/process triggers stay neutral — the underlying case doc's own checkbox already shows its selection state.
   const attNames = doc.attachments ?? [];
   const attPicked = attNames.some((name) => !!attachmentSel?.has(attKey(doc.id, name)));
   // Which inline detail (if any) is open for this row — state lives on the panel so only one row is expanded at a time (accordion)
@@ -801,7 +799,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           {docProcessIds(doc).length > 0 && (
             lockProcess
               ? <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }} title={`תהליך: ${processTitle(doc)}`}>{docProcessIds(doc).join(", ")}</span>
-              : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark} picked={procPicked}>
+              : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark}>
                   <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>
                 </RowIconTrigger>
           )}
@@ -825,7 +823,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         {/* Attachments / related documents — just before words; each icon toggles its own inline detail row */}
         <span className="flex justify-start flex-shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
-            <RowIconTrigger active={expanded === "related"} onClick={toggle("related")} title="מסמכים קשורים" isDark={isDark} picked={relPicked}><Link size={11} /></RowIconTrigger>
+            <RowIconTrigger active={expanded === "related"} onClick={toggle("related")} title="מסמכים קשורים" isDark={isDark}><Link size={11} /></RowIconTrigger>
           )}
           {(doc.attachments?.length ?? 0) > 0 && (
             <RowIconTrigger active={expanded === "attachments"} onClick={toggle("attachments")} title="נספחים" isDark={isDark} picked={attPicked}><Paperclip size={11} /></RowIconTrigger>
@@ -1002,10 +1000,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [grouping, setGrouping]   = useState<"chrono" | "type">("chrono"); // chrono (flat) or grouped by type
   const [sortKey, setSortKey]     = useState<"date" | "name" | "words" | "submitter" | "type" | "process" | null>(null); // table column sort
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
-  // Documents start unselected by default — the user picks what goes into the chat; triggers/process numbers stay gray until then
+  // Case documents start selected by default. Their related/process triggers are NOT colored by this (they'd all be
+  // blue and too loud in the row) — only the attachments icon reflects selection, since attachments are opt-in and not shown elsewhere.
   const [docs, setDocs]           = useState<CaseDoc[]>(() => [
-    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: false, used: false })),
-    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: false })),
+    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
+    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
   ]);
   const [attachmentSel, setAttachmentSel] = useState<Set<string>>(new Set()); // chat-selected attachments (exhibits), keyed by `${docId}::${name}`
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
