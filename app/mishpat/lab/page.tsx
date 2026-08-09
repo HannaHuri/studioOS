@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Minimize2,
-  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
@@ -189,25 +189,25 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתבי טענות", submitter: "נתבע",
-    date: "10.05.26", iso: "2026-05-10", bucket: "month", words: "12.1K",
+    date: "10.05.26", time: "11:30", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבע דוחה את כל טענות הרשלנות, טוען להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
     related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/defense-1.pdf",
   },
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
-    date: "05.05.26", iso: "2026-05-05", bucket: "month", words: "820",
+    date: "05.05.26", time: "09:45", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
     related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf",
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
-    date: "12.02.26", iso: "2026-02-12", bucket: "older", words: "15.7K",
+    date: "12.02.26", time: "14:10", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבע בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
     related: ["כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-1.pdf",
   },
   {
     id: "d8", name: "חוות דעת אקטוארית", type: "חוות דעת", submitter: "תובע",
-    date: "20.01.26", iso: "2026-01-20", bucket: "older", words: "3.6K",
+    date: "20.01.26", time: "10:20", iso: "2026-01-20", bucket: "older", words: "3.6K",
     summary: "חישוב הפסדי השתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בצירוף הפסדי פנסיה וזכויות סוציאליות.",
     related: ["תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/expert-opinion-1.pdf",
   },
@@ -219,13 +219,13 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d10", name: "בקשה לזימון עד", type: "בקשות והוראות", submitter: "נתבע",
-    date: "30.05.26", iso: "2026-05-30", bucket: "week", words: "0",
+    date: "30.05.26", time: "15:05", iso: "2026-05-30", bucket: "week", words: "0",
     summary: "המסמך טרם עובד — אין תקציר זמין.",
     related: [], checked: false, missing: true,
   },
   {
     id: "d11", name: "תצהיר עדות — גב' רוזן", type: "תצהירים", submitter: "נתבע",
-    date: "28.05.26", iso: "2026-05-28", bucket: "week", words: "6.2K",
+    date: "28.05.26", time: "12:40", iso: "2026-05-28", bucket: "week", words: "6.2K",
     summary: "תצהיר עדה מטעם הנתבע בנוגע לנסיבות מתן הטיפול ולנהלים שהיו נהוגים במחלקה.",
     related: ["כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/affidavit-2.pdf",
   },
@@ -237,63 +237,57 @@ const CASE_DOCS: CaseDoc[] = [
   },
   {
     id: "d13", name: "פרוטוקול ישיבת קדם משפט", type: "פרוטוקולים", submitter: "בית המשפט",
-    date: "15.05.26", iso: "2026-05-15", bucket: "month", words: "5.8K",
+    date: "15.05.26", time: "09:30", iso: "2026-05-15", bucket: "month", words: "5.8K",
     summary: "תיעוד ישיבת קדם המשפט, לרבות עמדות הצדדים והחלטות ביניים בנוגע לגילוי מסמכים.",
     related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/protocol-2.pdf",
   },
   {
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשות והוראות", submitter: "תובע",
-    date: "12.05.26", iso: "2026-05-12", bucket: "month", words: "1.4K",
+    date: "12.05.26", time: "13:15", iso: "2026-05-12", bucket: "month", words: "1.4K",
     summary: "התובע מבקש לחייב את הנתבע בגילוי רשומות רפואיות מלאות ויומני ניתוח רלוונטיים. הנתבע מתנגד חלקית לבקשה.",
     related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/motion-4.pdf", processId: 3,
   },
   {
     id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשות והוראות", submitter: "נתבע",
-    date: "14.05.26", iso: "2026-05-14", bucket: "month", words: "980",
+    date: "14.05.26", time: "10:50", iso: "2026-05-14", bucket: "month", words: "980",
     summary: "הנתבע מתנגד חלקית לגילוי וטוען לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
     related: ["בקשה לגילוי מסמכים"], checked: false, file: "/studioOS/docs/motion-1.pdf", processId: 3,
   },
   {
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
-    date: "08.05.26", iso: "2026-05-08", bucket: "month", words: "9.7K",
+    date: "08.05.26", time: "16:20", iso: "2026-05-08", bucket: "month", words: "9.7K",
     summary: "חוות דעת המומחה שמונה מטעם בית המשפט, הקובעת נכות בשיעור 18% וקשר סיבתי חלקי.",
     related: ["החלטה על מינוי מומחה"], checked: false, file: "/studioOS/docs/expert-opinion-2.pdf",
   },
   {
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
-    date: "03.03.26", iso: "2026-03-03", bucket: "older", words: "8.9K",
+    date: "03.03.26", time: "11:15", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבע מגיש תביעה שכנגד בטענה להוצאות שנגרמו לו עקב הגשת התביעה בחוסר תום לב.",
     related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf",
   },
   {
     id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתבי טענות", submitter: "תובע",
-    date: "20.03.26", iso: "2026-03-20", bucket: "older", words: "4.1K",
+    date: "20.03.26", time: "14:35", iso: "2026-03-20", bucket: "older", words: "4.1K",
     summary: "התובע דוחה את הטענות בתביעה שכנגד וטוען כי התביעה הוגשה בתום לב ועל בסיס ראיות.",
     related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-2.pdf",
   },
   {
     id: "d19", name: "החלטה על איחוד דיון", type: "החלטות בתיק", submitter: "בית המשפט",
-    date: "25.03.26", iso: "2026-03-25", bucket: "older", words: "640",
+    date: "25.03.26", time: "09:05", iso: "2026-03-25", bucket: "older", words: "640",
     summary: "בית המשפט מורה על איחוד הדיון בתביעה ובתביעה שכנגד לשם יעילות דיונית.",
     related: ["כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/decision-3.pdf",
   },
   {
     id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקולים", submitter: "בית המשפט",
-    date: "10.04.26", iso: "2026-04-10", bucket: "older", words: "11.2K",
+    date: "10.04.26", time: "13:50", iso: "2026-04-10", bucket: "older", words: "11.2K",
     summary: "תיעוד דיון ההוכחות הראשון, לרבות חקירת התובע ועד מטעמו וטענות הצדדים.",
     related: ["פרוטוקול ישיבת קדם משפט"], checked: false, file: "/studioOS/docs/protocol-1.pdf",
   },
   {
     id: "d21", name: "סיכומי התובע", type: "כתבי טענות", submitter: "תובע",
-    date: "18.04.26", iso: "2026-04-18", bucket: "older", words: "7.3K",
+    date: "18.04.26", time: "10:10", iso: "2026-04-18", bucket: "older", words: "7.3K",
     summary: "סיכומי התובע המסכמים את הראיות וטוענים לאחריות מלאה של הנתבע לנזקים שנגרמו.",
     related: [], checked: false, file: "/studioOS/docs/claim-1.pdf",
-  },
-  {
-    id: "d22", name: "החלטה על הגשת תיעוד נוסף", type: "החלטות בתיק", submitter: "בית המשפט",
-    date: "02.06.26", time: "13:20", iso: "2026-06-02", bucket: "today", words: "300",
-    summary: "בית המשפט מתיר הגשת תיעוד רפואי עדכני בכפוף למתן זכות תגובה לנתבע.", processId: 2,
-    related: ["הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
   },
   {
     id: "d23", name: "החלטה בבקשות גילוי והגשת ראיות", type: "החלטות בתיק", submitter: "בית המשפט",
@@ -306,13 +300,13 @@ const CASE_DOCS: CaseDoc[] = [
 
 // Second case (mock) — documents for a different file
 const CASE_DOCS_2: CaseDoc[] = [
-  { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", iso: "2026-05-29", bucket: "week", words: "9.8K",
+  { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", time: "09:20", iso: "2026-05-29", bucket: "week", words: "9.8K",
     summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false, file: "/studioOS/docs/claim-1.pdf" },
-  { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", iso: "2026-05-31", bucket: "week", words: "1.2K",
+  { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", time: "14:45", iso: "2026-05-31", bucket: "week", words: "1.2K",
     summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1 },
-  { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", iso: "2026-04-15", bucket: "older", words: "7.1K",
+  { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", time: "11:00", iso: "2026-04-15", bucket: "older", words: "7.1K",
     summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/defense-1.pdf" },
-  { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", iso: "2026-06-01", bucket: "week", words: "540",
+  { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", time: "10:30", iso: "2026-06-01", bucket: "week", words: "540",
     summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 1 },
 ];
 
@@ -591,45 +585,55 @@ function RowIconTrigger({ children, active, onClick, title, isDark, picked = fal
 }
 
 // Inline detail panel that expands directly under a table row, in place of the old floating popovers.
-// One nested document rendered inside an expanded detail, using the SAME grid template as the parent
-// table so every field lines up under the same columns (date · process · name · summary · type · מגיש · מילים).
-// The checkbox column is live: related docs and process-thread docs are real case documents, so ticking one
-// here toggles that document's own `checked` state (same as ticking it in the main list). Clicking the row opens it.
-function NestedDocRow({ doc, gridCols, colGap, showType, isDark, isOpen, isSelf, onOpenDoc, onToggleCheck }: { doc: CaseDoc; gridCols: string; colGap: string; showType: boolean; isDark: boolean; isOpen?: boolean; isSelf?: boolean; onOpenDoc?: (doc: CaseDoc) => void; onToggleCheck?: () => void }) {
+// One nested document rendered inside an expanded detail, using the SAME dynamic columns as the parent table so
+// every field lines up (and the pinned block stays put on horizontal scroll). The checkbox column is live: related
+// and process-thread docs are real case documents, so ticking one here toggles that document's own `checked` state.
+function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen, isSelf, onOpenDoc, onToggleCheck }: { doc: CaseDoc; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; isDark: boolean; isOpen?: boolean; isSelf?: boolean; onOpenDoc?: (doc: CaseDoc) => void; onToggleCheck?: () => void }) {
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
+  const num = colMeta.docNumbers[doc.id];
+  // Opaque backgrounds (so pinned sticky cells occlude scrolling content): base = detail-panel bg, plus open/hover tints.
+  const baseBg = isDark ? "#181f33" : "#f4f8fd";
+  const restBg = isOpen ? (isDark ? "#22293f" : "#e8f0fc") : baseBg;
+  const hoverBg = isOpen ? restBg : (isDark ? "#232a3d" : "#edf1f8");
+  const cellContent = (key: string) => {
+    switch (key) {
+      case "checkbox": return onToggleCheck ? <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span> : <span className="flex-shrink-0" />;
+      case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
+      case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
+      case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
+      case "process":  return <span className="min-w-0 flex justify-center w-full text-[12px]" style={{ color: metaCol, fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>;
+      case "name":     return (
+        <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
+          <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>
+          <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
+          {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        </span>
+      );
+      case "summary":  return <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
+      case "icons":    return <span />;
+      case "words":    return <span className="text-[11.5px] text-left w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      default:         return null;
+    }
+  };
   return (
     <div
       className="grid items-center px-2 py-1 rounded transition-colors cursor-pointer"
-      style={{ gridTemplateColumns: gridCols, columnGap: colGap, backgroundColor: isOpen ? (isDark ? "rgba(0,115,234,0.10)" : "rgba(0,115,234,0.06)") : "transparent" }}
+      style={{ gridTemplateColumns: gridCols, columnGap: colGap, minWidth: `${showType ? colMeta.minWidthType : colMeta.minWidthNoType}px`, ["--row-bg" as string]: restBg, backgroundColor: "var(--row-bg)" } as React.CSSProperties}
       title="פתיחת המסמך לצפייה"
       onClick={() => onOpenDoc?.(doc)}
-      onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,60,140,0.045)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isOpen ? (isDark ? "rgba(0,115,234,0.10)" : "rgba(0,115,234,0.06)") : "transparent"; }}
+      onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
+      onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
     >
-      {onToggleCheck
-        ? <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        : <span className="flex-shrink-0" />}
-      <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
-      <span className="min-w-0 flex justify-center text-[12px]" style={{ color: metaCol, fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>
-      <span />
-      <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
-        {/* subtle nesting cue before the name */}
-        <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>
-        {/* Displayed doc → blue underline + "פעיל". The thread's own document (the row it was expanded from) → italic, distinct without looking disabled. */}
-        <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
-        {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-      </span>
-      <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
-      {showType && (
-        <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
-      )}
-      {showType && <span />}
-      <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-      <span />
-      <span className="text-[11.5px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+      {COL_ORDER.filter((key) => colShown(key, colMeta, showType)).map((key) => (
+        <div key={key} className="min-w-0 flex items-center h-full" style={pinCellStyle(key, colMeta)}>
+          {cellContent(key)}
+        </div>
+      ))}
     </div>
   );
 }
@@ -637,12 +641,72 @@ function NestedDocRow({ doc, gridCols, colGap, showType, isDark, isOpen, isSelf,
 // Attachments aren't case documents, so their selection is tracked in a Set keyed by parent-doc + name.
 const attKey = (docId: string, name: string) => `${docId}::${name}`;
 
+// ── Table columns (customizable) ────────────────────────────────────────────
+// Toggleable columns the user can show/hide. The checkbox, document name, and the related/attachment icons are
+// structural and always shown, so they're not in this list. "num" (מספר מסמך) and "time" (שעת הגשה) are OFF by default.
+type DocColKey = "num" | "date" | "time" | "process" | "summary" | "type" | "submitter" | "words";
+const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary", "type", "submitter", "words"];
+const DOC_COL_LABELS: Record<DocColKey, string> = { num: "מספר מסמך", date: "תאריך", time: "שעת הגשה", process: "תהליך", summary: "תקציר", type: "סוג", submitter: "מגיש", words: "מילים" };
+const DOC_COL_DEFAULTS: Record<DocColKey, boolean> = { num: false, date: true, time: false, process: true, summary: true, type: true, submitter: true, words: true };
+const DOC_COLS_LS_KEY = "mishpat-lab-docCols";
+const loadDocCols = (): Record<DocColKey, boolean> => {
+  if (typeof window === "undefined") return { ...DOC_COL_DEFAULTS };
+  try {
+    const raw = window.localStorage.getItem(DOC_COLS_LS_KEY);
+    if (raw) return { ...DOC_COL_DEFAULTS, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { ...DOC_COL_DEFAULTS };
+};
+
+// Per-case chronological document number (oldest filed = 1). Attachments get the parent number + a Hebrew letter (1א׳).
+const HEB_LETTERS = "אבגדהוזחטיכלמנסעפצקרשת".split("");
+const hebLetter = (i: number) => HEB_LETTERS[i] ?? `#${i + 1}`;
+const buildDocNumbers = (docs: CaseDoc[]): Record<string, number> => {
+  const byCase: Record<string, CaseDoc[]> = {};
+  docs.forEach((d) => { (byCase[d.caseId ?? ""] ??= []).push(d); });
+  const nums: Record<string, number> = {};
+  Object.values(byCase).forEach((list) => {
+    [...list]
+      .sort((a, b) => `${a.iso} ${a.time ?? "00:00"}`.localeCompare(`${b.iso} ${b.time ?? "00:00"}`)) // oldest first
+      .forEach((d, i) => { nums[d.id] = i + 1; });
+  });
+  return nums;
+};
+
+// Horizontal scroller for the docs table (RTL): the pinned block starts visible on the right; the rest scrolls left.
+// A soft fade on the left edge signals there's more to see that way (paired with the partially-cut column beneath it).
+function HScroll({ children, bg, isDark }: { children: React.ReactNode; bg: string; isDark: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fadeEnd, setFadeEnd] = useState(false);
+  const update = () => {
+    const el = ref.current; if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    // Chromium RTL: scrollLeft is 0 at the start (right) and goes negative toward the end (left).
+    setFadeEnd(max > 1 && el.scrollLeft > -max + 1);
+  };
+  useEffect(() => {
+    update();
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(update); ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="relative">
+      <div ref={ref} dir="rtl" className="overflow-x-auto docs-scroll" onScroll={update}>{children}</div>
+      {fadeEnd && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-30" style={{ width: "22px", background: `linear-gradient(to left, ${isDark ? "rgba(0,0,0,0)" : "rgba(255,255,255,0)"}, ${bg})` }} />
+      )}
+    </div>
+  );
+}
+
 // Renders one of three things depending on which row icon was clicked: the process thread (status + its
 // documents), the related documents, or the attachments. Related docs and process-thread docs are real
 // documents, so they render as full column-aligned rows (NestedDocRow) with live checkboxes that toggle the
 // underlying document's `checked`. Attachments are exhibits, not case documents, so they have no column data
 // and stay a simple labeled list with their own checkbox state (attachmentSel). Each group offers "בחר הכל".
-function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, showType, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; showType: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
+function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colMeta, showType, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
   const panelBg = isDark ? "#181f33" : "#f4f8fd";
   const titleCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -676,7 +740,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, show
     body = (
       <div className="flex flex-col">
         {sorted.map((d) => (
-          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
+          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
         ))}
       </div>
     );
@@ -694,7 +758,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, show
         {doc.related.map((name) => {
           const rel = siblingDocs?.find((d) => d.name === name);
           return rel
-            ? <NestedDocRow key={name} doc={rel} gridCols={gridCols} colGap={colGap} showType={showType} isDark={isDark} isOpen={rel.id === openDocId} onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(rel.id) : undefined} />
+            ? <NestedDocRow key={name} doc={rel} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={rel.id === openDocId} onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(rel.id) : undefined} />
             : (
               <div key={name} className="flex items-center gap-2 py-1 px-2" style={{ paddingInlineStart: "40px" }}>
                 <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
@@ -715,13 +779,18 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, show
       allSelected = keys.every((k) => attachmentSel?.has(k));
       onSelectAll = () => onSetAttachments(keys, !allSelected);
     }
+    // When the מספר-מסמך column is on, attachments are numbered off their parent doc: 1א׳, 1ב׳ … (parent number + Hebrew letter).
+    const parentNum = colMeta.docNumbers[doc.id];
     body = (
       <div className="flex flex-col" style={{ paddingInlineStart: "16px", paddingInlineEnd: "8px" }}>
-        {names.map((name) => {
+        {names.map((name, i) => {
           const key = attKey(doc.id, name);
           return (
             <div key={name} className="flex items-center gap-2 py-1 text-right">
               <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={!!attachmentSel?.has(key)} onToggle={() => onToggleAttachment?.(key)} /></span>
+              {colMeta.visible.num && parentNum != null && (
+                <span className="text-[11.5px] flex-shrink-0 tabular-nums" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="מספר נספח">{parentNum}{hebLetter(i)}׳</span>
+              )}
               <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
               <span className="text-[12.5px] truncate flex-1 min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
             </div>
@@ -758,81 +827,90 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, show
   );
 }
 
-// Dense table row — one line per document: checkbox · date · process · name · summary · [type] · submitter · attachments · words.
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", showType = true, lockProcess, processDocs, siblingDocs, openDocId, expandedKind, onToggleExpand, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; showType?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKind?: "related" | "attachments" | "process" | null; onToggleExpand?: (kind: "related" | "attachments" | "process") => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+// The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
+type ColMeta = { visible: Record<DocColKey, boolean>; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number };
+const COL_ORDER = ["checkbox", "num", "date", "time", "process", "sp", "name", "summary", "type", "submitter", "icons", "words"] as const;
+const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
+  key === "checkbox" || key === "name" || key === "icons" || key === "sp" ? true
+  : key === "type" ? (cm.visible.type && showType)
+  : !!cm.visible[key as DocColKey];
+const pinCellStyle = (key: string, cm: ColMeta): React.CSSProperties | undefined =>
+  cm.pin[key] !== undefined ? { position: "sticky", right: cm.pin[key], zIndex: 2, background: "var(--row-bg)" } : undefined;
+
+// Dense table row — one line per document; columns come from `colMeta` (user-customizable, some pinned while scrolling).
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, lockProcess, processDocs, siblingDocs, openDocId, expandedKind, onToggleExpand, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKind?: "related" | "attachments" | "process" | null; onToggleExpand?: (kind: "related" | "attachments" | "process") => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
+  const hoverBg = isDark ? "#232c44" : (active || expandedKind != null ? "#e7f0fb" : "#f6f9ff");
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
-  // Only the attachments icon reflects selection (attachments are opt-in and shown nowhere else in the collapsed row).
-  // Related/process triggers stay neutral — the underlying case doc's own checkbox already shows its selection state.
   const attNames = doc.attachments ?? [];
   const attPicked = attNames.some((name) => !!attachmentSel?.has(attKey(doc.id, name)));
-  // Which inline detail (if any) is open for this row — state lives on the panel so only one row is expanded at a time (accordion)
   const expanded = expandedKind ?? null;
-  const lit = active || expanded != null; // row is highlighted when it's the open doc or has a detail expanded
+  const lit = active || expanded != null;
   const restBg = lit ? activeBg : baseBg;
   const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
+  const num = colMeta.docNumbers[doc.id];
+
+  const cellContent = (key: string) => {
+    switch (key) {
+      case "checkbox": return <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>;
+      case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
+      case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
+      case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
+      case "process":  return (
+        <span className="min-w-0 flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
+          {docProcessIds(doc).length > 0 && (lockProcess
+            ? <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }} title={`תהליך: ${processTitle(doc)}`}>{docProcessIds(doc).join(", ")}</span>
+            : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark}>
+                <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>
+              </RowIconTrigger>)}
+        </span>
+      );
+      case "name":     return (
+        <span className="flex items-center gap-1.5 min-w-0" onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} title="פתיחת המסמך לצפייה">
+          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
+          {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+        </span>
+      );
+      case "summary":  return <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
+      case "icons":    return (
+        <span className="flex justify-start flex-shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
+          {doc.related.length > 0 && <RowIconTrigger active={expanded === "related"} onClick={toggle("related")} title="מסמכים קשורים" isDark={isDark}><Link size={11} /></RowIconTrigger>}
+          {(doc.attachments?.length ?? 0) > 0 && <RowIconTrigger active={expanded === "attachments"} onClick={toggle("attachments")} title="נספחים" isDark={isDark} picked={attPicked}><Paperclip size={11} /></RowIconTrigger>}
+        </span>
+      );
+      case "words":    return <span className="text-[11.5px] text-left w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      default:         return null;
+    }
+  };
   return (
     <div
       ref={rowRef}
       className="relative transition-colors"
-      style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: restBg }}
+      style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, backgroundColor: restBg, minWidth: `${showType ? colMeta.minWidthType : colMeta.minWidthNoType}px` }}
       dir="rtl"
     >
       {lit && <span className="absolute inset-y-0 z-10" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
       <div
         className="grid items-center px-2 py-1.5 cursor-pointer"
-        style={{ gridTemplateColumns: gridCols, columnGap: colGap }}
+        style={{ gridTemplateColumns: gridCols, columnGap: colGap, ["--row-bg" as string]: restBg, backgroundColor: "var(--row-bg)" } as React.CSSProperties}
         title={expanded ? "לחצו לסגירת השרשור (שם המסמך פותח אותו)" : "פתיחת המסמך לצפייה"}
         onClick={() => { if (expanded) onToggleExpand?.(expanded); else onOpenDoc?.(); }}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (lit ? "#e7f0fb" : "#f6f9ff"); }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+        onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
+        onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
       >
-        <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>
-        {/* Date — time (when present) shown only on hover, so every row stays a single line */}
-        <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>
-        {/* Process — bold number; click opens the thread inline. Inside a process folder it's shown but not clickable (you're already in the thread). */}
-        <span className="min-w-0 flex justify-center" onClick={(e) => e.stopPropagation()}>
-          {docProcessIds(doc).length > 0 && (
-            lockProcess
-              ? <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }} title={`תהליך: ${processTitle(doc)}`}>{docProcessIds(doc).join(", ")}</span>
-              : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark}>
-                  <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>
-                </RowIconTrigger>
-          )}
-        </span>
-        <span />
-        {/* Document name — always opens the doc (even when the row's thread is expanded); the displayed doc is shown blue + underline */}
-        <span className="flex items-center gap-1.5 min-w-0" onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} title="פתיחת המסמך לצפייה">
-          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
-          {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-        </span>
-        {/* Summary — single line, truncated; full text on hover */}
-        <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
-        {/* Type tag — omitted inside a type-grouped folder, since the folder already says the type */}
-        {showType && (
-          <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>
-        )}
-        {/* Extra breathing room after the type tag (empty spacer track) so the pill isn't cramped against the submitter */}
-        {showType && <span />}
-        {/* Submitter — short label (court abbreviated to ביהמ״ש); full party name in the tooltip */}
-        <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>
-        {/* Attachments / related documents — just before words; each icon toggles its own inline detail row */}
-        <span className="flex justify-start flex-shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
-          {doc.related.length > 0 && (
-            <RowIconTrigger active={expanded === "related"} onClick={toggle("related")} title="מסמכים קשורים" isDark={isDark}><Link size={11} /></RowIconTrigger>
-          )}
-          {(doc.attachments?.length ?? 0) > 0 && (
-            <RowIconTrigger active={expanded === "attachments"} onClick={toggle("attachments")} title="נספחים" isDark={isDark} picked={attPicked}><Paperclip size={11} /></RowIconTrigger>
-          )}
-        </span>
-        {/* Words — flush to the table's left edge */}
-        <span className="text-[11.5px] text-left" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>
+        {COL_ORDER.filter((key) => colShown(key, colMeta, showType)).map((key) => (
+          <div key={key} className="min-w-0 flex items-center h-full" style={pinCellStyle(key, colMeta)}>
+            {cellContent(key)}
+          </div>
+        ))}
       </div>
-      {expanded && <RowDetail kind={expanded} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} showType={showType} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(expanded)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />}
+      {expanded && <RowDetail kind={expanded} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(expanded)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />}
     </div>
   );
 }
@@ -1007,6 +1085,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
   ]);
   const [attachmentSel, setAttachmentSel] = useState<Set<string>>(new Set()); // chat-selected attachments (exhibits), keyed by `${docId}::${name}`
+  // Customizable columns (persisted to localStorage) + the "columns" popover, and the per-case document numbers.
+  const [visibleCols, setVisibleCols] = useState<Record<DocColKey, boolean>>(DOC_COL_DEFAULTS);
+  const [colsMenuOpen, setColsMenuOpen] = useState(false);
+  useEffect(() => { setVisibleCols(loadDocCols()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
+  const toggleCol = (k: DocColKey) => setVisibleCols((p) => { const next = { ...p, [k]: !p[k] }; try { window.localStorage.setItem(DOC_COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  const docNumbers = useMemo(() => buildDocNumbers(docs), [docs]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
   const [openProcess, setOpenProcess] = useState<number | null>(null); // process sub-folder accordion, inside the "בקשות והוראות" type folder
@@ -1071,45 +1155,80 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       return (at < bt ? -1 : at > bt ? 1 : 0) * dir;
     });
   };
-  // Dense table — the only view. Column order (RTL → first track rightmost): checkbox · date · process · spacer · document · summary · [type] · submitter · attachments · words
-  // Date is trimmed to its actual content width so the process column sits right against it. A small dedicated spacer sits between process and the name — it's
-  // the only way to give process breathing room from the name without shrinking the name column itself. Inside a type-grouped folder the type column is
-  // redundant (the folder already says the type), so it's dropped. The icons track sits just before words (last column), so words stays on the table's true
-  // left edge. Type is the trickiest column: a grid track with a px max always claims that max before the flexible name/summary columns get any spare space,
-  // so to make type *yield* to name/summary when the panel is narrow, its max is capped low until the panel is actually roomy (widened by drag, or full-screen) —
-  // only then does it grow to fully show the longest type label. That keeps the docked table favoring name/summary while still showing type in full when there's space.
+  // Dense table with user-customizable columns. Full column order (RTL → first track rightmost):
+  // checkbox · [num] · [date] · [time] · process · document · summary · [type] · submitter · icons · words.
+  // The leading block (checkbox … name) is PINNED: it stays put while the rest scroll horizontally when the visible
+  // columns don't fit. checkbox / name / icons are structural (always shown); the rest obey `visibleCols`.
   const roomy = isFocus || panelWidth >= 720;
+  const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
-  // Submitter shows the short label (תובע / נתבע / ביהמ״ש) — wide enough for the word in both views, a touch roomier when expanded.
   const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
-  // A bare spacer track after the type tag: flanked by two 4px grid gaps it turns the type→submitter gap into 8px, so the pill isn't cramped (showType views only).
-  const typeGap = "0px";
-  // Roomy view (focus OR the docked table dragged wide): the name column is capped so it doesn't balloon on a wide
-  // panel — the summary is the single flexible column that soaks up all remaining width, so more of the summary shows
-  // and the name cell doesn't leave a big white gap. Narrow docked view keeps fr name/summary to fill the tight panel.
-  const tableTemplate = (showType: boolean) => roomy
-    ? (showType ? `18px 56px 34px 5px minmax(170px,240px) minmax(0,1fr) ${typeTrack} ${typeGap} ${submitterTrack} 28px minmax(36px,42px)` : `18px 56px 34px 5px minmax(170px,260px) minmax(0,1fr) ${submitterTrack} 28px minmax(36px,42px)`)
-    : (showType ? `18px 56px 34px 5px minmax(0,1.35fr) minmax(0,1.1fr) ${typeTrack} ${typeGap} ${submitterTrack} 24px minmax(30px,36px)` : `18px 56px 34px 5px minmax(0,1.4fr) minmax(0,1.15fr) ${submitterTrack} 24px minmax(30px,36px)`);
-  // Process is narrow enough that the sort chevron would squish the button (its natural width already exceeds the column) — indicate active sort via color only, no icon.
+  const COLS: { key: string; track: string; show: (st: boolean) => boolean; pinned: boolean; fixed?: number }[] = [
+    { key: "checkbox",  track: "18px",                                                show: () => true,                     pinned: true, fixed: 18 },
+    { key: "num",       track: "40px",                                                show: () => visibleCols.num,          pinned: true, fixed: 40 },
+    { key: "date",      track: "56px",                                                show: () => visibleCols.date,         pinned: true, fixed: 56 },
+    { key: "time",      track: "48px",                                                show: () => visibleCols.time,         pinned: true, fixed: 48 },
+    { key: "process",   track: "34px",                                                show: () => visibleCols.process,      pinned: true, fixed: 34 },
+    { key: "sp",        track: "5px",                                                 show: () => true,                     pinned: true, fixed: 5 },
+    // Narrow: fr name/summary (so the default set fits with no scroll, matching the deployed layout); the px minima only
+    // bite once extra columns are added → then it overflows and scrolls. Roomy keeps the capped name + flexible summary.
+    { key: "name",      track: roomy ? "minmax(170px,240px)" : "minmax(120px,1.35fr)", show: () => true,                    pinned: true },
+    { key: "summary",   track: roomy ? "minmax(150px,1fr)" : "minmax(120px,1.1fr)",   show: () => visibleCols.summary,      pinned: false },
+    { key: "type",      track: typeTrack,                                             show: (st) => visibleCols.type && st, pinned: false },
+    { key: "submitter", track: submitterTrack,                                        show: () => visibleCols.submitter,    pinned: false },
+    { key: "icons",     track: roomy ? "28px" : "24px",                               show: () => true,                     pinned: false },
+    { key: "words",     track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)",     show: () => visibleCols.words,        pinned: false },
+  ];
+  const visCols = (showType: boolean) => COLS.filter((col) => col.show(showType));
+  const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
+  // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
+  // The type column is never pinned, so this is independent of showType.
+  const pinMap: Record<string, number> = (() => {
+    const map: Record<string, number> = {}; let acc = 8; // start past the row's px-2 right padding so pinned cells hold their column
+    for (const col of visCols(true)) {
+      if (!col.pinned) break; // the pinned block is a contiguous prefix
+      map[col.key] = acc;
+      acc += (col.fixed ?? 0) + gapPx;
+    }
+    return map;
+  })();
+  // Min width the visible columns need — when it exceeds the panel, the table scrolls horizontally.
+  const tableMinWidth = (showType: boolean) => visCols(showType).reduce((sum, col) => {
+    const m = col.track.match(/minmax\((\d+)px/);
+    const min = m ? parseInt(m[1], 10) : (col.fixed ?? (parseInt(col.track, 10) || 0));
+    return sum + min + gapPx;
+  }, 8 /* px-2 padding */);
+  const colMeta: ColMeta = { visible: visibleCols, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false) };
+
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
       <span>{label}</span>
       {!opts?.hideIcon && sortKey === key && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
     </button>
   );
+  const headerCellContent = (key: string) => {
+    switch (key) {
+      case "checkbox": return <span />;
+      case "num":      return <span className="text-center w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>;
+      case "date":     return sortHead("date", "תאריך");
+      case "time":     return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>שעה</span>;
+      case "process":  return sortHead("process", "תהליך", { center: true, hideIcon: true });
+      case "name":     return sortHead("name", "שם מסמך");
+      case "summary":  return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>;
+      case "type":     return sortHead("type", "סוג");
+      case "submitter":return sortHead("submitter", "מגיש");
+      case "icons":    return <span />;
+      case "words":    return sortHead("words", "מילים", { alignLeft: true });
+      default:         return <span />;
+    }
+  };
   const makeTableHeader = (showType: boolean) => (
-    <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-10 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: isFocus ? "8px" : "4px", backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
-      <span />
-      {sortHead("date", "תאריך")}
-      {sortHead("process", "תהליך", { center: true, hideIcon: true })}
-      <span />
-      {sortHead("name", "שם מסמך")}
-      <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>
-      {showType && sortHead("type", "סוג")}
-      {showType && <span />}
-      {sortHead("submitter", "מגיש")}
-      <span />
-      {sortHead("words", "מילים", { alignLeft: true })}
+    <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-20 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: `${gapPx}px`, minWidth: `${tableMinWidth(showType)}px`, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
+      {visCols(showType).map((col) => (
+        <div key={col.key} className="min-w-0 flex items-center h-full" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg } : undefined}>
+          {headerCellContent(col.key)}
+        </div>
+      ))}
     </div>
   );
   const tableHeader = makeTableHeader(true);
@@ -1243,6 +1362,38 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     </div>
   );
 
+  // Column customization — a borderless vertical-ellipsis (⋮) button pushed to the far (left) end so it reads as its own
+  // control, distinct from the chrono/type view toggle. Opens a checklist popover right-aligned to the button (right:0),
+  // so it extends leftward, overhanging the table.
+  const columnsBtn = (
+    <div className="relative flex-shrink-0" style={{ marginInlineStart: "auto" }}>
+      <button
+        onClick={() => setColsMenuOpen((v) => !v)}
+        title="התאמת עמודות"
+        className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5"
+        style={{ color: colsMenuOpen ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: colsMenuOpen ? (isDark ? "#22304a" : "#eff4ff") : "transparent" }}
+      >
+        <MoreVertical size={18} />
+      </button>
+      {colsMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
+          <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", right: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
+            <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה</div>
+            <div className="py-1">
+              {DOC_COL_ORDER.map((k) => (
+                <div key={k} className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 cursor-pointer" onClick={() => toggleCol(k)}>
+                  <CheckboxBlue checked={visibleCols[k]} onToggle={() => {}} />
+                  <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Header */}
@@ -1329,12 +1480,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
 
               {/* View toggle — chrono / group-by-type (inside an open case it lives here on the filter row) */}
               {openCaseId && viewToggle}
+              {/* Column customization — only meaningful once a case (and its table) is open */}
+              {openCaseId && columnsBtn}
             </div>
           )}
         </div>
       </div>
 
-      {/* List — outer ltr puts scrollbar on the right; inner rtl keeps content */}
+      {/* List — the docs table scrolls horizontally (RTL) inside HScroll when columns overflow; this outer box scrolls vertically */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
        <div className="px-3 pt-1 pb-3 flex flex-col gap-4" dir="rtl">
         {CASES_META.map((cf) => {
@@ -1393,19 +1546,22 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
 
         {/* Chronological — flat column table; sort via column headers */}
         {grouping === "chrono" && (
-          <div className="flex flex-col">
+          <HScroll bg={bg} isDark={isDark}>
+          <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(true)}px` }}>
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
+          </HScroll>
         )}
 
         {/* By type — column-table rows under type sub-headers. A single sticky column header sits directly under the
             case name (mirroring the chronological view) and acts as the global sort control; the per-folder headers
             were dropped so the layout stays consistent with chrono. Type column is omitted (the folders already group by type). */}
         {grouping === "type" && (
-          <div className="flex flex-col">
+          <HScroll bg={bg} isDark={isDark}>
+          <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(false)}px` }}>
             {lensed.length > 0 && tableHeaderNoType}
             {typesInData.map((type, ti) => {
               const typeDocs = lensed.filter((d) => d.type === type);
@@ -1455,23 +1611,24 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} showType={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
             })}
           </div>
+          </HScroll>
         )}
 
                 </div>
