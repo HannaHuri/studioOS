@@ -2,21 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Plus, Edit2, X, ChevronDown, Zap, Lock, Globe, Check, CheckCircle2 } from "lucide-react";
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const c = {
-  primary:     "#0073ea",
-  headerBg:    "#ecedf5",
-  darkBlue:    "#00376d",
-  text:        "#323338",
-  textGray:    "#707070",
-  textLight:   "#8596af",
-  iconGray:    "#676879",
-  border:      "#c5c7d0",
-  inputBorder: "#dcdfec",
-  hoverBg:     "#f5f6f8",
-  error:       "#d83a52",
-} as const;
+import { c } from "./ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type BetaStatus = "active" | "closed" | "open";
@@ -48,8 +34,6 @@ const MOCK_BETAS: Beta[] = [
   { id: "3", name: "v1-new-sidebar", status: "open",   users: [],                          updatedAt: "15.05.2026" },
 ];
 
-const CURRENT_ADMIN = { initials: "טח", name: "טל חבקין" };
-
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<BetaStatus, {
   label: string; bg: string; text: string; border: string;
@@ -79,11 +63,6 @@ const CONFIRM_COPY: Record<BetaStatus, { title: string; body: (name: string) => 
 const EMPTY_FORM: BetaFormState = { name: "", users: "" };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function Logo() {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[30px] w-auto" />;
-}
-
 function BetaName({ children }: { children: React.ReactNode }) {
   return (
     <span style={{ color: "#323338", fontFamily: "monospace", direction: "ltr", display: "inline", fontWeight: 600 }}>
@@ -302,45 +281,7 @@ export default function AdminPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen"
-      dir="rtl"
-      style={{ backgroundColor: "#f8f9fb", fontFamily: "'Noto Sans Hebrew', sans-serif" }}
-    >
-      {/* ── Header ── */}
-      <header
-        dir="ltr"
-        className="h-16 flex items-center justify-between px-8 sticky top-0 z-10"
-        style={{ backgroundColor: c.headerBg, borderBottom: `1px solid ${c.border}` }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none"
-            style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}
-          >
-            {CURRENT_ADMIN.initials}
-          </div>
-          <div className="flex flex-col leading-tight text-right">
-            <span className="text-[13px] whitespace-nowrap" style={{ color: c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{CURRENT_ADMIN.name}</span>
-          </div>
-        </div>
-
-        <a
-          href="/studioOS/mishpat"
-          dir="rtl"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          style={{ textDecoration: "none" }}
-        >
-          <Logo />
-          <span
-            className="font-medium text-[20px] whitespace-nowrap"
-            style={{ color: c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: 1 }}
-          >
-            נט המשפט
-          </span>
-        </a>
-      </header>
-
+    <>
       {/* ── Main ── */}
       <main className="max-w-6xl mx-auto px-6 py-8">
 
@@ -677,7 +618,6 @@ export default function AdminPage() {
           </button>
         </div>
       )}
-
-    </div>
+    </>
   );
 }
