@@ -1363,8 +1363,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   );
 
   // Column customization — a borderless vertical-ellipsis (⋮) button pushed to the far (left) end so it reads as its own
-  // control, distinct from the chrono/type view toggle. Opens a checklist popover right-aligned to the button (right:0),
-  // so it extends leftward, overhanging the table.
+  // control, distinct from the chrono/type view toggle. The checklist popover is LEFT-aligned to the button (left:0,
+  // opens rightward): the button sits at the left edge, and in the expanded/full-width table right-aligning would push
+  // the popover off the left side of the screen.
   const columnsBtn = (
     <div className="relative flex-shrink-0" style={{ marginInlineStart: "auto" }}>
       <button
@@ -1378,7 +1379,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       {colsMenuOpen && (
         <>
           <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
-          <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", right: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
+          <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
             <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה</div>
             <div className="py-1">
               {DOC_COL_ORDER.map((k) => (
