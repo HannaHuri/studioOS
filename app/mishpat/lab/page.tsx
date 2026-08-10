@@ -1371,8 +1371,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       <button
         onClick={() => setColsMenuOpen((v) => !v)}
         title="התאמת עמודות"
-        className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5"
+        className="size-8 flex items-center justify-center rounded-md transition-colors"
         style={{ color: colsMenuOpen ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: colsMenuOpen ? (isDark ? "#22304a" : "#eff4ff") : "transparent" }}
+        onMouseEnter={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+        onMouseLeave={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = "transparent"; }}
       >
         <MoreVertical size={18} />
       </button>
