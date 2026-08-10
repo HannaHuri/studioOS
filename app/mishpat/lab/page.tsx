@@ -584,6 +584,18 @@ function RowIconTrigger({ children, active, onClick, title, isDark, picked = fal
   );
 }
 
+// Process id(s) as small numeric chips for the process column — the numbers stay visible (they matter) but read as
+// structured tags rather than noisy "2, 3" plain text. Chip text inherits its color (so a clickable trigger can tint it).
+function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
+  return (
+    <span className="flex items-center justify-center gap-px min-w-0">
+      {ids.map((pid) => (
+        <span key={pid} className="rounded text-[11px] font-semibold leading-none flex-shrink-0" style={{ backgroundColor: isDark ? "#2a3550" : "#e9eef7", fontFamily: "Figtree, sans-serif", padding: "2px 3px" }}>{pid}</span>
+      ))}
+    </span>
+  );
+}
+
 // Inline detail panel that expands directly under a table row, in place of the old floating popovers.
 // One nested document rendered inside an expanded detail, using the SAME dynamic columns as the parent table so
 // every field lines up (and the pinned block stays put on horizontal scroll). The checkbox column is live: related
@@ -604,7 +616,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
-      case "process":  return <span className="min-w-0 flex justify-center w-full text-[12px]" style={{ color: metaCol, fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>;
+      case "process":  return <span className="min-w-0 flex justify-center w-full" style={{ color: metaCol }}>{docProcessIds(doc).length > 0 && <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />}</span>;
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>
@@ -706,7 +718,7 @@ function HScroll({ children, bg, isDark }: { children: React.ReactNode; bg: stri
 // documents, so they render as full column-aligned rows (NestedDocRow) with live checkboxes that toggle the
 // underlying document's `checked`. Attachments are exhibits, not case documents, so they have no column data
 // and stay a simple labeled list with their own checkbox state (attachmentSel). Each group offers "בחר הכל".
-function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colMeta, showType, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
+function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colMeta, showType, showSelfInThread, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; showSelfInThread?: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
   const panelBg = isDark ? "#181f33" : "#f4f8fd";
   const titleCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -716,17 +728,39 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
   let TitleIcon: LucideIcon = FileText;
   let meta: React.ReactNode = null;
   let body: React.ReactNode = null;
+  let preBody: React.ReactNode = null; // an optional block between the header and the rows (used to list process names)
   // Whether every selectable item in this group is currently picked, and the toggle that selects/clears all of them.
   let allSelected = false;
   let onSelectAll: (() => void) | null = null;
 
   if (kind === "process") {
     const docs = processDocs ?? [];
-    const sorted = [...docs].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    // In the by-type view (showSelfInThread === false) the folder already names the process and lists all its docs, so
+    // the source doc itself is dropped from its thread. In chronological it's kept (italic) — it helps locate the doc
+    // within a long thread.
+    const sorted = [...docs].filter((d) => showSelfInThread !== false || d.id !== doc.id).sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
     const isResolution = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
-    const closed = sorted.some(isResolution);
-    title = processTitle(doc);
+    const closed = docs.some(isResolution); // status reflects the FULL thread — even when the source doc (the decision itself) is hidden from its own thread
+
+    const procIds = docProcessIds(doc);
+    const multi = procIds.length > 1;
+    // One process → keep its name in the header (not crowded). Several → shorten the header to just "תהליכים" (a count
+    // like "(2)" read as process #2) and list the names on their own light lines below.
+    title = multi ? "תהליכים" : processTitle(doc);
     TitleIcon = Layers;
+    if (multi) {
+      preBody = (
+        <div className="flex flex-col gap-0.5 mb-1.5 px-2" style={{ paddingInlineStart: "34px" }}>
+          {procIds.map((pid) => (
+            <div key={pid} className="flex items-center gap-1.5 text-[12px] min-w-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              <span style={{ fontFamily: "Figtree, sans-serif", fontWeight: 600, flexShrink: 0 }}>{pid}</span>
+              <span style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
+              <span className="truncate">{processLabel(doc.caseId, pid)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
     // Status only — open / closed (per feedback: drop doc-count and open/decision dates)
     meta = (
       <span className="text-[11px] rounded-full px-1.5 py-px whitespace-nowrap" style={{ fontWeight: 400, fontFamily: "Noto Sans Hebrew, sans-serif", backgroundColor: closed ? (isDark ? "#1c3a2c" : "#e5f4ec") : (isDark ? "#3a2e1c" : "#fbf0df"), color: closed ? "#0f8a5f" : "#b9670c" }}>
@@ -822,6 +856,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
           <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
         </div>
       </div>
+      {preBody}
       {body}
     </div>
   );
@@ -838,7 +873,7 @@ const pinCellStyle = (key: string, cm: ColMeta): React.CSSProperties | undefined
   cm.pin[key] !== undefined ? { position: "sticky", right: cm.pin[key], zIndex: 2, background: "var(--row-bg)" } : undefined;
 
 // Dense table row — one line per document; columns come from `colMeta` (user-customizable, some pinned while scrolling).
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, lockProcess, processDocs, siblingDocs, openDocId, expandedKind, onToggleExpand, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKind?: "related" | "attachments" | "process" | null; onToggleExpand?: (kind: "related" | "attachments" | "process") => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, showSelfInThread, lockProcess, processDocs, siblingDocs, openDocId, expandedKind, onToggleExpand, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; showSelfInThread?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKind?: "related" | "attachments" | "process" | null; onToggleExpand?: (kind: "related" | "attachments" | "process") => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   const hoverBg = isDark ? "#232c44" : (active || expandedKind != null ? "#e7f0fb" : "#f6f9ff");
@@ -860,12 +895,15 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
+      // Process — the id(s) as small numeric chips. Clickable (opens the thread) in the flat views; inside a type-view
+      // process folder (lockProcess) the chips stay but are static — they still matter there to reveal that a doc is
+      // linked to OTHER processes beyond the folder's own, but the thread isn't reopened (you're already in it).
       case "process":  return (
         <span className="min-w-0 flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {docProcessIds(doc).length > 0 && (lockProcess
-            ? <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }} title={`תהליך: ${processTitle(doc)}`}>{docProcessIds(doc).join(", ")}</span>
+            ? <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />
             : <RowIconTrigger active={expanded === "process"} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark}>
-                <span style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1, fontFamily: "Figtree, sans-serif" }}>{docProcessIds(doc).join(", ")}</span>
+                <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />
               </RowIconTrigger>)}
         </span>
       );
@@ -910,7 +948,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           </div>
         ))}
       </div>
-      {expanded && <RowDetail kind={expanded} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(expanded)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />}
+      {expanded && <RowDetail kind={expanded} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} showSelfInThread={showSelfInThread} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(expanded)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />}
     </div>
   );
 }
@@ -1614,18 +1652,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id && expandedRow.kind !== "process" ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKind={expandedRow?.id === doc.id ? expandedRow.kind : null} onToggleExpand={(kind) => setExpandedRow((prev) => (prev && prev.id === doc.id && prev.kind === kind ? null : { id: doc.id, kind }))} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
