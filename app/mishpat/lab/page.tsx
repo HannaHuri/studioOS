@@ -746,7 +746,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
     const multi = procIds.length > 1;
     // One process → keep its name in the header (not crowded). Several → shorten the header to just "תהליכים" (a count
     // like "(2)" read as process #2) and list the names on their own light lines below.
-    title = multi ? "תהליכים" : processTitle(doc);
+    title = multi ? "תהליכים" : `${processTitle(doc)} (${docs.length})`;
     TitleIcon = Layers;
     if (multi) {
       preBody = (
@@ -756,6 +756,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
               <span style={{ fontFamily: "Figtree, sans-serif", fontWeight: 600, flexShrink: 0 }}>{pid}</span>
               <span style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
               <span className="truncate">{processLabel(doc.caseId, pid)}</span>
+              <span style={{ opacity: 0.6, flexShrink: 0 }}>({docs.filter((d) => docProcessIds(d).includes(pid)).length})</span>
             </div>
           ))}
         </div>
