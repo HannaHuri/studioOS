@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
@@ -965,6 +965,12 @@ const MOCK_DOC_PARAS = [
 function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandle, canExpand, expanded, onToggleExpand }: { doc: CaseDoc; isDark: boolean; width: number; onWidthChange: (w: number) => void; onClose: () => void; fill?: boolean; showHandle?: boolean; canExpand?: boolean; expanded?: boolean; onToggleExpand?: () => void }) {
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const rootRef = useRef<HTMLDivElement>(null);
+  // Scroll container of the stacked PDF pages — driven by the jump-to-start/end double-arrows (a real scroll, unlike the reference-only page/zoom/rotate controls below)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollDoc = (toEnd: boolean) => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: toEnd ? el.scrollHeight : 0, behavior: "smooth" });
+  };
   // Real page count of the loaded PDF (null while parsing / no file) — feeds the reference-only panel's page-total display
   const [numPages, setNumPages] = useState<number | null>(null);
   useEffect(() => { setNumPages(null); }, [doc.file]);
@@ -1050,10 +1056,12 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
         {/* Reference only — rotate / page nav / zoom, styled for the dev team to implement against the real PDF engine (not wired up here) */}
         <div className="flex flex-col items-center">
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="סיבוב (תצוגה בלבד — לצוות הפיתוח)"><RotateCw size={17} /></button>
+          <button onClick={() => scrollDoc(false)} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="מעבר לתחילת המסמך"><ChevronsUp size={17} /></button>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד קודם (תצוגה בלבד)"><ChevronUp size={17} /></button>
           <span className="flex items-center justify-center rounded text-[15px] font-medium" style={{ width: "28px", height: "24px", marginTop: "4px", lineHeight: "1", paddingTop: "2px", boxSizing: "border-box", border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text, fontFamily: "Figtree, sans-serif" }} title="עמוד נוכחי — ניתן להקליד מספר עמוד (תצוגה בלבד)">1</span>
           <span className="flex items-center justify-center text-[15px]" style={{ marginTop: "8px", lineHeight: "1", color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="סך העמודים">{doc.file ? (numPages ?? "…") : 2}</span>
           <button className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="עמוד הבא (תצוגה בלבד)"><ChevronDown size={17} /></button>
+          <button onClick={() => scrollDoc(true)} className="size-8 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="מעבר לסוף המסמך"><ChevronsDown size={17} /></button>
         </div>
         <div className="w-5 border-t my-0.5" style={{ borderColor: isDark ? dk.border : c.border }} />
         <button className="size-9 flex items-center justify-center rounded-md transition-colors hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="הגדלה (תצוגה בלבד)"><ZoomIn size={18} /></button>
@@ -1067,13 +1075,13 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
       {/* Body — a real PDF (canvas-rendered via react-pdf) when the mock doc has a file, otherwise the generated mock pages. Rendering to canvas ourselves (rather than the browser's native PDF plugin in an iframe) is what lets the surrounding background actually be styled. */}
       {doc.file ? (
         // dir="ltr" so the scrollbar sits on the right edge (the PDF pages are centered, so direction doesn't affect them)
-        <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr" style={{ backgroundColor: isDark ? dk.bg : "#f1f3f4" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll" dir="ltr" style={{ backgroundColor: isDark ? dk.bg : "#f1f3f4" }}>
           <div className="flex flex-col items-center gap-4 pt-2.5 pb-5 px-4">
             <PdfViewer file={doc.file} numPages={numPages} pageWidth={fitPageWidth} onLoadSuccess={setNumPages} />
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
           <div className="flex flex-col items-center gap-4 pt-2.5 pb-5 px-4" dir="rtl">
             {[1, 2].map((p) => (
               <div key={p} className="w-full shadow-lg" style={{ maxWidth: `${fitPageWidth}px`, backgroundColor: "white", padding: "48px 56px", minHeight: "820px", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
