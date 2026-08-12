@@ -658,7 +658,19 @@ const attKey = (docId: string, name: string) => `${docId}::${name}`;
 // Toggleable columns the user can show/hide. The checkbox, document name, and the related/attachment icons are
 // structural and always shown, so they're not in this list. "num" (מספר מסמך) and "time" (שעת הגשה) are OFF by default.
 type DocColKey = "num" | "date" | "time" | "process" | "summary" | "type" | "submitter" | "related" | "attachments" | "words";
-const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary", "type", "submitter", "related", "attachments", "words"];
+const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary", "type", "submitter", "related", "attachments", "words"]; // data keys (labels + visibility defaults)
+// The LAYOUT order includes the "name" anchor. Columns before it are frozen (stay put on horizontal scroll); columns
+// after it scroll. Default puts process · date right of the name, like before — but every column is freely movable
+// (drag it across the name line to change whether it scrolls).
+type LayoutKey = DocColKey | "name";
+const DEFAULT_LAYOUT: LayoutKey[] = ["process", "date", "num", "time", "name", "summary", "type", "submitter", "related", "attachments", "words"];
+const reconcileLayout = (stored: string[]): LayoutKey[] => {
+  const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
+  const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
+  const withName: LayoutKey[] = valid.includes("name") ? valid : [...valid, "name"];
+  const missing = all.filter((k) => !withName.includes(k));
+  return [...withName, ...missing];
+};
 const DOC_COL_LABELS: Record<DocColKey, string> = { num: "מספר מסמך", date: "תאריך", time: "שעת הגשה", process: "תהליך", summary: "תקציר", type: "סוג", submitter: "מגיש", related: "מסמכים קשורים", attachments: "נספחים", words: "מילים" };
 const DOC_COL_DEFAULTS: Record<DocColKey, boolean> = { num: false, date: true, time: false, process: true, summary: true, type: true, submitter: true, related: true, attachments: true, words: true };
 const DOC_COLS_LS_KEY = "mishpat-lab-docCols";
@@ -670,20 +682,15 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   } catch { /* ignore */ }
   return { ...DOC_COL_DEFAULTS };
 };
-// Persisted column ORDER (the reorderable data columns). Reconciled with DOC_COL_ORDER so added/removed keys are handled.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docColOrder";
-const reconcileOrder = (stored: string[]): DocColKey[] => {
-  const valid = stored.filter((k): k is DocColKey => (DOC_COL_ORDER as string[]).includes(k));
-  const missing = DOC_COL_ORDER.filter((k) => !valid.includes(k));
-  return [...valid, ...missing];
-};
-const loadColOrder = (): DocColKey[] => {
-  if (typeof window === "undefined") return [...DOC_COL_ORDER];
+// Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v2";
+const loadLayout = (): LayoutKey[] => {
+  if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
     const raw = window.localStorage.getItem(DOC_COLORDER_LS_KEY);
-    if (raw) return reconcileOrder(JSON.parse(raw));
+    if (raw) return reconcileLayout(JSON.parse(raw));
   } catch { /* ignore */ }
-  return [...DOC_COL_ORDER];
+  return [...DEFAULT_LAYOUT];
 };
 
 // Per-case chronological document number (oldest filed = 1). Attachments get the parent number + a Hebrew letter (1א׳).
@@ -1175,12 +1182,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [attachmentSel, setAttachmentSel] = useState<Set<string>>(new Set()); // chat-selected attachments (exhibits), keyed by `${docId}::${name}`
   // Customizable columns (persisted to localStorage) + the "columns" popover, and the per-case document numbers.
   const [visibleCols, setVisibleCols] = useState<Record<DocColKey, boolean>>(DOC_COL_DEFAULTS);
-  const [colOrder, setColOrder] = useState<DocColKey[]>(DOC_COL_ORDER);
+  const [layout, setLayout] = useState<LayoutKey[]>(DEFAULT_LAYOUT);
   const [colsMenuOpen, setColsMenuOpen] = useState(false);
-  useEffect(() => { setVisibleCols(loadDocCols()); setColOrder(loadColOrder()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => { setVisibleCols(loadDocCols()); setLayout(loadLayout()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
   const toggleCol = (k: DocColKey) => setVisibleCols((p) => { const next = { ...p, [k]: !p[k] }; try { window.localStorage.setItem(DOC_COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
-  // Reorder a data column from index `from` to index `to` (drag in the התאמת עמודות popover), persisted.
-  const moveCol = (from: number, to: number) => setColOrder((prev) => {
+  // Move a layout item from index `from` to index `to` (drag in the התאמת עמודות popover). Because the list holds the
+  // "name" anchor, a drag can cross the name line → the column changes between the frozen and scrolling zones. Persisted.
+  const moveCol = (from: number, to: number) => setLayout((prev) => {
     if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
     const next = [...prev]; const [m] = next.splice(from, 1); next.splice(to, 0, m);
     try { window.localStorage.setItem(DOC_COLORDER_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -1248,25 +1256,34 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
   // Only the checkbox + document name are PINNED (frozen on the right) — they're the anchor that keeps a row
   // identifiable + selectable while everything else scrolls. Every other column is freely reorderable (colOrder).
-  type ColDef = { track: string; show: (st: boolean) => boolean; pinned?: boolean; fixed?: number };
+  // `track` = normal width; `pinTrack` = a FIXED width used only when the column sits in the frozen zone (a flexible/fr
+  // column can't be sticky). `fixed` feeds the sticky-offset math (its effective frozen width).
+  type ColDef = { track: string; pinTrack?: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
-    checkbox:    { track: "18px", show: () => true, pinned: true, fixed: 18 },
-    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(150px,220px)", show: () => true, pinned: true },
+    checkbox:    { track: "18px", show: () => true, fixed: 18 },
+    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(150px,220px)", show: () => true, fixed: roomy ? 240 : 220 },
     sp:          { track: "6px", show: () => true, fixed: 6 },
     num:         { track: "40px", show: () => visibleCols.num, fixed: 40 },
     process:     { track: "34px", show: () => visibleCols.process, fixed: 34 },
     date:        { track: "56px", show: () => visibleCols.date, fixed: 56 },
     time:        { track: "48px", show: () => visibleCols.time, fixed: 48 },
-    summary:     { track: roomy ? "minmax(150px,1fr)" : "minmax(150px,1fr)", show: () => visibleCols.summary },
-    type:        { track: typeTrack, show: (st) => visibleCols.type && st },
-    submitter:   { track: submitterTrack, show: () => visibleCols.submitter },
-    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related },
-    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments },
-    words:       { track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)", show: () => visibleCols.words },
+    summary:     { track: "minmax(150px,1fr)", pinTrack: "200px", show: () => visibleCols.summary, fixed: 200 },
+    type:        { track: typeTrack, pinTrack: "88px", show: (st) => visibleCols.type && st, fixed: 88 },
+    submitter:   { track: submitterTrack, pinTrack: "74px", show: () => visibleCols.submitter, fixed: 74 },
+    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related, fixed: roomy ? 30 : 26 },
+    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 26 },
+    words:       { track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)", pinTrack: "42px", show: () => visibleCols.words, fixed: 42 },
   };
-  // Full render order: frozen anchor (checkbox · name) · spacer · the user-ordered data columns.
-  const fullOrder = ["checkbox", "name", "sp", ...colOrder];
-  const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => ({ key: k, ...colDefs[k] }));
+  // Layout order carries the "name" anchor: data columns before it are FROZEN (stay put on scroll), after it SCROLL.
+  const nameIdx = layout.indexOf("name");
+  const frozenData = layout.slice(0, nameIdx).filter((k) => k !== "name");
+  const scrollData = layout.slice(nameIdx + 1).filter((k) => k !== "name");
+  const fullOrder = ["checkbox", ...frozenData, "name", "sp", ...scrollData];
+  const frozenSet = new Set<string>(["checkbox", "name", ...frozenData]);
+  const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
+    const d = colDefs[k]; const pinned = frozenSet.has(k);
+    return { key: k, track: pinned && d.pinTrack ? d.pinTrack : d.track, pinned, fixed: d.fixed };
+  });
   const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
   // The type column is never pinned, so this is independent of showType.
@@ -1476,7 +1493,20 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
             <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
             <div className="py-1">
-              {colOrder.map((k, i) => (
+              {layout.map((k, i) => k === "name" ? (
+                // The name anchor = the freeze line. Columns dragged ABOVE it stay put on scroll; BELOW it they scroll.
+                <div
+                  key="name"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { if (dragColIdx.current !== null) moveCol(dragColIdx.current, i); dragColIdx.current = null; }}
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  style={{ backgroundColor: isDark ? "#20283c" : "#eef3fb", borderTop: `1px solid ${isDark ? dk.border : "#dbe6f5"}`, borderBottom: `1px solid ${isDark ? dk.border : "#dbe6f5"}` }}
+                >
+                  <span className="flex-shrink-0" style={{ width: "13px" }} />
+                  <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שם מסמך</span>
+                  <span className="text-[11px] flex-1 text-left" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מעל = נשאר · מתחת = נגלל</span>
+                </div>
+              ) : (
                 <div
                   key={k}
                   draggable
@@ -1487,9 +1517,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
                 >
                   <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab" }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
-                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k)}>
-                    <CheckboxBlue checked={visibleCols[k]} onToggle={() => {}} />
-                    <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k]}</span>
+                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
+                    <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
+                    <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
                   </span>
                 </div>
               ))}
