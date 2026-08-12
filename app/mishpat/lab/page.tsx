@@ -642,7 +642,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
       onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
     >
-      {COL_ORDER.filter((key) => colShown(key, colMeta, showType)).map((key) => (
+      {colMeta.order.filter((key) => colShown(key, colMeta, showType)).map((key) => (
         <div key={key} className="min-w-0 flex items-center h-full" style={pinCellStyle(key, colMeta)}>
           {cellContent(key)}
         </div>
@@ -669,6 +669,21 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
     if (raw) return { ...DOC_COL_DEFAULTS, ...JSON.parse(raw) };
   } catch { /* ignore */ }
   return { ...DOC_COL_DEFAULTS };
+};
+// Persisted column ORDER (the reorderable data columns). Reconciled with DOC_COL_ORDER so added/removed keys are handled.
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docColOrder";
+const reconcileOrder = (stored: string[]): DocColKey[] => {
+  const valid = stored.filter((k): k is DocColKey => (DOC_COL_ORDER as string[]).includes(k));
+  const missing = DOC_COL_ORDER.filter((k) => !valid.includes(k));
+  return [...valid, ...missing];
+};
+const loadColOrder = (): DocColKey[] => {
+  if (typeof window === "undefined") return [...DOC_COL_ORDER];
+  try {
+    const raw = window.localStorage.getItem(DOC_COLORDER_LS_KEY);
+    if (raw) return reconcileOrder(JSON.parse(raw));
+  } catch { /* ignore */ }
+  return [...DOC_COL_ORDER];
 };
 
 // Per-case chronological document number (oldest filed = 1). Attachments get the parent number + a Hebrew letter (1א׳).
@@ -719,7 +734,7 @@ function HScroll({ children, bg, isDark }: { children: React.ReactNode; bg: stri
 // documents, so they render as full column-aligned rows (NestedDocRow) with live checkboxes that toggle the
 // underlying document's `checked`. Attachments are exhibits, not case documents, so they have no column data
 // and stay a simple labeled list with their own checkbox state (attachmentSel). Each group offers "בחר הכל".
-function RowDetail({ kind, accent, doc, processDocs, siblingDocs, gridCols, colGap, colMeta, showType, showSelfInThread, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; accent?: string; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; showSelfInThread?: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
+function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colMeta, showType, showSelfInThread, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "related" | "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; showSelfInThread?: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
   const panelBg = isDark ? "#181f33" : "#f4f8fd";
   const titleCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
@@ -865,8 +880,8 @@ function RowDetail({ kind, accent, doc, processDocs, siblingDocs, gridCols, colG
 }
 
 // The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
-type ColMeta = { visible: Record<DocColKey, boolean>; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number };
-const COL_ORDER = ["checkbox", "num", "process", "date", "time", "sp", "name", "summary", "type", "submitter", "related", "attachments", "words"] as const;
+// `order` is the live render order (checkbox · name · sp · …user-ordered data columns) — user-reorderable via the popover.
+type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number };
 const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
   key === "checkbox" || key === "name" || key === "sp" ? true
   : key === "type" ? (cm.visible.type && showType)
@@ -890,10 +905,9 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const attPicked = attNames.some((name) => !!attachmentSel?.has(attKey(doc.id, name)));
   const lit = active || anyOpen;
   const restBg = lit ? activeBg : baseBg;
-  // Fixed stacking order for the open panels, and an accent color per kind (a colored right border so each labeled card reads distinctly).
+  // Fixed stacking order for the open panels (process → related → attachments) when several are open at once.
   const PANEL_ORDER: ("process" | "related" | "attachments")[] = ["process", "related", "attachments"];
   const openPanels = PANEL_ORDER.filter((k) => openKinds.has(k));
-  const PANEL_ACCENT: Record<string, string> = { process: "#6b62c9", related: c.primary, attachments: "#c1841f" };
   const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
   const num = colMeta.docNumbers[doc.id];
 
@@ -962,7 +976,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
         onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
       >
-        {COL_ORDER.filter((key) => colShown(key, colMeta, showType)).map((key) => (
+        {colMeta.order.filter((key) => colShown(key, colMeta, showType)).map((key) => (
           <div key={key} className="min-w-0 flex items-center h-full" style={pinCellStyle(key, colMeta)}>
             {cellContent(key)}
           </div>
@@ -970,7 +984,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       </div>
       {/* Open detail panels stack as separate labeled cards (related / process / attachments can be open in parallel). */}
       {openPanels.map((kind) => (
-        <RowDetail key={kind} kind={kind} accent={PANEL_ACCENT[kind]} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} showSelfInThread={showSelfInThread} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(kind)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />
+        <RowDetail key={kind} kind={kind} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} showSelfInThread={showSelfInThread} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(kind)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />
       ))}
     </div>
   );
@@ -1161,9 +1175,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [attachmentSel, setAttachmentSel] = useState<Set<string>>(new Set()); // chat-selected attachments (exhibits), keyed by `${docId}::${name}`
   // Customizable columns (persisted to localStorage) + the "columns" popover, and the per-case document numbers.
   const [visibleCols, setVisibleCols] = useState<Record<DocColKey, boolean>>(DOC_COL_DEFAULTS);
+  const [colOrder, setColOrder] = useState<DocColKey[]>(DOC_COL_ORDER);
   const [colsMenuOpen, setColsMenuOpen] = useState(false);
-  useEffect(() => { setVisibleCols(loadDocCols()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => { setVisibleCols(loadDocCols()); setColOrder(loadColOrder()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
   const toggleCol = (k: DocColKey) => setVisibleCols((p) => { const next = { ...p, [k]: !p[k] }; try { window.localStorage.setItem(DOC_COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  // Reorder a data column from index `from` to index `to` (drag in the התאמת עמודות popover), persisted.
+  const moveCol = (from: number, to: number) => setColOrder((prev) => {
+    if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+    const next = [...prev]; const [m] = next.splice(from, 1); next.splice(to, 0, m);
+    try { window.localStorage.setItem(DOC_COLORDER_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+  const dragColIdx = useRef<number | null>(null);
   const docNumbers = useMemo(() => buildDocNumbers(docs), [docs]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
@@ -1223,24 +1246,27 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
   const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
-  const COLS: { key: string; track: string; show: (st: boolean) => boolean; pinned: boolean; fixed?: number }[] = [
-    { key: "checkbox",  track: "18px",                                                show: () => true,                     pinned: true, fixed: 18 },
-    { key: "num",       track: "40px",                                                show: () => visibleCols.num,          pinned: true, fixed: 40 },
-    { key: "process",   track: "34px",                                                show: () => visibleCols.process,      pinned: true, fixed: 34 },
-    { key: "date",      track: "56px",                                                show: () => visibleCols.date,         pinned: true, fixed: 56 },
-    { key: "time",      track: "48px",                                                show: () => visibleCols.time,         pinned: true, fixed: 48 },
-    { key: "sp",        track: "5px",                                                 show: () => true,                     pinned: true, fixed: 5 },
-    // Narrow: fr name/summary (so the default set fits with no scroll, matching the deployed layout); the px minima only
-    // bite once extra columns are added → then it overflows and scrolls. Roomy keeps the capped name + flexible summary.
-    { key: "name",      track: roomy ? "minmax(170px,240px)" : "minmax(120px,1.35fr)", show: () => true,                    pinned: true },
-    { key: "summary",   track: roomy ? "minmax(150px,1fr)" : "minmax(120px,1.1fr)",   show: () => visibleCols.summary,      pinned: false },
-    { key: "type",      track: typeTrack,                                             show: (st) => visibleCols.type && st, pinned: false },
-    { key: "submitter", track: submitterTrack,                                        show: () => visibleCols.submitter,    pinned: false },
-    { key: "related",   track: roomy ? "30px" : "26px",                               show: () => visibleCols.related,      pinned: false },
-    { key: "attachments", track: roomy ? "30px" : "26px",                             show: () => visibleCols.attachments,  pinned: false },
-    { key: "words",     track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)",     show: () => visibleCols.words,        pinned: false },
-  ];
-  const visCols = (showType: boolean) => COLS.filter((col) => col.show(showType));
+  // Only the checkbox + document name are PINNED (frozen on the right) — they're the anchor that keeps a row
+  // identifiable + selectable while everything else scrolls. Every other column is freely reorderable (colOrder).
+  type ColDef = { track: string; show: (st: boolean) => boolean; pinned?: boolean; fixed?: number };
+  const colDefs: Record<string, ColDef> = {
+    checkbox:    { track: "18px", show: () => true, pinned: true, fixed: 18 },
+    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(150px,220px)", show: () => true, pinned: true },
+    sp:          { track: "6px", show: () => true, fixed: 6 },
+    num:         { track: "40px", show: () => visibleCols.num, fixed: 40 },
+    process:     { track: "34px", show: () => visibleCols.process, fixed: 34 },
+    date:        { track: "56px", show: () => visibleCols.date, fixed: 56 },
+    time:        { track: "48px", show: () => visibleCols.time, fixed: 48 },
+    summary:     { track: roomy ? "minmax(150px,1fr)" : "minmax(150px,1fr)", show: () => visibleCols.summary },
+    type:        { track: typeTrack, show: (st) => visibleCols.type && st },
+    submitter:   { track: submitterTrack, show: () => visibleCols.submitter },
+    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related },
+    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments },
+    words:       { track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)", show: () => visibleCols.words },
+  };
+  // Full render order: frozen anchor (checkbox · name) · spacer · the user-ordered data columns.
+  const fullOrder = ["checkbox", "name", "sp", ...colOrder];
+  const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => ({ key: k, ...colDefs[k] }));
   const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
   // The type column is never pinned, so this is independent of showType.
@@ -1259,7 +1285,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     const min = m ? parseInt(m[1], 10) : (col.fixed ?? (parseInt(col.track, 10) || 0));
     return sum + min + gapPx;
   }, 8 /* px-2 padding */);
-  const colMeta: ColMeta = { visible: visibleCols, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false) };
+  const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false) };
 
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -1448,12 +1474,23 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         <>
           <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
           <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
-            <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה</div>
+            <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
             <div className="py-1">
-              {DOC_COL_ORDER.map((k) => (
-                <div key={k} className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 cursor-pointer" onClick={() => toggleCol(k)}>
-                  <CheckboxBlue checked={visibleCols[k]} onToggle={() => {}} />
-                  <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k]}</span>
+              {colOrder.map((k, i) => (
+                <div
+                  key={k}
+                  draggable
+                  onDragStart={() => { dragColIdx.current = i; }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { if (dragColIdx.current !== null) moveCol(dragColIdx.current, i); dragColIdx.current = null; }}
+                  onDragEnd={() => { dragColIdx.current = null; }}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
+                >
+                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab" }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
+                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k)}>
+                    <CheckboxBlue checked={visibleCols[k]} onToggle={() => {}} />
+                    <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k]}</span>
+                  </span>
                 </div>
               ))}
             </div>
