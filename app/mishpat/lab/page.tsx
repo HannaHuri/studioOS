@@ -840,14 +840,14 @@ function RowDetail({ kind, accent, doc, processDocs, siblingDocs, gridCols, colG
     <div
       onClick={(e) => e.stopPropagation()}
       className="pt-1.5 pb-2"
-      style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, borderInlineStart: accent ? `3px solid ${accent}` : undefined }}
+      style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
       dir="rtl"
     >
       <div className="flex items-center justify-between mb-1 px-2" style={{ paddingInlineStart: "34px" }}>
-        <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: accent ?? titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <TitleIcon size={13} />
-          <span style={{ color: accent ?? titleCol }}>{title}</span>
-          {meta && <><span style={{ opacity: 0.4, color: titleCol }}>·</span>{meta}</>}
+        <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <TitleIcon size={12} />
+          {title}
+          {meta && <><span style={{ opacity: 0.4 }}>·</span>{meta}</>}
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onSelectAll && (
