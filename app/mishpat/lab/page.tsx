@@ -1195,6 +1195,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     return next;
   });
   const dragColIdx = useRef<number | null>(null);
+  // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
+  const DOC_COLW_LS_KEY = "mishpat-lab-docColW";
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  useEffect(() => { try { const raw = window.localStorage.getItem(DOC_COLW_LS_KEY); if (raw) setColWidths(JSON.parse(raw)); } catch { /* ignore */ } }, []);
+  const setColWidth = (k: string, px: number) => setColWidths((prev) => {
+    const next = { ...prev, [k]: Math.max(30, Math.round(px)) };
+    try { window.localStorage.setItem(DOC_COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
   const docNumbers = useMemo(() => buildDocNumbers(docs), [docs]);
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
@@ -1274,15 +1283,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 26 },
     words:       { track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)", pinTrack: "42px", show: () => visibleCols.words, fixed: 42 },
   };
-  // Layout order carries the "name" anchor: data columns before it are FROZEN (stay put on scroll), after it SCROLL.
-  const nameIdx = layout.indexOf("name");
-  const frozenData = layout.slice(0, nameIdx).filter((k) => k !== "name");
-  const scrollData = layout.slice(nameIdx + 1).filter((k) => k !== "name");
-  const fullOrder = ["checkbox", ...frozenData, "name", "sp", ...scrollData];
-  const frozenSet = new Set<string>(["checkbox", "name", ...frozenData]);
+  // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
+  // what matters to the user is which columns show, in what order, at what width.
+  const fullOrder = ["checkbox", ...layout];
   const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
-    const d = colDefs[k]; const pinned = frozenSet.has(k);
-    return { key: k, track: pinned && d.pinTrack ? d.pinTrack : d.track, pinned, fixed: d.fixed };
+    const d = colDefs[k]; const w = colWidths[k];
+    // A user-set width wins over the default track (turns a flexible column into a fixed one).
+    return { key: k, track: w ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
   });
   const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
@@ -1334,8 +1341,25 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const makeTableHeader = (showType: boolean) => (
     <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-20 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: `${gapPx}px`, minWidth: `${tableMinWidth(showType)}px`, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       {visCols(showType).map((col) => (
-        <div key={col.key} className="min-w-0 flex items-center h-full" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg } : undefined}>
+        <div key={col.key} className="min-w-0 flex items-center h-full relative" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg } : undefined}>
           {headerCellContent(col.key)}
+          {col.key !== "checkbox" && (
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault(); e.stopPropagation();
+                const cell = e.currentTarget.parentElement as HTMLElement;
+                const startW = cell.getBoundingClientRect().width; const startX = e.clientX;
+                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (startX - ev.clientX)); // RTL: drag left ⇒ wider
+                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+                document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
+              }}
+              className="absolute top-0 bottom-0 z-10 group/rz"
+              style={{ insetInlineStart: "-3px", width: "7px", cursor: "col-resize" }}
+              title="גרירה לשינוי רוחב העמודה"
+            >
+              <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineStart: "3px", width: "2px", borderRadius: "1px" }} />
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -1493,20 +1517,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
             <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
             <div className="py-1">
-              {layout.map((k, i) => k === "name" ? (
-                // The name anchor = the freeze line. Columns dragged ABOVE it stay put on scroll; BELOW it they scroll.
-                <div
-                  key="name"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { if (dragColIdx.current !== null) moveCol(dragColIdx.current, i); dragColIdx.current = null; }}
-                  className="flex items-center gap-2 px-3 py-1.5"
-                  style={{ backgroundColor: isDark ? "#20283c" : "#eef3fb", borderTop: `1px solid ${isDark ? dk.border : "#dbe6f5"}`, borderBottom: `1px solid ${isDark ? dk.border : "#dbe6f5"}` }}
-                >
-                  <span className="flex-shrink-0" style={{ width: "13px" }} />
-                  <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שם מסמך</span>
-                  <span className="text-[11px] flex-1 text-left" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מעל = נשאר · מתחת = נגלל</span>
-                </div>
-              ) : (
+              {layout.map((k, i) => (
                 <div
                   key={k}
                   draggable
@@ -1517,10 +1528,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
                 >
                   <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab" }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
-                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
-                    <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
-                    <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
-                  </span>
+                  {k === "name" ? (
+                    // The document name is always shown (no hide toggle) — just reorderable.
+                    <span className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שם מסמך</span>
+                      <span className="text-[11px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מוצג תמיד</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
+                      <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
+                      <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
