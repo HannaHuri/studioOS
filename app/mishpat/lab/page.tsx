@@ -864,7 +864,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
 
 // The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
 type ColMeta = { visible: Record<DocColKey, boolean>; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number };
-const COL_ORDER = ["checkbox", "num", "date", "time", "process", "sp", "name", "summary", "type", "submitter", "icons", "words"] as const;
+const COL_ORDER = ["checkbox", "num", "process", "date", "time", "sp", "name", "summary", "type", "submitter", "icons", "words"] as const;
 const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
   key === "checkbox" || key === "name" || key === "icons" || key === "sp" ? true
   : key === "type" ? (cm.visible.type && showType)
@@ -1212,9 +1212,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const COLS: { key: string; track: string; show: (st: boolean) => boolean; pinned: boolean; fixed?: number }[] = [
     { key: "checkbox",  track: "18px",                                                show: () => true,                     pinned: true, fixed: 18 },
     { key: "num",       track: "40px",                                                show: () => visibleCols.num,          pinned: true, fixed: 40 },
+    { key: "process",   track: "34px",                                                show: () => visibleCols.process,      pinned: true, fixed: 34 },
     { key: "date",      track: "56px",                                                show: () => visibleCols.date,         pinned: true, fixed: 56 },
     { key: "time",      track: "48px",                                                show: () => visibleCols.time,         pinned: true, fixed: 48 },
-    { key: "process",   track: "34px",                                                show: () => visibleCols.process,      pinned: true, fixed: 34 },
     { key: "sp",        track: "5px",                                                 show: () => true,                     pinned: true, fixed: 5 },
     // Narrow: fr name/summary (so the default set fits with no scroll, matching the deployed layout); the px minima only
     // bite once extra columns are added → then it overflows and scrolls. Roomy keeps the capped name + flexible summary.
