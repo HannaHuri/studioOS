@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, Workflow,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, GitBranch,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
@@ -624,7 +624,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           {variant === "process"
-            ? <Workflow size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
+            ? <GitBranch size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
             : <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>}
           <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
