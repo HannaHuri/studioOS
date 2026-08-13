@@ -663,7 +663,7 @@ const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary",
 // after it scroll. Default puts process · date right of the name, like before — but every column is freely movable
 // (drag it across the name line to change whether it scrolls).
 type LayoutKey = DocColKey | "name";
-const DEFAULT_LAYOUT: LayoutKey[] = ["process", "date", "num", "time", "name", "summary", "type", "submitter", "related", "attachments", "words"];
+const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "related", "attachments", "name", "summary", "type", "submitter", "words"];
 const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
   const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
@@ -1298,8 +1298,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // columns don't fit. checkbox / name / icons are structural (always shown); the rest obey `visibleCols`.
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
-  const typeTrack = roomy ? "minmax(64px,92px)" : "minmax(32px,50px)";
-  const submitterTrack = roomy ? "minmax(56px,78px)" : "minmax(48px,66px)";
+  const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,50px)";
+  const submitterTrack = roomy ? "minmax(54px,78px)" : "minmax(42px,66px)";
   // Only the checkbox + document name are PINNED (frozen on the right) — they're the anchor that keeps a row
   // identifiable + selectable while everything else scrolls. Every other column is freely reorderable (colOrder).
   // `track` = normal width; `pinTrack` = a FIXED width used only when the column sits in the frozen zone (a flexible/fr
@@ -1307,18 +1307,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   type ColDef = { track: string; pinTrack?: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
-    name:        { track: roomy ? "minmax(150px,240px)" : "minmax(110px,1.4fr)", show: () => true, fixed: roomy ? 150 : 110 },
+    name:        { track: roomy ? "minmax(140px,240px)" : "minmax(74px,1.4fr)", show: () => true, fixed: roomy ? 140 : 74 },
     sp:          { track: "6px", show: () => true, fixed: 6 },
-    num:         { track: "38px", show: () => visibleCols.num, fixed: 38 },
-    process:     { track: "34px", show: () => visibleCols.process, fixed: 34 },
-    date:        { track: "54px", show: () => visibleCols.date, fixed: 54 },
-    time:        { track: "46px", show: () => visibleCols.time, fixed: 46 },
-    summary:     { track: roomy ? "minmax(130px,1fr)" : "minmax(100px,1.1fr)", show: () => visibleCols.summary, fixed: 100 },
+    num:         { track: "36px", show: () => visibleCols.num, fixed: 36 },
+    process:     { track: "32px", show: () => visibleCols.process, fixed: 32 },
+    date:        { track: "52px", show: () => visibleCols.date, fixed: 52 },
+    time:        { track: "44px", show: () => visibleCols.time, fixed: 44 },
+    summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 56 },
     related:     { track: roomy ? "26px" : "22px", show: () => visibleCols.related, fixed: roomy ? 26 : 22 },
     attachments: { track: roomy ? "26px" : "22px", show: () => visibleCols.attachments, fixed: roomy ? 26 : 22 },
-    words:       { track: roomy ? "minmax(34px,42px)" : "minmax(30px,36px)", show: () => visibleCols.words, fixed: 34 },
+    words:       { track: roomy ? "minmax(32px,42px)" : "minmax(28px,36px)", show: () => visibleCols.words, fixed: 32 },
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
   // what matters to the user is which columns show, in what order, at what width.
@@ -1375,9 +1375,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       default:         return <span />;
     }
   };
-  const makeTableHeader = (showType: boolean) => (
+  const makeTableHeader = (showType: boolean) => {
+    const cols = visCols(showType);
+    return (
     <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-20 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: `${gapPx}px`, minWidth: `${tableMinWidth(showType)}px`, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
-      {visCols(showType).map((col) => (
+      {cols.map((col) => (
         <div key={col.key} className="min-w-0 flex items-center h-full relative" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg } : undefined}>
           {headerCellContent(col.key)}
           {col.key !== "checkbox" && (
@@ -1385,8 +1387,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               onMouseDown={(e) => {
                 e.preventDefault(); e.stopPropagation();
                 const cell = e.currentTarget.parentElement as HTMLElement;
-                const startW = cell.getBoundingClientRect().width; const startX = e.clientX;
-                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (startX - ev.clientX)); // RTL: drag left ⇒ wider
+                const gridEl = cell.parentElement as HTMLElement;
+                // Freeze EVERY visible column to its current px width first, so resizing this one changes only it
+                // (the flexible fr columns no longer redistribute → other columns stop changing width).
+                const frozen: Record<string, number> = {};
+                cols.forEach((cc, idx) => { const el = gridEl.children[idx] as HTMLElement; if (el) frozen[cc.key] = Math.round(el.getBoundingClientRect().width); });
+                setColWidths((prev) => { const next = { ...prev, ...frozen }; try { window.localStorage.setItem(DOC_COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+                const startW = frozen[col.key]; const startX = e.clientX;
+                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (ev.clientX - startX)); // RTL right-edge handle: drag right ⇒ wider
                 const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
                 document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
               }}
@@ -1400,7 +1408,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         </div>
       ))}
     </div>
-  );
+    );
+  };
   const tableHeader = makeTableHeader(true);
   const tableHeaderNoType = makeTableHeader(false);
 
