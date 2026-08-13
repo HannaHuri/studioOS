@@ -673,7 +673,7 @@ const reconcileLayout = (stored: string[]): LayoutKey[] => {
 };
 const DOC_COL_LABELS: Record<DocColKey, string> = { num: "מספר מסמך", date: "תאריך", time: "שעת הגשה", process: "תהליך", summary: "תקציר", type: "סוג", submitter: "מגיש", related: "מסמכים קשורים", attachments: "נספחים", words: "מילים" };
 const DOC_COL_DEFAULTS: Record<DocColKey, boolean> = { num: false, date: true, time: false, process: true, summary: true, type: true, submitter: true, related: true, attachments: true, words: true };
-const DOC_COLS_LS_KEY = "mishpat-lab-docCols";
+const DOC_COLS_LS_KEY = "mishpat-lab-docCols-v2"; // key bumped → old saved column state is discarded, everyone gets fresh defaults
 const loadDocCols = (): Record<DocColKey, boolean> => {
   if (typeof window === "undefined") return { ...DOC_COL_DEFAULTS };
   try {
@@ -683,7 +683,7 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   return { ...DOC_COL_DEFAULTS };
 };
 // Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v2";
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v3";
 const loadLayout = (): LayoutKey[] => {
   if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
@@ -1207,6 +1207,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     try { window.localStorage.setItem(DOC_COLORDER_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
+  // Reset order + widths + visibility back to the defaults (and forget the saved state).
+  const resetCols = () => {
+    setLayout([...DEFAULT_LAYOUT]); setColWidths({}); setVisibleCols({ ...DOC_COL_DEFAULTS });
+    try { window.localStorage.removeItem(DOC_COLORDER_LS_KEY); window.localStorage.removeItem(DOC_COLW_LS_KEY); window.localStorage.removeItem(DOC_COLS_LS_KEY); } catch { /* ignore */ }
+  };
   const startColDrag = (key: string, e: ReactMouseEvent) => {
     const startY = e.clientY;
     let dragging = false;
@@ -1233,7 +1238,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
-  const DOC_COLW_LS_KEY = "mishpat-lab-docColW";
+  const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v2";
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   useEffect(() => { try { const raw = window.localStorage.getItem(DOC_COLW_LS_KEY); if (raw) setColWidths(JSON.parse(raw)); } catch { /* ignore */ } }, []);
   const setColWidth = (k: string, px: number) => setColWidths((prev) => {
@@ -1580,6 +1585,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   </span>
                 </div>
               ))}
+            </div>
+            <div className="px-3 py-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
+              <button onClick={resetCols} className="text-[12.5px] hover:underline" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title="החזרת סדר, רוחב והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
             </div>
           </div>
         </>
