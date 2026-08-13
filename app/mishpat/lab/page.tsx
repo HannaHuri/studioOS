@@ -663,7 +663,7 @@ const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary",
 // after it scroll. Default puts process · date right of the name, like before — but every column is freely movable
 // (drag it across the name line to change whether it scrolls).
 type LayoutKey = DocColKey | "name";
-const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "related", "attachments", "name", "summary", "type", "submitter", "words"];
+const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "name", "summary", "type", "submitter", "related", "attachments", "words"];
 const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
   const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
@@ -683,7 +683,7 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   return { ...DOC_COL_DEFAULTS };
 };
 // Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v3";
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v4";
 const loadLayout = (): LayoutKey[] => {
   if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
@@ -1193,17 +1193,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const dropColIdx = useRef<number | null>(null);
   const clickSuppressed = useRef(false); // true right after a drag, so the trailing click doesn't also toggle
   const [, setColDragTick] = useState(0); // forces a re-render so the drag/drop indicator updates
-  const reorderCol = (key: string, to: number) => setLayout((prev) => {
-    const data: string[] = prev.filter((k) => k !== "name");
-    const from = data.indexOf(key);
-    if (from === -1) return prev;
-    data.splice(from, 1);
-    let t = from < to ? to - 1 : to;             // account for the removed item shifting indices
-    t = Math.max(0, Math.min(t, data.length));
-    data.splice(t, 0, key);
-    const nameIdx = prev.indexOf("name");
-    const next = [...data] as LayoutKey[];
-    next.splice(Math.max(0, Math.min(nameIdx, next.length)), 0, "name"); // keep שם מסמך roughly where it was
+  const reorderCol = (fromKey: string, toDataIdx: number) => setLayout((prev) => {
+    // Work by KEY (not index) so the always-present "name" column — which isn't in the popover — never moves.
+    const dataItems = prev.filter((k) => k !== "name");                 // the reorderable columns, in order
+    const targetKey = toDataIdx < dataItems.length ? dataItems[toDataIdx] : null; // insert BEFORE this key, or at end
+    if (targetKey === fromKey) return prev;                             // dropped on itself → no-op
+    const without = prev.filter((k) => k !== fromKey);                  // remove only the dragged column; name stays put
+    const insertAt = targetKey === null ? without.length : without.indexOf(targetKey);
+    const next = [...without];
+    next.splice(insertAt, 0, fromKey as LayoutKey);
     try { window.localStorage.setItem(DOC_COLORDER_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
