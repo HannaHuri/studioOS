@@ -1191,6 +1191,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const colRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragColKey = useRef<string | null>(null);
   const dropColIdx = useRef<number | null>(null);
+  const clickSuppressed = useRef(false); // true right after a drag, so the trailing click doesn't also toggle
   const [, setColDragTick] = useState(0); // forces a re-render so the drag/drop indicator updates
   const reorderCol = (key: string, to: number) => setLayout((prev) => {
     const data = prev.filter((k) => k !== "name");
@@ -1207,21 +1208,29 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     return next;
   });
   const startColDrag = (key: string, e: ReactMouseEvent) => {
-    e.preventDefault();
-    dragColKey.current = key; dropColIdx.current = null; setColDragTick((t) => t + 1);
+    const startY = e.clientY;
+    let dragging = false;
     const dataKeys = () => layout.filter((k) => k !== "name");
     const onMove = (ev: MouseEvent) => {
+      if (!dragging) {
+        if (Math.abs(ev.clientY - startY) < 4) return; // small move threshold → a plain click still toggles
+        dragging = true; dragColKey.current = key; document.body.style.userSelect = "none";
+      }
       const list = dataKeys(); let idx = list.length;
       for (let j = 0; j < list.length; j++) { const el = colRowRefs.current[list[j]]; if (!el) continue; const r = el.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { idx = j; break; } }
       dropColIdx.current = idx; setColDragTick((t) => t + 1);
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = "";
-      const k = dragColKey.current, to = dropColIdx.current;
-      dragColKey.current = null; dropColIdx.current = null; setColDragTick((t) => t + 1);
-      if (k != null && to != null) reorderCol(k, to);
+      if (dragging) {
+        clickSuppressed.current = true; // eat only the click that immediately follows this drag
+        setTimeout(() => { clickSuppressed.current = false; }, 0);
+        const k = dragColKey.current, to = dropColIdx.current;
+        dragColKey.current = null; dropColIdx.current = null; setColDragTick((t) => t + 1);
+        if (k != null && to != null) reorderCol(k, to);
+      }
     };
-    document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
   const DOC_COLW_LS_KEY = "mishpat-lab-docColW";
@@ -1289,8 +1298,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // columns don't fit. checkbox / name / icons are structural (always shown); the rest obey `visibleCols`.
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
-  const typeTrack = roomy ? "minmax(76px,92px)" : "minmax(34px,50px)";
-  const submitterTrack = roomy ? "minmax(66px,78px)" : "minmax(56px,66px)";
+  const typeTrack = roomy ? "minmax(64px,92px)" : "minmax(32px,50px)";
+  const submitterTrack = roomy ? "minmax(56px,78px)" : "minmax(48px,66px)";
   // Only the checkbox + document name are PINNED (frozen on the right) — they're the anchor that keeps a row
   // identifiable + selectable while everything else scrolls. Every other column is freely reorderable (colOrder).
   // `track` = normal width; `pinTrack` = a FIXED width used only when the column sits in the frozen zone (a flexible/fr
@@ -1298,18 +1307,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   type ColDef = { track: string; pinTrack?: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
-    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(120px,1.35fr)", show: () => true, fixed: roomy ? 240 : 160 },
+    name:        { track: roomy ? "minmax(150px,240px)" : "minmax(110px,1.4fr)", show: () => true, fixed: roomy ? 150 : 110 },
     sp:          { track: "6px", show: () => true, fixed: 6 },
-    num:         { track: "40px", show: () => visibleCols.num, fixed: 40 },
+    num:         { track: "38px", show: () => visibleCols.num, fixed: 38 },
     process:     { track: "34px", show: () => visibleCols.process, fixed: 34 },
-    date:        { track: "56px", show: () => visibleCols.date, fixed: 56 },
-    time:        { track: "48px", show: () => visibleCols.time, fixed: 48 },
-    summary:     { track: roomy ? "minmax(150px,1fr)" : "minmax(120px,1.1fr)", show: () => visibleCols.summary, fixed: 160 },
-    type:        { track: typeTrack, pinTrack: "88px", show: (st) => visibleCols.type && st, fixed: 88 },
-    submitter:   { track: submitterTrack, pinTrack: "74px", show: () => visibleCols.submitter, fixed: 74 },
-    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related, fixed: roomy ? 30 : 26 },
-    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 26 },
-    words:       { track: roomy ? "minmax(36px,42px)" : "minmax(30px,36px)", pinTrack: "42px", show: () => visibleCols.words, fixed: 42 },
+    date:        { track: "54px", show: () => visibleCols.date, fixed: 54 },
+    time:        { track: "46px", show: () => visibleCols.time, fixed: 46 },
+    summary:     { track: roomy ? "minmax(130px,1fr)" : "minmax(100px,1.1fr)", show: () => visibleCols.summary, fixed: 100 },
+    type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
+    submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 56 },
+    related:     { track: roomy ? "26px" : "22px", show: () => visibleCols.related, fixed: roomy ? 26 : 22 },
+    attachments: { track: roomy ? "26px" : "22px", show: () => visibleCols.attachments, fixed: roomy ? 26 : 22 },
+    words:       { track: roomy ? "minmax(34px,42px)" : "minmax(30px,36px)", show: () => visibleCols.words, fixed: 34 },
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
   // what matters to the user is which columns show, in what order, at what width.
@@ -1549,13 +1558,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <div
                   key={k}
                   ref={(el) => { colRowRefs.current[k] = el; }}
+                  onMouseDown={(e) => startColDrag(k, e)}
                   className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 relative"
-                  style={{ opacity: dragColKey.current === k ? 0.4 : 1 }}
+                  style={{ opacity: dragColKey.current === k ? 0.4 : 1, cursor: "grab" }}
                 >
                   {dragColKey.current != null && dropColIdx.current === i && <div className="absolute left-2 right-2 top-0" style={{ height: "2px", backgroundColor: c.primary }} />}
                   {dragColKey.current != null && dropColIdx.current === list.length && i === list.length - 1 && <div className="absolute left-2 right-2 bottom-0" style={{ height: "2px", backgroundColor: c.primary }} />}
-                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab", touchAction: "none" }} title="גרירה לשינוי סדר" onMouseDown={(e) => startColDrag(k, e)}><GripVertical size={13} /></span>
-                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
+                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
+                  <span className="flex items-center gap-2 flex-1 min-w-0" onClick={() => { if (clickSuppressed.current) return; toggleCol(k as DocColKey); }}>
                     <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
                     <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
                   </span>
