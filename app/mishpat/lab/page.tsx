@@ -2142,9 +2142,11 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEm
 
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
-    // Over the document (floating window): a single-row input with just a send button — no scope / citations / case chip.
+    // Over the document (condensed floating chat): the scope bar sits above a single-row input.
     if (overDoc) {
       return (
+        <div className="flex flex-col gap-1.5">
+        <div className="px-0.5">{renderScopeBar()}</div>
         <div
           className="rounded-lg border flex items-end gap-1.5 px-2 py-1.5"
           style={{ borderColor: isDark ? dk.border : c.inputBorder, boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)", backgroundColor: isDark ? dk.input : "white" }}
@@ -2173,11 +2175,12 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEm
             placeholder={isEmpty ? "הקלידו שאלה…" : ""}
           />
         </div>
+        </div>
       );
     }
     return (
       <div
-        className="rounded-lg border flex flex-col gap-2 px-3 pt-2.5 pb-2 overflow-hidden"
+        className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2 overflow-hidden"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
           boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)",
@@ -2185,8 +2188,6 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEm
         }}
         dir="rtl"
       >
-        {renderScopeBar()}
-        <div className="w-full" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}`, margin: "1px 0 2px" }} />
         <textarea
           ref={inputRef}
           rows={1}
@@ -2384,27 +2385,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEm
         <div className="flex-1 flex flex-col px-6 pb-5 min-w-0" style={{ backgroundColor: bg }}>
           <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0">
           <div className="w-full max-w-[768px] flex flex-col gap-4">
-            {overDoc ? (
-              // Over the document: a scope toggle sits right above the input.
-              <div className="flex items-center gap-2 flex-wrap" dir="rtl">
-                <span className="text-[13px] flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שיחה עם</span>
-                <div className="flex items-center rounded-md overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
-                  {([["case", "התיק"], ["doc", "מסמך זה"]] as const).map(([val, label], i) => {
-                    const sel = chatSubject === val;
-                    return (
-                      <button
-                        key={val}
-                        onClick={() => setChatSubject(val)}
-                        className="h-[26px] px-3 text-[13px]"
-                        style={{ backgroundColor: sel ? (isDark ? "#22304a" : c.primaryLight) : "transparent", color: sel ? c.primary : (isDark ? dk.textMuted : c.textGray), fontWeight: sel ? 500 : 400, fontFamily: "Noto Sans Hebrew, sans-serif", borderInlineStart: i > 0 ? `1px solid ${isDark ? dk.border : c.border}` : "none" }}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
+            {overDoc ? null : (
               <p
                 className="text-right text-[22px] font-medium mb-2"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
