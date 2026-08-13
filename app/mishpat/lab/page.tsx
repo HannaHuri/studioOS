@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, Workflow,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Layers, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
@@ -579,7 +579,7 @@ function RowIconTrigger({ children, active, onClick, title, isDark, picked = fal
       onClick={onClick}
       className={`flex items-center justify-center flex-shrink-0 rounded transition-colors ${boxed ? "" : "hover:opacity-75"}`}
       style={boxed
-        ? { color: lit ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: lit ? (isDark ? "#22304a" : c.primaryLight) : (isDark ? "#232c40" : "#eef1f6"), border: `1px solid ${lit ? c.primary : (isDark ? dk.border : "#dde3ec")}`, padding: "2px 4px", lineHeight: 0 }
+        ? { color: lit ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: lit ? (isDark ? "#22304a" : c.primaryLight) : (isDark ? "#232c40" : "#eef1f6"), border: `1px solid ${lit ? c.primary : (isDark ? dk.border : "#dde3ec")}`, padding: "2px 2px", lineHeight: 0 }
         : { color: lit ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
       title={title}
     >
@@ -624,13 +624,13 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           {variant === "process"
-            ? <Layers size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
+            ? <Workflow size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
             : <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>}
           <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
       );
-      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return <span />;
@@ -894,7 +894,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
 
 // The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
 // `order` is the live render order (checkbox · name · sp · …user-ordered data columns) — user-reorderable via the popover.
-type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number; summaryWrap?: boolean };
+type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number; summaryWrap?: boolean; onCellTip?: (text: string | null, e?: ReactMouseEvent) => void };
 const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
   key === "checkbox" || key === "name" || key === "sp" ? true
   : key === "type" ? (cm.visible.type && showType)
@@ -948,7 +948,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
       );
-      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return (
@@ -1244,6 +1244,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [colWidths, setColWidths] = useState<Record<string, number>>({}); // ONLY columns the user explicitly resized (persisted)
   const [dragFreeze, setDragFreeze] = useState<Record<string, number> | null>(null); // temp: pins ALL columns to px DURING a resize drag, released on mouseup so untouched columns flex again
   const [summaryWrap, setSummaryWrap] = useState(false); // תקציר column: wrap to multiple lines vs. single-line ellipsis
+  // Custom (larger, styled) tooltip for the summary cell — the native `title` tooltip's size is OS-controlled and reads small.
+  const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const handleCellTip = (text: string | null, e?: ReactMouseEvent) => { if (text && e) setTip({ text, x: e.clientX, y: e.clientY }); else setTip(null); };
   useEffect(() => { try { const raw = window.localStorage.getItem(DOC_COLW_LS_KEY); if (raw) setColWidths(JSON.parse(raw)); } catch { /* ignore */ } }, []);
   const setColWidth = (k: string, px: number) => setColWidths((prev) => {
     const next = { ...prev, [k]: Math.max(30, Math.round(px)) };
@@ -1319,8 +1322,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 56 },
-    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related, fixed: roomy ? 30 : 26 },
-    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 26 },
+    related:     { track: roomy ? "27px" : "24px", show: () => visibleCols.related, fixed: roomy ? 27 : 24 },
+    attachments: { track: roomy ? "27px" : "24px", show: () => visibleCols.attachments, fixed: roomy ? 27 : 24 },
     words:       { track: roomy ? "minmax(32px,42px)" : "minmax(28px,36px)", show: () => visibleCols.words, fixed: 32 },
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
@@ -1351,7 +1354,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     const min = m ? parseInt(m[1], 10) : (col.fixed ?? (parseInt(col.track, 10) || 0));
     return sum + min + gapPx;
   }, 8 /* px-2 padding */);
-  const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false), summaryWrap };
+  const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false), summaryWrap, onCellTip: handleCellTip };
 
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -1610,6 +1613,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
+      {/* Larger custom tooltip (summary) — fixed-position so it isn't clipped by the table's scroll container */}
+      {tip && (
+        <div
+          className="fixed z-[300] pointer-events-none"
+          style={{ left: Math.min(tip.x + 14, (typeof window !== "undefined" ? window.innerWidth : 1280) - 336), top: tip.y + 18, maxWidth: "320px", padding: "9px 12px", borderRadius: "8px", backgroundColor: isDark ? "#0d1424" : "#1e2732", color: "#fff", fontSize: "14.5px", lineHeight: 1.5, fontFamily: "Noto Sans Hebrew, sans-serif", boxShadow: "0 8px 26px rgba(0,0,0,0.28)", direction: "rtl" }}
+        >
+          {tip.text}
+        </div>
+      )}
       {/* Header */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5" dir="rtl">
         {/* Search + filters — minimal (icons) on the case list; unfolds once a case is open */}
