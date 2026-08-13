@@ -2057,7 +2057,7 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean };
 
-function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scopeCount = 0, scopeTotal = 0, openDocChecked = false, onAddOpenDoc, onScopeToOpenDoc, onSelectAllCase, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; scopeCount?: number; scopeTotal?: number; openDocChecked?: boolean; onAddOpenDoc?: () => void; onScopeToOpenDoc?: () => void; onSelectAllCase?: () => void; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
+function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scopeCount = 0, scopeTotal = 0, caseCount = 1, openDocChecked = false, onAddOpenDoc, onScopeToOpenDoc, onSelectAllCase, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; scopeCount?: number; scopeTotal?: number; caseCount?: number; openDocChecked?: boolean; onAddOpenDoc?: () => void; onScopeToOpenDoc?: () => void; onSelectAllCase?: () => void; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
   const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -2119,14 +2119,16 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
     const muted = isDark ? dk.textMuted : c.textLight;
     const chipBg = isDark ? "#22304a" : c.primaryLight;
     const hasDoc = !!openDocName;
-    const allSelected = scopeTotal > 0 && scopeCount === scopeTotal;
-    const onlyOpenDoc = hasDoc && openDocChecked && scopeCount === 1;
+    const multiCase = caseCount > 1;
+    const allSelected = !multiCase && scopeTotal > 0 && scopeCount === scopeTotal;
+    const onlyOpenDoc = !multiCase && hasDoc && openDocChecked && scopeCount === 1;
+    const docWord = scopeCount === 1 ? "מסמך אחד" : `${scopeCount} מסמכים`;
     const scopeLabel =
       scopeCount === 0 ? "לא נבחרו מסמכים"
+      : multiCase ? `${docWord} · ${caseCount} תיקים`   // multi-case indication
       : allSelected ? "כל מסמכי התיק"
       : onlyOpenDoc ? "מסמך זה"
-      : scopeCount === 1 ? "מסמך אחד"
-      : `${scopeCount} מסמכים`;
+      : docWord;
     return (
       <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-[12.5px]" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
         <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
@@ -2562,8 +2564,9 @@ export default function MishpatPage() {
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
   // Case documents with their `checked` selection — lifted here so the chat scope bar reflects the checkboxes.
   const [docs, setDocs] = useState<CaseDoc[]>(() => [
+    // Default selection = the FIRST case only. The second case joins the chat scope only if the user checks its docs.
     ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
-    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
+    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: false })),
   ]);
   const [viewerWidth, setViewerWidth] = useState(700); // doc pane a touch wider than the chat when all three panes are open
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
@@ -2599,14 +2602,18 @@ export default function MishpatPage() {
   const readingW = Math.max(480, Math.min(vw - 60 - 400, readingDocW ?? readingDefaultW));
   // #2 — whenever the chat floats over the document it can collapse to a minimal question bar (any float, not just the expand-button reading mode).
   const chatBar = chatFloating && chatCollapsed;
-  // Chat scope (item 6) — the CHECKED documents of the case in context (the open doc's case; c1 otherwise).
+  // Chat scope (item 6) — the CHECKED documents ACROSS cases. When they span more than one case the bar reads
+  // multi-case ("N מסמכים · 2 תיקים"); otherwise it's the single-case wording.
   const activeCaseId = openDoc?.caseId ?? "c1";
-  const caseDocsForScope = docs.filter((d) => d.caseId === activeCaseId);
-  const scopeCount = caseDocsForScope.filter((d) => d.checked).length;
-  const scopeTotal = caseDocsForScope.length;
+  const checkedDocs = docs.filter((d) => d.checked);
+  const scopeCount = checkedDocs.length;
+  const scopeCaseIds = Array.from(new Set(checkedDocs.map((d) => d.caseId)));
+  const caseCount = scopeCaseIds.length;
+  const singleCaseId = caseCount === 1 ? scopeCaseIds[0] : null;
+  const scopeTotal = singleCaseId ? docs.filter((d) => d.caseId === singleCaseId).length : 0; // "all docs of the case" only meaningful single-case
   const openDocChecked = openDoc ? !!docs.find((d) => d.id === openDoc.id)?.checked : false;
   const addOpenDocToScope = () => { if (openDoc) setDocs((p) => p.map((d) => (d.id === openDoc.id ? { ...d, checked: true } : d))); };
-  const scopeToOpenDocOnly = () => { if (openDoc) setDocs((p) => p.map((d) => (d.caseId === activeCaseId ? { ...d, checked: d.id === openDoc.id } : d))); };
+  const scopeToOpenDocOnly = () => { if (openDoc) setDocs((p) => p.map((d) => ({ ...d, checked: d.id === openDoc.id }))); }; // only the open doc, across all cases
   const selectAllCase = () => setDocs((p) => p.map((d) => (d.caseId === activeCaseId ? { ...d, checked: true } : d)));
   const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatCollapsed(true); setChatPos(null); };
   // New conversation, chat only — keep the working context (table + open document) so the user can start fresh in place.
@@ -2702,7 +2709,7 @@ export default function MishpatPage() {
             {!chatFloating && !!openDoc && (
               <button onClick={floatChat} title="החזרת הצ׳אט לחלון צף מעל המסמך" className="absolute z-20 size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ top: "8px", insetInlineStart: "8px", color: iconCol, backgroundColor: isDark ? dk.surface : "#f1f3f7", border: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}><Minimize2 size={14} /></button>
             )}
-            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} scopeCount={scopeCount} scopeTotal={scopeTotal} openDocChecked={openDocChecked} onAddOpenDoc={addOpenDocToScope} onScopeToOpenDoc={scopeToOpenDocOnly} onSelectAllCase={selectAllCase} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
+            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} scopeCount={scopeCount} scopeTotal={scopeTotal} caseCount={caseCount} openDocChecked={openDocChecked} onAddOpenDoc={addOpenDocToScope} onScopeToOpenDoc={scopeToOpenDocOnly} onSelectAllCase={selectAllCase} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
           </div>
           {chatFloating && !chatBar && (
             <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
