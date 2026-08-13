@@ -2054,7 +2054,7 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean };
 
-function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
+function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
   const [showCitations, setShowCitations] = useState(true);
   const [chatSubject, setChatSubject] = useState<"case" | "doc">("case"); // scope: whole case vs the open document — shown as a toggle above the input
   const [showBadges, setShowBadges] = useState(true);
@@ -2110,6 +2110,36 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
     setInputText("");
   }
 
+  // ── Scope bar (item 6) — always tells the user exactly what the chat is talking to, with dynamic wording.
+  // Model (v1): whole case vs. the open document. When a document is open it shows whether it's included and offers
+  // "שוחח רק על המסמך הזה" as a one-click shortcut.
+  function renderScopeBar() {
+    const muted = isDark ? dk.textMuted : c.textLight;
+    const chipBg = isDark ? "#22304a" : c.primaryLight;
+    const hasDoc = !!openDocName;
+    const scope = hasDoc ? chatSubject : "case"; // no doc open ⇒ always the whole case
+    return (
+      <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-[12.5px]" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
+          <FolderOpen size={13} /> שיחה עם
+        </span>
+        <span className="rounded px-2 py-0.5 font-medium flex items-center gap-1 min-w-0" style={{ backgroundColor: chipBg, color: c.primary }}>
+          <span className="truncate">{scope === "case" ? "כל מסמכי התיק" : `מסמך זה — ${openDocName}`}</span>
+        </span>
+        {hasDoc && scope === "case" && (
+          <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
+            <span style={{ opacity: 0.6 }}>·</span>
+            <Check size={12} style={{ color: "#0f8a5f" }} /> המסמך הפתוח כלול
+            <button onClick={() => setChatSubject("doc")} className="hover:underline" style={{ color: c.primary }}>שוחח רק עליו</button>
+          </span>
+        )}
+        {hasDoc && scope === "doc" && (
+          <button onClick={() => setChatSubject("case")} className="flex-shrink-0 hover:underline" style={{ color: c.primary }}>← חזרה לכל התיק</button>
+        )}
+      </div>
+    );
+  }
+
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
     // Over the document (floating window): a single-row input with just a send button — no scope / citations / case chip.
@@ -2147,7 +2177,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
     }
     return (
       <div
-        className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2 overflow-hidden"
+        className="rounded-lg border flex flex-col gap-2 px-3 pt-2.5 pb-2 overflow-hidden"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
           boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)",
@@ -2155,6 +2185,8 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, onEmptyChange, on
         }}
         dir="rtl"
       >
+        {renderScopeBar()}
+        <div className="w-full" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}`, margin: "1px 0 2px" }} />
         <textarea
           ref={inputRef}
           rows={1}
@@ -2657,7 +2689,7 @@ export default function MishpatPage() {
             {!chatFloating && !!openDoc && (
               <button onClick={floatChat} title="החזרת הצ׳אט לחלון צף מעל המסמך" className="absolute z-20 size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ top: "8px", insetInlineStart: "8px", color: iconCol, backgroundColor: isDark ? dk.surface : "#f1f3f7", border: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}><Minimize2 size={14} /></button>
             )}
-            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
+            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
           </div>
           {chatFloating && !chatBar && (
             <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
