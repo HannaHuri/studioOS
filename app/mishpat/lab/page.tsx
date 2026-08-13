@@ -1392,15 +1392,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 cols.forEach((cc, idx) => { const el = gridEl.children[idx] as HTMLElement; if (el) frozen[cc.key] = Math.round(el.getBoundingClientRect().width); });
                 setColWidths((prev) => { const next = { ...prev, ...frozen }; try { window.localStorage.setItem(DOC_COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
                 const startW = frozen[col.key]; const startX = e.clientX;
-                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (ev.clientX - startX)); // RTL right-edge handle: drag right ⇒ wider
+                // RTL: a column grows from its LEFT edge (the handle sits there). Drag the handle LEFT ⇒ wider (the
+                // grabbed edge follows the cursor); drag it RIGHT (into the column) ⇒ narrower.
+                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (startX - ev.clientX));
                 const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
                 document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
               }}
               className="absolute top-0 bottom-0 z-10 group/rz"
-              style={{ insetInlineStart: "-3px", width: "7px", cursor: "col-resize" }}
+              style={{ insetInlineEnd: "-3px", width: "7px", cursor: "col-resize" }}
               title="גרירה לשינוי רוחב העמודה"
             >
-              <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineStart: "3px", width: "2px", borderRadius: "1px" }} />
+              <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineEnd: "3px", width: "2px", borderRadius: "1px" }} />
             </div>
           )}
         </div>
