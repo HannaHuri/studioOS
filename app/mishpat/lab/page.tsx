@@ -624,7 +624,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
       );
-      case "summary":  return <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return <span />;
@@ -888,7 +888,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
 
 // The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
 // `order` is the live render order (checkbox · name · sp · …user-ordered data columns) — user-reorderable via the popover.
-type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number };
+type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number; summaryWrap?: boolean };
 const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
   key === "checkbox" || key === "name" || key === "sp" ? true
   : key === "type" ? (cm.visible.type && showType)
@@ -942,7 +942,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
       );
-      case "summary":  return <span className="truncate text-[12.5px] min-w-0" title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} title={doc.summary} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return (
@@ -1207,7 +1207,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   });
   // Reset order + widths + visibility back to the defaults (and forget the saved state).
   const resetCols = () => {
-    setLayout([...DEFAULT_LAYOUT]); setColWidths({}); setVisibleCols({ ...DOC_COL_DEFAULTS });
+    setLayout([...DEFAULT_LAYOUT]); setColWidths({}); setDragFreeze(null); setSummaryWrap(false); setVisibleCols({ ...DOC_COL_DEFAULTS });
     try { window.localStorage.removeItem(DOC_COLORDER_LS_KEY); window.localStorage.removeItem(DOC_COLW_LS_KEY); window.localStorage.removeItem(DOC_COLS_LS_KEY); } catch { /* ignore */ }
     setColsMenuOpen(false); // close the popover after resetting
   };
@@ -1238,7 +1238,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   };
   // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
   const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v2";
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [colWidths, setColWidths] = useState<Record<string, number>>({}); // ONLY columns the user explicitly resized (persisted)
+  const [dragFreeze, setDragFreeze] = useState<Record<string, number> | null>(null); // temp: pins ALL columns to px DURING a resize drag, released on mouseup so untouched columns flex again
+  const [summaryWrap, setSummaryWrap] = useState(false); // תקציר column: wrap to multiple lines vs. single-line ellipsis
   useEffect(() => { try { const raw = window.localStorage.getItem(DOC_COLW_LS_KEY); if (raw) setColWidths(JSON.parse(raw)); } catch { /* ignore */ } }, []);
   const setColWidth = (k: string, px: number) => setColWidths((prev) => {
     const next = { ...prev, [k]: Math.max(30, Math.round(px)) };
@@ -1322,9 +1324,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // what matters to the user is which columns show, in what order, at what width.
   const fullOrder = ["checkbox", ...layout];
   const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
-    const d = colDefs[k]; const w = colWidths[k];
-    // A user-set width wins over the default track (turns a flexible column into a fixed one).
-    return { key: k, track: w ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
+    const d = colDefs[k];
+    // During a resize drag ALL columns are pinned (dragFreeze); otherwise only explicitly-resized columns are fixed and
+    // the rest keep their flexible default track → the table always fills the width (spreads on expand).
+    const w = (dragFreeze && dragFreeze[k] != null) ? dragFreeze[k] : colWidths[k];
+    return { key: k, track: w != null ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
   });
   const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
@@ -1344,7 +1348,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     const min = m ? parseInt(m[1], 10) : (col.fixed ?? (parseInt(col.track, 10) || 0));
     return sum + min + gapPx;
   }, 8 /* px-2 padding */);
-  const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false) };
+  const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false), summaryWrap };
 
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`מיון לפי ${label}`}>
@@ -1360,7 +1364,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       case "time":     return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>שעה</span>;
       case "process":  return sortHead("process", "תהליך", { center: true, hideIcon: true });
       case "name":     return sortHead("name", "שם מסמך");
-      case "summary":  return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>תקציר</span>;
+      case "summary":  return (
+        <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <span>תקציר</span>
+          <button onClick={() => setSummaryWrap((v) => !v)} title={summaryWrap ? "צמצום התקציר לשורה אחת" : "פריסת התקציר לכמה שורות"} className="flex items-center hover:opacity-70" style={{ color: summaryWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}>
+            <ChevronDown size={13} style={{ transform: summaryWrap ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </button>
+        </span>
+      );
       case "type":     return sortHead("type", "סוג");
       case "submitter":return sortHead("submitter", "מגיש");
       case "related":  return (
@@ -1390,12 +1401,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 // (the flexible fr columns no longer redistribute → other columns stop changing width).
                 const frozen: Record<string, number> = {};
                 cols.forEach((cc, idx) => { const el = gridEl.children[idx] as HTMLElement; if (el) frozen[cc.key] = Math.round(el.getBoundingClientRect().width); });
-                setColWidths((prev) => { const next = { ...prev, ...frozen }; try { window.localStorage.setItem(DOC_COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
-                const startW = frozen[col.key]; const startX = e.clientX;
+                setDragFreeze(frozen); // pin all columns for the DURATION of the drag → only the grabbed one visibly changes
+                const startW = frozen[col.key]; const startX = e.clientX; let lastW = startW;
                 // RTL: a column grows from its LEFT edge (the handle sits there). Drag the handle LEFT ⇒ wider (the
                 // grabbed edge follows the cursor); drag it RIGHT (into the column) ⇒ narrower.
-                const onMove = (ev: MouseEvent) => setColWidth(col.key, startW + (startX - ev.clientX));
-                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+                const onMove = (ev: MouseEvent) => { lastW = Math.max(30, Math.round(startW + (startX - ev.clientX))); setDragFreeze((prev) => ({ ...(prev || frozen), [col.key]: lastW })); };
+                const onUp = () => {
+                  document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = "";
+                  setColWidths((prev) => { const next = { ...prev, [col.key]: lastW }; try { window.localStorage.setItem(DOC_COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; }); // persist ONLY the grabbed column
+                  setDragFreeze(null); // release the others → flexible columns fill the width again (spreads on expand)
+                };
                 document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
               }}
               className="absolute top-0 bottom-0 z-10 group/rz"
