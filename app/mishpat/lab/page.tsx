@@ -571,12 +571,16 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
 // Clicking it toggles an inline detail row that opens in place (RowDetail) — no floating popover.
 // `picked` turns the icon blue once any of this group's nested items are selected for the chat (otherwise it
 // stays the default gray). No partial vs. full distinction — just picked / not picked.
-function RowIconTrigger({ children, active, onClick, title, isDark, picked = false }: { children: React.ReactNode; active: boolean; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean; picked?: boolean }) {
+function RowIconTrigger({ children, active, onClick, title, isDark, picked = false, boxed = false }: { children: React.ReactNode; active: boolean; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean; picked?: boolean; boxed?: boolean }) {
+  // `boxed` gives the icon a subtle button chip so it reads as an interactive control, not as column content.
+  const lit = active || picked;
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-center flex-shrink-0 rounded transition-colors hover:opacity-75"
-      style={{ color: active || picked ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
+      className={`flex items-center justify-center flex-shrink-0 rounded transition-colors ${boxed ? "" : "hover:opacity-75"}`}
+      style={boxed
+        ? { color: lit ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: lit ? (isDark ? "#22304a" : c.primaryLight) : (isDark ? "#232c40" : "#eef1f6"), border: `1px solid ${lit ? c.primary : (isDark ? dk.border : "#dde3ec")}`, padding: "2px 4px", lineHeight: 0 }
+        : { color: lit ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
       title={title}
     >
       {children}
@@ -600,7 +604,7 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
 // One nested document rendered inside an expanded detail, using the SAME dynamic columns as the parent table so
 // every field lines up (and the pinned block stays put on horizontal scroll). The checkbox column is live: related
 // and process-thread docs are real case documents, so ticking one here toggles that document's own `checked` state.
-function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen, isSelf, onOpenDoc, onToggleCheck }: { doc: CaseDoc; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; isDark: boolean; isOpen?: boolean; isSelf?: boolean; onOpenDoc?: (doc: CaseDoc) => void; onToggleCheck?: () => void }) {
+function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen, isSelf, variant = "related", onOpenDoc, onToggleCheck }: { doc: CaseDoc; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; isDark: boolean; isOpen?: boolean; isSelf?: boolean; variant?: "related" | "process"; onOpenDoc?: (doc: CaseDoc) => void; onToggleCheck?: () => void }) {
   const metaCol = isDark ? dk.textMuted : c.textLight;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
@@ -619,7 +623,9 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "process":  return <span className="min-w-0 flex justify-center w-full" style={{ color: metaCol }}>{docProcessIds(doc).length > 0 && <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />}</span>;
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
-          <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>
+          {variant === "process"
+            ? <Layers size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
+            : <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>}
           <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
@@ -798,7 +804,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
     body = (
       <div className="flex flex-col">
         {sorted.map((d) => (
-          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
+          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} variant="process" onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
         ))}
       </div>
     );
@@ -948,7 +954,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "related":  return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
-            <RowIconTrigger active={openKinds.has("related")} onClick={toggle("related")} title={`מסמכים קשורים (${doc.related.length})`} isDark={isDark}>
+            <RowIconTrigger active={openKinds.has("related")} onClick={toggle("related")} title={`מסמכים קשורים (${doc.related.length})`} isDark={isDark} boxed>
               <Link size={13} />
             </RowIconTrigger>
           )}
@@ -957,7 +963,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "attachments": return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length ?? 0) > 0 && (
-            <RowIconTrigger active={openKinds.has("attachments")} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`} isDark={isDark} picked={attPicked}>
+            <RowIconTrigger active={openKinds.has("attachments")} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`} isDark={isDark} picked={attPicked} boxed>
               <Paperclip size={13} />
             </RowIconTrigger>
           )}
@@ -1313,8 +1319,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 56 },
-    related:     { track: roomy ? "26px" : "22px", show: () => visibleCols.related, fixed: roomy ? 26 : 22 },
-    attachments: { track: roomy ? "26px" : "22px", show: () => visibleCols.attachments, fixed: roomy ? 26 : 22 },
+    related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related, fixed: roomy ? 30 : 26 },
+    attachments: { track: roomy ? "30px" : "26px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 26 },
     words:       { track: roomy ? "minmax(32px,42px)" : "minmax(28px,36px)", show: () => visibleCols.words, fixed: 32 },
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
