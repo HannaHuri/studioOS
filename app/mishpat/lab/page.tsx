@@ -1298,22 +1298,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     });
   };
   // Dense table with user-customizable columns. Full column order (RTL → first track rightmost):
-  // checkbox · [num] · [date] · [time] · process · document · summary · [type] · submitter · icons · words.
-  // The leading block (checkbox … name) is PINNED: it stays put while the rest scroll horizontally when the visible
-  // columns don't fit. checkbox / name / icons are structural (always shown); the rest obey `visibleCols`.
+  // Flat table (nothing pinned): checkbox leads, then the user-ordered columns. `track` = the column's width;
+  // `fixed` is its min used in the no-scroll width sum. Widths obey `visibleCols`; the document name is always shown.
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,50px)";
   const submitterTrack = roomy ? "minmax(54px,78px)" : "minmax(42px,66px)";
-  // Only the checkbox + document name are PINNED (frozen on the right) — they're the anchor that keeps a row
-  // identifiable + selectable while everything else scrolls. Every other column is freely reorderable (colOrder).
-  // `track` = normal width; `pinTrack` = a FIXED width used only when the column sits in the frozen zone (a flexible/fr
-  // column can't be sticky). `fixed` feeds the sticky-offset math (its effective frozen width).
-  type ColDef = { track: string; pinTrack?: string; show: (st: boolean) => boolean; fixed?: number };
+  type ColDef = { track: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
     name:        { track: roomy ? "minmax(140px,240px)" : "minmax(74px,1.4fr)", show: () => true, fixed: roomy ? 140 : 74 },
-    sp:          { track: "6px", show: () => true, fixed: 6 },
     num:         { track: "36px", show: () => visibleCols.num, fixed: 36 },
     process:     { track: "32px", show: () => visibleCols.process, fixed: 32 },
     date:        { track: "52px", show: () => visibleCols.date, fixed: 52 },
