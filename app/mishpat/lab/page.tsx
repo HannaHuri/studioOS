@@ -1209,6 +1209,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const resetCols = () => {
     setLayout([...DEFAULT_LAYOUT]); setColWidths({}); setVisibleCols({ ...DOC_COL_DEFAULTS });
     try { window.localStorage.removeItem(DOC_COLORDER_LS_KEY); window.localStorage.removeItem(DOC_COLW_LS_KEY); window.localStorage.removeItem(DOC_COLS_LS_KEY); } catch { /* ignore */ }
+    setColsMenuOpen(false); // close the popover after resetting
   };
   const startColDrag = (key: string, e: ReactMouseEvent) => {
     const startY = e.clientY;
