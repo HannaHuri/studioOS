@@ -1194,7 +1194,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const clickSuppressed = useRef(false); // true right after a drag, so the trailing click doesn't also toggle
   const [, setColDragTick] = useState(0); // forces a re-render so the drag/drop indicator updates
   const reorderCol = (key: string, to: number) => setLayout((prev) => {
-    const data = prev.filter((k) => k !== "name");
+    const data: string[] = prev.filter((k) => k !== "name");
     const from = data.indexOf(key);
     if (from === -1) return prev;
     data.splice(from, 1);
