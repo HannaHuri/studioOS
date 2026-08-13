@@ -1152,7 +1152,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
 }
 
 // ── Document panel (open) — table browser ────────────────────────────────────
-function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, onClosePanel, openDocId }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; onClosePanel?: () => void; openDocId?: string }) {
+function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, onClosePanel, openDocId, docs, setDocs }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; onClosePanel?: () => void; openDocId?: string; docs: CaseDoc[]; setDocs: React.Dispatch<React.SetStateAction<CaseDoc[]>> }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // Which detail panels are open — a Set of `${docId}::${kind}` so related / process / attachments can be open in
   // parallel (per user), across any rows. Each opens/closes independently from its own trigger or the card's × button.
@@ -1175,10 +1175,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("desc");
   // Case documents start selected by default. Their related/process triggers are NOT colored by this (they'd all be
   // blue and too loud in the row) — only the attachments icon reflects selection, since attachments are opt-in and not shown elsewhere.
-  const [docs, setDocs]           = useState<CaseDoc[]>(() => [
-    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
-    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
-  ]);
+  // `docs` (with each doc's `checked` flag) is lifted to MishpatPage so the chat's scope bar can read the selection.
   const [attachmentSel, setAttachmentSel] = useState<Set<string>>(new Set()); // chat-selected attachments (exhibits), keyed by `${docId}::${name}`
   // Customizable columns (persisted to localStorage) + the "columns" popover, and the per-case document numbers.
   const [visibleCols, setVisibleCols] = useState<Record<DocColKey, boolean>>(DOC_COL_DEFAULTS);
@@ -2054,9 +2051,8 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean };
 
-function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
+function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scopeCount = 0, scopeTotal = 0, openDocChecked = false, onAddOpenDoc, onScopeToOpenDoc, onSelectAllCase, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; scopeCount?: number; scopeTotal?: number; openDocChecked?: boolean; onAddOpenDoc?: () => void; onScopeToOpenDoc?: () => void; onSelectAllCase?: () => void; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
   const [showCitations, setShowCitations] = useState(true);
-  const [chatSubject, setChatSubject] = useState<"case" | "doc">("case"); // scope: whole case vs the open document — shown as a toggle above the input
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
   const [inputText, setInputText] = useState("");
@@ -2110,31 +2106,47 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, onEm
     setInputText("");
   }
 
-  // ── Scope bar (item 6) — always tells the user exactly what the chat is talking to, with dynamic wording.
-  // Model (v1): whole case vs. the open document. When a document is open it shows whether it's included and offers
-  // "שוחח רק על המסמך הזה" as a one-click shortcut.
+  // ── Scope bar (item 6) — tells the user exactly what the chat is talking to, driven by the CHECKED documents.
+  // Dynamic wording (singular/plural), plus reconciliation with the open document: whether it's included, an "add"
+  // action when it isn't, and a "שוחח רק על המסמך הזה" shortcut.
   function renderScopeBar() {
     const muted = isDark ? dk.textMuted : c.textLight;
     const chipBg = isDark ? "#22304a" : c.primaryLight;
     const hasDoc = !!openDocName;
-    const scope = hasDoc ? chatSubject : "case"; // no doc open ⇒ always the whole case
+    const allSelected = scopeTotal > 0 && scopeCount === scopeTotal;
+    const onlyOpenDoc = hasDoc && openDocChecked && scopeCount === 1;
+    const scopeLabel =
+      scopeCount === 0 ? "לא נבחרו מסמכים"
+      : allSelected ? "כל מסמכי התיק"
+      : onlyOpenDoc ? "מסמך זה"
+      : scopeCount === 1 ? "מסמך אחד"
+      : `${scopeCount} מסמכים`;
     return (
       <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-[12.5px]" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
         <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
           <FolderOpen size={13} /> שיחה עם
         </span>
-        <span className="rounded px-2 py-0.5 font-medium flex items-center gap-1 min-w-0" style={{ backgroundColor: chipBg, color: c.primary }}>
-          <span className="truncate">{scope === "case" ? "כל מסמכי התיק" : `מסמך זה — ${openDocName}`}</span>
+        <span className="rounded px-2 py-0.5 font-medium flex items-center gap-1 min-w-0" style={{ backgroundColor: scopeCount === 0 ? (isDark ? "#3a2e1c" : "#fbf0df") : chipBg, color: scopeCount === 0 ? "#b9670c" : c.primary }}>
+          <span className="truncate">{scopeLabel}</span>
         </span>
-        {hasDoc && scope === "case" && (
-          <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
-            <span style={{ opacity: 0.6 }}>·</span>
-            <Check size={12} style={{ color: "#0f8a5f" }} /> המסמך הפתוח כלול
-            <button onClick={() => setChatSubject("doc")} className="hover:underline" style={{ color: c.primary }}>שוחח רק עליו</button>
-          </span>
+        {/* Reconciliation with the open document */}
+        {hasDoc && !onlyOpenDoc && (
+          openDocChecked ? (
+            <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
+              <span style={{ opacity: 0.6 }}>·</span>
+              <Check size={12} style={{ color: "#0f8a5f" }} /> המסמך הפתוח כלול
+              <button onClick={() => onScopeToOpenDoc?.()} className="hover:underline" style={{ color: c.primary }}>שוחח רק עליו</button>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 flex-shrink-0" style={{ color: "#b9670c" }}>
+              <span style={{ opacity: 0.6 }}>·</span>
+              המסמך הפתוח אינו בשיחה
+              <button onClick={() => onAddOpenDoc?.()} className="hover:underline font-medium" style={{ color: c.primary }}>הוסף</button>
+            </span>
+          )
         )}
-        {hasDoc && scope === "doc" && (
-          <button onClick={() => setChatSubject("case")} className="flex-shrink-0 hover:underline" style={{ color: c.primary }}>← חזרה לכל התיק</button>
+        {onlyOpenDoc && scopeTotal > 1 && (
+          <button onClick={() => onSelectAllCase?.()} className="flex-shrink-0 hover:underline" style={{ color: c.primary }}>← כל התיק</button>
         )}
       </div>
     );
@@ -2542,6 +2554,11 @@ export default function MishpatPage() {
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
   const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
+  // Case documents with their `checked` selection — lifted here so the chat scope bar reflects the checkboxes.
+  const [docs, setDocs] = useState<CaseDoc[]>(() => [
+    ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
+    ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: true })),
+  ]);
   const [viewerWidth, setViewerWidth] = useState(700); // doc pane a touch wider than the chat when all three panes are open
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
   const [readingDocW, setReadingDocW] = useState<number | null>(null); // manual doc/table split in reading mode (null = auto)
@@ -2576,6 +2593,15 @@ export default function MishpatPage() {
   const readingW = Math.max(480, Math.min(vw - 60 - 400, readingDocW ?? readingDefaultW));
   // #2 — whenever the chat floats over the document it can collapse to a minimal question bar (any float, not just the expand-button reading mode).
   const chatBar = chatFloating && chatCollapsed;
+  // Chat scope (item 6) — the CHECKED documents of the case in context (the open doc's case; c1 otherwise).
+  const activeCaseId = openDoc?.caseId ?? "c1";
+  const caseDocsForScope = docs.filter((d) => d.caseId === activeCaseId);
+  const scopeCount = caseDocsForScope.filter((d) => d.checked).length;
+  const scopeTotal = caseDocsForScope.length;
+  const openDocChecked = openDoc ? !!docs.find((d) => d.id === openDoc.id)?.checked : false;
+  const addOpenDocToScope = () => { if (openDoc) setDocs((p) => p.map((d) => (d.id === openDoc.id ? { ...d, checked: true } : d))); };
+  const scopeToOpenDocOnly = () => { if (openDoc) setDocs((p) => p.map((d) => (d.caseId === activeCaseId ? { ...d, checked: d.id === openDoc.id } : d))); };
+  const selectAllCase = () => setDocs((p) => p.map((d) => (d.caseId === activeCaseId ? { ...d, checked: true } : d)));
   const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatCollapsed(true); setChatPos(null); };
   // New conversation, chat only — keep the working context (table + open document) so the user can start fresh in place.
   const newChat = () => { setConvKey((k) => k + 1); };
@@ -2670,7 +2696,7 @@ export default function MishpatPage() {
             {!chatFloating && !!openDoc && (
               <button onClick={floatChat} title="החזרת הצ׳אט לחלון צף מעל המסמך" className="absolute z-20 size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ top: "8px", insetInlineStart: "8px", color: iconCol, backgroundColor: isDark ? dk.surface : "#f1f3f7", border: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}><Minimize2 size={14} /></button>
             )}
-            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
+            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} scopeCount={scopeCount} scopeTotal={scopeTotal} openDocChecked={openDocChecked} onAddOpenDoc={addOpenDocToScope} onScopeToOpenDoc={scopeToOpenDocOnly} onSelectAllCase={selectAllCase} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
           </div>
           {chatFloating && !chatBar && (
             <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
@@ -2721,7 +2747,7 @@ export default function MishpatPage() {
                 : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={closePanel} openDocId={openDoc?.id} />
+              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={closePanel} openDocId={openDoc?.id} docs={docs} setDocs={setDocs} />
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail). Normal mode: resize the table width.
