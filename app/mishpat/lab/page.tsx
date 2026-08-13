@@ -1186,15 +1186,43 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [colsMenuOpen, setColsMenuOpen] = useState(false);
   useEffect(() => { setVisibleCols(loadDocCols()); setLayout(loadLayout()); }, []); // hydrate from localStorage after mount (avoids SSR mismatch)
   const toggleCol = (k: DocColKey) => setVisibleCols((p) => { const next = { ...p, [k]: !p[k] }; try { window.localStorage.setItem(DOC_COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
-  // Move a layout item from index `from` to index `to` (drag in the התאמת עמודות popover). Because the list holds the
-  // "name" anchor, a drag can cross the name line → the column changes between the frozen and scrolling zones. Persisted.
-  const moveCol = (from: number, to: number) => setLayout((prev) => {
-    if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
-    const next = [...prev]; const [m] = next.splice(from, 1); next.splice(to, 0, m);
+  // Column reorder in the popover — pointer-based (robust + testable), operating on the DATA columns only (the שם מסמך
+  // column isn't listed there). `to` is the insertion slot among the data columns; name is kept at its place. Persisted.
+  const colRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragColKey = useRef<string | null>(null);
+  const dropColIdx = useRef<number | null>(null);
+  const [, setColDragTick] = useState(0); // forces a re-render so the drag/drop indicator updates
+  const reorderCol = (key: string, to: number) => setLayout((prev) => {
+    const data = prev.filter((k) => k !== "name");
+    const from = data.indexOf(key);
+    if (from === -1) return prev;
+    data.splice(from, 1);
+    let t = from < to ? to - 1 : to;             // account for the removed item shifting indices
+    t = Math.max(0, Math.min(t, data.length));
+    data.splice(t, 0, key);
+    const nameIdx = prev.indexOf("name");
+    const next = [...data] as LayoutKey[];
+    next.splice(Math.max(0, Math.min(nameIdx, next.length)), 0, "name"); // keep שם מסמך roughly where it was
     try { window.localStorage.setItem(DOC_COLORDER_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
-  const dragColIdx = useRef<number | null>(null);
+  const startColDrag = (key: string, e: ReactMouseEvent) => {
+    e.preventDefault();
+    dragColKey.current = key; dropColIdx.current = null; setColDragTick((t) => t + 1);
+    const dataKeys = () => layout.filter((k) => k !== "name");
+    const onMove = (ev: MouseEvent) => {
+      const list = dataKeys(); let idx = list.length;
+      for (let j = 0; j < list.length; j++) { const el = colRowRefs.current[list[j]]; if (!el) continue; const r = el.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { idx = j; break; } }
+      dropColIdx.current = idx; setColDragTick((t) => t + 1);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = "";
+      const k = dragColKey.current, to = dropColIdx.current;
+      dragColKey.current = null; dropColIdx.current = null; setColDragTick((t) => t + 1);
+      if (k != null && to != null) reorderCol(k, to);
+    };
+    document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
+  };
   // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
   const DOC_COLW_LS_KEY = "mishpat-lab-docColW";
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
@@ -1270,13 +1298,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   type ColDef = { track: string; pinTrack?: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
-    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(150px,220px)", show: () => true, fixed: roomy ? 240 : 220 },
+    name:        { track: roomy ? "minmax(170px,240px)" : "minmax(120px,1.35fr)", show: () => true, fixed: roomy ? 240 : 160 },
     sp:          { track: "6px", show: () => true, fixed: 6 },
     num:         { track: "40px", show: () => visibleCols.num, fixed: 40 },
     process:     { track: "34px", show: () => visibleCols.process, fixed: 34 },
     date:        { track: "56px", show: () => visibleCols.date, fixed: 56 },
     time:        { track: "48px", show: () => visibleCols.time, fixed: 48 },
-    summary:     { track: "minmax(150px,1fr)", pinTrack: "200px", show: () => visibleCols.summary, fixed: 200 },
+    summary:     { track: roomy ? "minmax(150px,1fr)" : "minmax(120px,1.1fr)", show: () => visibleCols.summary, fixed: 160 },
     type:        { track: typeTrack, pinTrack: "88px", show: (st) => visibleCols.type && st, fixed: 88 },
     submitter:   { track: submitterTrack, pinTrack: "74px", show: () => visibleCols.submitter, fixed: 74 },
     related:     { track: roomy ? "30px" : "26px", show: () => visibleCols.related, fixed: roomy ? 30 : 26 },
@@ -1517,29 +1545,20 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
             <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
             <div className="py-1">
-              {layout.map((k, i) => (
+              {layout.filter((k) => k !== "name").map((k, i, list) => (
                 <div
                   key={k}
-                  draggable
-                  onDragStart={() => { dragColIdx.current = i; }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { if (dragColIdx.current !== null) moveCol(dragColIdx.current, i); dragColIdx.current = null; }}
-                  onDragEnd={() => { dragColIdx.current = null; }}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
+                  ref={(el) => { colRowRefs.current[k] = el; }}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 relative"
+                  style={{ opacity: dragColKey.current === k ? 0.4 : 1 }}
                 >
-                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab" }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
-                  {k === "name" ? (
-                    // The document name is always shown (no hide toggle) — just reorderable.
-                    <span className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-[13px] font-medium" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>שם מסמך</span>
-                      <span className="text-[11px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>מוצג תמיד</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
-                      <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
-                      <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
-                    </span>
-                  )}
+                  {dragColKey.current != null && dropColIdx.current === i && <div className="absolute left-2 right-2 top-0" style={{ height: "2px", backgroundColor: c.primary }} />}
+                  {dragColKey.current != null && dropColIdx.current === list.length && i === list.length - 1 && <div className="absolute left-2 right-2 bottom-0" style={{ height: "2px", backgroundColor: c.primary }} />}
+                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray, cursor: "grab", touchAction: "none" }} title="גרירה לשינוי סדר" onMouseDown={(e) => startColDrag(k, e)}><GripVertical size={13} /></span>
+                  <span className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={() => toggleCol(k as DocColKey)}>
+                    <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
+                    <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
+                  </span>
                 </div>
               ))}
             </div>
