@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, GitBranch,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
-  HelpCircle, Info, Layers, Link, Sparkles, Minimize2,
+  HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
   Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
@@ -624,8 +624,8 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           {variant === "process"
-            ? <GitBranch size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
-            : <span className="flex-shrink-0" style={{ color: metaCol, opacity: 0.7, fontSize: "11px", lineHeight: 1 }}>↳</span>}
+            ? <CornerDownRight size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
+            : <Link size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />}
           <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
         </span>
@@ -776,7 +776,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
     // One process → keep its name in the header (not crowded). Several → shorten the header to just "תהליכים" (a count
     // like "(2)" read as process #2) and list the names on their own light lines below.
     title = multi ? "תהליכים" : `${processTitle(doc)} (${docs.length})`;
-    TitleIcon = Layers;
+    TitleIcon = CornerDownRight;
     if (multi) {
       preBody = (
         <div className="flex flex-col gap-0.5 mb-1.5 px-2" style={{ paddingInlineStart: "34px" }}>
