@@ -624,7 +624,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           {variant === "process"
-            ? <CornerDownRight size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />
+            ? <CornerDownRight size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85, transform: "scaleX(-1)" }} />
             : <Link size={11} className="flex-shrink-0" style={{ color: metaCol, opacity: 0.85 }} />}
           <span className="doc-link truncate text-[12.5px] leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", fontStyle: isSelf ? "italic" : undefined, color: isOpen ? c.primary : undefined, textDecoration: isOpen ? "underline" : undefined, textDecorationColor: isOpen ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
@@ -873,7 +873,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
     >
       <div className="flex items-center justify-between mb-1 px-2" style={{ paddingInlineStart: "34px" }}>
         <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <TitleIcon size={12} />
+          <TitleIcon size={12} style={kind === "process" ? { transform: "scaleX(-1)" } : undefined} />
           {title}
           {meta && <><span style={{ opacity: 0.4 }}>·</span>{meta}</>}
         </span>
