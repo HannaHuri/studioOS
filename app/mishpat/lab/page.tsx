@@ -2422,7 +2422,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
                 className="text-right text-[22px] font-medium mb-2"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
               >
-                שלום, אפרת. במה אוכל לעזור?
+                שלום, עמית. במה אוכל לעזור?
               </p>
             )}
             {renderInput()}
@@ -2502,9 +2502,9 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>אש</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>עכ</div>
             <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>אפרת שפילמן</span>
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמית כהן</span>
             </div>
           </button>
 
