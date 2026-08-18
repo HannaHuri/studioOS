@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
@@ -46,12 +46,18 @@ function Logo() {
 }
 
 // ── Checkbox ───────────────────────────────────────────────────────────────
+// While the chat is narrowed to "רק המסמך הזה", the table's selection is still there but does NOT feed the chat.
+// Rather than drill a flag through every row component, the doc-selection checkboxes read it from context and dim.
+// (The column-visibility popover opts out with its own false provider — those checkboxes aren't doc selection.)
+const SelectionDimmed = createContext(false);
+
 function CheckboxBlue({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+  const dimmed = useContext(SelectionDimmed);
   return (
     <div
       onClick={onToggle}
-      className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center cursor-pointer select-none"
-      style={{ backgroundColor: checked ? c.primary : "transparent", border: checked ? "none" : `1px solid ${c.border}` }}
+      className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center cursor-pointer select-none transition-opacity"
+      style={{ backgroundColor: checked ? c.primary : "transparent", border: checked ? "none" : `1px solid ${c.border}`, opacity: dimmed ? 0.3 : 1 }}
     >
       {checked && (
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -1596,7 +1602,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   {dragColKey.current != null && dropColIdx.current === list.length && i === list.length - 1 && <div className="absolute left-2 right-2 bottom-0" style={{ height: "2px", backgroundColor: c.primary }} />}
                   <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
                   <span className="flex items-center gap-2 flex-1 min-w-0" onClick={() => { if (clickSuppressed.current) return; toggleCol(k as DocColKey); }}>
-                    <CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} />
+                    <SelectionDimmed.Provider value={false}><CheckboxBlue checked={visibleCols[k as DocColKey]} onToggle={() => {}} /></SelectionDimmed.Provider>
                     <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
                   </span>
                 </div>
@@ -2069,7 +2075,9 @@ function SourcesBtn({ isDark }: { isDark: boolean }) {
 // ── Chat area ──────────────────────────────────────────────────────────────
 type Message = { q: string; isFirst: boolean };
 
-function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scopeCount = 0, scopeTotal = 0, caseCount = 1, openDocChecked = false, onAddOpenDoc, onScopeToOpenDoc, onSelectAllCase, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; scopeCount?: number; scopeTotal?: number; caseCount?: number; openDocChecked?: boolean; onAddOpenDoc?: () => void; onScopeToOpenDoc?: () => void; onSelectAllCase?: () => void; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
+type ScopeMode = "selection" | "doc";
+
+function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scopeCount = 0, caseCount = 1, scopeMode = "selection", onScopeModeChange, onEmptyChange, onEnlarge, onDock, onDragStart }: { isDark: boolean; conversationKey: number; barMode?: boolean; overDoc?: boolean; openDocName?: string; scopeCount?: number; caseCount?: number; scopeMode?: ScopeMode; onScopeModeChange?: (m: ScopeMode) => void; onEmptyChange?: (isEmpty: boolean) => void; onEnlarge?: () => void; onDock?: () => void; onDragStart?: (e: ReactMouseEvent) => void }) {
   const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -2124,52 +2132,58 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
     setInputText("");
   }
 
-  // ── Scope bar (item 6) — tells the user exactly what the chat is talking to, driven by the CHECKED documents.
-  // Dynamic wording (singular/plural), plus reconciliation with the open document: whether it's included, an "add"
-  // action when it isn't, and a "שוחח רק על המסמך הזה" shortcut.
+  // ── Scope control — a 2-segment control above the input, shown ONLY in the floating chat over a document.
+  // The question it answers is deliberately closed ("narrow to the document I'm reading?"), not open ("what is the
+  // scope?"): the table's checkboxes remain the one place that governs selection, and "רק המסמך הזה" is a temporary
+  // OVERRIDE that never rewrites them — switching back restores exactly what was there.
+  // The two sides are NOT equal weight, so they don't get an equal-weight control (a segmented control reads as
+  // "two peers — pick one"): the top line STATES the scope in force, and the checkbox below OFFERS the narrowing.
+  // Checkbox rather than a lone radio, because a single radio can't be unticked — there'd be no way back. It's also
+  // the same gesture, and the same component, users already use to pick documents in the table.
   function renderScopeBar() {
-    const muted = isDark ? dk.textMuted : c.textLight;
-    const chipBg = isDark ? "#22304a" : c.primaryLight;
-    const hasDoc = !!openDocName;
-    const multiCase = caseCount > 1;
-    const allSelected = !multiCase && scopeTotal > 0 && scopeCount === scopeTotal;
-    const onlyOpenDoc = !multiCase && hasDoc && openDocChecked && scopeCount === 1;
-    const docWord = scopeCount === 1 ? "מסמך אחד" : `${scopeCount} מסמכים`;
-    const scopeLabel =
-      scopeCount === 0 ? "לא נבחרו מסמכים"
-      : multiCase ? `${docWord} · ${caseCount} תיקים`   // multi-case indication
-      : allSelected ? "כל מסמכי התיק"
-      : onlyOpenDoc ? "מסמך זה"
-      : docWord;
+    const narrowed = scopeMode === "doc";
     return (
-      <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-[12.5px]" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+      <div className="flex flex-col gap-1" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        {renderScopeLine()}
+        <label className="flex items-center gap-1.5 text-[12.5px] cursor-pointer w-fit" title={openDocName ? `שיחה רק עם ${openDocName}` : "שיחה רק עם המסמך הפתוח"}>
+          <CheckboxBlue checked={narrowed} onToggle={() => onScopeModeChange?.(narrowed ? "selection" : "doc")} />
+          <span style={{ color: narrowed ? c.primary : (isDark ? dk.textMuted : c.textLight) }}>רק המסמך הזה</span>
+        </label>
+      </div>
+    );
+  }
+
+  // "שיחה עם …" — always states the scope actually in force, so the line and the checkbox can never contradict
+  // each other. Shared by the floating window (above the checkbox) and the enlarged chat (on its own, read-only).
+  function renderScopeLine(withRevert = false) {
+    const muted = isDark ? dk.textMuted : c.textLight;
+    const narrowed = scopeMode === "doc";
+    const empty = !narrowed && scopeCount === 0;
+    // Multi-case is a signal worth keeping: "26 · 2 תיקים" says the answer spans two cases.
+    const label = narrowed
+      ? (openDocName ?? "המסמך הפתוח")
+      : `המסמכים שבחרתי (${caseCount > 1 ? `${scopeCount} · ${caseCount} תיקים` : scopeCount})`;
+    return (
+      <div className="flex items-center gap-x-1.5 gap-y-1 flex-wrap text-[12.5px] min-w-0" dir="rtl" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
         <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
           <FolderOpen size={13} /> שיחה עם
         </span>
-        <span className="rounded px-2 py-0.5 font-medium flex items-center gap-1 min-w-0" style={{ backgroundColor: scopeCount === 0 ? (isDark ? "#3a2e1c" : "#fbf0df") : chipBg, color: scopeCount === 0 ? "#b9670c" : c.primary }}>
-          <span className="truncate">{scopeLabel}</span>
-        </span>
-        {/* Reconciliation with the open document */}
-        {hasDoc && !onlyOpenDoc && (
-          openDocChecked ? (
-            <span className="flex items-center gap-1 flex-shrink-0" style={{ color: muted }}>
-              <span style={{ opacity: 0.6 }}>·</span>
-              <Check size={12} style={{ color: "#0f8a5f" }} /> המסמך הפתוח כלול
-              <button onClick={() => onScopeToOpenDoc?.()} className="hover:underline" style={{ color: c.primary }}>שוחח רק עליו</button>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 flex-shrink-0" style={{ color: "#b9670c" }}>
-              <span style={{ opacity: 0.6 }}>·</span>
-              המסמך הפתוח אינו בשיחה
-              <button onClick={() => onAddOpenDoc?.()} className="hover:underline font-medium" style={{ color: c.primary }}>הוסף</button>
-            </span>
-          )
-        )}
-        {onlyOpenDoc && scopeTotal > 1 && (
-          <button onClick={() => onSelectAllCase?.()} className="flex-shrink-0 hover:underline" style={{ color: c.primary }}>← כל התיק</button>
+        <span className="font-medium truncate min-w-0" style={{ color: empty ? "#b9670c" : c.primary }}>{label}</span>
+        {withRevert && (
+          <button onClick={() => onScopeModeChange?.("selection")} title="חזרה לשיחה עם המסמכים שבחרתי" className="flex-shrink-0 hover:opacity-70" style={{ color: c.primary }}>
+            <X size={12} />
+          </button>
         )}
       </div>
     );
+  }
+
+  // In the enlarged / docked chat there is no control (by design — the choice belongs to the moment you're reading a
+  // document). But a narrowed scope must never be invisible, or a one-document answer reads like a whole-case answer:
+  // when it IS narrowed, a quiet read-only chip states it and offers the one-click way back.
+  function renderScopeChip() {
+    if (overDoc || scopeMode !== "doc" || !openDocName) return null;
+    return <div className="px-0.5">{renderScopeLine(true)}</div>;
   }
 
   // ── Input box (shared between empty and normal state) ──────────────────
@@ -2177,7 +2191,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
     // Over the document (condensed floating chat): the scope bar sits above a single-row input.
     if (overDoc) {
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
         <div className="px-0.5">{renderScopeBar()}</div>
         <div
           className="rounded-lg border flex items-end gap-1.5 px-2 py-1.5"
@@ -2425,7 +2439,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
                 שלום, עמית. במה אוכל לעזור?
               </p>
             )}
-            {renderInput()}
+            <div className="flex flex-col gap-3">{renderScopeChip()}{renderInput()}</div>
           </div>
           </div>
           {/* Full disclaimer pinned to the bottom of the page in the empty state (short version replaces it once a question is asked). */}
@@ -2462,9 +2476,12 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
         </div>
 
         <div className="px-6 pb-5 pt-2 flex flex-col items-center">
-          <div className="w-full max-w-[768px] min-w-0">
-            {renderInput()}
-            {renderDisclaimer()}
+          <div className="w-full max-w-[768px] min-w-0 flex flex-col gap-3">
+            {renderScopeChip()}
+            <div>
+              {renderInput()}
+              {renderDisclaimer()}
+            </div>
           </div>
         </div>
       </div>
@@ -2614,24 +2631,23 @@ export default function MishpatPage() {
   const readingW = Math.max(480, Math.min(vw - 60 - 400, readingDocW ?? readingDefaultW));
   // #2 — whenever the chat floats over the document it can collapse to a minimal question bar (any float, not just the expand-button reading mode).
   const chatBar = chatFloating && chatCollapsed;
-  // Chat scope (item 6) — the CHECKED documents ACROSS cases. When they span more than one case the bar reads
-  // multi-case ("N מסמכים · 2 תיקים"); otherwise it's the single-case wording.
-  const activeCaseId = openDoc?.caseId ?? "c1";
+  // Chat scope — the CHECKED documents ACROSS cases. When they span more than one case the label carries it
+  // ("12 · 2 תיקים"), since an answer drawn from two cases is a thing the user must be able to see.
   const checkedDocs = docs.filter((d) => d.checked);
   const scopeCount = checkedDocs.length;
-  const scopeCaseIds = Array.from(new Set(checkedDocs.map((d) => d.caseId)));
-  const caseCount = scopeCaseIds.length;
-  const singleCaseId = caseCount === 1 ? scopeCaseIds[0] : null;
-  const scopeTotal = singleCaseId ? docs.filter((d) => d.caseId === singleCaseId).length : 0; // "all docs of the case" only meaningful single-case
-  const openDocChecked = openDoc ? !!docs.find((d) => d.id === openDoc.id)?.checked : false;
-  const addOpenDocToScope = () => { if (openDoc) setDocs((p) => p.map((d) => (d.id === openDoc.id ? { ...d, checked: true } : d))); };
-  const scopeToOpenDocOnly = () => { if (openDoc) setDocs((p) => p.map((d) => ({ ...d, checked: d.id === openDoc.id }))); }; // only the open doc, across all cases
-  const selectAllCase = () => setDocs((p) => p.map((d) => (d.caseId === activeCaseId ? { ...d, checked: true } : d)));
-  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatCollapsed(true); setChatPos(null); };
+  const caseCount = new Set(checkedDocs.map((d) => d.caseId)).size;
+  // "רק המסמך הזה" is an OVERRIDE, not a selection: the checkboxes are left untouched and merely ignored while it's on,
+  // so switching back restores the user's hand-picked selection exactly. (The previous version rewrote the checkboxes,
+  // which silently destroyed that selection with no way back.) The mode means "whatever document is open", so it
+  // follows along when another document is opened — and it resets when there's no document to point at any more.
+  const [scopeMode, setScopeMode] = useState<ScopeMode>("selection");
+  const scopeDocs = scopeMode === "doc" && openDoc ? [openDoc] : checkedDocs;
+  void scopeDocs; // the mock has no backend to send it to yet — this is what a real request would carry
+  const closeDoc = () => { setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatCollapsed(true); setChatPos(null); setScopeMode("selection"); };
   // New conversation, chat only — keep the working context (table + open document) so the user can start fresh in place.
-  const newChat = () => { setConvKey((k) => k + 1); };
+  const newChat = () => { setConvKey((k) => k + 1); setScopeMode("selection"); };
   // Full reset (logo) — back to the clean opening screen: fresh chat + close panel, document and any reading/dock state.
-  const resetAll = () => { setConvKey((k) => k + 1); setIsPanelOpen(false); setFocusDocs(false); setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatPos(null); setChatCollapsed(true); };
+  const resetAll = () => { setConvKey((k) => k + 1); setIsPanelOpen(false); setFocusDocs(false); setOpenDoc(null); setDocExpanded(false); setReadingDocW(null); setChatPos(null); setChatCollapsed(true); setScopeMode("selection"); };
   // Dock the floating chat back into its column while keeping the document open (shrinks the viewer if needed so the chat fits)
   const dockChat = () => { setDocExpanded(false); setChatCollapsed(true); setChatPos(null); setViewerWidth((w) => Math.min(w, Math.max(380, vw - 55 - (isPanelOpen ? panelWidth : 40) - 430))); };
   // Reverse of docking — float the chat back over the document (as a window), giving the document the wider reading width again.
@@ -2721,7 +2737,7 @@ export default function MishpatPage() {
             {!chatFloating && !!openDoc && (
               <button onClick={floatChat} title="החזרת הצ׳אט לחלון צף מעל המסמך" className="absolute z-20 size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ top: "8px", insetInlineStart: "8px", color: iconCol, backgroundColor: isDark ? dk.surface : "#f1f3f7", border: `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}><Minimize2 size={14} /></button>
             )}
-            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} scopeCount={scopeCount} scopeTotal={scopeTotal} caseCount={caseCount} openDocChecked={openDocChecked} onAddOpenDoc={addOpenDocToScope} onScopeToOpenDoc={scopeToOpenDocOnly} onSelectAllCase={selectAllCase} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
+            <ChatArea isDark={isDark} conversationKey={convKey} barMode={chatBar} overDoc={chatFloating && !!openDoc} openDocName={openDoc?.name} scopeCount={scopeCount} caseCount={caseCount} scopeMode={scopeMode} onScopeModeChange={setScopeMode} onEmptyChange={(e) => { if (!e) setChatCollapsed(false); }} onEnlarge={() => setChatCollapsed(false)} onDock={dockChat} onDragStart={startChatDrag} />
           </div>
           {chatFloating && !chatBar && (
             <div onMouseDown={startChatResize} className="absolute top-0 right-0 z-20" style={{ width: "18px", height: "18px", cursor: "nesw-resize" }} title="גרירה לשינוי גודל">
@@ -2772,7 +2788,11 @@ export default function MishpatPage() {
                 : { width: `${panelWidth}px`, overflow: "visible" }}
           >
             <div className="absolute inset-0" style={{ overflow: "visible" }}>
-              <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={closePanel} openDocId={openDoc?.id} docs={docs} setDocs={setDocs} />
+              {/* While the chat is narrowed to the open document, the table's selection is inert — dim the checkboxes
+                  so the screen doesn't show N checked documents that aren't actually in the conversation. */}
+              <SelectionDimmed.Provider value={scopeMode === "doc" && !!openDoc}>
+                <DocumentPanelOpen isDark={isDark} panelWidth={focusDocs ? vw - 72 : (readingMode ? Math.max(400, vw - readingW - 60) : panelWidth)} isFocus={focusDocs} onToggleFocus={() => setFocusDocs((v) => !v)} onSetWidth={setPanelWidth} onOpenDoc={(doc) => { setFocusDocs(false); setOpenDoc(doc); }} onClosePanel={closePanel} openDocId={openDoc?.id} docs={docs} setDocs={setDocs} />
+              </SelectionDimmed.Provider>
             </div>
 
             {/* Resize handle — left edge (panel sits to the left of the rail). Normal mode: resize the table width.
