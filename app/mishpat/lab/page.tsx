@@ -819,7 +819,11 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
 
       <div className="flex flex-col gap-1">
         <span className="flex items-center gap-2">{label("שם המסמך")}<span className="flex-1" />{restoreBtn(doc.nameOriginal, () => editName(doc.nameOriginal!))}</span>
+        {/* Enter saves from the NAME field (single-line input — that is what Enter means there). In the summary it has
+            to stay a line break, or a paragraph couldn't be broken and an ordinary Enter mid-writing would close the
+            panel; Ctrl+Enter saves from there. */}
         <input ref={nameRef} value={name} onChange={(e) => editName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); } }}
           className="w-full rounded px-2 py-1.5 text-[13px] leading-tight outline-none" style={fieldStyle} />
       </div>
 
