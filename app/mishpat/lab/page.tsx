@@ -843,13 +843,13 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
 
 // One pencil serves both jobs: the (hover-only) invitation to edit, and — once the text has been edited — a permanent
 // blue mark that this is the user's wording, whose tooltip carries the system's original.
-function EditPencil({ edited, original, label, isDark, onStart }: { edited: boolean; original?: string; label: string; isDark: boolean; onStart: () => void }) {
+function EditPencil({ edited, title, isDark, onStart }: { edited: boolean; title: string; isDark: boolean; onStart: () => void }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onStart(); }}
       className={`flex-shrink-0 flex items-center transition-opacity hover:!opacity-100 ${edited ? "opacity-70" : "opacity-0 group-hover:opacity-60"}`}
       style={{ color: edited ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
-      title={edited && original ? `נערך על ידך · נוסח המערכת: ${original}` : label}
+      title={title}
     >
       <Pencil size={11} />
     </button>
@@ -1079,9 +1079,14 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const openPanels = PANEL_ORDER.filter((k) => openKinds.has(k));
   const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
   const num = colMeta.docNumbers[doc.id];
-  // Name/summary editing — null when this row has no cell open for editing (the usual case).
+  // Name/summary editing — null when this row has no cell open for editing (the usual case). Once either field has been
+  // rewritten the pencil stays visible and blue, and its tooltip names the system's wording for whichever field it was.
   const edit = useContext(DocEditCtx);
   const editingField = edit?.editing?.id === doc.id ? edit.editing.field : null;
+  const editedAny = doc.nameOriginal != null || doc.summaryOriginal != null;
+  const editTitle = editedAny
+    ? ["נערך על ידך", doc.nameOriginal != null ? `שם המערכת: ${doc.nameOriginal}` : null, doc.summaryOriginal != null ? `תקציר המערכת: ${doc.summaryOriginal}` : null].filter(Boolean).join("\n")
+    : "עריכת שם המסמך והתקציר";
 
   const cellContent = (key: string) => {
     switch (key) {
@@ -1101,17 +1106,20 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
               </RowIconTrigger>)}
         </span>
       );
+      // ONE edit affordance per row, pinned to the END of the name column (the spacer) rather than trailing the text:
+      // the panel edits both fields anyway, and an icon that lands at the same x on every row fades in like a column
+      // instead of chasing the cursor. Two pencils at two text-dependent positions was the noise.
       case "name":     return (
-        <span className="flex items-center gap-1.5 min-w-0">
+        <span className="flex items-center gap-1.5 min-w-0 w-full">
           <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-          {edit && <EditPencil edited={doc.nameOriginal != null} original={doc.nameOriginal} label="עריכת שם המסמך" isDark={isDark} onStart={() => edit.start(doc.id, "name")} />}
+          <span className="flex-1 min-w-0" />
+          {edit && <EditPencil edited={editedAny} title={editTitle} isDark={isDark} onStart={() => edit.start(doc.id, "name")} />}
         </span>
       );
       case "summary":  return (
         <span className="flex items-center gap-1 min-w-0 w-full">
           <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
-          {edit && <EditPencil edited={doc.summaryOriginal != null} original={doc.summaryOriginal} label="עריכת התקציר" isDark={isDark} onStart={() => edit.start(doc.id, "summary")} />}
         </span>
       );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
