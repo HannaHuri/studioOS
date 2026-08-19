@@ -8,7 +8,7 @@ import {
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
-  Calendar, ExternalLink, Check, Key, Gavel, Maximize2, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
+  Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
   type LucideIcon,
 } from "lucide-react";
@@ -51,19 +51,27 @@ function Logo() {
 // (The column-visibility popover opts out with its own false provider — those checkboxes aren't doc selection.)
 const SelectionDimmed = createContext(false);
 
-function CheckboxBlue({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+// `mixed` = the standard indeterminate state: used on folder headers (case / type / process) when only SOME of the
+// documents inside are selected — a dash instead of a check, so a partial selection can't be mistaken for "none".
+// Clicking a mixed box selects everything in the folder (checked stays false while mixed, so the caller's !allOn works).
+function CheckboxBlue({ checked, mixed, onToggle }: { checked: boolean; mixed?: boolean; onToggle: () => void }) {
   const dimmed = useContext(SelectionDimmed);
+  const filled = checked || !!mixed;
   return (
     <div
       onClick={onToggle}
       className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center cursor-pointer select-none transition-opacity"
-      style={{ backgroundColor: checked ? c.primary : "transparent", border: checked ? "none" : `1px solid ${c.border}`, opacity: dimmed ? 0.3 : 1 }}
+      style={{ backgroundColor: filled ? c.primary : "transparent", border: filled ? "none" : `1px solid ${c.border}`, opacity: dimmed ? 0.3 : 1 }}
     >
-      {checked && (
+      {checked ? (
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
           <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      )}
+      ) : mixed ? (
+        <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
+          <path d="M1 1H9" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      ) : null}
     </div>
   );
 }
@@ -125,7 +133,8 @@ interface CaseDoc {
   key?: boolean;         // central/pivotal document
   keyReason?: string;    // why it's central — shown in tooltip (transparency)
   isNew?: boolean;       // new since the judge's last visit
-  pending?: boolean;     // awaiting the judge's decision
+  nameOriginal?: string;    // the system's own name, kept the first time the user renames the display name
+  summaryOriginal?: string; // the system's own summary, kept the first time the user rewrites it
   caseId?: string;       // which case this document belongs to
   file?: string;         // path to a real PDF under /public — shown instead of the mock pages when present
   processId?: number;    // groups documents that belong to the same thread/topic (motion → response → decision)
@@ -149,6 +158,11 @@ const docProcessIds = (d: CaseDoc): number[] => d.processIds ?? (d.processId != 
 const processLabel = (caseId: string | undefined, id: number): string => PROCESS_LABELS[caseId ?? ""]?.[id] ?? `תהליך ${id}`;
 const processTitle = (d: CaseDoc): string =>
   docProcessIds(d).map((id) => processLabel(d.caseId, id)).join(" · ") || "תהליך";
+// A decision / judgment closes the thread it belongs to. Everything else leaves it open — including a thread that is
+// currently waiting on the other side's response rather than on the judge.
+const isResolutionDoc = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
+// Process keys are per-case (each case numbers its threads from 1), so any cross-case set must be keyed by both.
+const procKey = (caseId: string | undefined, pid: number) => `${caseId ?? ""}::${pid}`;
 
 // Type filter chips with aggregate word counts (real case data)
 const DOC_TYPE_TOTALS: { type: string; words: string }[] = [
@@ -170,7 +184,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "27.05.26", time: "09:14", iso: "2026-05-27", bucket: "week", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
     related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
-    isNew: true, pending: true, file: "/studioOS/docs/motion-1.pdf", processId: 1,
+    isNew: true, file: "/studioOS/docs/motion-1.pdf", processId: 1,
   },
   {
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהירים", submitter: "תובע", submitterName: "יעקב אברמוב",
@@ -511,7 +525,6 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
       className="rounded-[8px] border h-full overflow-hidden flex flex-col cursor-pointer transition-colors"
       style={{ borderColor: active ? c.primary : (isDark ? dk.border : "#dce8f6"), backgroundColor: active ? activeBg : baseBg, boxShadow: markNew ? "inset -2px 0 0 0 rgba(0,115,234,0.45)" : undefined }}
       dir="rtl"
-      title="פתיחת המסמך לצפייה"
       onClick={onOpenDoc}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#232c44" : (active ? "#e1ecfb" : "#f6f9ff"); }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? activeBg : baseBg; }}
@@ -526,7 +539,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
         </button>
       </div>
 
-      {/* Row 2: all metadata + icons on one line (date · submitter · key · used · pending · open · count) */}
+      {/* Row 2: all metadata + icons on one line (date · submitter · key · used · open · count) */}
       <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5 overflow-hidden">
         <span className="text-[12px] flex-shrink-0" style={{ color: subText, fontFamily: "Figtree, sans-serif" }}>{doc.date}{doc.time ? ` · ${doc.time}` : ""}</span>
         <span
@@ -551,7 +564,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
         {doc.related.length > 0 && (
           <div className={`flex items-center gap-x-3 gap-y-1 mt-auto ${relMore ? "flex-wrap" : "flex-nowrap overflow-hidden"}`}>
             {shownRelated.map((r) => (
-              <button key={r} onClick={(e) => e.stopPropagation()} className="doc-link flex items-center gap-1 text-right min-w-0" title="פתיחת המסמך">
+              <button key={r} onClick={(e) => e.stopPropagation()} className="doc-link flex items-center gap-1 text-right min-w-0" title={r}>
                 <FileText size={12} style={{ flexShrink: 0 }} />
                 <span className="text-[13px] truncate" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>{r}</span>
               </button>
@@ -649,7 +662,6 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
     <div
       className="grid items-center px-2 py-1 rounded transition-colors cursor-pointer"
       style={{ gridTemplateColumns: gridCols, columnGap: colGap, minWidth: `${showType ? colMeta.minWidthType : colMeta.minWidthNoType}px`, ["--row-bg" as string]: restBg, backgroundColor: "var(--row-bg)" } as React.CSSProperties}
-      title="פתיחת המסמך לצפייה"
       onClick={() => onOpenDoc?.(doc)}
       onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
       onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
@@ -704,6 +716,145 @@ const loadLayout = (): LayoutKey[] => {
   } catch { /* ignore */ }
   return [...DEFAULT_LAYOUT];
 };
+
+// ── Editing a document's name / summary ────────────────────────────────────
+// The name and summary are the SYSTEM's output, not the court record, so a user may correct them. Two rules hold this
+// together: (1) the original is never destroyed — it is kept on the document and one hover away, and restorable;
+// (2) the edit is PERSONAL (2026-08-19 decision) — a judge may well use the summary as a private reminder of what the
+// document is, so it must not rewrite what colleagues see. Personal scope is also why it persists to localStorage
+// rather than to the document. If this ever becomes shared-per-case, this overlay is the thing that moves server-side.
+type EditField = "name" | "summary";
+type DocEdit = Partial<Record<EditField, string>>;
+const DOC_EDITS_LS_KEY = "mishpat-lab-docEdits-v1";
+const loadDocEdits = (): Record<string, DocEdit> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(DOC_EDITS_LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return {};
+};
+const saveDocEdits = (m: Record<string, DocEdit>) => {
+  try { window.localStorage.setItem(DOC_EDITS_LS_KEY, JSON.stringify(m)); } catch { /* ignore */ }
+};
+// Re-apply saved edits on top of the freshly-loaded documents (the system text becomes the "original").
+const applyDocEdits = (list: CaseDoc[]): CaseDoc[] => {
+  const edits = loadDocEdits();
+  if (!Object.keys(edits).length) return list;
+  return list.map((d) => {
+    const e = edits[d.id];
+    if (!e) return d;
+    const next = { ...d };
+    if (e.name != null && e.name !== d.name) { next.nameOriginal = d.name; next.name = e.name; }
+    if (e.summary != null && e.summary !== d.summary) { next.summaryOriginal = d.summary; next.summary = e.summary; }
+    return next;
+  });
+};
+// Which cell is open for editing, and how to start/cancel/commit — carried by context so it doesn't have to be drilled
+// through every table row. `commit(null)` restores the system's text.
+const DocEditCtx = createContext<{
+  editing: { id: string; field: EditField } | null;
+  start: (id: string, field: EditField) => void;
+  cancel: () => void;
+  commit: (id: string, values: Partial<Record<EditField, string | null>>) => void;
+  setDirty: (dirty: boolean) => void;
+} | null>(null);
+
+// The editor opens as a panel UNDER the row (same pattern as the related/process/attachment details) rather than inside
+// the cell: the summary column is routinely ~100px wide, which is unusable for rewriting a paragraph. Both fields are
+// edited together — the pencil that was clicked only decides which one gets the focus.
+function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChange }: {
+  doc: CaseDoc; focusField: EditField; isDark: boolean;
+  onCommit: (values: Partial<Record<EditField, string | null>>) => void; onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [name, setName] = useState(doc.name);
+  const [summary, setSummary] = useState(doc.summary);
+  // Reported up so a second click on the pencil can close an untouched panel without ever discarding typed text.
+  const editName = (v: string) => { setName(v); onDirtyChange(v !== doc.name || summary !== doc.summary); };
+  const editSummary = (v: string) => { setSummary(v); onDirtyChange(name !== doc.name || v !== doc.summary); };
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const sumRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = focusField === "name" ? nameRef.current : sumRef.current;
+    if (el) { el.focus(); el.select(); }
+  }, [focusField]);
+  const labelCol = isDark ? dk.textMuted : c.textLight;
+  // undefined = untouched, null = back to the system's text (also when emptied), string = the user's wording
+  const norm = (draft: string, current: string, original?: string): string | null | undefined => {
+    const v = draft.trim();
+    if (v === current) return undefined;
+    if (v === "" || (original != null && v === original)) return null;
+    return v;
+  };
+  const save = () => {
+    const out: Partial<Record<EditField, string | null>> = {};
+    const n = norm(name, doc.name, doc.nameOriginal); if (n !== undefined) out.name = n;
+    const s = norm(summary, doc.summary, doc.summaryOriginal); if (s !== undefined) out.summary = s;
+    onCommit(out);
+  };
+  const fieldStyle: React.CSSProperties = {
+    fontFamily: "Noto Sans Hebrew, sans-serif", border: `1px solid ${isDark ? dk.border : "#cfe1f7"}`, resize: "none",
+    backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text,
+  };
+  const restoreBtn = (original: string | undefined, onRestore: () => void) => original == null ? null : (
+    <button onClick={onRestore} className="text-[11.5px] hover:opacity-70 whitespace-nowrap flex-shrink-0"
+      style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={`נוסח המערכת: ${original}`}>שחזור לנוסח המערכת</button>
+  );
+  const label = (text: string) => <span className="text-[12px]" style={{ color: labelCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{text}</span>;
+  return (
+    <div
+      className="px-3 py-2.5 flex flex-col gap-2.5" dir="rtl"
+      style={{ backgroundColor: isDark ? "#181f33" : "#f4f8fd", borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+      }}
+    >
+      <span className="flex items-center gap-1.5 text-[12px]" style={{ color: labelCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        <Pencil size={12} className="flex-shrink-0" />
+        השם והתקציר נכתבו על ידי המערכת — הנוסח שתשמרו כאן נשמר עבורכם בלבד
+      </span>
+
+      <div className="flex flex-col gap-1">
+        <span className="flex items-center gap-2">{label("שם המסמך")}<span className="flex-1" />{restoreBtn(doc.nameOriginal, () => editName(doc.nameOriginal!))}</span>
+        <input ref={nameRef} value={name} onChange={(e) => editName(e.target.value)}
+          className="w-full rounded px-2 py-1.5 text-[13px] leading-tight outline-none" style={fieldStyle} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="flex items-center gap-2">{label("תקציר")}<span className="flex-1" />{restoreBtn(doc.summaryOriginal, () => editSummary(doc.summaryOriginal!))}</span>
+        <textarea ref={sumRef} value={summary} onChange={(e) => editSummary(e.target.value)} rows={4}
+          className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
+      </div>
+
+      {/* Buttons pinned to the far (left, in RTL) end of the panel. The Esc / Ctrl+Enter shortcuts still work but are
+          deliberately NOT advertised — the hint read as one more thing to learn. */}
+      <div className="flex items-center gap-2 justify-end">
+        <button onClick={save} className="rounded-md px-3 h-7 text-[13px] hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}>שמירה</button>
+        <button onClick={onCancel} className="rounded-md px-3 h-7 text-[13px] hover:bg-black/5 transition-colors"
+          style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>ביטול</button>
+      </div>
+    </div>
+  );
+}
+
+// One pencil serves both jobs: the (hover-only) invitation to edit, and — once the text has been edited — a permanent
+// blue mark that this is the user's wording, whose tooltip carries the system's original.
+function EditPencil({ edited, original, label, isDark, onStart }: { edited: boolean; original?: string; label: string; isDark: boolean; onStart: () => void }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onStart(); }}
+      className={`flex-shrink-0 flex items-center transition-opacity hover:!opacity-100 ${edited ? "opacity-70" : "opacity-0 group-hover:opacity-60"}`}
+      style={{ color: edited ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
+      title={edited && original ? `נערך על ידך · נוסח המערכת: ${original}` : label}
+    >
+      <Pencil size={11} />
+    </button>
+  );
+}
 
 // Per-case chronological document number (oldest filed = 1). Attachments get the parent number + a Hebrew letter (1א׳).
 const HEB_LETTERS = "אבגדהוזחטיכלמנסעפצקרשת".split("");
@@ -774,8 +925,7 @@ function RowDetail({ kind, doc, processDocs, siblingDocs, gridCols, colGap, colM
     // the source doc itself is dropped from its thread. In chronological it's kept (italic) — it helps locate the doc
     // within a long thread.
     const sorted = [...docs].filter((d) => showSelfInThread !== false || d.id !== doc.id).sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
-    const isResolution = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
-    const closed = docs.some(isResolution); // status reflects the FULL thread — even when the source doc (the decision itself) is hidden from its own thread
+    const closed = docs.some(isResolutionDoc); // status reflects the FULL thread — even when the source doc (the decision itself) is hidden from its own thread
 
     const procIds = docProcessIds(doc);
     const multi = procIds.length > 1;
@@ -929,6 +1079,9 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const openPanels = PANEL_ORDER.filter((k) => openKinds.has(k));
   const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
   const num = colMeta.docNumbers[doc.id];
+  // Name/summary editing — null when this row has no cell open for editing (the usual case).
+  const edit = useContext(DocEditCtx);
+  const editingField = edit?.editing?.id === doc.id ? edit.editing.field : null;
 
   const cellContent = (key: string) => {
     switch (key) {
@@ -949,12 +1102,18 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "name":     return (
-        <span className="flex items-center gap-1.5 min-w-0" onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} title="פתיחת המסמך לצפייה">
-          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
+          {edit && <EditPencil edited={doc.nameOriginal != null} original={doc.nameOriginal} label="עריכת שם המסמך" isDark={isDark} onStart={() => edit.start(doc.id, "name")} />}
         </span>
       );
-      case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
+      case "summary":  return (
+        <span className="flex items-center gap-1 min-w-0 w-full">
+          <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>
+          {edit && <EditPencil edited={doc.summaryOriginal != null} original={doc.summaryOriginal} label="עריכת התקציר" isDark={isDark} onStart={() => edit.start(doc.id, "summary")} />}
+        </span>
+      );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return (
@@ -988,10 +1147,9 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
     >
       {lit && <span className="absolute inset-y-0 z-10" style={{ insetInlineStart: 0, width: "3px", backgroundColor: c.primary }} />}
       <div
-        className="grid items-center px-2 py-1.5 cursor-pointer"
+        className="group grid items-center px-2 py-1.5 cursor-pointer"
         style={{ gridTemplateColumns: gridCols, columnGap: colGap, ["--row-bg" as string]: restBg, backgroundColor: "var(--row-bg)" } as React.CSSProperties}
-        title="פתיחת המסמך לצפייה"
-        onClick={() => onOpenDoc?.()}
+        onClick={() => { if (!editingField) onOpenDoc?.(); }}
         onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
         onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
       >
@@ -1001,6 +1159,10 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           </div>
         ))}
       </div>
+      {editingField && edit && (
+        <DocEditPanel doc={doc} focusField={editingField} isDark={isDark}
+          onCommit={(values) => edit.commit(doc.id, values)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
+      )}
       {/* Open detail panels stack as separate labeled cards (related / process / attachments can be open in parallel). */}
       {openPanels.map((kind) => (
         <RowDetail key={kind} kind={kind} doc={doc} processDocs={processDocs} siblingDocs={siblingDocs} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} showSelfInThread={showSelfInThread} openDocId={openDocId} isDark={isDark} onOpenDoc={onOpenAnyDoc} onClose={() => onToggleExpand?.(kind)} onToggleDocById={onToggleDocById} onSetChecked={onSetChecked} attachmentSel={attachmentSel} onToggleAttachment={onToggleAttachment} onSetAttachments={onSetAttachments} />
@@ -1263,7 +1425,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
   const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
   const [openProcess, setOpenProcess] = useState<number | null>(null); // process sub-folder accordion, inside the "בקשות והוראות" type folder
-  const [lens, setLens]             = useState<"all" | "new" | "pending">("all"); // status lens
+  const [lens, setLens]             = useState<"all" | "new" | "open">("all"); // status lens
 
   // On (re)open of the panel while a document is already open, reveal it: expand its case and scroll its row into
   // view (once). This only fires on mount — not while browsing — so it doesn't reintroduce the mid-navigation jump.
@@ -1461,18 +1623,71 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     setDocs((p) => p.map((d) => (d.caseId === caseId ? { ...d, checked: next } : d)));
   }
 
+  // ── Name / summary editing ───────────────────────────────────────────────
+  // The document keeps the system's text in `nameOriginal` / `summaryOriginal` from the first edit onward, so restoring
+  // is always possible; the same edit is mirrored into localStorage so it survives a reload (it belongs to the user,
+  // not to the document). `value === null` = restore the system's text.
+  const [editing, setEditing] = useState<{ id: string; field: EditField } | null>(null);
+  const editDirty = useRef(false); // has anything been typed in the open panel? (a second pencil click closes it only if not)
+  const commitEdit = (id: string, values: Partial<Record<EditField, string | null>>) => {
+    setEditing(null);
+    editDirty.current = false;
+    if (!Object.keys(values).length) return; // nothing was changed
+    setDocs((p) => p.map((d) => {
+      if (d.id !== id) return d;
+      const next = { ...d };
+      if (values.name !== undefined) {
+        if (values.name === null) { next.name = d.nameOriginal ?? d.name; next.nameOriginal = undefined; }
+        else { next.nameOriginal = d.nameOriginal ?? d.name; next.name = values.name; }
+      }
+      if (values.summary !== undefined) {
+        if (values.summary === null) { next.summary = d.summaryOriginal ?? d.summary; next.summaryOriginal = undefined; }
+        else { next.summaryOriginal = d.summaryOriginal ?? d.summary; next.summary = values.summary; }
+      }
+      return next;
+    }));
+    const edits = loadDocEdits();
+    const e: DocEdit = { ...edits[id] };
+    (Object.keys(values) as EditField[]).forEach((f) => { const v = values[f]; if (v === null) delete e[f]; else if (v !== undefined) e[f] = v; });
+    if (e.name == null && e.summary == null) delete edits[id]; else edits[id] = e;
+    saveDocEdits(edits);
+  };
+  const editCtx = {
+    editing,
+    // Clicking the pencil of a cell that's already open closes the panel again — but never when something was typed,
+    // so the toggle can't silently throw away an edit.
+    start: (id: string, field: EditField) => setEditing((cur) => {
+      const sameCell = cur?.id === id && cur.field === field;
+      if (sameCell && editDirty.current) return cur;
+      editDirty.current = false;
+      return sameCell ? null : { id, field };
+    }),
+    cancel: () => { editDirty.current = false; setEditing(null); },
+    commit: commitEdit,
+    setDirty: (d: boolean) => { editDirty.current = d; },
+  };
+
   // A document matches the active top filters (type / submitter / date / search) — case-agnostic
   const matchesFilters = (d: CaseDoc) =>
     (activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
     (!dateFrom || d.iso >= dateFrom) &&
     (!dateTo || d.iso <= dateTo) &&
-    (search.trim() === "" || d.name.includes(search.trim()) || d.summary.includes(search.trim()));
-  // Full active predicate (filters + the "pending" lens) — used for the per-case match count
-  const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "pending" || d.pending);
+    // Search covers the system's original wording too — otherwise renaming a document makes it unfindable by the name
+    // it actually carries in נט המשפט.
+    (search.trim() === "" || [d.name, d.summary, d.nameOriginal, d.summaryOriginal].some((t) => t?.includes(search.trim())));
+  // "תהליכים פתוחים" lens. A thread stays open until a decision/judgment is filed in it — a motion that is currently
+  // out for the other side's response is still open even though the judge has nothing to do with it right now; the lens
+  // shows the whole thread so he can see where it stands. Built across ALL cases, since the case list counts matches
+  // per case while only one case's documents are loaded into the table.
+  const closedProcesses = new Set<string>();
+  docs.forEach((d) => { if (isResolutionDoc(d)) docProcessIds(d).forEach((pid) => closedProcesses.add(procKey(d.caseId, pid))); });
+  const inOpenProcess = (d: CaseDoc) => docProcessIds(d).some((pid) => !closedProcesses.has(procKey(d.caseId, pid)));
+  // Full active predicate (filters + the open-processes lens) — used for the per-case match count
+  const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "open" || inOpenProcess(d));
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
-    activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "pending";
+    activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "open";
   // The three "refine" filters only (type / submitter / date) — these are what collapse behind the filter icon on the case list
   const refineCount = (activeType !== "הכל" ? 1 : 0) + (activeSubmitter !== "הכל" ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
   const refineActive = refineCount > 0;
@@ -1488,7 +1703,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-06-01";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
-  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "pending" && d.pending));
+  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "open" && inOpenProcess(d)));
   const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
   // Process badge popovers show the whole thread regardless of active filters — grouped from all of this case's documents
   const processDocsById: Record<number, CaseDoc[]> = {};
@@ -1527,21 +1742,23 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     </div>
   ) : null;
 
-  // ממתין להחלטה — task-oriented lens. Lives inline on the top row while on the case list; moves into the filter row once a case is open.
-  const pendingBtn = (
+  // תהליכים פתוחים — task-oriented lens (was "ממתין להחלטה"; validation showed a decision can be outstanding simply
+  // because the motion is out for the other side's response, so "waiting for a decision" mislabels those threads).
+  // Lives inline on the top row while on the case list; moves into the filter row once a case is open.
+  const openProcBtn = (
     <button
-      onClick={() => setLens((l) => (l === "pending" ? "all" : "pending"))}
+      onClick={() => setLens((l) => (l === "open" ? "all" : "open"))}
       className="flex items-center gap-1 h-8 px-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap flex-shrink-0"
       style={{
-        border: `1px solid ${lens === "pending" ? c.primary : (isDark ? dk.border : c.border)}`,
-        color: lens === "pending" ? c.primary : (isDark ? dk.textMuted : c.textGray),
-        backgroundColor: lens === "pending" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
+        border: `1px solid ${lens === "open" ? c.primary : (isDark ? dk.border : c.border)}`,
+        color: lens === "open" ? c.primary : (isDark ? dk.textMuted : c.textGray),
+        backgroundColor: lens === "open" ? (isDark ? "#22304a" : "#eff4ff") : (isDark ? dk.input : "white"),
         fontFamily: "Noto Sans Hebrew, sans-serif",
       }}
-      title="הצג רק מסמכים הממתינים להחלטה"
+      title="הצג רק תהליכים שטרם ניתנה בהם החלטה — כולל אלה הממתינים לתגובת הצד השני"
     >
-      <Gavel size={13} style={{ transform: "scaleX(-1)" }} />
-      ממתין להחלטה
+      <CornerDownRight size={13} style={{ transform: "scaleX(-1)" }} />
+      תהליכים פתוחים
     </button>
   );
 
@@ -1618,6 +1835,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   );
 
   return (
+    <DocEditCtx.Provider value={editCtx}>
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {/* Larger custom tooltip (summary) — fixed-position so it isn't clipped by the table's scroll container */}
       {tip && (
@@ -1676,7 +1894,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   )}
                 </button>
                 {viewToggle}
-                {pendingBtn}
+                {openProcBtn}
               </>
             )}
             {/* Window controls pinned to the far (left) end — the growing search field already pushes them there, so the spacer is only needed when search is a small icon */}
@@ -1696,7 +1914,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               )}
 
               {/* Inside an open case ממתין joins the filter row (on the case list it lives up on Row A instead) */}
-              {openCaseId && pendingBtn}
+              {openCaseId && openProcBtn}
 
               {filterActive && (
                 <button
@@ -1726,6 +1944,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           const caseDocs = docs.filter((d) => d.caseId === cf.id);
           const caseOpen = openCaseId === cf.id;
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
+          const caseSomeOn = !caseAllOn && caseDocs.some((d) => d.checked); // partial selection → indeterminate dash
           const caseUsed = caseDocs.some((d) => d.used);
           const caseMatch = filterActive ? caseDocs.filter(matchesActive).length : null; // # of docs matching the active filter (null when no filter)
           const caseWords = caseDocs.reduce((sum, d) => sum + parseWords(d.words), 0); // total words across the case's documents
@@ -1734,7 +1953,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width */}
               <div className="flex items-start gap-2 px-2 py-3 transition-opacity" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}`, opacity: caseMatch === 0 ? 0.5 : 1 }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                  <CheckboxBlue checked={caseAllOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
+                  <CheckboxBlue checked={caseAllOn} mixed={caseSomeOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
                 <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => { const closing = caseOpen; setOpenCaseId(closing ? null : cf.id); if (closing) { setSearchOpen(false); setFiltersOpen(false); } }}>
                   {/* Row A: title (right) + word count · chevron (left edge) */}
@@ -1799,12 +2018,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               const typeDocs = lensed.filter((d) => d.type === type);
               const open = openType === type;
               const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
+              const someOn = !allOn && typeDocs.some((d) => d.checked);
               const typeWords = formatWords(typeDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
               const typeUsed = typeDocs.some((d) => d.used);
               return (
                 <div key={type} className="flex flex-col" style={ti > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` } : undefined}>
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
-                    <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
+                    <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} mixed={someOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
                     <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span></span>
                       {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
@@ -1830,10 +2050,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                           const pDocs = [...(processDocsById[pid] ?? byProcess[pid])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
                           const pOpen = openProcess === pid;
                           const pAllOn = pDocs.every((d) => d.checked);
+                          const pSomeOn = !pAllOn && pDocs.some((d) => d.checked);
                           return (
                             <div key={pid} className="flex flex-col" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
                               <div className="flex items-center gap-2 py-1.5" style={{ paddingInlineStart: "28px", paddingInlineEnd: "8px" }}>
-                                <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={pAllOn} onToggle={() => setDocs((p) => p.map((d) => (docProcessIds(d).includes(pid) ? { ...d, checked: !pAllOn } : d)))} /></span>
+                                <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={pAllOn} mixed={pSomeOn} onToggle={() => setDocs((p) => p.map((d) => (docProcessIds(d).includes(pid) ? { ...d, checked: !pAllOn } : d)))} /></span>
                                 <button onClick={() => setOpenProcess((o) => (o === pid ? null : pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={pOpen ? "כיווץ" : "פתיחה"}>
                                   <span className="text-[13px] font-medium truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                                     <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {processLabel(openCaseId, pid)} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
@@ -1871,6 +2092,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
        </div>
       </div>
     </div>
+    </DocEditCtx.Provider>
   );
 }
 
@@ -2436,7 +2658,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
                 className="text-right text-[22px] font-medium mb-2"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
               >
-                שלום, עמית. במה אוכל לעזור?
+                שלום, יניב. במה אוכל לעזור?
               </p>
             )}
             <div className="flex flex-col gap-3">{renderScopeChip()}{renderInput()}</div>
@@ -2519,9 +2741,9 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>עכ</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>יב</div>
             <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמית כהן</span>
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>יניב בוקר</span>
             </div>
           </button>
 
@@ -2590,13 +2812,18 @@ export default function MishpatPage() {
   const [panelWidth, setPanelWidth] = useState(620); // dense table is the only view — wide enough for the separate summary + process columns
   const [resizing, setResizing] = useState(false);
   const [focusDocs, setFocusDocs] = useState(false);
-  const [openDoc, setOpenDoc] = useState<CaseDoc | null>(null);
+  const [openDocRaw, setOpenDoc] = useState<CaseDoc | null>(null);
   // Case documents with their `checked` selection — lifted here so the chat scope bar reflects the checkboxes.
   const [docs, setDocs] = useState<CaseDoc[]>(() => [
     // Default selection = the FIRST case only. The second case joins the chat scope only if the user checks its docs.
     ...CASE_DOCS.map((d) => ({ ...d, caseId: "c1", checked: true, used: false })),
     ...CASE_DOCS_2.map((d) => ({ ...d, caseId: "c2", checked: false })),
   ]);
+  // Personal name/summary edits are re-applied after mount (localStorage is not available during SSR).
+  useEffect(() => { setDocs((p) => applyDocEdits(p)); }, []);
+  // The open document is held by value, so re-read it from `docs` — otherwise the viewer keeps showing the name the
+  // document had when it was opened, even after the user renames it in the table.
+  const openDoc = openDocRaw ? (docs.find((d) => d.id === openDocRaw.id) ?? openDocRaw) : null;
   const [viewerWidth, setViewerWidth] = useState(700); // doc pane a touch wider than the chat when all three panes are open
   const [docExpanded, setDocExpanded] = useState(false); // user expanded the document over the chat
   const [readingDocW, setReadingDocW] = useState<number | null>(null); // manual doc/table split in reading mode (null = auto)
