@@ -1085,7 +1085,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const editingField = edit?.editing?.id === doc.id ? edit.editing.field : null;
   const editedAny = doc.nameOriginal != null || doc.summaryOriginal != null;
   const editTitle = editedAny
-    ? ["נערך על ידך", doc.nameOriginal != null ? `שם המערכת: ${doc.nameOriginal}` : null, doc.summaryOriginal != null ? `תקציר המערכת: ${doc.summaryOriginal}` : null].filter(Boolean).join("\n")
+    ? ["נערך", doc.nameOriginal != null ? `שם המערכת: ${doc.nameOriginal}` : null, doc.summaryOriginal != null ? `תקציר המערכת: ${doc.summaryOriginal}` : null].filter(Boolean).join("\n")
     : "עריכת שם המסמך והתקציר";
 
   const cellContent = (key: string) => {
