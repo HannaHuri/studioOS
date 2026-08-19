@@ -1946,7 +1946,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseSomeOn = !caseAllOn && caseDocs.some((d) => d.checked); // partial selection → indeterminate dash
           const caseUsed = caseDocs.some((d) => d.used);
-          const caseMatch = filterActive ? caseDocs.filter(matchesActive).length : null; // # of docs matching the active filter (null when no filter)
+          // # of docs matching the active filter (null when no filter) — but under the open-processes lens the unit of
+          // the answer is the THREAD, not the document: a motion and the response to it are two documents and one thing
+          // the judge has to deal with, so there the badge counts distinct open processes instead. (Both are zero
+          // together — a document only matches the lens by being in an open process.)
+          const caseMatchDocs = filterActive ? caseDocs.filter(matchesActive) : null;
+          const caseMatch = caseMatchDocs && (lens === "open"
+            ? new Set(caseMatchDocs.flatMap((d) => docProcessIds(d).filter((pid) => !closedProcesses.has(procKey(d.caseId, pid))))).size
+            : caseMatchDocs.length);
           const caseWords = caseDocs.reduce((sum, d) => sum + parseWords(d.words), 0); // total words across the case's documents
           return (
             <div key={cf.id} className="flex flex-col">
@@ -1970,9 +1977,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                             style={caseMatch === 0
                               ? { backgroundColor: "transparent", color: isDark ? dk.textMuted : c.textLight }
                               : { backgroundColor: isDark ? "#22304a" : "#e8f0fb", color: isDark ? dk.text : c.primary }}
-                            title="מסמכים בתיק זה התואמים לסינון הפעיל"
+                            title={lens === "open" ? "תהליכים פתוחים בתיק זה" : "מסמכים בתיק זה התואמים לסינון הפעיל"}
                           >
-                            {caseMatch === 0 ? "אין תואמים" : `${caseMatch} ${caseMatch === 1 ? "תואם" : "תואמים"}`}
+                            {lens === "open"
+                              ? (caseMatch === 0 ? "אין תהליכים פתוחים" : `${caseMatch} ${caseMatch === 1 ? "תהליך פתוח" : "תהליכים פתוחים"}`)
+                              : (caseMatch === 0 ? "אין תואמים" : `${caseMatch} ${caseMatch === 1 ? "תואם" : "תואמים"}`)}
                           </span>
                         )}
                       </span>
