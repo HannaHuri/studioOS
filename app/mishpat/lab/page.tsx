@@ -194,7 +194,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d2", name: "תצהיר עדות ראשית — ד״ר לוי", type: "תצהירים", submitter: "תובע", submitterName: "יעקב אברמוב",
     date: "31.05.26", time: "16:40", iso: "2026-05-31", bucket: "week", words: "8.4K",
     summary: "תצהיר מומחה רפואי מטעם התובע הקובע קשר סיבתי בין הרשלנות הנטענת לנזק, ומפרט נכות צמיתה בשיעור 25%.",
-    related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה"], checked: true, used: true, isNew: true,
+    related: ["חוות דעת אקטוארית", "כתב תביעה", "פרוטוקול דיון מקדמי", "החלטה על מינוי מומחה", "כתב הגנה מתוקן", "הודעה על הגשת ראיות נוספות"], checked: true, used: true, isNew: true,
     attachments: ["נספח א — תעודת התמחות ד״ר לוי", "נספח ב — צילומי MRI"],
     key: true, keyReason: "מסמך מרכזי — תצהיר מומחה שעליו נשענת התביעה; מסמכים נוספים מפנים אליו", file: "/studioOS/docs/affidavit-1.pdf",
   },
@@ -208,26 +208,26 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקולים", submitter: "בית המשפט",
     date: "18.05.26", time: "14:22", iso: "2026-05-18", bucket: "month", words: "4.2K",
     summary: "סיכום הדיון המקדמי: נקבעו פלוגתאות, הוסכם על מינוי מומחה מטעם בית המשפט ונקבע לוח זמנים להגשת ראיות.",
-    related: ["החלטה על מינוי מומחה"], checked: false, used: true,
+    related: ["החלטה על מינוי מומחה", "בקשה לדחיית מועד דיון", "תצהיר עדות ראשית — ד״ר לוי", "פרוטוקול ישיבת קדם משפט"], checked: false, used: true,
     key: true, keyReason: "מסמך מרכזי — פרוטוקול הקובע את הפלוגתאות ולוח הזמנים בתיק", file: "/studioOS/docs/protocol-1.pdf",
   },
   {
     id: "d5", name: "כתב הגנה מתוקן", type: "כתבי טענות", submitter: "נתבע",
     date: "10.05.26", time: "11:30", iso: "2026-05-10", bucket: "month", words: "12.1K",
     summary: "הנתבע דוחה את כל טענות הרשלנות, טוען להעדר קשר סיבתי ולאשם תורם של התובע, ומעלה טענת התיישנות חלקית.",
-    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי"], checked: false, file: "/studioOS/docs/defense-1.pdf",
+    related: ["כתב תביעה", "תצהיר עדות ראשית — ד״ר לוי", "תצהיר עדות — גב' רוזן", "כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/defense-1.pdf",
   },
   {
     id: "d6", name: "החלטה על מינוי מומחה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "05.05.26", time: "09:45", iso: "2026-05-05", bucket: "month", words: "820",
     summary: "בית המשפט ממנה את פרופ׳ זילברשטיין כמומחה מטעמו לבחינת שאלת הנכות, וקובע את חלוקת שכר הטרחה בין הצדדים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/decision-1.pdf",
+    related: ["פרוטוקול דיון מקדמי", "תצהיר עדות ראשית — ד״ר לוי", "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע"], checked: false, file: "/studioOS/docs/decision-1.pdf",
   },
   {
     id: "d7", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע",
     date: "12.02.26", time: "14:10", iso: "2026-02-12", bucket: "older", words: "15.7K",
     summary: "התובע, מר יעקב אברמוב, הגיש כתב תביעה כנגד הנתבע בגין רשלנות רפואית לכאורה בטיפול שניתן לו, בעקבותיו נגרמו נזקי גוף.",
-    related: ["כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-1.pdf",
+    related: ["כתב הגנה מתוקן", "תצהיר עדות ראשית — ד״ר לוי", "בקשה לגילוי מסמכים", "כתב תביעה שכנגד"], checked: false, file: "/studioOS/docs/claim-1.pdf",
   },
   {
     id: "d8", name: "חוות דעת אקטוארית", type: "חוות דעת", submitter: "תובע",
@@ -257,14 +257,14 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "02.06.26", time: "10:15", iso: "2026-06-02", bucket: "today", words: "390",
     summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
-    related: [], checked: false, file: "/studioOS/docs/decision-2.pdf",
+    related: ["בקשה לחיוב בהוצאות בגין דחיית הדיון"], checked: false, file: "/studioOS/docs/decision-2.pdf",
     processId: 1, // the decision that closes thread 1 — it was linked only through `related`, so the thread looked open
   },
   {
     id: "d13", name: "פרוטוקול ישיבת קדם משפט", type: "פרוטוקולים", submitter: "בית המשפט",
     date: "15.05.26", time: "09:30", iso: "2026-05-15", bucket: "month", words: "5.8K",
     summary: "תיעוד ישיבת קדם המשפט, לרבות עמדות הצדדים והחלטות ביניים בנוגע לגילוי מסמכים.",
-    related: ["פרוטוקול דיון מקדמי"], checked: false, file: "/studioOS/docs/protocol-2.pdf",
+    related: ["פרוטוקול דיון מקדמי", "פרוטוקול דיון הוכחות ראשון"], checked: false, file: "/studioOS/docs/protocol-2.pdf",
   },
   {
     id: "d14", name: "בקשה לגילוי מסמכים", type: "בקשות והוראות", submitter: "תובע",
@@ -288,7 +288,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d17", name: "כתב תביעה שכנגד", type: "כתבי טענות", submitter: "נתבע",
     date: "03.03.26", time: "11:15", iso: "2026-03-03", bucket: "older", words: "8.9K",
     summary: "הנתבע מגיש תביעה שכנגד בטענה להוצאות שנגרמו לו עקב הגשת התביעה בחוסר תום לב.",
-    related: ["כתב תביעה", "כתב הגנה מתוקן"], checked: false, file: "/studioOS/docs/claim-2.pdf",
+    related: ["כתב תביעה", "כתב הגנה מתוקן", "כתב הגנה לתביעה שכנגד", "החלטה על איחוד דיון"], checked: false, file: "/studioOS/docs/claim-2.pdf",
   },
   {
     id: "d18", name: "כתב הגנה לתביעה שכנגד", type: "כתבי טענות", submitter: "תובע",
@@ -306,7 +306,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d20", name: "פרוטוקול דיון הוכחות ראשון", type: "פרוטוקולים", submitter: "בית המשפט",
     date: "10.04.26", time: "13:50", iso: "2026-04-10", bucket: "older", words: "11.2K",
     summary: "תיעוד דיון ההוכחות הראשון, לרבות חקירת התובע ועד מטעמו וטענות הצדדים.",
-    related: ["פרוטוקול ישיבת קדם משפט"], checked: false, file: "/studioOS/docs/protocol-1.pdf",
+    related: ["פרוטוקול ישיבת קדם משפט", "בקשה לזימון עד נוסף"], checked: false, file: "/studioOS/docs/protocol-1.pdf",
   },
   {
     id: "d21", name: "סיכומי התובע", type: "כתבי טענות", submitter: "תובע",
@@ -346,7 +346,7 @@ const CASE_DOCS: CaseDoc[] = [
 // Second case (mock) — documents for a different file
 const CASE_DOCS_2: CaseDoc[] = [
   { id: "e1", name: "כתב תביעה", type: "כתבי טענות", submitter: "תובע", date: "29.05.26", time: "09:20", iso: "2026-05-29", bucket: "week", words: "9.8K",
-    summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: [], checked: false, file: "/studioOS/docs/claim-1.pdf" },
+    summary: "תביעה כספית בגין הפרת חוזה בנייה ואיחור במסירת דירות לרוכשים.", related: ["כתב הגנה"], checked: false, file: "/studioOS/docs/claim-1.pdf" },
   { id: "e2", name: "בקשה לסעד זמני", type: "בקשות והוראות", submitter: "תובע", date: "31.05.26", time: "14:45", iso: "2026-05-31", bucket: "week", words: "1.2K",
     summary: "בקשה לצו מניעה זמני שימנע העברת זכויות בפרויקט עד להכרעה בתיק. הנתבע מתנגד לבקשה.", related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1 },
   { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", time: "11:00", iso: "2026-04-15", bucket: "older", words: "7.1K",
