@@ -187,7 +187,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d1", name: "בקשה לדחיית מועד דיון", type: "בקשות והוראות", submitter: "נתבע", submitterName: "המרכז הרפואי קדם בע״מ",
     date: "27.05.26", time: "09:14", iso: "2026-05-27", bucket: "week", words: "1.1K",
     summary: "הנתבע מבקש לדחות את מועד הדיון הקבוע ל-21.6 בשל היעדרות מומחה מרכזי מהארץ, ומציע מועד חלופי בחודש יולי. התובע מתנגד לבקשה.",
-    related: ["פרוטוקול דיון מקדמי", "החלטה בבקשת ארכה"], checked: false,
+    related: ["פרוטוקול דיון מקדמי"], checked: false,
     isNew: true, file: "/studioOS/docs/motion-1.pdf", processId: 1,
   },
   {
@@ -202,7 +202,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d3", name: "תגובה לבקשת ארכה", type: "בקשות והוראות", submitter: "תובע",
     date: "29.05.26", time: "11:05", iso: "2026-05-29", bucket: "week", words: "640",
     summary: "התובע מתנגד לבקשת הארכה וטוען כי מדובר בניסיון לסחבת; לחלופין מבקש כי הדחייה תותנה בהוצאות.",
-    related: ["בקשה לדחיית מועד דיון"], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1,
+    related: [], checked: false, file: "/studioOS/docs/motion-2.pdf", processId: 1,
   },
   {
     id: "d4", name: "פרוטוקול דיון מקדמי", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -257,7 +257,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d12", name: "החלטה בבקשת ארכה", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "02.06.26", time: "10:15", iso: "2026-06-02", bucket: "today", words: "390",
     summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
-    related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false, file: "/studioOS/docs/decision-2.pdf",
+    related: [], checked: false, file: "/studioOS/docs/decision-2.pdf",
     processId: 1, // the decision that closes thread 1 — it was linked only through `related`, so the thread looked open
   },
   {
@@ -276,7 +276,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d15", name: "תגובה לבקשת גילוי מסמכים", type: "בקשות והוראות", submitter: "נתבע",
     date: "14.05.26", time: "10:50", iso: "2026-05-14", bucket: "month", words: "980",
     summary: "הנתבע מתנגד חלקית לגילוי וטוען לחיסיון רפואי ולחוסר רלוונטיות של חלק מהמסמכים.",
-    related: ["בקשה לגילוי מסמכים"], checked: false, file: "/studioOS/docs/motion-1.pdf", processId: 3,
+    related: [], checked: false, file: "/studioOS/docs/motion-1.pdf", processId: 3,
   },
   {
     id: "d16", name: "חוות דעת מומחה מטעם בית המשפט בשאלת הנכות הרפואית והקשר הסיבתי לאירוע", type: "חוות דעת", submitter: "בית המשפט",
@@ -318,7 +318,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d23", name: "החלטה בבקשות גילוי והגשת ראיות", type: "החלטות בתיק", submitter: "בית המשפט",
     date: "03.06.26", time: "10:05", iso: "2026-06-03", bucket: "today", words: "410",
     summary: "בית המשפט מכריע במאוחד בבקשת גילוי המסמכים ובבקשה להגשת ראיות נוספות: מורה על גילוי הרשומות הרפואיות ומתיר הגשת תיעוד עדכני בכפוף לזכות תגובה.",
-    related: ["בקשה לגילוי מסמכים", "הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
+    related: [], checked: false, file: "/studioOS/docs/decision-4.pdf",
     processIds: [2, 3],
   },
   // Thread 4 — filed, not yet answered: the ball is with the other side, and the judge has nothing to do with it today.
@@ -339,7 +339,7 @@ const CASE_DOCS: CaseDoc[] = [
     id: "d26", name: "תגובה לבקשה לחיוב בהוצאות", type: "בקשות והוראות", submitter: "נתבע",
     date: "03.06.26", time: "09:10", iso: "2026-06-03", bucket: "today", words: "560",
     summary: "הנתבע מתנגד לחיוב בהוצאות וטוען כי הודיע על הצורך בדחייה מיד עם היוודע היעדרות המומחה, וכי לא נגרמו לתובע הוצאות ממשיות.",
-    related: ["בקשה לחיוב בהוצאות בגין דחיית הדיון"], checked: false, isNew: true, file: "/studioOS/docs/motion-1.pdf", processId: 5,
+    related: [], checked: false, isNew: true, file: "/studioOS/docs/motion-1.pdf", processId: 5,
   },
 ];
 
@@ -352,7 +352,7 @@ const CASE_DOCS_2: CaseDoc[] = [
   { id: "e3", name: "כתב הגנה", type: "כתבי טענות", submitter: "נתבע", date: "15.04.26", time: "11:00", iso: "2026-04-15", bucket: "older", words: "7.1K",
     summary: "הנתבע טוען לעיכובים מצד התובע ולכוח עליון שמנע עמידה בלוחות הזמנים.", related: ["כתב תביעה"], checked: false, file: "/studioOS/docs/defense-1.pdf" },
   { id: "e4", name: "החלטה בבקשת סעד זמני", type: "החלטות בתיק", submitter: "בית המשפט", date: "01.06.26", time: "10:30", iso: "2026-06-01", bucket: "week", words: "540",
-    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: ["בקשה לסעד זמני"], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 1 },
+    summary: "בית המשפט נעתר חלקית ומורה על רישום הערת אזהרה עד לדיון.", related: [], checked: false, used: true, file: "/studioOS/docs/decision-5.pdf", processId: 1 },
 ];
 
 // Case metadata (number + parties)
