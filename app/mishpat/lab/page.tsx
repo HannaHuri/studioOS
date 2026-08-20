@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type M
 import dynamic from "next/dynamic";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
-  CircleDot, Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
+  Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
@@ -148,6 +148,10 @@ const PROCESS_LABELS: Record<string, Record<number, string>> = {
     1: "בקשת הנתבע לדחיית מועד הדיון",
     2: "הודעת התובע על הגשת ראיות נוספות",
     3: "בקשת התובע לגילוי מסמכים",
+    // The two open threads — one waiting on the other side, one waiting on the judge. Both matter for the
+    // "תהליכים פתוחים" lens: it exists precisely because those two states look identical from a decision's point of view.
+    4: "בקשת הנתבע לזימון עד נוסף",
+    5: "בקשת התובע לחיוב בהוצאות",
   },
   c2: {
     1: "בקשת התובע לסעד זמני",
@@ -254,6 +258,7 @@ const CASE_DOCS: CaseDoc[] = [
     date: "02.06.26", time: "10:15", iso: "2026-06-02", bucket: "today", words: "390",
     summary: "בית המשפט נעתר חלקית לבקשת הארכה ומאריך את המועד להגשת סיכומים ב-14 יום.",
     related: ["בקשה לדחיית מועד דיון", "תגובה לבקשת ארכה"], checked: false, file: "/studioOS/docs/decision-2.pdf",
+    processId: 1, // the decision that closes thread 1 — it was linked only through `related`, so the thread looked open
   },
   {
     id: "d13", name: "פרוטוקול ישיבת קדם משפט", type: "פרוטוקולים", submitter: "בית המשפט",
@@ -315,6 +320,26 @@ const CASE_DOCS: CaseDoc[] = [
     summary: "בית המשפט מכריע במאוחד בבקשת גילוי המסמכים ובבקשה להגשת ראיות נוספות: מורה על גילוי הרשומות הרפואיות ומתיר הגשת תיעוד עדכני בכפוף לזכות תגובה.",
     related: ["בקשה לגילוי מסמכים", "הודעה על הגשת ראיות נוספות"], checked: false, file: "/studioOS/docs/decision-4.pdf",
     processIds: [2, 3],
+  },
+  // Thread 4 — filed, not yet answered: the ball is with the other side, and the judge has nothing to do with it today.
+  {
+    id: "d24", name: "בקשה לזימון עד נוסף", type: "בקשות והוראות", submitter: "נתבע", submitterName: "המרכז הרפואי קדם בע״מ",
+    date: "03.06.26", time: "13:40", iso: "2026-06-03", bucket: "today", words: "820",
+    summary: "הנתבע מבקש לזמן לעדות את האחות התורנית שטיפלה בתובע בליל האירוע, וטוען כי עדותה חיונית לבירור השתלשלות הטיפול. התובע טרם הגיב.",
+    related: ["פרוטוקול דיון הוכחות ראשון"], checked: false, isNew: true, file: "/studioOS/docs/motion-3.pdf", processId: 4,
+  },
+  // Thread 5 — answered, undecided: this one IS waiting on the judge.
+  {
+    id: "d25", name: "בקשה לחיוב בהוצאות בגין דחיית הדיון", type: "בקשות והוראות", submitter: "תובע",
+    date: "02.06.26", time: "15:30", iso: "2026-06-02", bucket: "today", words: "710",
+    summary: "התובע מבקש לחייב את הנתבע בהוצאות בגין דחיית מועד הדיון, וטוען כי הבקשה הוגשה בהתראה קצרה ולאחר שהיערכותו לדיון כבר הושלמה.",
+    related: ["החלטה בבקשת ארכה"], checked: false, isNew: true, file: "/studioOS/docs/motion-4.pdf", processId: 5,
+  },
+  {
+    id: "d26", name: "תגובה לבקשה לחיוב בהוצאות", type: "בקשות והוראות", submitter: "נתבע",
+    date: "03.06.26", time: "09:10", iso: "2026-06-03", bucket: "today", words: "560",
+    summary: "הנתבע מתנגד לחיוב בהוצאות וטוען כי הודיע על הצורך בדחייה מיד עם היוודע היעדרות המומחה, וכי לא נגרמו לתובע הוצאות ממשיות.",
+    related: ["בקשה לחיוב בהוצאות בגין דחיית הדיון"], checked: false, isNew: true, file: "/studioOS/docs/motion-1.pdf", processId: 5,
   },
 ];
 
@@ -1769,10 +1794,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       }}
       title="הצג רק תהליכים שטרם ניתנה בהם החלטה — כולל אלה הממתינים לתגובת הצד השני"
     >
-      {/* CircleDot, not the mirrored process arrow: mirrored it draws the same shape as the summary-wrap control's
-          CornerDownLeft two buttons away. A status dot also says "open" rather than "waiting", which is the distinction
-          this lens exists to make. */}
-      <CircleDot size={13} />
+      {/* Route, not the mirrored process arrow: mirrored it draws the same shape as the summary-wrap control's
+          CornerDownLeft two buttons away. A path with a start and an end also says "תהליך" in a real-world metaphor,
+          and says nothing about "waiting" — the distinction this lens exists to make. */}
+      <Route size={13} />
       תהליכים פתוחים
     </button>
   );
