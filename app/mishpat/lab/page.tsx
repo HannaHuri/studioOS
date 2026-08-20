@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type M
 import dynamic from "next/dynamic";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
-  Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
+  CircleDot, Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen,
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
@@ -1769,7 +1769,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       }}
       title="הצג רק תהליכים שטרם ניתנה בהם החלטה — כולל אלה הממתינים לתגובת הצד השני"
     >
-      <CornerDownRight size={13} style={{ transform: "scaleX(-1)" }} />
+      {/* CircleDot, not the mirrored process arrow: mirrored it draws the same shape as the summary-wrap control's
+          CornerDownLeft two buttons away. A status dot also says "open" rather than "waiting", which is the distinction
+          this lens exists to make. */}
+      <CircleDot size={13} />
       תהליכים פתוחים
     </button>
   );
