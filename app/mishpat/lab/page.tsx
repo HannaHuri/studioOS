@@ -747,7 +747,9 @@ type LayoutKey = DocColKey | "name";
 // נספחים sits immediately after שם מסמך, not out with the metadata: a נספח is part of THIS document (validation,
 // 2026-08-23 — "חלק מאוד מהותי מהמסמך"), whereas מסמכים קשורים is a relation to OTHER documents and stays in the
 // metadata block. Adjacency is what makes that distinction readable without explaining it.
-const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "name", "attachments", "summary", "type", "submitter", "related", "words"];
+// שעת הגשה follows תאריך — the layout drives the columns popover too, so the two time fields read as a pair in the
+// menu, and the column lands beside the date when it is switched on.
+const DEFAULT_LAYOUT: LayoutKey[] = ["date", "time", "process", "num", "name", "attachments", "summary", "type", "submitter", "related", "words"];
 const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
   const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
@@ -767,7 +769,7 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   return { ...DOC_COL_DEFAULTS };
 };
 // Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v5"; // v5: נספחים moved next to the name — without the bump, everyone who ever opened the page keeps the old order and never sees it
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v6"; // bump on EVERY default-order change (v5 נספחים beside the name, v6 שעת הגשה after תאריך) — without it, anyone who has opened the page keeps the old order and never sees the change
 const loadLayout = (): LayoutKey[] => {
   if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
