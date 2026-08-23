@@ -1164,22 +1164,27 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       // numbers stay but are static — they still matter there to reveal that a doc is linked to OTHER processes beyond the
       // folder's own — so they keep the plain pill and NOT the button chip. Pill = data, box = button.
       case "process":  return (
-        <span className="min-w-0 flex items-center justify-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="min-w-0 flex items-center justify-center gap-0.5 w-full" onClick={(e) => e.stopPropagation()}>
           {procIds.length > 0 && (lockProcess
             ? <ProcessChips ids={procIds} isDark={isDark} />
             : (
               <>
+                {/* The "+N" slot leads (RTL → it renders to the RIGHT of the chip) and is a FIXED width that is there
+                    whether or not this row overflows. That keeps the group's width constant, so the process chip lands
+                    on the same x in every row and the column reads as one straight line of buttons. */}
+                <span className="flex items-center justify-center flex-shrink-0" style={{ width: "14px" }}>
+                  {procIds.length > 1 && (
+                    <ProcessOverflowLink
+                      n={procIds.length - 1}
+                      onClick={toggle("process")}
+                      title={`תהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`}
+                      isDark={isDark}
+                    />
+                  )}
+                </span>
                 <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} isDark={isDark} boxed>
                   <ProcessTriggerLabel id={procIds[0]} />
                 </RowIconTrigger>
-                {procIds.length > 1 && (
-                  <ProcessOverflowLink
-                    n={procIds.length - 1}
-                    onClick={toggle("process")}
-                    title={`תהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`}
-                    isDark={isDark}
-                  />
-                )}
               </>
             ))}
         </span>
