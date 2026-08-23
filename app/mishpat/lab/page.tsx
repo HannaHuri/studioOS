@@ -668,9 +668,10 @@ function ProcessTriggerLabel({ id }: { id: number }) {
 // plainly something else. It stays clickable (same panel — the panel lists every process by name and count), so the
 // blue is honest rather than decorative.
 function ProcessOverflowLink({ n, onClick, title, isDark }: { n: number; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
+  // dir="ltr" + a single text node: `+{n}` is two separate text runs, and RTL reorders them into "1+".
   return (
-    <button onClick={onClick} title={title} className="text-[11px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
-      +{n}
+    <button dir="ltr" onClick={onClick} title={title} className="text-[11px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
+      {`+${n}`}
     </button>
   );
 }
