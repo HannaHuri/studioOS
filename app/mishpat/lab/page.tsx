@@ -1445,7 +1445,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // Per-column widths (px), set by dragging a column header's edge; persisted. Overrides the column's default track.
-  const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v2";
+  // Key bumped to v3: a pre-2026-08-13 build persisted EVERY column as a fixed px width the moment a resize drag
+  // started, so anyone who ever grabbed a handle back then carries a fully-frozen table that can never spread on
+  // expand. Bumping the key throws that saved state away and gives those users the flexible defaults back.
+  const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v3";
   const [colWidths, setColWidths] = useState<Record<string, number>>({}); // ONLY columns the user explicitly resized (persisted)
   const [dragFreeze, setDragFreeze] = useState<Record<string, number> | null>(null); // temp: pins ALL columns to px DURING a resize drag, released on mouseup so untouched columns flex again
   const [summaryWrap, setSummaryWrap] = useState(false); // תקציר column: wrap to multiple lines vs. single-line ellipsis
@@ -1534,13 +1537,31 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
   // what matters to the user is which columns show, in what order, at what width.
   const fullOrder = ["checkbox", ...layout];
-  const visCols = (showType: boolean) => fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
-    const d = colDefs[k];
-    // During a resize drag ALL columns are pinned (dragFreeze); otherwise only explicitly-resized columns are fixed and
-    // the rest keep their flexible default track → the table always fills the width (spreads on expand).
-    const w = (dragFreeze && dragFreeze[k] != null) ? dragFreeze[k] : colWidths[k];
-    return { key: k, track: w != null ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
-  });
+  const visCols = (showType: boolean) => {
+    const cols = fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
+      const d = colDefs[k];
+      // During a resize drag ALL columns are pinned (dragFreeze); otherwise only explicitly-resized columns are fixed and
+      // the rest keep their flexible default track → the table always fills the width (spreads on expand).
+      const w = (dragFreeze && dragFreeze[k] != null) ? dragFreeze[k] : colWidths[k];
+      return { key: k, track: w != null ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
+    });
+    // The table must ALWAYS fill its container. In the roomy/expanded layout תקציר is the only column with an `fr`
+    // track, so hiding it — or resizing it to a fixed px width — used to leave every track fixed and the columns
+    // bunched at the right edge with dead space on the left. When no flexible track is left, promote one column to
+    // `1fr` so it absorbs the leftover. Skipped mid-drag, where pinning every column is the point.
+    if (!dragFreeze && !cols.some((cc) => cc.track.includes("fr"))) {
+      // Prefer a column the user has NOT explicitly resized (a width they set by hand is a promise we keep), תקציר first.
+      const candidates = ["summary", "name"].filter((k) => cols.some((cc) => cc.key === k));
+      const pick = candidates.find((k) => colWidths[k] == null) ?? candidates[0];
+      const col = cols.find((cc) => cc.key === pick);
+      if (col) {
+        const m = col.track.match(/minmax\((\d+)px/);
+        const min = m ? parseInt(m[1], 10) : (parseInt(col.track, 10) || 0);
+        col.track = `minmax(${min}px,1fr)`; // grows into the free space, never shrinks below what it has now
+      }
+    }
+    return cols;
+  };
   const tableTemplate = (showType: boolean) => visCols(showType).map((col) => col.track).join(" ");
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
   // The type column is never pinned, so this is independent of showType.
