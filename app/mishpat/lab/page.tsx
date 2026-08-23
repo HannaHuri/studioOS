@@ -651,22 +651,27 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
   );
 }
 
-// The label inside a CLICKABLE process trigger. Deliberately plain text: the boxed chip around it — the very same chip
-// 🔗 מסמכים קשורים and 📎 נספחים wear — is what says "this opens something". A number on its own pill background read
-// as column content, which is why users never tried clicking it.
-// ALWAYS exactly one process number, plus a blue "+N" for the rest — the same shape at 1, 2 or 9 processes, so the
-// column never changes grammar as the data grows. "2,3" inside one small chip was the alternative and it reads as the
-// single number twenty-three; the blue "+N" can't be mistaken for a process id. (Two side-by-side chips do fit the
-// 44px track — measured 40px — but only up to two, and two buttons opening the same panel promises two actions that
-// don't exist: the panel already lists every process by name and count.)
-function ProcessTriggerLabel({ ids }: { ids: number[] }) {
-  const shown = ids.slice(0, 1);
-  const rest = ids.length - shown.length;
+// The label inside a CLICKABLE process trigger: ONE process number, as plain text. The boxed chip around it — the very
+// same chip 🔗 מסמכים קשורים and 📎 נספחים wear — is what says "this opens something"; a number on its own pill
+// background read as column content, which is why users never tried clicking it.
+function ProcessTriggerLabel({ id }: { id: number }) {
   return (
-    <span className="flex items-center justify-center gap-0.5 text-[11.5px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", minWidth: "13px", minHeight: "13px" /* match the 13px icon in the 🔗/📎 chips so the three buttons are the same size */ }}>
-      <span>{shown[0]}</span>
-      {rest > 0 && <span style={{ color: c.primary }}>+{rest}</span>}
+    <span className="flex items-center justify-center text-[11.5px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", minWidth: "13px", minHeight: "13px" /* match the 13px icon in the 🔗/📎 chips so the three buttons are the same size */ }}>
+      {id}
     </span>
+  );
+}
+
+// The extra processes beyond the first, as a blue "+N" that sits OUTSIDE the chip — bare text, no button styling.
+// Keeping it out of the chip is what makes it unmistakable: inside, "2 +1" reads as one crowded label and a
+// comma-joined "2,3" reads as the single number twenty-three. Outside, the chip is still one process and the +N is
+// plainly something else. It stays clickable (same panel — the panel lists every process by name and count), so the
+// blue is honest rather than decorative.
+function ProcessOverflowLink({ n, onClick, title, isDark }: { n: number; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
+  return (
+    <button onClick={onClick} title={title} className="text-[11px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
+      +{n}
+    </button>
   );
 }
 
@@ -1137,6 +1142,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const openPanels = PANEL_ORDER.filter((k) => openKinds.has(k));
   const toggle = (kind: "related" | "attachments" | "process") => (e: ReactMouseEvent) => { e.stopPropagation(); onToggleExpand?.(kind); };
   const num = colMeta.docNumbers[doc.id];
+  const procIds = docProcessIds(doc);
   // Name/summary editing — null when this row has no cell open for editing (the usual case). Once either field has been
   // rewritten the pencil stays visible and blue, and its tooltip names the system's wording for whichever field it was.
   const edit = useContext(DocEditCtx);
@@ -1158,12 +1164,24 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       // numbers stay but are static — they still matter there to reveal that a doc is linked to OTHER processes beyond the
       // folder's own — so they keep the plain pill and NOT the button chip. Pill = data, box = button.
       case "process":  return (
-        <span className="min-w-0 flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
-          {docProcessIds(doc).length > 0 && (lockProcess
-            ? <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />
-            : <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark} boxed>
-                <ProcessTriggerLabel ids={docProcessIds(doc)} />
-              </RowIconTrigger>)}
+        <span className="min-w-0 flex items-center justify-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+          {procIds.length > 0 && (lockProcess
+            ? <ProcessChips ids={procIds} isDark={isDark} />
+            : (
+              <>
+                <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} isDark={isDark} boxed>
+                  <ProcessTriggerLabel id={procIds[0]} />
+                </RowIconTrigger>
+                {procIds.length > 1 && (
+                  <ProcessOverflowLink
+                    n={procIds.length - 1}
+                    onClick={toggle("process")}
+                    title={`תהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`}
+                    isDark={isDark}
+                  />
+                )}
+              </>
+            ))}
         </span>
       );
       // ONE edit affordance per row, pinned to the END of the name column (the spacer) rather than trailing the text:
