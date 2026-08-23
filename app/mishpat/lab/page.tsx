@@ -386,9 +386,13 @@ const SUBMITTER_OPTIONS = ["הכל", "תובע", "נתבע", "בית המשפט"
 
 // ── Compact filter dropdown (optionally type-ahead searchable) ───────────────
 function FilterDropdown({
-  label, value, options, onChange, searchable = false, subLabels, isDark,
+  label, value, options, onChange, searchable = false, subLabels, isDark, emptyOptions, emptyTitle,
 }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void; searchable?: boolean; subLabels?: Record<string, string>; isDark?: boolean;
+  // Options with nothing behind them in the current view: shown, but grayed and not selectable, so "no פסקי דין" reads
+  // as a fact about the case rather than as a filter the user got wrong. The selected value is never grayed — the user
+  // must always be able to see and undo what is narrowing the list.
+  emptyOptions?: Set<string>; emptyTitle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -433,14 +437,17 @@ function FilterDropdown({
             <div className="max-h-[240px] overflow-y-auto docs-scroll" dir="ltr">
               {shown.map((opt) => {
                 const sel = opt === value;
+                const empty = !sel && !!emptyOptions?.has(opt);
                 return (
                   <button
                     key={opt}
                     dir="rtl"
-                    onClick={() => { onChange(opt); setOpen(false); setQ(""); }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] text-right"
-                    style={{ backgroundColor: sel ? (isDark ? "#22304a" : "#eff4ff") : "transparent", color: sel ? c.primary : (isDark ? dk.text : c.text), fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                    onMouseEnter={(e) => { if (!sel) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+                    disabled={empty}
+                    title={empty ? emptyTitle : undefined}
+                    onClick={() => { if (empty) return; onChange(opt); setOpen(false); setQ(""); }}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] text-right ${empty ? "cursor-default" : ""}`}
+                    style={{ backgroundColor: sel ? (isDark ? "#22304a" : "#eff4ff") : "transparent", color: empty ? (isDark ? "#4d5878" : c.textLight) : (sel ? c.primary : (isDark ? dk.text : c.text)), fontWeight: sel ? 600 : 400, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                    onMouseEnter={(e) => { if (!sel && !empty) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = sel ? (isDark ? "#22304a" : "#eff4ff") : "transparent"; }}
                   >
                     <span className="flex flex-col items-start min-w-0">
@@ -644,6 +651,21 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
   );
 }
 
+// The label inside a CLICKABLE process trigger. Deliberately plain text: the boxed chip around it — the very same chip
+// 🔗 מסמכים קשורים and 📎 נספחים wear — is what says "this opens something". A number on its own pill background read
+// as column content, which is why users never tried clicking it.
+// Overflow past two processes collapses to a blue "+N" that must NOT be mistaken for another process number.
+function ProcessTriggerLabel({ ids }: { ids: number[] }) {
+  const shown = ids.length <= 2 ? ids : ids.slice(0, 1);
+  const rest = ids.length - shown.length;
+  return (
+    <span className="flex items-center justify-center gap-0.5 text-[11.5px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", minWidth: "13px", minHeight: "13px" /* match the 13px icon in the 🔗/📎 chips so the three buttons are the same size */ }}>
+      <span>{shown.join(",")}</span>
+      {rest > 0 && <span style={{ color: c.primary }}>+{rest}</span>}
+    </span>
+  );
+}
+
 // Inline detail panel that expands directly under a table row, in place of the old floating popovers.
 // One nested document rendered inside an expanded detail, using the SAME dynamic columns as the parent table so
 // every field lines up (and the pinned block stays put on horizontal scroll). The checkbox column is live: related
@@ -712,7 +734,10 @@ const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary",
 // after it scroll. Default puts process · date right of the name, like before — but every column is freely movable
 // (drag it across the name line to change whether it scrolls).
 type LayoutKey = DocColKey | "name";
-const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "name", "summary", "type", "submitter", "related", "attachments", "words"];
+// נספחים sits immediately after שם מסמך, not out with the metadata: a נספח is part of THIS document (validation,
+// 2026-08-23 — "חלק מאוד מהותי מהמסמך"), whereas מסמכים קשורים is a relation to OTHER documents and stays in the
+// metadata block. Adjacency is what makes that distinction readable without explaining it.
+const DEFAULT_LAYOUT: LayoutKey[] = ["date", "process", "num", "time", "name", "attachments", "summary", "type", "submitter", "related", "words"];
 const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
   const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
@@ -732,7 +757,7 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   return { ...DOC_COL_DEFAULTS };
 };
 // Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v4";
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v5"; // v5: נספחים moved next to the name — without the bump, everyone who ever opened the page keeps the old order and never sees it
 const loadLayout = (): LayoutKey[] => {
   if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
@@ -1123,15 +1148,17 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
-      // Process — the id(s) as small numeric chips. Clickable (opens the thread) in the flat views; inside a type-view
-      // process folder (lockProcess) the chips stay but are static — they still matter there to reveal that a doc is
-      // linked to OTHER processes beyond the folder's own, but the thread isn't reopened (you're already in it).
+      // Process — the id(s). Clickable in the flat views, and there it wears the SAME boxed chip as 🔗 קשורים / 📎 נספחים
+      // right next to it: validation (2026-08-23) found users simply never tried clicking a bare number, because a number
+      // on a soft background is the universal look of "cell content". Inside a type-view process folder (lockProcess) the
+      // numbers stay but are static — they still matter there to reveal that a doc is linked to OTHER processes beyond the
+      // folder's own — so they keep the plain pill and NOT the button chip. Pill = data, box = button.
       case "process":  return (
         <span className="min-w-0 flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {docProcessIds(doc).length > 0 && (lockProcess
             ? <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />
-            : <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark}>
-                <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />
+            : <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processTitle(doc)}`} isDark={isDark} boxed>
+                <ProcessTriggerLabel ids={docProcessIds(doc)} />
               </RowIconTrigger>)}
         </span>
       );
@@ -1524,7 +1551,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
     name:        { track: roomy ? "minmax(140px,240px)" : "minmax(74px,1.4fr)", show: () => true, fixed: roomy ? 140 : 74 },
     num:         { track: "36px", show: () => visibleCols.num, fixed: 36 },
-    process:     { track: "32px", show: () => visibleCols.process, fixed: 32 },
+    process:     { track: roomy ? "44px" : "32px", show: () => visibleCols.process, fixed: roomy ? 44 : 32 }, // roomy fits the boxed trigger with "2,3" or "2 +3"
     date:        { track: "52px", show: () => visibleCols.date, fixed: 52 },
     time:        { track: "44px", show: () => visibleCols.time, fixed: 44 },
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
@@ -1726,8 +1753,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   };
 
   // A document matches the active top filters (type / submitter / date / search) — case-agnostic
-  const matchesFilters = (d: CaseDoc) =>
-    (activeType === "הכל" || d.type === activeType) &&
+  // `ignoreType` drops the type filter itself — used to work out which types still have documents behind them, which
+  // must be measured against every OTHER filter but not against the type choice (otherwise picking one type would
+  // gray out all the rest).
+  const matchesFilters = (d: CaseDoc, opts?: { ignoreType?: boolean }) =>
+    (opts?.ignoreType || activeType === "הכל" || d.type === activeType) &&
     (activeSubmitter === "הכל" || d.submitter === activeSubmitter) &&
     (!dateFrom || d.iso >= dateFrom) &&
     (!dateTo || d.iso <= dateTo) &&
@@ -1742,7 +1772,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   docs.forEach((d) => { if (isResolutionDoc(d)) docProcessIds(d).forEach((pid) => closedProcesses.add(procKey(d.caseId, pid))); });
   const inOpenProcess = (d: CaseDoc) => docProcessIds(d).some((pid) => !closedProcesses.has(procKey(d.caseId, pid)));
   // Full active predicate (filters + the open-processes lens) — used for the per-case match count
-  const matchesActive = (d: CaseDoc) => matchesFilters(d) && (lens !== "open" || inOpenProcess(d));
+  const matchesActive = (d: CaseDoc, opts?: { ignoreType?: boolean }) => matchesFilters(d, opts) && (lens !== "open" || inOpenProcess(d));
+  // Types with no documents behind them right now → grayed (not hidden) in the סוג filter. Hiding them would leave the
+  // user unable to tell "this case has no judgments" from "that option doesn't exist here"; the grouped "לפי סוג" view
+  // already lists only the types present, so graying also brings the filter in line with it.
+  const typesAvailable = new Set(docs.filter((d) => (!openCaseId || d.caseId === openCaseId) && matchesActive(d, { ignoreType: true })).map((d) => d.type));
+  const emptyTypes = new Set(TYPE_OPTIONS.filter((t) => t !== "הכל" && !typesAvailable.has(t)));
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
     activeType !== "הכל" || activeSubmitter !== "הכל" || !!dateFrom || !!dateTo || search.trim() !== "" || lens === "open";
@@ -1968,7 +2003,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
               {filtersExpanded && (
                 <>
-                  <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} />
+                  <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} emptyOptions={emptyTypes} emptyTitle={openCaseId ? "אין מסמכים מסוג זה בתיק" : "אין מסמכים מסוג זה"} />
                   <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
                   <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
                 </>
@@ -2011,7 +2046,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           // the answer is the THREAD, not the document: a motion and the response to it are two documents and one thing
           // the judge has to deal with, so there the badge counts distinct open processes instead. (Both are zero
           // together — a document only matches the lens by being in an open process.)
-          const caseMatchDocs = filterActive ? caseDocs.filter(matchesActive) : null;
+          const caseMatchDocs = filterActive ? caseDocs.filter((d) => matchesActive(d)) : null;
           const caseMatch = caseMatchDocs && (lens === "open"
             ? new Set(caseMatchDocs.flatMap((d) => docProcessIds(d).filter((pid) => !closedProcesses.has(procKey(d.caseId, pid))))).size
             : caseMatchDocs.length);
