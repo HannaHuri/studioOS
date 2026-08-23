@@ -654,13 +654,17 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
 // The label inside a CLICKABLE process trigger. Deliberately plain text: the boxed chip around it — the very same chip
 // 🔗 מסמכים קשורים and 📎 נספחים wear — is what says "this opens something". A number on its own pill background read
 // as column content, which is why users never tried clicking it.
-// Overflow past two processes collapses to a blue "+N" that must NOT be mistaken for another process number.
+// ALWAYS exactly one process number, plus a blue "+N" for the rest — the same shape at 1, 2 or 9 processes, so the
+// column never changes grammar as the data grows. "2,3" inside one small chip was the alternative and it reads as the
+// single number twenty-three; the blue "+N" can't be mistaken for a process id. (Two side-by-side chips do fit the
+// 44px track — measured 40px — but only up to two, and two buttons opening the same panel promises two actions that
+// don't exist: the panel already lists every process by name and count.)
 function ProcessTriggerLabel({ ids }: { ids: number[] }) {
-  const shown = ids.length <= 2 ? ids : ids.slice(0, 1);
+  const shown = ids.slice(0, 1);
   const rest = ids.length - shown.length;
   return (
     <span className="flex items-center justify-center gap-0.5 text-[11.5px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", minWidth: "13px", minHeight: "13px" /* match the 13px icon in the 🔗/📎 chips so the three buttons are the same size */ }}>
-      <span>{shown.join(",")}</span>
+      <span>{shown[0]}</span>
       {rest > 0 && <span style={{ color: c.primary }}>+{rest}</span>}
     </span>
   );
