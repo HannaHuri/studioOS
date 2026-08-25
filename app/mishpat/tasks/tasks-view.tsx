@@ -9,54 +9,55 @@
 //     ask about; they work one task at a time. The chat scope is set from the open DOCUMENT instead.
 //  3. It carries a רקע column: a short paragraph, composed per task, saying only what actually matters in this
 //     particular request. See TASK_PLAYBOOKS in ./tasks-data for the model layer behind it.
+//
+// Clicking anywhere on a row opens its document, exactly as clicking a row opens a document in the documents
+// table. The one control that does something else is the תהליך chip, which opens the request's thread in place.
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import {
-  ChevronDown, ChevronLeft, ChevronUp, CornerDownLeft, MoreVertical, Search, Sparkles, X,
-} from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronUp, CornerDownLeft, MoreVertical, Route, Search, X } from "lucide-react";
 import { c, dk, type CaseDoc } from "./shared";
 import {
-  TASKS, TASK_DOCS, URGENCY_LABEL, URGENCY_ORDER,
-  daysFrom, daysUntil, fmtDate, fmtDays, fmtEstimate,
+  TASKS, TASK_DOCS, TASK_KIND_COLORS, URGENCY_LABEL, URGENCY_ORDER,
+  daysFrom, daysUntil, fmtDate, fmtDays, fmtEstimate, threadDocsFor,
   type JudgeTask, type TaskUrgency,
 } from "./tasks-data";
 
 // ── Columns ────────────────────────────────────────────────────────────────
 // "subject" is the anchor: it is always visible and never listed in the columns menu, exactly like שם מסמך in the
-// documents table — it is the row's identity and its opener.
+// documents table — it is the row's identity.
 type TaskColKey =
   | "urgency" | "kind" | "caseNumber" | "caseName" | "waiting" | "due" | "hearing"
-  | "background" | "estimate" | "thread" | "opened" | "submitter" | "notes" | "handler";
+  | "background" | "estimate" | "process" | "opened" | "submitter" | "notes" | "handler";
 type TaskLayoutKey = TaskColKey | "subject";
 
 const TASK_COL_KEYS: TaskColKey[] = [
   "urgency", "kind", "caseNumber", "caseName", "waiting", "due", "hearing",
-  "background", "estimate", "thread", "opened", "submitter", "notes", "handler",
+  "background", "estimate", "process", "opened", "submitter", "notes", "handler",
 ];
 const TASK_COL_LABELS: Record<TaskColKey, string> = {
   urgency: "דחיפות", kind: "סוג משימה", caseNumber: "מס׳ תיק", caseName: "שם תיק",
   waiting: "בהמתנה", due: "תאריך יעד", hearing: "ת. דיון קרוב", background: "רקע",
-  estimate: "זמן טיפול", thread: "מסמכים בשרשור", opened: "תאריך פתיחה",
+  estimate: "זמן טיפול", process: "תהליך", opened: "תאריך פתיחה",
   submitter: "מגיש", notes: "הערות", handler: "גורם מטפל",
 };
 const TASK_COL_DEFAULTS: Record<TaskColKey, boolean> = {
   urgency: true, kind: true, caseNumber: true, caseName: true, waiting: true, due: true, hearing: true,
-  background: true, estimate: true, thread: true, opened: false, submitter: false, notes: false, handler: false,
+  background: true, estimate: true, process: true, opened: false, submitter: false, notes: false, handler: false,
 };
 const DEFAULT_TASK_LAYOUT: TaskLayoutKey[] = [
-  "urgency", "kind", "subject", "caseNumber", "caseName", "waiting", "due", "hearing",
-  "background", "estimate", "thread", "opened", "submitter", "notes", "handler",
+  "urgency", "kind", "process", "subject", "caseNumber", "caseName", "waiting", "due", "hearing",
+  "background", "estimate", "opened", "submitter", "notes", "handler",
 ];
 // Base widths in px. רקע is the one flexible track — see the docs-table rule: at least one uncapped `fr` must stay
 // reachable in every visibility combination, or the columns bunch up at the right edge on a wide screen.
 const TASK_COL_W: Record<TaskLayoutKey, number> = {
-  urgency: 30, kind: 132, subject: 260, caseNumber: 104, caseName: 186, waiting: 74, due: 82, hearing: 92,
-  background: 300, estimate: 74, thread: 42, opened: 82, submitter: 74, notes: 168, handler: 132,
+  urgency: 30, kind: 132, subject: 260, caseNumber: 104, caseName: 178, waiting: 74, due: 82, hearing: 92,
+  background: 300, estimate: 74, process: 34, opened: 82, submitter: 74, notes: 168, handler: 132,
 };
 
-const COLS_LS = "mishpat-tasks-cols-v1";
-const LAYOUT_LS = "mishpat-tasks-layout-v1";
-const WIDTH_LS = "mishpat-tasks-colw-v1";
+const COLS_LS = "mishpat-tasks-cols-v2";     // v2: "thread" became "process"
+const LAYOUT_LS = "mishpat-tasks-layout-v2"; // v2: תהליך moved next to סוג משימה
+const WIDTH_LS = "mishpat-tasks-colw-v2";
 const GROUP_LS = "mishpat-tasks-group-v1";
 
 const readLS = <T,>(key: string, fallback: T): T => {
@@ -84,12 +85,14 @@ const URG_COLOR: Record<TaskUrgency, string> = {
 };
 
 export default function TasksView({
-  isDark, docs, openDocId, onOpenTask, onCloseTask,
+  isDark, docs, openDocId, activeTaskId, onOpenTask, onOpenDoc, onCloseTask,
 }: {
   isDark: boolean;
   docs: CaseDoc[];                       // the fully-modelled cases — a task in one of them opens its real document
   openDocId?: string;
+  activeTaskId?: string;                 // stays highlighted while reading another document from the same thread
   onOpenTask: (task: JudgeTask, doc: CaseDoc) => void;
+  onOpenDoc: (doc: CaseDoc) => void;     // a document opened from inside a thread, without changing the active task
   onCloseTask?: () => void;
 }) {
   const bg = isDark ? dk.surface : "white";
@@ -107,15 +110,13 @@ export default function TasksView({
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<string>("הכל");
   const [bgWrap, setBgWrap] = useState(false);          // header arrow — every row shows its full background
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [showRec, setShowRec] = useState<Set<string>>(new Set()); // recommendation is collapsed until asked for
+  const [openThreads, setOpenThreads] = useState<Set<string>>(new Set());
   const [colsOpen, setColsOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const colsBtnRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Once a document is open the table keeps its place but loses most of its width. Rather than leaving the judge to
-  // scroll a 1500px table sideways inside a 640px column, drop to the four columns that carry the jump-to-the-next-task
+  // scroll a 1500px table sideways inside a 640px column, drop to the columns that carry the jump-to-the-next-task
   // decision. The user's own column choices are untouched — this is a display mode, not a change to their layout.
   const [paneW, setPaneW] = useState(0);
   // Measured on every render as well as through a ResizeObserver: the observer alone misses the case that matters
@@ -138,8 +139,8 @@ export default function TasksView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const narrow = paneW > 0 && paneW < 880;
-  const NARROW_COLS: TaskLayoutKey[] = ["urgency", "subject", "due", "background"];
-  const NARROW_W: Partial<Record<TaskLayoutKey, number>> = { subject: 186, background: 170, due: 76 };
+  const NARROW_COLS: TaskLayoutKey[] = ["urgency", "process", "subject", "due", "background"];
+  const NARROW_W: Partial<Record<TaskLayoutKey, number>> = { subject: 176, background: 160, due: 76 };
   // Hand-set widths are honoured in the full layout only — they were chosen for a table twice this wide.
   const colW = (k: TaskLayoutKey) => (narrow ? NARROW_W[k] ?? TASK_COL_W[k] : widths[k] ?? TASK_COL_W[k]);
 
@@ -237,12 +238,11 @@ export default function TasksView({
     () => narrow
       ? layout.filter((k) => NARROW_COLS.includes(k))
       : layout.filter((k) => k === "subject" || visible[k as TaskColKey]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [layout, visible, narrow],
   );
   const template = useMemo(() => {
     const frozen = dragFreeze;
-    // Keep one uncapped flexible track no matter which columns are on. רקע is it whenever it is visible and has
-    // not been resized by hand; otherwise the widest remaining text column takes the role.
     // Prefer a column the user has NOT resized by hand (רקע, then the task name), but if both carry an explicit
     // width, promote one anyway — a layout with no `fr` anywhere leaves dead space on the left of a wide screen.
     const flexible = frozen ? null : (
@@ -257,9 +257,11 @@ export default function TasksView({
         return k === flexible ? `minmax(${w}px, 1fr)` : `${w}px`;
       })
       .join(" ");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visCols, widths, dragFreeze, narrow]);
   const minWidth = useMemo(
     () => visCols.reduce((sum, k) => sum + colW(k) + 10, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [visCols, widths, narrow],
   );
 
@@ -317,7 +319,6 @@ export default function TasksView({
       case "hearing": return <span>ת. דיון</span>;
       case "background": return (
         <span className="flex items-center gap-1">
-          <Sparkles size={12} style={{ color: c.takhelet }} />
           <span>רקע</span>
           <button
             onClick={() => setBgWrap((v) => !v)}
@@ -330,7 +331,7 @@ export default function TasksView({
         </span>
       );
       case "estimate": return sortHead("estimate", "זמן טיפול");
-      case "thread": return <span title="מסמכים בשרשור הבקשה" className="block w-full text-center">שרשור</span>;
+      case "process": return <span title="תהליך — שרשור הבקשה" className="flex items-center justify-center w-full" style={{ color: muted }}><Route size={13} /></span>;
       case "opened": return <span>נפתחה</span>;
       case "submitter": return <span>מגיש</span>;
       case "notes": return <span>הערות</span>;
@@ -338,7 +339,14 @@ export default function TasksView({
     }
   };
 
-  const cell = (k: TaskLayoutKey, t: JudgeTask, isOpen: boolean) => {
+  const openTask = (t: JudgeTask) => {
+    const doc = docById.get(t.docId);
+    if (doc) onOpenTask(t, doc);
+  };
+  const toggleThread = (id: string) =>
+    setOpenThreads((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const cell = (k: TaskLayoutKey, t: JudgeTask, isOpen: boolean, threadOpen: boolean, threadCount: number) => {
     switch (k) {
       case "urgency":
         return (
@@ -346,26 +354,46 @@ export default function TasksView({
             <span style={{ width: 7, height: 7, borderRadius: 99, backgroundColor: URG_COLOR[t.urgency] }} />
           </span>
         );
-      case "kind":
+      case "kind": {
+        const kc = TASK_KIND_COLORS[t.kind];
         return (
-          <span className="truncate rounded px-1.5 py-0.5 text-[11.5px]"
-            style={{ backgroundColor: isDark ? "#232b42" : "#eef2f8", color: isDark ? dk.textMuted : c.iconGray }}>
-            {t.kind}
+          <span className="min-w-0 flex">
+            <span className="text-[11.5px] truncate rounded px-1.5 py-px" title={t.kind}
+              style={{ backgroundColor: kc.bg, color: kc.color, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {t.kind}
+            </span>
           </span>
         );
+      }
       case "subject":
         return (
-          <button
-            onClick={() => open(t)}
-            title={`פתיחת המסמך: ${docById.get(t.docId)?.name ?? t.subject}`}
-            className="truncate text-right hover:underline"
-            style={{ color: isOpen ? c.primary : text, fontWeight: isOpen ? 600 : 500 }}
-          >
+          <span className="truncate" title={`פתיחת המסמך: ${docById.get(t.docId)?.name ?? t.subject}`}
+            style={{ color: isOpen ? c.primary : text, fontWeight: isOpen ? 600 : 500 }}>
             {t.subject}
-          </button>
+          </span>
+        );
+      case "process":
+        // "pill = data, box = button" — the thread trigger wears the same boxed chip as the documents table's, so it
+        // reads as something to press rather than as a number printed in the row.
+        return (
+          <span className="flex justify-center w-full">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleThread(t.id); }}
+              title={`${t.processTitle} · ${threadCount} מסמכים`}
+              className="flex items-center justify-center rounded transition-colors"
+              style={{
+                width: 19, height: 19, fontSize: "11.5px",
+                border: `1px solid ${threadOpen ? c.primary : (isDark ? dk.border : "#d4dceb")}`,
+                backgroundColor: threadOpen ? (isDark ? "#243050" : "#eff4ff") : "transparent",
+                color: threadOpen ? c.primary : (isDark ? dk.textMuted : c.iconGray),
+              }}
+            >
+              {threadCount}
+            </button>
+          </span>
         );
       case "caseNumber":
-        return <span className="truncate" dir="ltr" style={{ color: c.primary, textAlign: "right", direction: "ltr", unicodeBidi: "isolate" }}>{t.caseNumber}</span>;
+        return <span className="truncate" style={{ color: c.primary, direction: "ltr", unicodeBidi: "isolate", textAlign: "right" }}>{t.caseNumber}</span>;
       case "caseName":
         return <span className="truncate" style={{ color: muted }} title={t.caseName}>{t.caseName}</span>;
       case "waiting": {
@@ -394,50 +422,30 @@ export default function TasksView({
       }
       case "background":
         return (
-          <button
-            onClick={() => toggleExpand(t.id)}
-            title={isExpanded(t.id) ? "סגירת הרקע" : "פתיחת הרקע המלא"}
-            className="flex items-start gap-1 text-right min-w-0 w-full hover:opacity-80"
-            style={{ color: muted }}
-          >
-            <ChevronLeft
-              size={13}
-              className="flex-shrink-0 mt-[3px] transition-transform"
-              style={{ transform: isExpanded(t.id) ? "rotate(-90deg)" : "none", color: isDark ? dk.textMuted : c.iconGray }}
-            />
-            <span className={bgWrap || isExpanded(t.id) ? "whitespace-normal leading-snug min-w-0" : "min-w-0"}
-              style={bgWrap || isExpanded(t.id) ? undefined : {
-                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                overflow: "hidden", lineHeight: "1.35",
-              }}>
+          <span className="min-w-0" style={{ color: muted }}>
+            <span
+              className={bgWrap ? "whitespace-normal leading-snug" : ""}
+              style={bgWrap ? undefined : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: "1.35" }}
+            >
               {t.background}
             </span>
-          </button>
+            {/* The recommendation rides along with the full background rather than living behind its own control:
+                with the row no longer expandable, the wrap toggle is the one place the whole background is shown. */}
+            {bgWrap && t.recommendation && (
+              <span className="block mt-1 leading-snug">
+                <span style={{ color: c.takhelet, fontWeight: 500 }}>הצעה: </span>
+                <span>{t.recommendation}</span>
+              </span>
+            )}
+          </span>
         );
       case "estimate":
         return <span style={{ color: muted }}>{fmtEstimate(t.estimate)}</span>;
-      case "thread":
-        return (
-          <span className="flex justify-center w-full">
-            <span className="rounded px-1.5 text-[11.5px]" title={`${t.threadDocs} מסמכים בשרשור הבקשה`}
-              style={{ backgroundColor: isDark ? "#232b42" : "#eef2f8", color: isDark ? dk.textMuted : c.iconGray }}>
-              {t.threadDocs}
-            </span>
-          </span>
-        );
       case "opened": return <span style={{ color: muted }}>{fmtDate(t.openedIso)}</span>;
       case "submitter": return <span className="truncate" style={{ color: muted }}>{t.submitter}</span>;
       case "notes": return <span className="truncate" style={{ color: muted }} title={t.notes}>{t.notes ?? "—"}</span>;
       case "handler": return <span className="truncate" style={{ color: muted }} title={t.handler}>{t.handler ?? "—"}</span>;
     }
-  };
-
-  const isExpanded = (id: string) => expanded.has(id);
-  const toggleExpand = (id: string) =>
-    setExpanded((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const open = (t: JudgeTask) => {
-    const doc = docById.get(t.docId);
-    if (doc) onOpenTask(t, doc);
   };
 
   const totalMinutes = filtered.reduce((s, t) => s + t.estimate, 0);
@@ -455,7 +463,7 @@ export default function TasksView({
         </span>
         <div className="flex-1" />
         {onCloseTask && (
-          <button onClick={onCloseTask} title="סגירת המשימות" className="size-7 flex items-center justify-center rounded hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }}>
+          <button onClick={onCloseTask} title="סגירת המסמך וחזרה לרשימה המלאה" className="size-7 flex items-center justify-center rounded hover:bg-black/5" style={{ color: isDark ? dk.textMuted : c.iconGray }}>
             <X size={16} />
           </button>
         )}
@@ -499,7 +507,7 @@ export default function TasksView({
         <div className="flex-1" />
         <div className="relative">
           <button
-            ref={colsBtnRef} onClick={() => setColsOpen((v) => !v)} title="התאמת עמודות"
+            onClick={() => setColsOpen((v) => !v)} title="התאמת עמודות"
             className="size-7 flex items-center justify-center rounded hover:bg-black/5"
             style={{ color: colsOpen ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
           >
@@ -548,14 +556,14 @@ export default function TasksView({
               <div key={k} className="min-w-0 flex items-center h-full relative">
                 {headerCell(k)}
                 {!narrow && (
-                <div
-                  onMouseDown={(e) => startResize(e, k)}
-                  className="absolute top-0 bottom-0 z-10 group/rz"
-                  style={{ insetInlineEnd: "-5px", width: "9px", cursor: "col-resize" }}
-                  title="גרירה לשינוי רוחב העמודה"
-                >
-                  <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineEnd: "4px", width: "2px", borderRadius: 1 }} />
-                </div>
+                  <div
+                    onMouseDown={(e) => startResize(e, k)}
+                    className="absolute top-0 bottom-0 z-10 group/rz"
+                    style={{ insetInlineEnd: "-5px", width: "9px", cursor: "col-resize" }}
+                    title="גרירה לשינוי רוחב העמודה"
+                  >
+                    <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineEnd: "4px", width: "2px", borderRadius: 1 }} />
+                  </div>
                 )}
               </div>
             ))}
@@ -580,14 +588,19 @@ export default function TasksView({
                   </button>
                 )}
                 {!isCollapsed && g.items.map((t) => {
-                  const isOpen = docById.get(t.docId)?.id === openDocId;
+                  // The row stays lit while the judge reads any document of the request, not only the leading one.
+                  const isOpen = activeTaskId ? t.id === activeTaskId : t.docId === openDocId;
+                  const threadOpen = openThreads.has(t.id);
+                  const thread = threadDocsFor(t, docs);
                   return (
                     <div key={t.id}>
                       <div
-                        className="grid items-center px-3 text-[12.5px] transition-colors"
+                        onClick={() => openTask(t)}
+                        title="פתיחת המסמך"
+                        className="grid items-center px-3 text-[12.5px] cursor-pointer transition-colors hover:bg-black/[0.02]"
                         style={{
                           gridTemplateColumns: template, columnGap: "10px",
-                          minHeight: bgWrap || isExpanded(t.id) ? "auto" : "38px",
+                          minHeight: bgWrap ? "auto" : "38px",
                           paddingTop: 6, paddingBottom: 6,
                           borderBottom: `1px solid ${isDark ? "#222a42" : "#f0f4fa"}`,
                           backgroundColor: isOpen ? (isDark ? "#1e2942" : "#eff6ff") : "transparent",
@@ -595,18 +608,15 @@ export default function TasksView({
                         }}
                       >
                         {visCols.map((k) => (
-                          <div key={k} className="min-w-0 flex items-start" style={{ alignItems: k === "background" ? "flex-start" : "center" }}>
-                            {cell(k, t, isOpen)}
+                          <div key={k} className="min-w-0 flex" style={{ alignItems: k === "background" && bgWrap ? "flex-start" : "center" }}>
+                            {cell(k, t, isOpen, threadOpen, thread.length)}
                           </div>
                         ))}
                       </div>
-                      {isExpanded(t.id) && (
-                        <TaskDetail
-                          task={t} isDark={isDark}
-                          showRec={showRec.has(t.id)}
-                          onToggleRec={() => setShowRec((p) => { const n = new Set(p); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; })}
-                          onOpen={() => open(t)}
-                          docName={docById.get(t.docId)?.name}
+                      {threadOpen && (
+                        <ThreadPanel
+                          task={t} docs={thread} isDark={isDark} openDocId={openDocId}
+                          onOpenDoc={onOpenDoc} onClose={() => toggleThread(t.id)}
                         />
                       )}
                     </div>
@@ -625,53 +635,47 @@ export default function TasksView({
   );
 }
 
-// ── The expanded row ───────────────────────────────────────────────────────
-// The full background, the recommendation (collapsed — the judge forms a view from the findings first), and the
-// actions that follow from this kind of request. Deliberately not a checklist: the checks live in the playbook and
-// shape what the paragraph says, they are not a form to read down.
-export function TaskDetail({ task, isDark, showRec, onToggleRec, onOpen, docName, compact }: {
-  task: JudgeTask; isDark: boolean; showRec: boolean; onToggleRec: () => void;
-  onOpen?: () => void; docName?: string; compact?: boolean;
+// ── The request's thread ───────────────────────────────────────────────────
+// The same idea as the documents table's process panel: a labelled card under the row listing the documents of the
+// thread in order (motion → response → decision), each one opening on click.
+function ThreadPanel({ task, docs, isDark, openDocId, onOpenDoc, onClose }: {
+  task: JudgeTask; docs: CaseDoc[]; isDark: boolean; openDocId?: string;
+  onOpenDoc: (doc: CaseDoc) => void; onClose: () => void;
 }) {
   const muted = isDark ? dk.textMuted : c.textGray;
   const text = isDark ? dk.text : c.text;
   return (
     <div
-      className={compact ? "px-3 py-2.5" : "px-3 py-3"}
+      className="px-3 py-2"
       style={{ backgroundColor: isDark ? "#171d2e" : "#fbfcfe", borderBottom: `1px solid ${isDark ? "#222a42" : "#eaf0f8"}` }}
       dir="rtl"
     >
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Sparkles size={13} style={{ color: c.takhelet }} />
-        <span className="text-[12px] font-medium" style={{ color: isDark ? dk.text : c.darkBlue }}>רקע</span>
+      <div className="flex items-center gap-1.5 mb-1.5 text-[12px]">
+        <Route size={13} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+        <span className="font-medium" style={{ color: isDark ? dk.text : c.darkBlue }}>{task.processTitle}</span>
+        <span style={{ color: muted }}>({docs.length} מסמכים)</span>
+        <div className="flex-1" />
+        <button onClick={onClose} title="סגירת התהליך" className="size-5 flex items-center justify-center rounded hover:bg-black/5" style={{ color: muted }}>
+          <X size={13} />
+        </button>
       </div>
-      <p className="text-[13px] leading-relaxed max-w-[900px]" style={{ color: text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-        {task.background}
-      </p>
-
-      {task.recommendation && (
-        <div className="mt-2.5">
-          <button onClick={onToggleRec} className="flex items-center gap-1 text-[12.5px] hover:opacity-80" style={{ color: c.primary }}>
-            <ChevronLeft size={13} className="transition-transform" style={{ transform: showRec ? "rotate(-90deg)" : "none" }} />
-            <span>{showRec ? "הסתרת ההצעה" : "הצעת המערכת"}</span>
+      <div className="rounded overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : "#e6ecf6"}` }}>
+        {docs.map((d, i) => (
+          <button
+            key={d.id}
+            onClick={(e) => { e.stopPropagation(); onOpenDoc(d); }}
+            className="flex items-center gap-2 w-full px-2.5 py-1.5 text-[12px] text-right hover:bg-black/[0.03] transition-colors"
+            style={{
+              borderTop: i === 0 ? "none" : `1px solid ${isDark ? "#222a42" : "#eef2f8"}`,
+              backgroundColor: d.id === openDocId ? (isDark ? "#1e2942" : "#eff6ff") : "transparent",
+            }}
+          >
+            <span style={{ color: muted, width: 58, flexShrink: 0 }}>{d.date}</span>
+            <span className="truncate flex-1 min-w-0" style={{ color: d.id === openDocId ? c.primary : text, fontWeight: d.id === openDocId ? 600 : 400 }}>{d.name}</span>
+            <span className="flex-shrink-0" style={{ color: muted }}>{d.submitter === "בית המשפט" ? "ביהמ״ש" : d.submitter}</span>
           </button>
-          {showRec && (
-            <p className="text-[13px] leading-relaxed mt-1.5 pr-4 max-w-[900px]"
-              style={{ color: text, borderInlineStart: "none", borderInlineEnd: `2px solid ${c.takhelet}`, paddingInlineEnd: "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-              {task.recommendation}
-            </p>
-          )}
-        </div>
-      )}
-
-      {onOpen && (
-        <div className="flex items-center gap-2 mt-3 text-[12.5px]">
-          <button onClick={onOpen} className="rounded px-2.5 h-7 hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            פתיחת המסמך
-          </button>
-          {docName && <span style={{ color: muted }}>{docName}</span>}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

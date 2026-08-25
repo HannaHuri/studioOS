@@ -50,6 +50,7 @@ export interface CaseDoc {
   nameOriginal?: string;    // the system's own name, kept the first time the user renames the display name
   summaryOriginal?: string; // the system's own summary, kept the first time the user rewrites it
   caseId?: string;       // which case this document belongs to
+  caseLabel?: string;    // case line printed on the mock page (tasks screen documents span ten cases, not one)
   file?: string;         // path to a real PDF under /public — shown instead of the mock pages when present
   processId?: number;    // groups documents that belong to the same thread/topic (motion → response → decision)
   processIds?: number[]; // a document that belongs to several processes (appears in each thread/folder); overrides processId

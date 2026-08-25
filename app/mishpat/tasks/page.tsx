@@ -19,7 +19,7 @@ const PdfViewer = dynamic(() => import("./pdf-viewer"), { ssr: false });
 // Design tokens and the document shape live in ./shared, so the tasks screen can use the same palette and
 // open a real document without importing this page (which would be circular).
 import { c, dk, type DocBucket, type CaseDoc } from "./shared";
-import TasksView, { TaskDetail } from "./tasks-view";
+import TasksView from "./tasks-view";
 import { TASKS, type JudgeTask } from "./tasks-data";
 
 function Logo() {
@@ -1355,7 +1355,7 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
                   <div className="text-center mb-7">
                     <div className="text-[12px]" style={{ color: "#5a6478" }}>בית המשפט המחוזי</div>
                     <div className="text-[17px] font-bold mt-2" style={{ color: "#1a2a4a" }}>{doc.name}</div>
-                    <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>ת״א 12345-67-89 · {PARTY_NAMES.c1?.["תובע"]} נ׳ {PARTY_NAMES.c1?.["נתבע"]}</div>
+                    <div className="text-[12px] mt-1.5" style={{ color: "#5a6478" }}>{doc.caseLabel ?? `ת״א 12345-67-89 · ${PARTY_NAMES.c1?.["תובע"]} נ׳ ${PARTY_NAMES.c1?.["נתבע"]}`}</div>
                     <div className="mt-4" style={{ borderTop: "1px solid #dfe4ec" }} />
                   </div>
                 )}
@@ -2899,8 +2899,6 @@ export default function MishpatPage() {
   const [view, setView] = useState<"chat" | "tasks">("chat");
   const [activeTask, setActiveTask] = useState<JudgeTask | null>(null);
   const [tasksWidth, setTasksWidth] = useState(640); // width of the tasks table once a document is open beside it
-  const [taskRecOpen, setTaskRecOpen] = useState(false);
-  const [taskStripOpen, setTaskStripOpen] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
@@ -3082,28 +3080,11 @@ export default function MishpatPage() {
 
         {/* ── Tasks screen ─────────────────────────────────────────────────
             No document open → the table takes the whole width (this is a screen, not a panel).
-            A document open → the document is pinned left with the task's background as a strip above it, and the
-            table keeps its place on the right so the judge can move to the next task without closing anything. */}
+            A document open → the document takes the whole left side (the judge came here to read it), and the table
+            keeps its place on the right so they can move to the next task without closing anything. */}
         {tasksMode && openDoc && (
-          <div className="flex-1 min-w-0 flex flex-col">
-            {activeTask && (
-              <div className="flex-shrink-0" style={{ backgroundColor: isDark ? "#171d2e" : "#fbfcfe", borderBottom: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }} dir="rtl">
-                <div className="flex items-center gap-2 px-3 pt-2">
-                  <button onClick={() => setTaskStripOpen((v) => !v)} className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80" style={{ color: isDark ? dk.text : c.darkBlue }}>
-                    <ChevronDown size={13} style={{ transform: taskStripOpen ? "none" : "rotate(90deg)", transition: "transform .15s" }} />
-                    <Sparkles size={13} style={{ color: c.takhelet }} />
-                    <span>רקע</span>
-                  </button>
-                  <span className="text-[12px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>{activeTask.subject}</span>
-                </div>
-                {taskStripOpen
-                  ? <TaskDetail task={activeTask} isDark={isDark} showRec={taskRecOpen} onToggleRec={() => setTaskRecOpen((v) => !v)} compact />
-                  : <div className="h-2" />}
-              </div>
-            )}
-            <div className="flex-1 min-h-0 flex">
-              <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={closeDoc} fill />
-            </div>
+          <div className="flex-1 min-w-0 flex">
+            <DocViewer doc={openDoc} isDark={isDark} width={viewerWidth} onWidthChange={setViewerWidth} onClose={closeDoc} fill />
           </div>
         )}
         {tasksMode && (
@@ -3115,7 +3096,11 @@ export default function MishpatPage() {
               isDark={isDark}
               docs={docs}
               openDocId={openDoc?.id}
-              onOpenTask={(task, doc) => { setActiveTask(task); setOpenDoc(doc); setTaskStripOpen(true); setTaskRecOpen(false); setScopeMode("doc"); setChatCollapsed(true); }}
+              activeTaskId={activeTask?.id}
+              onOpenTask={(task, doc) => { setActiveTask(task); setOpenDoc(doc); setScopeMode("doc"); setChatCollapsed(true); }}
+              // A document opened from inside a thread: show it, but leave the active task alone — the judge is
+              // still working the same request, just reading another paper in it.
+              onOpenDoc={(doc) => { setOpenDoc(doc); setScopeMode("doc"); setChatCollapsed(true); }}
               onCloseTask={openDoc ? closeTask : undefined}
             />
             {/* Split handle between the document and the table — same grip language as the documents panel */}
