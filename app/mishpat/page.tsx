@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
@@ -1515,6 +1515,20 @@ function ExampleModal({
   const [active, setActive] = useState(0);
   const [renaming, setRenaming] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<number | null>(null);
+  const [showRule, setShowRule] = useState(false);
+  const ruleRef = useRef<HTMLDivElement>(null);
+  const ruleBtnRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!showRule) return;
+    // containment test, not a blind close — see the ⋮ menu: mousedown precedes click
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ruleRef.current?.contains(t) || ruleBtnRef.current?.contains(t)) return;
+      setShowRule(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [showRule]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1583,9 +1597,6 @@ function ExampleModal({
             <div className="text-[20px]" style={{ color: titleCol }}>
               {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
             </div>
-            <div className="text-[12.5px] mt-1.5" style={{ color: titleCol }}>
-              בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
-            </div>
           </div>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
@@ -1607,22 +1618,26 @@ function ExampleModal({
         <div className="px-6 flex items-stretch gap-0.5" style={{ height: "38px" }}>
           {texts.map((t, i) => {
             const on = i === active;
+            // a hairline between neighbours, dropped either side of the selected tab
+            const divider = i > 0 && active !== i && active !== i - 1;
             return (
+              <Fragment key={t.id}>
+              {i > 0 && (
+                <div className="flex-none self-center" style={{ width: "1px", height: "18px", backgroundColor: divider ? line : "transparent" }} />
+              )}
               <div
-                key={t.id}
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
                   backgroundColor: on ? tabOn : "transparent",
                   // longhands only — mixing the `border` shorthand with `borderBottom` let the
                   // shorthand win and the bottom edge came back, doubling the field's own border
-                  borderTop: on ? "none" : `1px solid ${line}`,
-                  borderInlineStart: on ? "none" : `1px solid ${line}`,
-                  borderInlineEnd: on ? "none" : `1px solid ${line}`,
-                  borderBottom: "none",
+                  borderTop: "none",
+                  borderInlineStart: "none",
+                  borderInlineEnd: "none",
+                  borderBottom: on ? `2px solid ${c.primary}` : "none",
                   borderRadius: "4px 4px 0 0",
                   marginBottom: on ? "-1px" : 0,
-                  paddingBottom: on ? "1px" : 0,
                   color: on ? textCol : subCol,
                   fontWeight: on ? 500 : 400,
                 }}
@@ -1661,6 +1676,7 @@ function ExampleModal({
                   </>
                 )}
               </div>
+              </Fragment>
             );
           })}
 
@@ -1704,15 +1720,38 @@ function ExampleModal({
         <div>
           <div className="flex items-start px-6 pt-0 pb-5 gap-3">
             <div className="flex-none text-right" style={{ width: "300px" }}>
-              <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
-                {over ? (
-                  <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
-                ) : (
-                  <>
-                    <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
-                    {" · "}
-                    <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
-                  </>
+              <div className="text-[13px] mb-1.5 whitespace-nowrap flex items-center gap-1.5 relative" style={{ color: over ? RED : subCol }}>
+                <span>
+                  {over ? (
+                    <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
+                  ) : (
+                    <>
+                      <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
+                      {" · "}
+                      <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
+                    </>
+                  )}
+                </span>
+                <button
+                  ref={ruleBtnRef}
+                  onClick={() => setShowRule((v) => !v)}
+                  className="flex-none transition-opacity hover:opacity-100"
+                  style={{ color: subCol, opacity: showRule ? 1 : 0.6 }}
+                  title="על המכסה"
+                ><Info size={14} /></button>
+
+                {showRule && (
+                  <div
+                    ref={ruleRef}
+                    className="absolute rounded-md shadow-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+                    style={{
+                      bottom: "26px", insetInlineEnd: 0, width: "270px", zIndex: 5,
+                      backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`,
+                      color: subCol, fontWeight: 400, whiteSpace: "normal", textAlign: "right",
+                    }}
+                  >
+                    בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
+                  </div>
                 )}
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
