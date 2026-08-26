@@ -1537,10 +1537,8 @@ function ExampleModal({
   // Tabs: boxed and adjacent as in the Figma, sitting on top of the field. The active one
   // combines Vibe's blue underline with a תכלת fill. Hover is Vibe's --primary-background-hover-color.
   const titleCol = isDark ? dk.textMuted : c.textLight;
-  // Selected tab = תכלת fill, no outline, welded to the field. Unselected = outlined on
-  // top/left/right only, transparent inside: a grey fill read as disabled, and the missing
-  // bottom edge keeps the field's own border from doubling up under each tab.
-  const tabOn = isDark ? "#27406b" : c.badgeBg;
+  // Tabs carry no fill in either state — the selected one is marked by Vibe's blue underline
+  // alone, and a hairline separates neighbours.
   const hoverBg = isDark ? "rgba(200,214,229,0.08)" : c.hoverBg;
 
   const counts = texts.map((t) => countWords(t.body));
@@ -1618,18 +1616,16 @@ function ExampleModal({
         <div className="px-6 flex items-stretch gap-0.5" style={{ height: "38px" }}>
           {texts.map((t, i) => {
             const on = i === active;
-            // a hairline between neighbours, dropped either side of the selected tab
-            const divider = i > 0 && active !== i && active !== i - 1;
             return (
               <Fragment key={t.id}>
               {i > 0 && (
-                <div className="flex-none self-center" style={{ width: "1px", height: "18px", backgroundColor: divider ? line : "transparent" }} />
+                <div className="flex-none self-center" style={{ width: "1px", height: "18px", backgroundColor: line }} />
               )}
               <div
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
-                  backgroundColor: on ? tabOn : "transparent",
+                  backgroundColor: "transparent",
                   // longhands only — mixing the `border` shorthand with `borderBottom` let the
                   // shorthand win and the bottom edge came back, doubling the field's own border
                   borderTop: "none",
@@ -1732,27 +1728,30 @@ function ExampleModal({
                     </>
                   )}
                 </span>
-                <button
-                  ref={ruleBtnRef}
-                  onClick={() => setShowRule((v) => !v)}
-                  className="flex-none transition-opacity hover:opacity-100"
-                  style={{ color: subCol, opacity: showRule ? 1 : 0.6 }}
-                  title="על המכסה"
-                ><Info size={14} /></button>
+                <span className="relative flex-none flex items-center">
+                  <button
+                    ref={ruleBtnRef}
+                    onClick={() => setShowRule((v) => !v)}
+                    className="flex items-center justify-center transition-opacity hover:opacity-100"
+                    style={{ color: subCol, opacity: showRule ? 1 : 0.6, lineHeight: 0 }}
+                    title="על המכסה"
+                  ><Info size={14} /></button>
 
-                {showRule && (
-                  <div
-                    ref={ruleRef}
-                    className="absolute rounded-md shadow-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
-                    style={{
-                      bottom: "26px", insetInlineEnd: 0, width: "270px", zIndex: 5,
-                      backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`,
-                      color: subCol, fontWeight: 400, whiteSpace: "normal", textAlign: "right",
-                    }}
-                  >
-                    בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
-                  </div>
-                )}
+                  {showRule && (
+                    <div
+                      ref={ruleRef}
+                      className="absolute shadow-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+                      style={{
+                        insetInlineStart: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)",
+                        width: "270px", zIndex: 5, borderRadius: "4px",
+                        backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`,
+                        color: subCol, fontWeight: 400, whiteSpace: "normal", textAlign: "right",
+                      }}
+                    >
+                      בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
+                    </div>
+                  )}
+                </span>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
                 <div
