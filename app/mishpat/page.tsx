@@ -1544,9 +1544,13 @@ function ExampleModal({
 
   const counts = texts.map((t) => countWords(t.body));
   const total = counts.reduce((a, b) => a + b, 0);
+  const textsUsed = counts.filter((n) => n > 0).length;
   const over = total > MAX_WORDS;
   const atTextLimit = texts.length >= MAX_TEXTS;
 
+  // the name is only "missing" once there is a text to save — otherwise a freshly opened
+  // editor would flag it before the user has done anything
+  const nameMissing = !name.trim() && total > 0;
   const saveBlocked = !name.trim() ? "יש להזין שם לדוגמה."
     : total === 0 ? "יש להזין טקסט בלפחות אחד המסכים."
     : over ? `לא ניתן לשמור בחריגה מהמכסה. יש להסיר ${fmtNum(total - MAX_WORDS)} מילים.`
@@ -1593,7 +1597,7 @@ function ExampleModal({
         <div className="flex items-start px-6 pt-5 pb-4">
           <div className="flex-1 min-w-0">
             {/* pale title, as in the Figma — the work area carries the emphasis, not the chrome */}
-            <div className="text-[20px]" style={{ color: titleCol }}>
+            <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>
               {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
             </div>
           </div>
@@ -1608,8 +1612,8 @@ function ExampleModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="הזינו שם לדוגמה"
-            className="w-full rounded-md px-3 py-2.5 text-[16px] outline-none transition-colors focus:border-[#0073ea]"
-            style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
+            className="w-full rounded-md px-3 py-2.5 text-[16px] outline-none transition-colors"
+            style={{ border: `1px solid ${nameMissing ? RED : line}`, backgroundColor: surface, color: textCol }}
           />
         </div>
 
@@ -1620,7 +1624,7 @@ function ExampleModal({
             return (
               <Fragment key={t.id}>
               {i > 0 && (
-                <div className="flex-none self-end" style={{ width: "1px", height: "30px", marginBottom: "1px", backgroundColor: line }} />
+                <div className="flex-none self-end" style={{ width: "1px", height: "30px", marginBottom: "-1px", backgroundColor: line }} />
               )}
               <div
                 onClick={() => setActive(i)}
@@ -1726,7 +1730,9 @@ function ExampleModal({
                   ) : (
                     <>
                       {/* what the user has entered reads dark; the ceiling stays muted */}
-                      <span style={{ color: textCol, fontWeight: 700 }}>{texts.length}</span> מתוך {MAX_TEXTS} טקסטים
+                      {/* counts texts that actually hold something — an empty tab is not a text,
+                          and empty tabs are dropped on save anyway */}
+                      <span style={{ color: textCol, fontWeight: 700 }}>{textsUsed}</span> מתוך {MAX_TEXTS} טקסטים
                       {" · "}
                       <span style={{ color: textCol, fontWeight: 700 }}>{fmtNum(total)}</span> מתוך {fmtNum(MAX_WORDS)} מילים
                     </>
