@@ -624,7 +624,7 @@ const AGENT_STEPS: {
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKey: number }) {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse }: { isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void }) {
   const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -809,6 +809,21 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
     return (
+      <div className="flex flex-col gap-2">
+      {/* Example in use — set from the examples panel's ⋮ menu */}
+      {inUseName && (
+        <div className="flex justify-center" dir="rtl">
+          <div
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px]"
+            style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            <button onClick={onClearInUse} className="opacity-60 hover:opacity-100 transition-opacity" title="הפסקת השימוש בדוגמה">
+              <X size={13} />
+            </button>
+            <span>דוגמה בשימוש: {inUseName}</span>
+          </div>
+        </div>
+      )}
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -913,6 +928,7 @@ function ChatArea({ isDark, conversationKey }: { isDark: boolean; conversationKe
             </button>
           </div>
         </div>
+      </div>
       </div>
     );
   }
@@ -1345,24 +1361,36 @@ const SEED_EXAMPLES: Example[] = [
 ];
 
 function ExamplesPanel({
-  isDark, examples, onAdd, onEdit, onDelete,
+  isDark, examples, onAdd, onUse, onEdit, onDelete,
 }: {
   isDark: boolean;
   examples: Example[];
   onAdd: () => void;
+  onUse: (ex: Example) => void;
   onEdit: (ex: Example) => void;
   onDelete: (ex: Example) => void;
 }) {
-  const [menuFor, setMenuFor] = useState<string | null>(null);
+  // The ⋮ menu is positioned fixed (anchored to the button) so it can open to the LEFT of the
+  // dots and hang outside the panel without being clipped by its scroll container.
+  const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("resize", close);
+    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", close); };
+  }, [menu]);
+
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : "#eef2f7";
+  const openMenu = examples.find((e) => e.id === menu?.id);
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl" onClick={() => setMenuFor(null)}>
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl">
       <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${line}` }}>
-        <Paperclip size={18} style={{ color: c.primary }} />
+        <Paperclip size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
         <div className="flex-1" />
         <button
@@ -1399,36 +1427,52 @@ function ExamplesPanel({
                   <div className="text-[12px] mt-0.5" style={{ color: subCol }}>עריכה אחרונה {ex.edited}</div>
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === ex.id ? null : ex.id); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setMenu(menu?.id === ex.id ? null : { id: ex.id, top: r.bottom + 4, right: window.innerWidth - r.right });
+                  }}
                   className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
                   style={{ color: isDark ? dk.textMuted : c.iconGray }}
                   title="פעולות"
                 >
                   <MoreHorizontal size={16} />
                 </button>
-                {menuFor === ex.id && (
-                  <div
-                    className="absolute z-20 rounded-md overflow-hidden shadow-lg"
-                    style={{ top: "36px", left: "8px", backgroundColor: bg, border: `1px solid ${isDark ? dk.border : c.border}`, minWidth: "120px" }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      className="w-full text-right px-3 py-2 text-[13px] hover:bg-black/5 transition-colors"
-                      style={{ color: titleCol }}
-                      onClick={() => { setMenuFor(null); onEdit(ex); }}
-                    >עריכה</button>
-                    <button
-                      className="w-full text-right px-3 py-2 text-[13px] hover:bg-black/5 transition-colors"
-                      style={{ color: RED, borderTop: `1px solid ${line}` }}
-                      onClick={() => { setMenuFor(null); onDelete(ex); }}
-                    >מחיקה</button>
-                  </div>
-                )}
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* ⋮ menu — opens to the left of the dots; icon leads each row (right side, RTL) */}
+      {menu && openMenu && (
+        <div
+          dir="rtl"
+          onMouseDown={(e) => e.stopPropagation()}
+          className="rounded-md overflow-hidden shadow-lg"
+          style={{
+            position: "fixed", top: menu.top, right: menu.right, zIndex: 55, minWidth: "168px",
+            backgroundColor: bg, border: `1px solid ${isDark ? dk.border : c.border}`,
+            fontFamily: "Noto Sans Hebrew, sans-serif",
+          }}
+        >
+          {([
+            { label: "שימוש בדוגמה", Icon: Check, act: () => onUse(openMenu), col: titleCol },
+            { label: "עריכה", Icon: Pencil, act: () => onEdit(openMenu), col: titleCol },
+            { label: "מחיקה", Icon: Trash2, act: () => onDelete(openMenu), col: RED },
+          ] as const).map(({ label, Icon, act, col }, i) => (
+            <button
+              key={label}
+              onClick={() => { setMenu(null); act(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors"
+              style={{ color: col, borderTop: i ? `1px solid ${line}` : undefined }}
+            >
+              <Icon size={15} className="flex-none" />
+              <span className="flex-1 text-right">{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1447,6 +1491,7 @@ function ExampleModal({
   );
   const [active, setActive] = useState(0);
   const [renaming, setRenaming] = useState<number | null>(null);
+  const [pendingText, setPendingText] = useState<number | null>(null);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1456,7 +1501,6 @@ function ExampleModal({
   const counts = texts.map((t) => countWords(t.body));
   const total = counts.reduce((a, b) => a + b, 0);
   const over = total > MAX_WORDS;
-  const pct = Math.min(100, (total / MAX_WORDS) * 100);
   const atTextLimit = texts.length >= MAX_TEXTS;
 
   const saveBlocked = !name.trim() ? "יש להזין שם לדוגמה."
@@ -1517,14 +1561,14 @@ function ExampleModal({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="הזינו שם דוגמה"
-            className="w-full rounded-md px-3 py-2.5 text-[14px] outline-none transition-colors focus:border-[#0073ea]"
+            placeholder="הזינו שם לדוגמה"
+            className="w-full rounded-md px-3 py-2.5 text-[16px] outline-none transition-colors focus:border-[#0073ea]"
             style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
           />
         </div>
 
-        {/* tabs — narrowed to fit five without scrolling */}
-        <div className="px-6 pb-2.5 flex items-center gap-1.5">
+        {/* tabs + the quota counter — narrowed so five fit without scrolling */}
+        <div className="px-6 pb-4 flex items-center gap-1.5">
           {texts.map((t, i) => {
             const on = i === active;
             return (
@@ -1558,7 +1602,7 @@ function ExampleModal({
                   title="שינוי שם"
                 ><Pencil size={13} /></button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); removeText(i); }}
+                  onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
                   className="flex-none opacity-60 hover:opacity-100 transition-opacity"
                   title="מחיקת טקסט"
                 ><Trash2 size={13} /></button>
@@ -1574,10 +1618,24 @@ function ExampleModal({
           >
             <Plus size={15} />
           </button>
+
+          <div className="flex-1" />
+
+          <div className="flex-none text-[13px] whitespace-nowrap" style={{ color: over ? RED : subCol }}>
+            {over ? (
+              <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
+            ) : (
+              <>
+                <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
+                {" · "}
+                <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
+              </>
+            )}
+          </div>
         </div>
 
-        {/* per-text count */}
-        <div className="px-6 pb-1.5 text-[12px]" style={{ color: subCol }}>
+        {/* per-text count — sits tight against the field below it */}
+        <div className="px-6 pb-1 text-[12px]" style={{ color: subCol }}>
           {counts[active] > 0 ? `${fmtNum(counts[active])} מילים בטקסט הזה` : "יש להדביק כאן את הטקסט"}
         </div>
 
@@ -1591,23 +1649,9 @@ function ExampleModal({
           />
         </div>
 
-        {/* footer — capacity bar across the top edge, then counter + buttons */}
+        {/* footer — buttons only; the quota counter lives up in the tab row */}
         <div style={{ borderTop: `1px solid ${line}` }}>
-          <div className="h-1" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
-            <div className="h-full transition-all duration-200" style={{ width: `${pct}%`, backgroundColor: over ? RED : c.primary }} />
-          </div>
-          <div className="flex items-center px-6 py-4 gap-4">
-            <div className="text-[13px]" style={{ color: over ? RED : subCol }}>
-              {over ? (
-                <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
-              ) : (
-                <>
-                  <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
-                  {" · "}
-                  <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
-                </>
-              )}
-            </div>
+          <div className="flex items-center px-6 py-4 gap-2">
             <div className="flex-1" />
             <button
               onClick={onClose}
@@ -1624,6 +1668,15 @@ function ExampleModal({
           </div>
         </div>
       </div>
+
+      {pendingText !== null && (
+        <ConfirmDelete
+          isDark={isDark}
+          name={texts[pendingText]?.title ?? ""}
+          onConfirm={() => { removeText(pendingText); setPendingText(null); }}
+          onClose={() => setPendingText(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1661,6 +1714,7 @@ export default function MishpatPage() {
   const [examples, setExamples] = useState<Example[]>(SEED_EXAMPLES);
   const [editing, setEditing] = useState<{ ex: Example | null } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Example | null>(null);
+  const [inUse, setInUse] = useState<Example | null>(null);
   const [toast, setToast] = useState("");
   useEffect(() => {
     if (!toast) return;
@@ -1752,7 +1806,7 @@ export default function MishpatPage() {
 
         {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode ── */}
         <div className="flex-1 flex min-w-0 relative" style={{ paddingBottom: FOOTER_HEIGHT }}>
-          <ChatArea isDark={isDark} conversationKey={convKey} />
+          <ChatArea isDark={isDark} conversationKey={convKey} inUseName={inUse?.name ?? null} onClearInUse={() => setInUse(null)} />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
           {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen) && (
@@ -1790,6 +1844,7 @@ export default function MishpatPage() {
                 isDark={isDark}
                 examples={examples}
                 onAdd={() => setEditing({ ex: null })}
+                onUse={(ex) => { setInUse(ex); setToast(`הדוגמה "${ex.name}" בשימוש`); }}
                 onEdit={(ex) => setEditing({ ex })}
                 onDelete={(ex) => setPendingDelete(ex)}
               />
@@ -1835,6 +1890,7 @@ export default function MishpatPage() {
               isDark={isDark}
               examples={examples}
               onAdd={() => setEditing({ ex: null })}
+              onUse={(ex) => { setInUse(ex); setToast(`הדוגמה "${ex.name}" בשימוש`); }}
               onEdit={(ex) => setEditing({ ex })}
               onDelete={(ex) => setPendingDelete(ex)}
             />
@@ -1908,6 +1964,7 @@ export default function MishpatPage() {
           name={pendingDelete.name}
           onConfirm={() => {
             setExamples((prev) => prev.filter((p) => p.id !== pendingDelete.id));
+            setInUse((u) => (u?.id === pendingDelete.id ? null : u));
             setPendingDelete(null);
           }}
           onClose={() => setPendingDelete(null)}
