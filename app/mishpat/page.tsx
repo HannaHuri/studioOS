@@ -1519,10 +1519,9 @@ function ExampleModal({
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const line = isDark ? dk.border : c.inputBorder;
-  // Vibe tab tokens: a 2px rail under every tab, the accent under the active one,
-  // and a soft rounded hover — no boxes. (--ui-background-color / --primary-color /
-  // --primary-background-hover-color)
-  const rail = isDark ? dk.border : c.inputBorder;
+  // Tabs: boxed and adjacent as in the Figma, sitting on top of the field. The active one
+  // combines Vibe's blue underline with a תכלת fill. Hover is Vibe's --primary-background-hover-color.
+  const tabTint = isDark ? "#243354" : "#e9f1fd";
   const hoverBg = isDark ? "rgba(200,214,229,0.08)" : "rgba(103,104,121,0.1)";
 
   const counts = texts.map((t) => countWords(t.body));
@@ -1573,15 +1572,11 @@ function ExampleModal({
         }}
       >
         {/* header */}
-        <div className="flex items-start px-6 pt-5 pb-4">
-          <div className="flex-1 min-w-0">
-            <div className="text-[20px]" style={{ color: textCol }}>
-              {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
-            </div>
-            <div className="text-[13px] mt-1" style={{ color: subCol }}>
-              בכל דוגמה ניתן להדביק עד {MAX_TEXTS} טקסטים, בהיקף כולל של {fmtNum(MAX_WORDS)} מילים.
-            </div>
-          </div>
+        <div className="flex items-center px-6 pt-5 pb-4">
+          <span className="text-[20px]" style={{ color: textCol }}>
+            {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
+          </span>
+          <div className="flex-1" />
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
@@ -1607,12 +1602,19 @@ function ExampleModal({
                 key={t.id}
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer"
-                style={{ borderBottom: `2px solid ${on ? c.primary : rail}`, transition: "border-color 150ms" }}
+                style={{
+                  border: `1px solid ${line}`,
+                  borderBottom: on ? `2px solid ${c.primary}` : `1px solid ${line}`,
+                  borderRadius: "4px 4px 0 0",
+                  backgroundColor: on ? tabTint : "transparent",
+                  marginInlineStart: i > 0 ? "-1px" : 0,
+                  transition: "background-color 150ms, border-color 150ms",
+                }}
               >
                 <div
-                  className="h-full flex items-center gap-1.5 px-3 rounded transition-colors"
+                  className="h-full flex items-center gap-1.5 px-3 transition-colors"
                   style={{ color: textCol }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverBg)}
+                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   {renaming === i ? (
@@ -1646,12 +1648,12 @@ function ExampleModal({
             );
           })}
 
-          <div className="flex-none flex items-center px-1" style={{ borderBottom: `2px solid ${rail}` }}>
+          <div className="flex-none flex items-center px-1.5">
             <button
               onClick={addText}
               disabled={atTextLimit}
               className="size-7 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed"
-              style={{ color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
+              style={{ border: `1px solid ${line}`, color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
               onMouseEnter={(e) => { if (!atTextLimit) e.currentTarget.style.backgroundColor = hoverBg; }}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת טקסט"}
@@ -1671,10 +1673,7 @@ function ExampleModal({
             onChange={(e) => setBody(active, e.target.value)}
             placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
             className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
-            style={{
-              border: `1px solid ${line}`, borderTop: "none", borderRadius: 0,
-              backgroundColor: surface, color: textCol,
-            }}
+            style={{ border: `1px solid ${line}`, borderRadius: 0, backgroundColor: surface, color: textCol }}
           />
         </div>
 
@@ -1686,7 +1685,7 @@ function ExampleModal({
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
           <div className="flex items-start px-6 pt-0 pb-5 gap-3">
-            <div className="flex-none text-right" style={{ width: "268px" }}>
+            <div className="flex-none text-right" style={{ width: "320px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
                   <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
@@ -1703,6 +1702,9 @@ function ExampleModal({
                   className="h-full rounded-full transition-all duration-200"
                   style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : c.primary }}
                 />
+              </div>
+              <div className="text-[12px] mt-2 leading-snug" style={{ color: subCol }}>
+                בכל דוגמה ניתן להזין עד חמישה טקסטים בהיקף כולל של 50 אלף מילים.
               </div>
             </div>
 
