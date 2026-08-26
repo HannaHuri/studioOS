@@ -1619,7 +1619,7 @@ function ExampleModal({
             return (
               <Fragment key={t.id}>
               {i > 0 && (
-                <div className="flex-none self-center" style={{ width: "1px", height: "18px", backgroundColor: line }} />
+                <div className="flex-none self-stretch" style={{ width: "1px", backgroundColor: line }} />
               )}
               <div
                 onClick={() => setActive(i)}
@@ -1722,9 +1722,10 @@ function ExampleModal({
                     <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
                   ) : (
                     <>
-                      <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
+                      {/* what the user has entered reads dark; the ceiling stays muted */}
+                      <span style={{ color: textCol }}>{texts.length}</span> מתוך {MAX_TEXTS} טקסטים
                       {" · "}
-                      <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
+                      <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך {fmtNum(MAX_WORDS)} מילים
                     </>
                   )}
                 </span>
@@ -1742,7 +1743,8 @@ function ExampleModal({
                       ref={ruleRef}
                       className="absolute shadow-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
                       style={{
-                        insetInlineStart: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)",
+                        // the icon lands about three quarters down the popover, not at its middle
+                        insetInlineStart: "calc(100% + 8px)", top: "50%", transform: "translateY(-75%)",
                         width: "270px", zIndex: 5, borderRadius: "4px",
                         backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`,
                         color: subCol, fontWeight: 400, whiteSpace: "normal", textAlign: "right",
