@@ -23,6 +23,18 @@ function ListSortDescendingIcon({ size = 24, strokeWidth = 2, style }: { size?: 
   );
 }
 
+// "שימוש בדוגמה" — a boxed return arrow (apply/insert). Not in lucide as a single glyph,
+// so it's hand-drawn here to match the icon in the design.
+function UseExampleIcon({ size = 24, style, className }: { size?: number; style?: React.CSSProperties; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="3.5" />
+      <path d="M16 8.5v3a1.5 1.5 0 0 1-1.5 1.5H9" />
+      <path d="m11 11-2 2 2 2" />
+    </svg>
+  );
+}
+
 // ── Design tokens ──────────────────────────────────────────────────────────
 const FOOTER_HEIGHT = 90; // page-level disclaimer footer — 3 lines at 14px + 20px bottom padding
 
@@ -1290,9 +1302,9 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl">
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
       <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}>
-        <Clock size={18} style={{ color: c.primary }} />
+        <Clock size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
       </div>
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
@@ -1373,12 +1385,22 @@ function ExamplesPanel({
   // The ⋮ menu is positioned fixed (anchored to the button) so it can open to the LEFT of the
   // dots and hang outside the panel without being clipped by its scroll container.
   const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!menu) return;
-    const close = () => setMenu(null);
+    // Close on an outside press only. Testing containment (rather than relying on
+    // stopPropagation) matters: mousedown fires before click, so closing blindly here
+    // unmounts the item and its click never lands — which is why the menu's own
+    // עריכה/מחיקה did nothing.
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (menuRef.current?.contains(t as Node)) return;
+      if (t instanceof Element && t.closest("[data-ex-menu-btn]")) return;
+      setMenu(null);
+    };
     document.addEventListener("mousedown", close);
-    window.addEventListener("resize", close);
-    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", close); };
+    window.addEventListener("resize", close as unknown as EventListener);
+    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", close as unknown as EventListener); };
   }, [menu]);
 
   const bg = isDark ? dk.surface : "white";
@@ -1388,7 +1410,7 @@ function ExamplesPanel({
   const openMenu = examples.find((e) => e.id === menu?.id);
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl">
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
       <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${line}` }}>
         <Paperclip size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
@@ -1422,12 +1444,12 @@ function ExamplesPanel({
                 className="relative rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03] flex items-start gap-2"
                 style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
               >
-                <button className="flex-1 min-w-0 text-right" onClick={() => onEdit(ex)}>
+                <button className="flex-1 min-w-0 text-right" onClick={() => onUse(ex)} title="שימוש בדוגמה">
                   <div className="text-[14px] truncate" style={{ color: titleCol }}>{ex.name}</div>
                   <div className="text-[12px] mt-0.5" style={{ color: subCol }}>עריכה אחרונה {ex.edited}</div>
                 </button>
                 <button
-                  onMouseDown={(e) => e.stopPropagation()}
+                  data-ex-menu-btn
                   onClick={(e) => {
                     const r = e.currentTarget.getBoundingClientRect();
                     setMenu(menu?.id === ex.id ? null : { id: ex.id, top: r.bottom + 4, right: window.innerWidth - r.right });
@@ -1448,7 +1470,7 @@ function ExamplesPanel({
       {menu && openMenu && (
         <div
           dir="rtl"
-          onMouseDown={(e) => e.stopPropagation()}
+          ref={menuRef}
           className="rounded-md overflow-hidden shadow-lg"
           style={{
             position: "fixed", top: menu.top, right: menu.right, zIndex: 55, minWidth: "168px",
@@ -1457,7 +1479,7 @@ function ExamplesPanel({
           }}
         >
           {([
-            { label: "שימוש בדוגמה", Icon: Check, act: () => onUse(openMenu), col: titleCol },
+            { label: "שימוש בדוגמה", Icon: UseExampleIcon, act: () => onUse(openMenu), col: titleCol },
             { label: "עריכה", Icon: Pencil, act: () => onEdit(openMenu), col: titleCol },
             { label: "מחיקה", Icon: Trash2, act: () => onDelete(openMenu), col: RED },
           ] as const).map(({ label, Icon, act, col }, i) => (
@@ -1567,8 +1589,8 @@ function ExampleModal({
           />
         </div>
 
-        {/* tabs + the quota counter — narrowed so five fit without scrolling */}
-        <div className="px-6 pb-4 flex items-center gap-1.5">
+        {/* tabs — narrowed so five fit without scrolling */}
+        <div className="px-6 pb-2 flex items-center gap-1.5">
           {texts.map((t, i) => {
             const on = i === active;
             return (
@@ -1635,13 +1657,13 @@ function ExampleModal({
           />
         </div>
 
-        {/* footer — the quota counter and its bar sit next to the buttons */}
-        <div style={{ borderTop: `1px solid ${line}` }}>
+        {/* footer — the quota counter and its bar sit next to the buttons, no rule above them */}
+        <div>
           <div className="flex items-center px-6 py-4 gap-3">
             <div className="flex-1" />
 
-            <div className="flex-none" style={{ width: "268px" }}>
-              <div className="text-[13px] mb-1.5 whitespace-nowrap" style={{ color: over ? RED : subCol }}>
+            <div className="flex-none text-right" style={{ width: "268px" }}>
+              <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
                   <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
                 ) : (
@@ -1679,6 +1701,7 @@ function ExampleModal({
       {pendingText !== null && (
         <ConfirmDelete
           isDark={isDark}
+          kind="טקסט"
           name={texts[pendingText]?.title ?? ""}
           onConfirm={() => { removeText(pendingText); setPendingText(null); }}
           onClose={() => setPendingText(null)}
@@ -1688,21 +1711,25 @@ function ExampleModal({
   );
 }
 
-function ConfirmDelete({ isDark, name, onConfirm, onClose }: { isDark: boolean; name: string; onConfirm: () => void; onClose: () => void }) {
+function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boolean; kind: "דוגמה" | "טקסט"; name: string; onConfirm: () => void; onClose: () => void }) {
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
-        className="rounded-lg shadow-2xl px-6 py-5"
-        style={{ width: "min(400px, 90vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        className="rounded-lg shadow-2xl px-7 py-6 text-center"
+        style={{ width: "min(420px, 90vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       >
-        <div className="text-[16px] mb-5" style={{ color: textCol }}>למחוק את &quot;{name}&quot;?</div>
-        <div className="flex gap-2">
-          <button onClick={onConfirm} className="rounded-md px-5 py-2 text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: RED }}>מחיקה</button>
-          <button onClick={onClose} className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>ביטול</button>
+        <div className="text-[15px]" style={{ color: subCol }}>מחיקת {kind}</div>
+        <div className="text-[16px] leading-relaxed mt-4" style={{ color: textCol }}>
+          למחוק את ה{kind} ׳{name}׳?
+        </div>
+        <div className="flex gap-3 justify-center mt-6">
+          <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>ביטול</button>
+          <button onClick={onConfirm} className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary }}>אישור</button>
         </div>
       </div>
     </div>
@@ -1968,6 +1995,7 @@ export default function MishpatPage() {
       {pendingDelete && (
         <ConfirmDelete
           isDark={isDark}
+          kind="דוגמה"
           name={pendingDelete.name}
           onConfirm={() => {
             setExamples((prev) => prev.filter((p) => p.id !== pendingDelete.id));
