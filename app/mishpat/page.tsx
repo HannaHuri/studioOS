@@ -1425,11 +1425,6 @@ function ExamplesPanel({
         </button>
       </div>
 
-      {/* the quota rule lives here rather than in the editor — it is read while deciding to
-          add or open an example, and it keeps the editor's footer clear */}
-      <div className="px-4 pb-3 text-[11.5px] leading-snug" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-        בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
-      </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
@@ -1527,10 +1522,12 @@ function ExampleModal({
   const line = isDark ? dk.border : c.inputBorder;
   // Tabs: boxed and adjacent as in the Figma, sitting on top of the field. The active one
   // combines Vibe's blue underline with a תכלת fill. Hover is Vibe's --primary-background-hover-color.
-  const tabOn = isDark ? "#27406b" : c.badgeBg;      // selected — a real תכלת, not a wash
-  const tabOnText = isDark ? dk.text : c.darkBlue;
-  const tabOff = isDark ? "#1e2538" : c.hoverBg;     // unselected still sits on a fill, never bare
-  const hoverBg = isDark ? "rgba(200,214,229,0.08)" : "#eceef2";
+  const titleCol = isDark ? dk.textMuted : c.textLight;
+  // Selected tab = תכלת fill, no outline, welded to the field. Unselected = outlined on
+  // top/left/right only, transparent inside: a grey fill read as disabled, and the missing
+  // bottom edge keeps the field's own border from doubling up under each tab.
+  const tabOn = isDark ? "#27406b" : c.badgeBg;
+  const hoverBg = isDark ? "rgba(200,214,229,0.08)" : c.hoverBg;
 
   const counts = texts.map((t) => countWords(t.body));
   const total = counts.reduce((a, b) => a + b, 0);
@@ -1580,11 +1577,16 @@ function ExampleModal({
         }}
       >
         {/* header */}
-        <div className="flex items-center px-6 pt-5 pb-4">
-          <span className="text-[20px]" style={{ color: textCol }}>
-            {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
-          </span>
-          <div className="flex-1" />
+        <div className="flex items-start px-6 pt-5 pb-4">
+          <div className="flex-1 min-w-0">
+            {/* pale title, as in the Figma — the work area carries the emphasis, not the chrome */}
+            <div className="text-[20px]" style={{ color: titleCol }}>
+              {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
+            </div>
+            <div className="text-[12.5px] mt-1.5" style={{ color: titleCol }}>
+              בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
+            </div>
+          </div>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
@@ -1611,17 +1613,21 @@ function ExampleModal({
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
-                  // No borders anywhere. Both states carry a fill so nothing reads bare, and the
-                  // selected tab sits 1px over the field's top border so the two weld together.
-                  backgroundColor: on ? tabOn : tabOff,
+                  backgroundColor: on ? tabOn : "transparent",
+                  // longhands only — mixing the `border` shorthand with `borderBottom` let the
+                  // shorthand win and the bottom edge came back, doubling the field's own border
+                  borderTop: on ? "none" : `1px solid ${line}`,
+                  borderInlineStart: on ? "none" : `1px solid ${line}`,
+                  borderInlineEnd: on ? "none" : `1px solid ${line}`,
+                  borderBottom: "none",
                   borderRadius: "4px 4px 0 0",
                   marginBottom: on ? "-1px" : 0,
                   paddingBottom: on ? "1px" : 0,
-                  color: on ? tabOnText : subCol,
+                  color: on ? textCol : subCol,
                   fontWeight: on ? 500 : 400,
                 }}
                 onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = tabOff; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {renaming === i ? (
                   <input
