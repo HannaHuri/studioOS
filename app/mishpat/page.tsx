@@ -1516,6 +1516,7 @@ function ExampleModal({
   const [renaming, setRenaming] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<number | null>(null);
   const [showRule, setShowRule] = useState(false);
+  const [hoveredTab, setHoveredTab] = useState<number | null>(null);
   const ruleRef = useRef<HTMLDivElement>(null);
   const ruleBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -1619,13 +1620,15 @@ function ExampleModal({
             return (
               <Fragment key={t.id}>
               {i > 0 && (
-                <div className="flex-none self-stretch" style={{ width: "1px", backgroundColor: line }} />
+                <div className="flex-none self-end" style={{ width: "1px", height: "30px", marginBottom: "1px", backgroundColor: line }} />
               )}
               <div
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
-                  backgroundColor: "transparent",
+                  // React-controlled, never written straight to the DOM: setting it imperatively
+                  // in onMouseEnter left the grey stuck once a hovered tab became the active one
+                  backgroundColor: !on && hoveredTab === i ? hoverBg : "transparent",
                   // longhands only — mixing the `border` shorthand with `borderBottom` let the
                   // shorthand win and the bottom edge came back, doubling the field's own border
                   borderTop: "none",
@@ -1637,8 +1640,8 @@ function ExampleModal({
                   color: on ? textCol : subCol,
                   fontWeight: on ? 500 : 400,
                 }}
-                onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
+                onMouseEnter={() => setHoveredTab(i)}
+                onMouseLeave={() => setHoveredTab((h) => (h === i ? null : h))}
               >
                 {renaming === i ? (
                   <input
@@ -1700,7 +1703,7 @@ function ExampleModal({
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
             placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
-            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
+            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
             style={{ border: `1px solid ${line}`, borderRadius: 0, backgroundColor: surface, color: textCol }}
           />
         </div>
@@ -1723,9 +1726,9 @@ function ExampleModal({
                   ) : (
                     <>
                       {/* what the user has entered reads dark; the ceiling stays muted */}
-                      <span style={{ color: textCol }}>{texts.length}</span> מתוך {MAX_TEXTS} טקסטים
+                      <span style={{ color: textCol, fontWeight: 700 }}>{texts.length}</span> מתוך {MAX_TEXTS} טקסטים
                       {" · "}
-                      <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך {fmtNum(MAX_WORDS)} מילים
+                      <span style={{ color: textCol, fontWeight: 700 }}>{fmtNum(total)}</span> מתוך {fmtNum(MAX_WORDS)} מילים
                     </>
                   )}
                 </span>
@@ -1744,7 +1747,7 @@ function ExampleModal({
                       className="absolute shadow-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
                       style={{
                         // the icon lands about three quarters down the popover, not at its middle
-                        insetInlineStart: "calc(100% + 8px)", top: "50%", transform: "translateY(-75%)",
+                        insetInlineStart: "calc(100% + 8px)", top: "50%", transform: "translateY(-90%)",
                         width: "270px", zIndex: 5, borderRadius: "4px",
                         backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`,
                         color: subCol, fontWeight: 400, whiteSpace: "normal", textAlign: "right",
@@ -1764,6 +1767,14 @@ function ExampleModal({
             </div>
 
             <div className="flex-1" />
+
+            {/* say what is still missing, but only once the user has actually started —
+                on a freshly opened editor both are empty and there is nothing to report */}
+            {!over && (name.trim() || total > 0) && saveBlocked && (
+              <div className="flex-none text-[12.5px] whitespace-nowrap mt-4" style={{ color: RED }}>
+                {total === 0 ? "יש להדביק טקסט אחד לפחות כדי לשמור" : "יש להזין שם לדוגמה"}
+              </div>
+            )}
 
             <button
               onClick={onClose}
