@@ -1618,20 +1618,6 @@ function ExampleModal({
           >
             <Plus size={15} />
           </button>
-
-          <div className="flex-1" />
-
-          <div className="flex-none text-[13px] whitespace-nowrap" style={{ color: over ? RED : subCol }}>
-            {over ? (
-              <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
-            ) : (
-              <>
-                <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
-                {" · "}
-                <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
-              </>
-            )}
-          </div>
         </div>
 
         {/* per-text count — sits tight against the field below it */}
@@ -1649,10 +1635,31 @@ function ExampleModal({
           />
         </div>
 
-        {/* footer — buttons only; the quota counter lives up in the tab row */}
+        {/* footer — the quota counter and its bar sit next to the buttons */}
         <div style={{ borderTop: `1px solid ${line}` }}>
-          <div className="flex items-center px-6 py-4 gap-2">
+          <div className="flex items-center px-6 py-4 gap-3">
             <div className="flex-1" />
+
+            <div className="flex-none" style={{ width: "268px" }}>
+              <div className="text-[13px] mb-1.5 whitespace-nowrap" style={{ color: over ? RED : subCol }}>
+                {over ? (
+                  <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
+                ) : (
+                  <>
+                    <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
+                    {" · "}
+                    <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
+                  </>
+                )}
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-200"
+                  style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : c.primary }}
+                />
+              </div>
+            </div>
+
             <button
               onClick={onClose}
               className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5"
