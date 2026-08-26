@@ -1601,49 +1601,50 @@ function ExampleModal({
               <div
                 key={t.id}
                 onClick={() => setActive(i)}
-                className="flex-1 min-w-0 max-w-[200px] cursor-pointer"
+                className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
-                  border: `1px solid ${line}`,
-                  borderBottom: on ? `2px solid ${c.primary}` : `1px solid ${line}`,
-                  borderRadius: "4px 4px 0 0",
+                  // No tab borders at all. The active tab is a tinted shoulder that sits 1px
+                  // over the field's top border, so the two never draw a double line.
                   backgroundColor: on ? tabTint : "transparent",
-                  marginInlineStart: i > 0 ? "-1px" : 0,
-                  transition: "background-color 150ms, border-color 150ms",
+                  borderRadius: "4px 4px 0 0",
+                  marginBottom: on ? "-1px" : 0,
+                  paddingBottom: on ? "1px" : 0,
+                  color: on ? textCol : subCol,
                 }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                <div
-                  className="h-full flex items-center gap-1.5 px-3 transition-colors"
-                  style={{ color: textCol }}
-                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  {renaming === i ? (
-                    <input
-                      autoFocus
-                      value={t.title}
-                      onChange={(e) => setTitle(i, e.target.value)}
-                      onBlur={() => setRenaming(null)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
-                      style={{ color: textCol }}
-                    />
-                  ) : (
-                    <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setActive(i); setRenaming(i); }}
-                    className="flex-none transition-opacity hover:opacity-100"
-                    style={{ color: subCol, opacity: on ? 0.9 : 0.5 }}
-                    title="שינוי שם"
-                  ><Pencil size={13} /></button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
-                    className="flex-none transition-opacity hover:opacity-100"
-                    style={{ color: subCol, opacity: on ? 0.9 : 0.5 }}
-                    title="מחיקת טקסט"
-                  ><Trash2 size={13} /></button>
-                </div>
+                {renaming === i ? (
+                  <input
+                    autoFocus
+                    value={t.title}
+                    onChange={(e) => setTitle(i, e.target.value)}
+                    onBlur={() => setRenaming(null)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
+                    style={{ color: textCol }}
+                  />
+                ) : (
+                  <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
+                )}
+                {/* the two actions belong to the text you are editing — hidden on the rest */}
+                {on && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setRenaming(i); }}
+                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                      style={{ color: subCol }}
+                      title="שינוי שם"
+                    ><Pencil size={13} /></button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
+                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                      style={{ color: subCol }}
+                      title="מחיקת טקסט"
+                    ><Trash2 size={13} /></button>
+                  </>
+                )}
               </div>
             );
           })}
@@ -1653,7 +1654,7 @@ function ExampleModal({
               onClick={addText}
               disabled={atTextLimit}
               className="size-7 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed"
-              style={{ border: `1px solid ${line}`, color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
+              style={{ color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
               onMouseEnter={(e) => { if (!atTextLimit) e.currentTarget.style.backgroundColor = hoverBg; }}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת טקסט"}
@@ -1685,7 +1686,7 @@ function ExampleModal({
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
           <div className="flex items-start px-6 pt-0 pb-5 gap-3">
-            <div className="flex-none text-right" style={{ width: "320px" }}>
+            <div className="flex-none text-right" style={{ width: "420px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
                   <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
@@ -1703,7 +1704,7 @@ function ExampleModal({
                   style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : c.primary }}
                 />
               </div>
-              <div className="text-[12px] mt-2 leading-snug" style={{ color: subCol }}>
+              <div className="text-[12px] mt-2 leading-snug whitespace-nowrap" style={{ color: subCol }}>
                 בכל דוגמה ניתן להזין עד חמישה טקסטים בהיקף כולל של 50 אלף מילים.
               </div>
             </div>
