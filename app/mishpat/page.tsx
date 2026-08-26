@@ -1303,13 +1303,13 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
   const subCol = isDark ? dk.textMuted : c.textLight;
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
+      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
         <Clock size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
       </div>
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-        <div className="px-3 py-3 flex flex-col gap-1.5" dir="rtl">
+        <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
           {items.map((it, i) => (
             <button
               key={i}
@@ -1411,7 +1411,7 @@ function ExamplesPanel({
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
+      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
         <Paperclip size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
         <div className="flex-1" />
@@ -1426,7 +1426,7 @@ function ExamplesPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-        <div className="px-3 py-3 flex flex-col gap-1.5" dir="rtl">
+        <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
           {examples.length === 0 ? (
             <div className="px-4 pt-14 text-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               <FileText size={40} style={{ color: subCol, opacity: 0.35, margin: "0 auto 14px" }} />
@@ -1519,6 +1519,11 @@ function ExampleModal({
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const line = isDark ? dk.border : c.inputBorder;
+  // Vibe tab tokens: a 2px rail under every tab, the accent under the active one,
+  // and a soft rounded hover — no boxes. (--ui-background-color / --primary-color /
+  // --primary-background-hover-color)
+  const rail = isDark ? dk.border : c.inputBorder;
+  const hoverBg = isDark ? "rgba(200,214,229,0.08)" : "rgba(103,104,121,0.1)";
 
   const counts = texts.map((t) => countWords(t.body));
   const total = counts.reduce((a, b) => a + b, 0);
@@ -1568,12 +1573,16 @@ function ExampleModal({
         }}
       >
         {/* header */}
-        <div className="flex items-center px-6 pt-5 pb-4">
-          <span className="text-[20px]" style={{ color: textCol }}>
-            {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
-          </span>
-          <div className="flex-1" />
-          <button onClick={onClose} className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
+        <div className="flex items-start px-6 pt-5 pb-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-[20px]" style={{ color: textCol }}>
+              {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
+            </div>
+            <div className="text-[13px] mt-1" style={{ color: subCol }}>
+              בכל דוגמה ניתן להדביק עד {MAX_TEXTS} טקסטים, בהיקף כולל של {fmtNum(MAX_WORDS)} מילים.
+            </div>
+          </div>
+          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
         </div>
@@ -1590,56 +1599,69 @@ function ExampleModal({
         </div>
 
         {/* tabs — narrowed so five fit without scrolling */}
-        <div className="px-6 pb-2 flex items-center gap-1.5">
+        <div className="px-6 pb-3 flex items-stretch" style={{ height: "40px" }}>
           {texts.map((t, i) => {
             const on = i === active;
             return (
               <div
                 key={t.id}
                 onClick={() => setActive(i)}
-                className="flex-1 min-w-0 max-w-[200px] flex items-center gap-1.5 rounded-md px-2.5 py-2 cursor-pointer transition-colors"
-                style={{
-                  border: `1px solid ${on ? c.primary : line}`,
-                  backgroundColor: on ? (isDark ? "#243354" : c.badgeBg) : "transparent",
-                  color: on ? textCol : subCol,
-                }}
+                className="flex-1 min-w-0 max-w-[200px] cursor-pointer"
+                style={{ borderBottom: `2px solid ${on ? c.primary : rail}`, transition: "border-color 150ms" }}
               >
-                {renaming === i ? (
-                  <input
-                    autoFocus
-                    value={t.title}
-                    onChange={(e) => setTitle(i, e.target.value)}
-                    onBlur={() => setRenaming(null)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 bg-transparent outline-none text-[13px]"
-                    style={{ color: textCol }}
-                  />
-                ) : (
-                  <span className="flex-1 min-w-0 truncate text-[13px]" title={t.title}>{t.title}</span>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setActive(i); setRenaming(i); }}
-                  className="flex-none opacity-60 hover:opacity-100 transition-opacity"
-                  title="שינוי שם"
-                ><Pencil size={13} /></button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
-                  className="flex-none opacity-60 hover:opacity-100 transition-opacity"
-                  title="מחיקת טקסט"
-                ><Trash2 size={13} /></button>
+                <div
+                  className="h-full flex items-center justify-center gap-1.5 px-3 rounded transition-colors"
+                  style={{ color: textCol }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverBg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  {renaming === i ? (
+                    <input
+                      autoFocus
+                      value={t.title}
+                      onChange={(e) => setTitle(i, e.target.value)}
+                      onBlur={() => setRenaming(null)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-center"
+                      style={{ color: textCol }}
+                    />
+                  ) : (
+                    <span className="min-w-0 truncate text-[14px]" title={t.title}>{t.title}</span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setActive(i); setRenaming(i); }}
+                    className="flex-none transition-opacity hover:opacity-100"
+                    style={{ color: subCol, opacity: on ? 0.9 : 0.5 }}
+                    title="שינוי שם"
+                  ><Pencil size={13} /></button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
+                    className="flex-none transition-opacity hover:opacity-100"
+                    style={{ color: subCol, opacity: on ? 0.9 : 0.5 }}
+                    title="מחיקת טקסט"
+                  ><Trash2 size={13} /></button>
+                </div>
               </div>
             );
           })}
-          <button
-            onClick={addText}
-            disabled={atTextLimit}
-            className="size-7 flex-none flex items-center justify-center rounded-md transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
-            style={{ border: `1px solid ${line}`, color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
-            title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת טקסט"}
-          >
-            <Plus size={15} />
-          </button>
+
+          <div className="flex-none flex items-center px-1" style={{ borderBottom: `2px solid ${rail}` }}>
+            <button
+              onClick={addText}
+              disabled={atTextLimit}
+              className="size-7 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed"
+              style={{ color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
+              onMouseEnter={(e) => { if (!atTextLimit) e.currentTarget.style.backgroundColor = hoverBg; }}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת טקסט"}
+            >
+              <Plus size={15} />
+            </button>
+          </div>
+
+          {/* the rail continues to the end of the row */}
+          <div className="flex-1" style={{ borderBottom: `2px solid ${rail}` }} />
         </div>
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
@@ -1647,20 +1669,20 @@ function ExampleModal({
           <textarea
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
-            placeholder="לכאן ניתן להדביק את הנוסח שעליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
+            placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
             className="w-full h-full resize-none rounded-md px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
             style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
           />
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
-        <div className="px-6 pt-1.5 text-[12px]" style={{ color: subCol, textAlign: "left", minHeight: "22px" }}>
+        <div className="px-6 pt-1 text-[12px]" style={{ color: subCol, textAlign: "left", minHeight: "18px" }}>
           {counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}
         </div>
 
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
-          <div className="flex items-center px-6 pt-0.5 pb-4 gap-3">
+          <div className="flex items-center px-6 pt-0 pb-4 gap-3">
             <div className="flex-none text-right" style={{ width: "268px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
