@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Bot, Activity, Folder, Terminal, Send, Equal,
+  Bot, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1298,12 +1298,375 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
   );
 }
 
+// ── Examples (דוגמאות) ─────────────────────────────────────────────────────
+// A דוגמה is the named item in the panel; it holds up to MAX_TEXTS pasted טקסטים,
+// and all of its texts together may not exceed MAX_WORDS. The quota is per‑example:
+// one example filling up takes nothing away from another.
+const MAX_TEXTS = 5;
+const MAX_WORDS = 50000;
+const RED = "#d83a52";
+
+type ExText = { id: string; title: string; body: string };
+type Example = { id: string; name: string; texts: ExText[]; edited: string };
+
+const countWords = (s: string) => {
+  const t = s.trim();
+  return t ? t.split(/\s+/).length : 0;
+};
+const fmtNum = (n: number) => n.toLocaleString("he-IL");
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const SEED_EXAMPLES: Example[] = [
+  {
+    id: "ex1",
+    name: "פסקי דין בנזקי גוף",
+    edited: "01/03/2025",
+    texts: [
+      {
+        id: "t1",
+        title: "פס״ד שמעוני נ׳ טשרניחובסקי",
+        body: "בית המשפט דן בתביעת נזקי גוף שהוגשה בגין תאונת דרכים מיום 14.2.2023. התובעת, ילידת 1978, נפגעה בעת שנהגה ברכבה בצומת מרומזר. הנתבעת לא הגישה כתב הגנה במועד, ובקשתה להארכת מועד נדחתה בהחלטה מיום 3.5.2023.\n\nלאחר שעיינתי בחוות דעת המומחה הרפואי מטעם בית המשפט, ובשים לב לנכות התפקודית שנקבעה בשיעור 19%, מצאתי כי יש לקבל את התביעה בחלקה.",
+      },
+      { id: "t2", title: "טקסט 2", body: "" },
+    ],
+  },
+  {
+    id: "ex2",
+    name: "הודעות לצדדים לפני דיון",
+    edited: "03/01/2025",
+    texts: [
+      {
+        id: "t3",
+        title: "טקסט 1",
+        body: "לכבוד הצדדים — הנדון: דיון ההוכחות הקבוע ליום 19.5.2024. בית המשפט מבקש להפנות את תשומת לב הצדדים לכך שרשימת העדים תוגש לא יאוחר משבעה ימים לפני מועד הדיון.",
+      },
+    ],
+  },
+];
+
+function ExamplesPanel({
+  isDark, examples, onAdd, onEdit, onDelete,
+}: {
+  isDark: boolean;
+  examples: Example[];
+  onAdd: () => void;
+  onEdit: (ex: Example) => void;
+  onDelete: (ex: Example) => void;
+}) {
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const bg = isDark ? dk.surface : "white";
+  const titleCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  const line = isDark ? dk.border : "#eef2f7";
+
+  return (
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg }} dir="rtl" onClick={() => setMenuFor(null)}>
+      <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${line}` }}>
+        <Paperclip size={18} style={{ color: c.primary }} />
+        <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
+        <div className="flex-1" />
+        <button
+          onClick={(e) => { e.stopPropagation(); onAdd(); }}
+          className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5"
+          style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray }}
+          title="הוספת דוגמה חדשה"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
+        <div className="px-3 py-3 flex flex-col gap-1.5" dir="rtl">
+          {examples.length === 0 ? (
+            <div className="px-4 pt-14 text-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              <FileText size={40} style={{ color: subCol, opacity: 0.35, margin: "0 auto 14px" }} />
+              <p className="text-[13px] leading-relaxed" style={{ color: subCol }}>
+                עוד לא נוספו דוגמאות. כדי להוסיף דוגמה חדשה, יש ללחוץ על כפתור הפלוס בחלקו העליון של החלון.
+              </p>
+              <p className="text-[13px] leading-relaxed mt-3" style={{ color: subCol }}>
+                בכל דוגמה ניתן להדביק עד {MAX_TEXTS} טקסטים, בהיקף כולל של {fmtNum(MAX_WORDS)} מילים.
+              </p>
+            </div>
+          ) : (
+            examples.map((ex) => (
+              <div
+                key={ex.id}
+                className="relative rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03] flex items-start gap-2"
+                style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              >
+                <button className="flex-1 min-w-0 text-right" onClick={() => onEdit(ex)}>
+                  <div className="text-[14px] truncate" style={{ color: titleCol }}>{ex.name}</div>
+                  <div className="text-[12px] mt-0.5" style={{ color: subCol }}>עריכה אחרונה {ex.edited}</div>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === ex.id ? null : ex.id); }}
+                  className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+                  style={{ color: isDark ? dk.textMuted : c.iconGray }}
+                  title="פעולות"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {menuFor === ex.id && (
+                  <div
+                    className="absolute z-20 rounded-md overflow-hidden shadow-lg"
+                    style={{ top: "36px", left: "8px", backgroundColor: bg, border: `1px solid ${isDark ? dk.border : c.border}`, minWidth: "120px" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="w-full text-right px-3 py-2 text-[13px] hover:bg-black/5 transition-colors"
+                      style={{ color: titleCol }}
+                      onClick={() => { setMenuFor(null); onEdit(ex); }}
+                    >עריכה</button>
+                    <button
+                      className="w-full text-right px-3 py-2 text-[13px] hover:bg-black/5 transition-colors"
+                      style={{ color: RED, borderTop: `1px solid ${line}` }}
+                      onClick={() => { setMenuFor(null); onDelete(ex); }}
+                    >מחיקה</button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExampleModal({
+  isDark, initial, onSave, onClose,
+}: {
+  isDark: boolean;
+  initial: Example | null;
+  onSave: (ex: Example) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [texts, setTexts] = useState<ExText[]>(
+    initial?.texts.length ? initial.texts : [{ id: uid(), title: "טקסט 1", body: "" }]
+  );
+  const [active, setActive] = useState(0);
+  const [renaming, setRenaming] = useState<number | null>(null);
+
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textGray;
+  const line = isDark ? dk.border : c.inputBorder;
+
+  const counts = texts.map((t) => countWords(t.body));
+  const total = counts.reduce((a, b) => a + b, 0);
+  const over = total > MAX_WORDS;
+  const pct = Math.min(100, (total / MAX_WORDS) * 100);
+  const atTextLimit = texts.length >= MAX_TEXTS;
+
+  const saveBlocked = !name.trim() ? "יש להזין שם לדוגמה."
+    : total === 0 ? "יש להזין טקסט בלפחות אחד המסכים."
+    : over ? `לא ניתן לשמור בחריגה מהמכסה. יש להסיר ${fmtNum(total - MAX_WORDS)} מילים.`
+    : "";
+
+  const setBody = (i: number, v: string) =>
+    setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, body: v } : t)));
+  const setTitle = (i: number, v: string) =>
+    setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, title: v } : t)));
+
+  const addText = () => {
+    if (atTextLimit) return;
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "" }]);
+    setActive(texts.length);
+  };
+  const removeText = (i: number) => {
+    if (texts.length === 1) { setBody(0, ""); return; }
+    setTexts((prev) => prev.filter((_, k) => k !== i));
+    setActive((a) => (a >= i && a > 0 ? a - 1 : a));
+  };
+
+  const save = () => {
+    if (saveBlocked) return;
+    onSave({
+      id: initial?.id ?? uid(),
+      name: name.trim(),
+      texts: texts.filter((t) => t.body.trim()),
+      edited: new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
+        style={{
+          width: "min(1100px, 92vw)", height: "min(760px, 88vh)",
+          backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif",
+        }}
+      >
+        {/* header */}
+        <div className="flex items-center px-6 pt-5 pb-4">
+          <span className="text-[20px]" style={{ color: textCol }}>
+            {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
+          </span>
+          <div className="flex-1" />
+          <button onClick={onClose} className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* name */}
+        <div className="px-6 pb-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="הזינו שם דוגמה"
+            className="w-full rounded-md px-3 py-2.5 text-[14px] outline-none transition-colors focus:border-[#0073ea]"
+            style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
+          />
+        </div>
+
+        {/* tabs — narrowed to fit five without scrolling */}
+        <div className="px-6 pb-2.5 flex items-center gap-1.5">
+          {texts.map((t, i) => {
+            const on = i === active;
+            return (
+              <div
+                key={t.id}
+                onClick={() => setActive(i)}
+                className="flex-1 min-w-0 max-w-[200px] flex items-center gap-1.5 rounded-md px-2.5 py-2 cursor-pointer transition-colors"
+                style={{
+                  border: `1px solid ${on ? c.primary : line}`,
+                  backgroundColor: on ? (isDark ? "#243354" : c.badgeBg) : "transparent",
+                  color: on ? textCol : subCol,
+                }}
+              >
+                {renaming === i ? (
+                  <input
+                    autoFocus
+                    value={t.title}
+                    onChange={(e) => setTitle(i, e.target.value)}
+                    onBlur={() => setRenaming(null)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[13px]"
+                    style={{ color: textCol }}
+                  />
+                ) : (
+                  <span className="flex-1 min-w-0 truncate text-[13px]" title={t.title}>{t.title}</span>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActive(i); setRenaming(i); }}
+                  className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                  title="שינוי שם"
+                ><Pencil size={13} /></button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeText(i); }}
+                  className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                  title="מחיקת טקסט"
+                ><Trash2 size={13} /></button>
+              </div>
+            );
+          })}
+          <button
+            onClick={addText}
+            disabled={atTextLimit}
+            className="size-7 flex-none flex items-center justify-center rounded-md transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
+            style={{ border: `1px solid ${line}`, color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
+            title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת טקסט"}
+          >
+            <Plus size={15} />
+          </button>
+        </div>
+
+        {/* per-text count */}
+        <div className="px-6 pb-1.5 text-[12px]" style={{ color: subCol }}>
+          {counts[active] > 0 ? `${fmtNum(counts[active])} מילים בטקסט הזה` : "יש להדביק כאן את הטקסט"}
+        </div>
+
+        {/* the field */}
+        <div className="px-6 flex-1 min-h-0 pb-4">
+          <textarea
+            value={texts[active]?.body ?? ""}
+            onChange={(e) => setBody(active, e.target.value)}
+            className="w-full h-full resize-none rounded-md px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
+            style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
+          />
+        </div>
+
+        {/* footer — capacity bar across the top edge, then counter + buttons */}
+        <div style={{ borderTop: `1px solid ${line}` }}>
+          <div className="h-1" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
+            <div className="h-full transition-all duration-200" style={{ width: `${pct}%`, backgroundColor: over ? RED : c.primary }} />
+          </div>
+          <div className="flex items-center px-6 py-4 gap-4">
+            <div className="text-[13px]" style={{ color: over ? RED : subCol }}>
+              {over ? (
+                <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
+              ) : (
+                <>
+                  <span style={{ color: textCol }}>{texts.length}</span> מתוך <span style={{ color: textCol }}>{MAX_TEXTS}</span> טקסטים
+                  {" · "}
+                  <span style={{ color: textCol }}>{fmtNum(total)}</span> מתוך <span style={{ color: textCol }}>{fmtNum(MAX_WORDS)}</span> מילים
+                </>
+              )}
+            </div>
+            <div className="flex-1" />
+            <button
+              onClick={onClose}
+              className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5"
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}
+            >ביטול</button>
+            <button
+              onClick={save}
+              disabled={!!saveBlocked}
+              title={saveBlocked || undefined}
+              className="rounded-md px-6 py-2 text-[14px] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed"
+              style={{ backgroundColor: c.primary, opacity: saveBlocked ? 0.45 : 1 }}
+            >שמירה</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDelete({ isDark, name, onConfirm, onClose }: { isDark: boolean; name: string; onConfirm: () => void; onClose: () => void }) {
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-lg shadow-2xl px-6 py-5"
+        style={{ width: "min(400px, 90vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+      >
+        <div className="text-[16px] mb-5" style={{ color: textCol }}>למחוק את &quot;{name}&quot;?</div>
+        <div className="flex gap-2">
+          <button onClick={onConfirm} className="rounded-md px-5 py-2 text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: RED }}>מחיקה</button>
+          <button onClick={onClose} className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>ביטול</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);     // documents
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isExamplesOpen, setIsExamplesOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
   const [vw, setVw] = useState(1280);
+
+  // Examples (דוגמאות) — the panel list, the open editor, the pending delete, and the save toast
+  const [examples, setExamples] = useState<Example[]>(SEED_EXAMPLES);
+  const [editing, setEditing] = useState<{ ex: Example | null } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Example | null>(null);
+  const [toast, setToast] = useState("");
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   // Responsive breakpoints
   const BOTH_MIN = 1080; // >= : both side panels may be open together (push)
@@ -1325,17 +1688,27 @@ export default function MishpatPage() {
     if (nowNarrow && !prevNarrow.current) {
       setIsPanelOpen(false);
       setIsHistoryOpen(false);
+      setIsExamplesOpen(false);
     }
     prevNarrow.current = nowNarrow;
     // When both can't fit, keep only one open — and do NOT auto-restore when the window grows again.
-    if (vw < BOTH_MIN && isPanelOpen && isHistoryOpen) setIsHistoryOpen(false);
-  }, [vw, isPanelOpen, isHistoryOpen]);
+    if (vw < BOTH_MIN && isPanelOpen && (isHistoryOpen || isExamplesOpen)) { setIsHistoryOpen(false); setIsExamplesOpen(false); }
+  }, [vw, isPanelOpen, isHistoryOpen, isExamplesOpen]);
 
-  // Exclusive when there isn't room for both: opening one closes the other
+  // Exclusive when there isn't room for both: opening one closes the other.
+  // History and examples share the right-hand slot, so they always close each other.
   const toggleDocs = () =>
-    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsHistoryOpen(false); return nv; });
+    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) { setIsHistoryOpen(false); setIsExamplesOpen(false); } return nv; });
   const toggleHistory = () =>
-    setIsHistoryOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) setIsPanelOpen(false); return nv; });
+    setIsHistoryOpen((v) => { const nv = !v; if (nv) { setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+  const toggleExamples = () =>
+    setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+
+  const saveExample = (ex: Example) => {
+    setExamples((prev) => (prev.some((p) => p.id === ex.id) ? prev.map((p) => (p.id === ex.id ? ex : p)) : [ex, ...prev]));
+    setEditing(null);
+    setToast("הדוגמה נשמרה");
+  };
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
@@ -1382,9 +1755,9 @@ export default function MishpatPage() {
           <ChatArea isDark={isDark} conversationKey={convKey} />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
-          {narrow && (isPanelOpen || isHistoryOpen) && (
+          {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen) && (
             <div
-              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); }}
+              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); setIsExamplesOpen(false); }}
               className="absolute inset-0 z-30"
               style={{ backgroundColor: "rgba(0,0,0,0.28)" }}
             />
@@ -1405,6 +1778,22 @@ export default function MishpatPage() {
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               <HistoryPanel isDark={isDark} />
               <button onClick={() => setIsHistoryOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
+                <X size={14} style={{ color: c.iconGray }} />
+              </button>
+            </div>
+          )}
+
+          {/* Examples drawer (narrow) — overlays from the right, same slot as history */}
+          {narrow && isExamplesOpen && (
+            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
+              <ExamplesPanel
+                isDark={isDark}
+                examples={examples}
+                onAdd={() => setEditing({ ex: null })}
+                onEdit={(ex) => setEditing({ ex })}
+                onDelete={(ex) => setPendingDelete(ex)}
+              />
+              <button onClick={() => setIsExamplesOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
                 <X size={14} style={{ color: c.iconGray }} />
               </button>
             </div>
@@ -1439,6 +1828,19 @@ export default function MishpatPage() {
           </div>
         )}
 
+        {/* ── RIGHT: Examples panel — same slot as history (push mode only) ── */}
+        {!narrow && isExamplesOpen && (
+          <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
+            <ExamplesPanel
+              isDark={isDark}
+              examples={examples}
+              onAdd={() => setEditing({ ex: null })}
+              onEdit={(ex) => setEditing({ ex })}
+              onDelete={(ex) => setPendingDelete(ex)}
+            />
+          </div>
+        )}
+
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
@@ -1452,11 +1854,12 @@ export default function MishpatPage() {
           <div className="flex flex-col items-center gap-2">
             {topIcons.map(({ Icon, label }) => {
               const isHist = label === "היסטוריה";
-              const active = isHist && isHistoryOpen;
+              const isEx = label === "דוגמאות";
+              const active = (isHist && isHistoryOpen) || (isEx && isExamplesOpen);
               return (
                 <button
                   key={label}
-                  onClick={isHist ? toggleHistory : undefined}
+                  onClick={isHist ? toggleHistory : isEx ? toggleExamples : undefined}
                   className="size-8 flex items-center justify-center rounded transition-colors hover:bg-black/5"
                   style={{ color: active ? "white" : iconCol, backgroundColor: active ? c.primary : undefined }}
                   title={label}
@@ -1488,6 +1891,37 @@ export default function MishpatPage() {
           <span style={{ color: c.textLight }}>{vw}px</span>
         </div>
       </div>
+
+      {/* ── Examples: editor, delete confirmation, save toast ── */}
+      {editing && (
+        <ExampleModal
+          key={editing.ex?.id ?? "new"}
+          isDark={isDark}
+          initial={editing.ex}
+          onSave={saveExample}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {pendingDelete && (
+        <ConfirmDelete
+          isDark={isDark}
+          name={pendingDelete.name}
+          onConfirm={() => {
+            setExamples((prev) => prev.filter((p) => p.id !== pendingDelete.id));
+            setPendingDelete(null);
+          }}
+          onClose={() => setPendingDelete(null)}
+        />
+      )}
+      {toast && (
+        <div
+          className="fixed left-1/2 z-[80] flex items-center gap-2 px-4 py-2.5 rounded-md shadow-lg text-[13px]"
+          style={{ bottom: "32px", transform: "translateX(-50%)", backgroundColor: "#2b3247", color: "white", fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+        >
+          <Check size={15} />
+          <span>{toast}</span>
+        </div>
+      )}
     </div>
   );
 }
