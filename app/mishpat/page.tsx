@@ -1599,7 +1599,7 @@ function ExampleModal({
         </div>
 
         {/* tabs — narrowed so five fit without scrolling */}
-        <div className="px-6 pb-3 flex items-stretch" style={{ height: "40px" }}>
+        <div className="px-6 flex items-stretch" style={{ height: "40px" }}>
           {texts.map((t, i) => {
             const on = i === active;
             return (
@@ -1610,7 +1610,7 @@ function ExampleModal({
                 style={{ borderBottom: `2px solid ${on ? c.primary : rail}`, transition: "border-color 150ms" }}
               >
                 <div
-                  className="h-full flex items-center justify-center gap-1.5 px-3 rounded transition-colors"
+                  className="h-full flex items-center gap-1.5 px-3 rounded transition-colors"
                   style={{ color: textCol }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverBg)}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
@@ -1623,11 +1623,11 @@ function ExampleModal({
                       onBlur={() => setRenaming(null)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-center"
+                      className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
                       style={{ color: textCol }}
                     />
                   ) : (
-                    <span className="min-w-0 truncate text-[14px]" title={t.title}>{t.title}</span>
+                    <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); setActive(i); setRenaming(i); }}
@@ -1660,8 +1660,8 @@ function ExampleModal({
             </button>
           </div>
 
-          {/* the rail continues to the end of the row */}
-          <div className="flex-1" style={{ borderBottom: `2px solid ${rail}` }} />
+          {/* no rail past the plus — the line stops where the tabs stop */}
+          <div className="flex-1" />
         </div>
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
@@ -1670,8 +1670,11 @@ function ExampleModal({
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
             placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
-            className="w-full h-full resize-none rounded-md px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
-            style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
+            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
+            style={{
+              border: `1px solid ${line}`, borderTop: "none", borderRadius: 0,
+              backgroundColor: surface, color: textCol,
+            }}
           />
         </div>
 
@@ -1682,7 +1685,7 @@ function ExampleModal({
 
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
-          <div className="flex items-center px-6 pt-0 pb-4 gap-3">
+          <div className="flex items-start px-6 pt-0 pb-5 gap-3">
             <div className="flex-none text-right" style={{ width: "268px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
@@ -1707,14 +1710,14 @@ function ExampleModal({
 
             <button
               onClick={onClose}
-              className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5"
+              className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5 mt-4"
               style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}
             >ביטול</button>
             <button
               onClick={save}
               disabled={!!saveBlocked}
               title={saveBlocked || undefined}
-              className="rounded-md px-6 py-2 text-[14px] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed"
+              className="rounded-md px-6 py-2 text-[14px] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed mt-4"
               style={{ backgroundColor: c.primary, opacity: saveBlocked ? 0.45 : 1 }}
             >שמירה</button>
           </div>
