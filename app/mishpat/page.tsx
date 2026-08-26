@@ -1425,6 +1425,12 @@ function ExamplesPanel({
         </button>
       </div>
 
+      {/* the quota rule lives here rather than in the editor — it is read while deciding to
+          add or open an example, and it keeps the editor's footer clear */}
+      <div className="px-4 pb-3 text-[11.5px] leading-snug" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
+      </div>
+
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
           {examples.length === 0 ? (
@@ -1434,7 +1440,7 @@ function ExamplesPanel({
                 עוד לא נוספו דוגמאות. כדי להוסיף דוגמה חדשה, יש ללחוץ על כפתור הפלוס בחלקו העליון של החלון.
               </p>
               <p className="text-[13px] leading-relaxed mt-3" style={{ color: subCol }}>
-                בכל דוגמה ניתן להדביק עד {MAX_TEXTS} טקסטים, בהיקף כולל של {fmtNum(MAX_WORDS)} מילים.
+                בכל דוגמה ניתן להזין עד {MAX_TEXTS} טקסטים, בהיקף כולל של 50 אלף מילים.
               </p>
             </div>
           ) : (
@@ -1521,8 +1527,10 @@ function ExampleModal({
   const line = isDark ? dk.border : c.inputBorder;
   // Tabs: boxed and adjacent as in the Figma, sitting on top of the field. The active one
   // combines Vibe's blue underline with a תכלת fill. Hover is Vibe's --primary-background-hover-color.
-  const tabTint = isDark ? "#243354" : "#e9f1fd";
-  const hoverBg = isDark ? "rgba(200,214,229,0.08)" : "rgba(103,104,121,0.1)";
+  const tabOn = isDark ? "#27406b" : c.badgeBg;      // selected — a real תכלת, not a wash
+  const tabOnText = isDark ? dk.text : c.darkBlue;
+  const tabOff = isDark ? "#1e2538" : c.hoverBg;     // unselected still sits on a fill, never bare
+  const hoverBg = isDark ? "rgba(200,214,229,0.08)" : "#eceef2";
 
   const counts = texts.map((t) => countWords(t.body));
   const total = counts.reduce((a, b) => a + b, 0);
@@ -1594,7 +1602,7 @@ function ExampleModal({
         </div>
 
         {/* tabs — narrowed so five fit without scrolling */}
-        <div className="px-6 flex items-stretch" style={{ height: "40px" }}>
+        <div className="px-6 flex items-stretch gap-0.5" style={{ height: "38px" }}>
           {texts.map((t, i) => {
             const on = i === active;
             return (
@@ -1603,16 +1611,17 @@ function ExampleModal({
                 onClick={() => setActive(i)}
                 className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
                 style={{
-                  // No tab borders at all. The active tab is a tinted shoulder that sits 1px
-                  // over the field's top border, so the two never draw a double line.
-                  backgroundColor: on ? tabTint : "transparent",
+                  // No borders anywhere. Both states carry a fill so nothing reads bare, and the
+                  // selected tab sits 1px over the field's top border so the two weld together.
+                  backgroundColor: on ? tabOn : tabOff,
                   borderRadius: "4px 4px 0 0",
                   marginBottom: on ? "-1px" : 0,
                   paddingBottom: on ? "1px" : 0,
-                  color: on ? textCol : subCol,
+                  color: on ? tabOnText : subCol,
+                  fontWeight: on ? 500 : 400,
                 }}
                 onMouseEnter={(e) => { if (!on) e.currentTarget.style.backgroundColor = hoverBg; }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.backgroundColor = tabOff; }}
               >
                 {renaming === i ? (
                   <input
@@ -1679,14 +1688,16 @@ function ExampleModal({
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
-        <div className="px-6 pt-1 text-[12px]" style={{ color: subCol, textAlign: "left", minHeight: "18px" }}>
+        {/* fixed height + line-height: a min-height alone still grew when the text appeared
+            (12px inheriting the body's 1.72 line-height ≈ 20.6px), which nudged the field */}
+        <div className="px-6 pt-1 text-[12px]" style={{ color: subCol, textAlign: "left", height: "22px", lineHeight: "18px" }}>
           {counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}
         </div>
 
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
           <div className="flex items-start px-6 pt-0 pb-5 gap-3">
-            <div className="flex-none text-right" style={{ width: "420px" }}>
+            <div className="flex-none text-right" style={{ width: "300px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
                   <span style={{ fontWeight: 600 }}>חריגה של {fmtNum(total - MAX_WORDS)} מילים מהמכסה</span>
@@ -1703,9 +1714,6 @@ function ExampleModal({
                   className="h-full rounded-full transition-all duration-200"
                   style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : c.primary }}
                 />
-              </div>
-              <div className="text-[12px] mt-2 leading-snug whitespace-nowrap" style={{ color: subCol }}>
-                בכל דוגמה ניתן להזין עד חמישה טקסטים בהיקף כולל של 50 אלף מילים.
               </div>
             </div>
 
