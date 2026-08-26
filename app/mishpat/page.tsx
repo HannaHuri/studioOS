@@ -1303,7 +1303,7 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
   const subCol = isDark ? dk.textMuted : c.textLight;
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}>
+      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
         <Clock size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
       </div>
@@ -1411,7 +1411,7 @@ function ExamplesPanel({
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${line}` }}>
+      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
         <Paperclip size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
         <div className="flex-1" />
@@ -1642,26 +1642,25 @@ function ExampleModal({
           </button>
         </div>
 
-        {/* per-text count — sits tight against the field below it */}
-        <div className="px-6 pb-1 text-[12px]" style={{ color: subCol }}>
-          {counts[active] > 0 ? `${fmtNum(counts[active])} מילים בטקסט הזה` : "יש להדביק כאן את הטקסט"}
-        </div>
-
-        {/* the field */}
-        <div className="px-6 flex-1 min-h-0 pb-4">
+        {/* the field — the guidance lives inside it as a placeholder while it is empty */}
+        <div className="px-6 flex-1 min-h-0">
           <textarea
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
+            placeholder="לכאן ניתן להדביק את הנוסח שעליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
             className="w-full h-full resize-none rounded-md px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
             style={{ border: `1px solid ${line}`, backgroundColor: surface, color: textCol }}
           />
         </div>
 
-        {/* footer — the quota counter and its bar sit next to the buttons, no rule above them */}
-        <div>
-          <div className="flex items-center px-6 py-4 gap-3">
-            <div className="flex-1" />
+        {/* per-text count — bottom-left, outside the field */}
+        <div className="px-6 pt-1.5 text-[12px]" style={{ color: subCol, textAlign: "left", minHeight: "22px" }}>
+          {counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}
+        </div>
 
+        {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
+        <div>
+          <div className="flex items-center px-6 pt-0.5 pb-4 gap-3">
             <div className="flex-none text-right" style={{ width: "268px" }}>
               <div className="text-[13px] mb-1.5 whitespace-nowrap text-right" style={{ color: over ? RED : subCol }}>
                 {over ? (
@@ -1681,6 +1680,8 @@ function ExampleModal({
                 />
               </div>
             </div>
+
+            <div className="flex-1" />
 
             <button
               onClick={onClose}
