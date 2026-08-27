@@ -1517,6 +1517,7 @@ function ExampleModal({
   const [pendingText, setPendingText] = useState<number | null>(null);
   const [showRule, setShowRule] = useState(false);
   const [hoveredTab, setHoveredTab] = useState<number | null>(null);
+  const [attempted, setAttempted] = useState(false);
   const ruleRef = useRef<HTMLDivElement>(null);
   const ruleBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -1548,10 +1549,10 @@ function ExampleModal({
   const over = total > MAX_WORDS;
   const atTextLimit = texts.length >= MAX_TEXTS;
 
-  // the name is only "missing" once there is a text to save — otherwise a freshly opened
-  // editor would flag it before the user has done anything
-  const nameMissing = !name.trim() && total > 0;
-  const textMissing = total === 0 && !!name.trim();
+  // Save stays enabled, as it is in the live product. Validation is silent until the user
+  // actually tries to save, then stays on and clears field by field as each is fixed.
+  const nameMissing = attempted && !name.trim();
+  const textMissing = attempted && total === 0;
   const saveBlocked = !name.trim() ? "יש להזין שם לדוגמה."
     : total === 0 ? "יש להזין טקסט בלפחות אחד המסכים."
     : over ? `לא ניתן לשמור בחריגה מהמכסה. יש להסיר ${fmtNum(total - MAX_WORDS)} מילים.`
@@ -1574,7 +1575,7 @@ function ExampleModal({
   };
 
   const save = () => {
-    if (saveBlocked) return;
+    if (saveBlocked) { setAttempted(true); return; }
     onSave({
       id: initial?.id ?? uid(),
       name: name.trim(),
@@ -1793,10 +1794,8 @@ function ExampleModal({
             >ביטול</button>
             <button
               onClick={save}
-              disabled={!!saveBlocked}
-              title={saveBlocked || undefined}
-              className="rounded-md px-6 py-2 text-[14px] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed mt-4"
-              style={{ backgroundColor: c.primary, opacity: saveBlocked ? 0.45 : 1 }}
+              className="rounded-md px-6 py-2 text-[14px] text-white transition-opacity hover:opacity-90 mt-4"
+              style={{ backgroundColor: c.primary }}
             >שמירה</button>
           </div>
         </div>
