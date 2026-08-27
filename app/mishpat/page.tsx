@@ -1332,7 +1332,10 @@ function HistoryPanel({ isDark }: { isDark: boolean }) {
 // one example filling up takes nothing away from another.
 const MAX_TEXTS = 5;
 const MAX_WORDS = 50000;
+// Vibe's own status colours: --negative-color and --color-working_orange
 const RED = "#d83a52";
+const AMBER = "#fdab3d";
+const NEAR_FULL = 0.8; // the bar turns amber from here up, so it warns instead of only mirroring
 
 type ExText = { id: string; title: string; body: string };
 type Example = { id: string; name: string; texts: ExText[]; edited: string };
@@ -1547,6 +1550,7 @@ function ExampleModal({
   const total = counts.reduce((a, b) => a + b, 0);
   const textsUsed = counts.filter((n) => n > 0).length;
   const over = total > MAX_WORDS;
+  const near = !over && total >= MAX_WORDS * NEAR_FULL;
   const atTextLimit = texts.length >= MAX_TEXTS;
 
   // Save stays enabled, as it is in the live product. Validation is silent until the user
@@ -1780,7 +1784,7 @@ function ExampleModal({
               <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? dk.border : "#eef1f7" }}>
                 <div
                   className="h-full rounded-full transition-all duration-200"
-                  style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : c.primary }}
+                  style={{ width: `${Math.min(100, (total / MAX_WORDS) * 100)}%`, backgroundColor: over ? RED : near ? AMBER : c.primary }}
                 />
               </div>
             </div>
