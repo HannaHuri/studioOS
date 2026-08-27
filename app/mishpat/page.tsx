@@ -1613,8 +1613,8 @@ function ExampleModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="הזינו שם לדוגמה"
-            className="w-full rounded-md px-3 py-2.5 text-[16px] outline-none transition-colors"
-            style={{ border: `1px solid ${nameMissing ? RED : line}`, backgroundColor: surface, color: textCol }}
+            className="w-full px-3 py-2.5 text-[16px] outline-none transition-colors"
+            style={{ border: `1px solid ${nameMissing ? RED : line}`, borderRadius: "4px", backgroundColor: surface, color: textCol }}
           />
         </div>
 
@@ -1715,7 +1715,9 @@ function ExampleModal({
             onChange={(e) => setBody(active, e.target.value)}
             placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
             className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
-            style={{ border: `1px solid ${line}`, borderRadius: 0, backgroundColor: surface, color: textCol }}
+            // top corners stay square where the tab strip meets it; the bottom two match the
+            // name field's 4px so the two inputs read as one family
+            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
           />
         </div>
 
