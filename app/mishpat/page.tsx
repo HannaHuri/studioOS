@@ -1551,6 +1551,7 @@ function ExampleModal({
   // the name is only "missing" once there is a text to save — otherwise a freshly opened
   // editor would flag it before the user has done anything
   const nameMissing = !name.trim() && total > 0;
+  const textMissing = total === 0 && !!name.trim();
   const saveBlocked = !name.trim() ? "יש להזין שם לדוגמה."
     : total === 0 ? "יש להזין טקסט בלפחות אחד המסכים."
     : over ? `לא ניתן לשמור בחריגה מהמכסה. יש להסיר ${fmtNum(total - MAX_WORDS)} מילים.`
@@ -1607,7 +1608,7 @@ function ExampleModal({
         </div>
 
         {/* name */}
-        <div className="px-6 pb-3">
+        <div className="px-6 pb-1">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -1617,8 +1618,13 @@ function ExampleModal({
           />
         </div>
 
+        {/* validation sits with the thing it is about — fixed height so nothing shifts */}
+        <div className="px-6 pb-1 text-[12.5px]" style={{ color: RED, height: "20px", lineHeight: "16px" }}>
+          {nameMissing ? "יש להזין שם לדוגמה" : ""}
+        </div>
+
         {/* tabs — narrowed so five fit without scrolling */}
-        <div className="px-6 flex items-stretch gap-0.5" style={{ height: "38px" }}>
+        <div className="px-6 flex items-stretch" style={{ height: "38px" }}>
           {texts.map((t, i) => {
             const on = i === active;
             return (
@@ -1671,7 +1677,8 @@ function ExampleModal({
                       title="שינוי שם"
                     ><Pencil size={13} /></button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setPendingText(i); }}
+                      // nothing to lose in an empty tab — only confirm when there is text
+                      onClick={(e) => { e.stopPropagation(); if (counts[i] === 0) removeText(i); else setPendingText(i); }}
                       className="flex-none opacity-60 hover:opacity-100 transition-opacity"
                       style={{ color: subCol }}
                       title="מחיקת טקסט"
@@ -1715,8 +1722,11 @@ function ExampleModal({
         {/* per-text count — bottom-left, outside the field */}
         {/* fixed height + line-height: a min-height alone still grew when the text appeared
             (12px inheriting the body's 1.72 line-height ≈ 20.6px), which nudged the field */}
-        <div className="px-6 pt-1 text-[12px]" style={{ color: subCol, textAlign: "left", height: "22px", lineHeight: "18px" }}>
-          {counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}
+        <div className="px-6 pt-1 text-[12px] flex items-start" style={{ height: "22px", lineHeight: "18px" }}>
+          {/* the missing-text notice takes this row when there is nothing to count anywhere */}
+          <span style={{ color: RED }}>{textMissing ? "יש להדביק טקסט אחד לפחות כדי לשמור" : ""}</span>
+          <span className="flex-1" />
+          <span style={{ color: subCol }}>{counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}</span>
         </div>
 
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
@@ -1773,14 +1783,6 @@ function ExampleModal({
             </div>
 
             <div className="flex-1" />
-
-            {/* say what is still missing, but only once the user has actually started —
-                on a freshly opened editor both are empty and there is nothing to report */}
-            {!over && (name.trim() || total > 0) && saveBlocked && (
-              <div className="flex-none text-[12.5px] whitespace-nowrap mt-4" style={{ color: RED }}>
-                {total === 0 ? "יש להדביק טקסט אחד לפחות כדי לשמור" : "יש להזין שם לדוגמה"}
-              </div>
-            )}
 
             <button
               onClick={onClose}
