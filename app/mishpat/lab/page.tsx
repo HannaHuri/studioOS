@@ -2793,7 +2793,7 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
                 className="text-right text-[22px] font-medium mb-2"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
               >
-                שלום, איריס. במה אוכל לעזור?
+                שלום, אילן. במה אוכל לעזור?
               </p>
             )}
             <div className="flex flex-col gap-3">{renderScopeChip()}{renderInput()}</div>
@@ -2878,7 +2878,7 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
           >
             <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>אס</div>
             <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>איריס אילוטוביץ' סגל</span>
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>אילן סופר</span>
             </div>
           </button>
 
