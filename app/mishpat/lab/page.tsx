@@ -1675,8 +1675,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 44 },
-    related:     { track: roomy ? "52px" : "50px", show: () => visibleCols.related, fixed: roomy ? 52 : 50 },       // fits the "קשורים" header
-    attachments: { track: roomy ? "52px" : "50px", show: () => visibleCols.attachments, fixed: roomy ? 52 : 50 },   // fits the "נספחים" header
+    related:     { track: roomy ? "38px" : "36px", show: () => visibleCols.related, fixed: roomy ? 38 : 36 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
+    attachments: { track: roomy ? "38px" : "36px", show: () => visibleCols.attachments, fixed: roomy ? 38 : 36 },   // ditto "נספחים" — but nudged so it only spills toward שם מסמך (see headerCellContent)
     words:       { track: roomy ? "minmax(58px,66px)" : "minmax(54px,62px)", show: () => visibleCols.words, fixed: 54 }, // fits the "מס׳ מילים" header
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
@@ -1752,7 +1752,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       case "type":     return sortHead("type", "סוג");
       case "submitter":return sortHead("submitter", "מגיש");
       case "related":  return sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
-      case "attachments": return sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" });
+      case "attachments": return (
+        <span className="flex w-full" style={{ transform: "translateX(5px)" }}>
+          {sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" })}
+        </span>
+      );
       case "words":    return sortHead("words", "מס׳ מילים", { alignLeft: true, titleText: "מיון לפי מספר מילים" });
       default:         return <span />;
     }
