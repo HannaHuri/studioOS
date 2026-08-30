@@ -1107,15 +1107,17 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
 // So the relation points OUTWARD: clicking a name scrolls to that document's real row and rings it, and each
 // checkbox is that document's OWN, so its real row ticks at the same moment. Every part of the list keeps saying
 // "this document lives over there", never "this document is part of me".
-function RelatedPopover({ doc, siblingDocs, anchor, trigger, isDark, onClose, onJump, onOpenDoc, onToggleDocById, onSetChecked }: { doc: CaseDoc; siblingDocs: CaseDoc[]; anchor: DOMRect; trigger?: HTMLElement | null; isDark: boolean; onClose: () => void; onJump: (d: CaseDoc) => void; onOpenDoc?: (d: CaseDoc) => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void }) {
+function RelatedPopover({ doc, siblingDocs, anchor, trigger, activeId, isDark, onClose, onJump, onOpenDoc, onToggleDocById, onSetChecked }: { doc: CaseDoc; siblingDocs: CaseDoc[]; anchor: DOMRect; trigger?: HTMLElement | null; activeId?: string | null; isDark: boolean; onClose: () => void; onJump: (d: CaseDoc) => void; onOpenDoc?: (d: CaseDoc) => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDown = (e: MouseEvent) => { const t = e.target as Node; if (!ref.current?.contains(t) && !trigger?.contains(t)) onClose(); }; // the trigger is exempt so its own click can toggle instead of reopening
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", onClose, true); // capture: the list hangs off a fixed rect, so ANY container scrolling under it would tear it loose
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); window.removeEventListener("scroll", onClose, true); };
+    // Deliberately NOT closed by scrolling. Jumping to a related document scrolls the table under the list, and the
+    // list has to survive that: its whole point is browsing several related documents one after another. It stays
+    // where it was opened until the user closes it (×, Esc, the 🔗 trigger again, or a click outside).
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   });
 
   const W = 320;
@@ -1163,7 +1165,7 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, isDark, onClose, on
       )}
       <div className="flex flex-col overflow-y-auto py-1">
         {resolved.map(({ name, d }) => d ? (
-          <div key={name} className="group flex items-center gap-2 px-3 py-1.5 transition-colors hover:bg-black/[0.03]">
+          <div key={name} className="group flex items-center gap-2 px-3 py-1.5 transition-colors hover:bg-black/[0.03]" style={d.id === activeId ? { backgroundColor: isDark ? "#22293f" : "#eaf2fd" } : undefined}>
             <span className="flex-shrink-0" onClick={(e) => e.stopPropagation()}><CheckboxBlue checked={d.checked} onToggle={() => onToggleDocById?.(d.id)} /></span>
             <button onClick={() => onJump(d)} className="flex flex-col items-start min-w-0 flex-1 text-right" title="מעבר לשורה של המסמך בטבלה">
               <span className="doc-link text-[12.5px] truncate max-w-full" style={{ color: textCol }}>{name}</span>
@@ -1173,7 +1175,7 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, isDark, onClose, on
                 <span className="truncate">{d.type}</span>
               </span>
             </button>
-            <button onClick={() => { onOpenDoc?.(d); onClose(); }} title="פתיחת המסמך" className="flex items-center justify-center rounded flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-black/5 transition-opacity" style={{ color: c.primary, width: "22px", height: "22px" }}><FileText size={14} /></button>
+            <button onClick={() => onOpenDoc?.(d)} title="פתיחת המסמך" className="flex items-center justify-center rounded flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-black/5 transition-opacity" style={{ color: c.primary, width: "22px", height: "22px" }}><FileText size={14} /></button>
           </div>
         ) : (
           // Named as related but not actually in this case — nothing to jump to, so it stays plain text.
@@ -1506,12 +1508,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // 🔗 מסמכים קשורים: one floating list at a time, anchored to the icon's rect, plus the row it jumped to.
   const [relPop, setRelPop] = useState<{ doc: CaseDoc; rect: DOMRect; el: HTMLElement } | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [relActiveId, setRelActiveId] = useState<string | null>(null); // which related document the open list last took you to
   const flashTimer = useRef<number | null>(null);
-  const closeRelPop = () => setRelPop(null);
+  const closeRelPop = () => { setRelPop(null); setRelActiveId(null); };
   // Go to the related document's OWN row and ring it. When the row isn't on screen at all — filtered out, or in a
   // group that isn't rendered — there is nothing to point at, so fall back to opening the document itself.
   const jumpToDoc = (d: CaseDoc) => {
-    setRelPop(null);
+    setRelActiveId(d.id); // the list stays open, so it marks which of its documents you are looking at
     const el = rowRefs.current[d.id];
     if (!el) { onOpenDoc?.(d); return; }
     el.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1830,6 +1833,28 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     const idSet = new Set(ids);
     setDocs((p) => p.map((d) => (idSet.has(d.id) ? { ...d, checked: next } : d)));
   }
+  // A נספח was filed WITH its document, so it goes into the chat scope with it: selecting a document selects its
+  // נספחים, and dropping the document drops them again. This runs off the checked TRANSITION rather than off every
+  // render, which is what lets someone untick one נספח by hand and keep that choice while the document stays
+  // selected — and it catches every path that changes selection (a row's checkbox, "בחר הכל" in a nested group, a
+  // whole type folder) without each of them having to remember.
+  const prevCheckedIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const now = new Set(docs.filter((d) => d.checked).map((d) => d.id));
+    const prev = prevCheckedIds.current;
+    prevCheckedIds.current = now;
+    const keysOf = (id: string) => { const d = docs.find((x) => x.id === id); return (d?.attachments ?? []).map((n) => attKey(id, n)); };
+    if (prev === null) { // first run — seed from the documents that start selected
+      const seed = docs.flatMap((d) => (d.checked ? (d.attachments ?? []).map((n) => attKey(d.id, n)) : []));
+      if (seed.length) setAttachmentSel((sel) => { const n = new Set(sel); seed.forEach((k) => n.add(k)); return n; });
+      return;
+    }
+    const add: string[] = [], drop: string[] = [];
+    now.forEach((id) => { if (!prev.has(id)) add.push(...keysOf(id)); });
+    prev.forEach((id) => { if (!now.has(id)) drop.push(...keysOf(id)); });
+    if (add.length || drop.length) setAttachmentSel((sel) => { const n = new Set(sel); add.forEach((k) => n.add(k)); drop.forEach((k) => n.delete(k)); return n; });
+  }, [docs]);
+
   // Attachments aren't case documents, so their chat-selection lives in a separate Set (keyed by parent-doc + name).
   const toggleAttachment = (key: string) => setAttachmentSel((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   const setAttachmentsSelected = (keys: string[], next: boolean) => setAttachmentSel((s) => { const n = new Set(s); keys.forEach((k) => (next ? n.add(k) : n.delete(k))); return n; });
@@ -2011,7 +2036,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
         title="קיבוץ המסמכים לתיקיות לפי סוג"
       >
-        לפי סוג
+        תיקיות
       </button>
     </div>
   );
@@ -2060,6 +2085,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           siblingDocs={docs.filter((d) => d.caseId === relPop.doc.caseId)}
           anchor={relPop.rect}
           trigger={relPop.el}
+          activeId={relActiveId}
           isDark={isDark}
           onClose={closeRelPop}
           onJump={jumpToDoc}
