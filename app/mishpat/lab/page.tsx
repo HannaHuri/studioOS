@@ -716,7 +716,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
-      case "words":    return <span className="text-[11.5px] text-right w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      case "words":    return <span className="text-[11.5px] text-center w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
       default:         return null;
     }
   };
@@ -900,13 +900,14 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
           className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
       </div>
 
-      {/* Buttons pinned to the far (left, in RTL) end of the panel. The Esc / Ctrl+Enter shortcuts still work but are
-          deliberately NOT advertised — the hint read as one more thing to learn. */}
+      {/* Buttons pinned to the far (left, in RTL) end of the panel, שמירה outermost with ביטול to its right. The
+          Esc / Ctrl+Enter shortcuts still work but are deliberately NOT advertised — the hint read as one more
+          thing to learn. */}
       <div className="flex items-center gap-2 justify-end">
-        <button onClick={save} className="rounded-md px-3 h-7 text-[13px] hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}>שמירה</button>
         <button onClick={onCancel} className="rounded-md px-3 h-7 text-[13px] hover:bg-black/5 transition-colors"
           style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>ביטול</button>
+        <button onClick={save} className="rounded-md px-3 h-7 text-[13px] hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}>שמירה</button>
       </div>
     </div>
   );
@@ -1301,7 +1302,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           )}
         </span>
       );
-      case "words":    return <span className="text-[11.5px] text-right w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      case "words":    return <span className="text-[11.5px] text-center w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
       default:         return null;
     }
   };
@@ -1678,7 +1679,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 44 },
     related:     { track: roomy ? "38px" : "36px", show: () => visibleCols.related, fixed: roomy ? 38 : 36 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
-    attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" — but nudged so it only spills toward שם מסמך (see headerCellContent)
+    attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
     words:       { track: roomy ? "minmax(58px,66px)" : "minmax(54px,62px)", show: () => visibleCols.words, fixed: 54 }, // fits the "מס׳ מילים" header
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
@@ -1744,7 +1745,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       case "process":  return sortHead("process", "תהליך", { center: true, hideIcon: true });
       case "name":     return sortHead("name", "שם מסמך");
       case "summary":  return (
-        <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+        <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "8px" }}>
           <span>תקציר</span>
           <button onClick={() => setSummaryWrap((v) => !v)} title={summaryWrap ? "צמצום התקציר לשורה אחת" : "פריסת התקציר לכמה שורות"} className="flex items-center hover:opacity-70" style={{ color: summaryWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}>
             <CornerDownLeft size={13} />
@@ -1753,17 +1754,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       );
       case "type":     return sortHead("type", "סוג");
       case "submitter":return sortHead("submitter", "מגיש");
-      case "related":  return (
-        <span className="flex w-full" style={{ transform: "translateX(5px)" }}>
-          {sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" })}
-        </span>
-      );
-      case "attachments": return (
-        <span className="flex w-full" style={{ transform: "translateX(8px)" }}>
-          {sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" })}
-        </span>
-      );
-      case "words":    return sortHead("words", "מס׳ מילים", { titleText: "מיון לפי מספר מילים" });
+      case "related":  return sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
+      case "attachments": return sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" });
+      case "words":    return sortHead("words", "מס׳ מילים", { center: true, titleText: "מיון לפי מספר מילים" });
       default:         return <span />;
     }
   };
