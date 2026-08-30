@@ -8,7 +8,7 @@ import {
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield, StickyNote,
   Split, Sun, ThumbsDown, ThumbsUp,
-  Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
+  Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal, ClipboardCopy, ClipboardList, CircleMinus, CirclePlus,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
   type LucideIcon,
 } from "lucide-react";
@@ -701,7 +701,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
   const cellContent = (key: string) => {
     switch (key) {
       case "checkbox": return onToggleCheck ? <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span> : <span className="flex-shrink-0" />;
-      case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
+      case "num":      return <span dir="ltr" className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
       case "process":  return <span className="min-w-0 flex justify-center w-full" style={{ color: metaCol }}>{docProcessIds(doc).length > 0 && <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />}</span>;
@@ -1148,7 +1148,7 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
             <div key={name} className="flex items-center gap-2 py-1 text-right">
               <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={!!attachmentSel?.has(key)} onToggle={() => onToggleAttachment?.(key)} /></span>
               {colMeta.visible.num && parentNum != null && (
-                <span className="text-[11.5px] flex-shrink-0 tabular-nums" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="מספר נספח">{parentNum}{hebLetter(i)}׳</span>
+                <span dir="ltr" className="text-[11.5px] flex-shrink-0 tabular-nums" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="מספר נספח">{`#${parentNum}${hebLetter(i)}׳`}</span>
               )}
               <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
               <span className="text-[12.5px] truncate flex-1 min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
@@ -1278,6 +1278,54 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, activeId, isDark, o
   );
 }
 
+// Right-click on a row. It came out of validation — a user simply tried it — and the users come from נט המשפט,
+// a Windows-era application where right-click is a reflex rather than a discovery.
+// The rule it lives by: **nothing lives ONLY here.** A context menu is invisible by definition, so anything that
+// existed only inside it would be lost to everyone who never right-clicks. What it adds instead is the one thing
+// this table has repeatedly failed at — saying its row actions in WORDS. Every item below mirrors a control that
+// is already on the row, except the two copy actions, which have no home at all today.
+// It deliberately acts on the row that was clicked and NEVER on "the selection": the checkbox here means
+// "in the conversation", not "picked for an operation", and letting a menu act on it would collide with that.
+type CtxItem = { label: string; icon: LucideIcon; onSelect: () => void; danger?: boolean } | "sep";
+function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number; items: CtxItem[]; isDark: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onClose, true);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); window.removeEventListener("scroll", onClose, true); };
+  });
+  const W = 236;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const rows = items.filter((i) => i !== "sep").length, seps = items.length - rows;
+  const h = rows * 30 + seps * 9 + 8;
+  return (
+    <div
+      ref={ref}
+      dir="rtl"
+      className="fixed z-[290] rounded-lg overflow-hidden py-1"
+      style={{ left: Math.max(8, Math.min(x - W, vw - W - 8)), top: Math.max(8, Math.min(y, vh - h - 8)), width: W, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.2)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+    >
+      {items.map((it, i) => it === "sep" ? (
+        <div key={`sep${i}`} className="my-1" style={{ height: "1px", backgroundColor: isDark ? dk.border : "#eef1f4" }} />
+      ) : (
+        <button
+          key={it.label}
+          onClick={() => { it.onSelect(); onClose(); }}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-right transition-colors hover:bg-black/[0.04]"
+          style={{ color: isDark ? dk.text : c.text }}
+        >
+          <it.icon size={14} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+          <span className="text-[13px] truncate">{it.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // The full column order + which cells are shown, shared by DocRowCompact / NestedDocRow / the header so they stay aligned.
 // `order` is the live render order (checkbox · name · sp · …user-ordered data columns) — user-reorderable via the popover.
 type ColMeta = { visible: Record<DocColKey, boolean>; order: string[]; pin: Record<string, number | undefined>; gapPx: number; docNumbers: Record<string, number>; minWidthType: number; minWidthNoType: number; summaryWrap?: boolean; onCellTip?: (text: string | null, e?: ReactMouseEvent) => void };
@@ -1289,7 +1337,7 @@ const pinCellStyle = (key: string, cm: ColMeta): React.CSSProperties | undefined
   cm.pin[key] !== undefined ? { position: "sticky", right: cm.pin[key], zIndex: 2, background: "var(--row-bg)" } : undefined;
 
 // Dense table row — one line per document; columns come from `colMeta` (user-customizable, some pinned while scrolling).
-function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, showSelfInThread, lockProcess, processDocs, siblingDocs, openDocId, expandedKinds, onToggleExpand, relatedOpen, onOpenRelated, flash, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; showSelfInThread?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKinds?: ("attachments" | "process")[]; onToggleExpand?: (kind: "attachments" | "process") => void; relatedOpen?: boolean; onOpenRelated?: (rect: DOMRect, el: HTMLElement) => void; flash?: boolean; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
+function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, showSelfInThread, lockProcess, processDocs, siblingDocs, openDocId, expandedKinds, onToggleExpand, relatedOpen, onOpenRelated, flash, onContextMenu, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; showSelfInThread?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKinds?: ("attachments" | "process")[]; onToggleExpand?: (kind: "attachments" | "process") => void; relatedOpen?: boolean; onOpenRelated?: (rect: DOMRect, el: HTMLElement) => void; flash?: boolean; onContextMenu?: (x: number, y: number) => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
   const activeBg = isDark ? "#212c42" : "#f1f6fd";
   // Which detail panels are open for this row (parallel — related / process / attachments can all be open at once).
@@ -1322,7 +1370,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const cellContent = (key: string) => {
     switch (key) {
       case "checkbox": return <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>;
-      case "num":      return <span className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num ?? ""}</span>;
+      case "num":      return <span dir="ltr" className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
       // Process — the id(s). Clickable in the flat views, and there it wears the SAME boxed chip as 🔗 קשורים / 📎 נספחים
@@ -1422,6 +1470,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         className="group grid items-center px-2 py-1.5 cursor-pointer"
         style={{ gridTemplateColumns: gridCols, columnGap: colGap, ["--row-bg" as string]: restBg, backgroundColor: "var(--row-bg)", boxShadow: flash ? `inset 0 0 0 1px ${c.primary}` : undefined } as React.CSSProperties}
         onClick={() => { if (!editingField) onOpenDoc?.(); }}
+        onContextMenu={(e) => { if (!onContextMenu) return; e.preventDefault(); onContextMenu(e.clientX, e.clientY); }}
         onMouseEnter={(e) => { e.currentTarget.style.setProperty("--row-bg", hoverBg); }}
         onMouseLeave={(e) => { e.currentTarget.style.setProperty("--row-bg", restBg); }}
       >
@@ -1613,6 +1662,57 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [relPop, setRelPop] = useState<{ doc: CaseDoc; rect: DOMRect; el: HTMLElement } | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [relActiveId, setRelActiveId] = useState<string | null>(null); // which related document the open list last took you to
+  const [ctxMenu, setCtxMenu] = useState<{ doc: CaseDoc; x: number; y: number } | null>(null);
+  // Clipboard: the async API needs a secure context, which localhost and the deployed site both are — the
+  // textarea fallback is there for anything else (an IP address in a demo, an old browser in a courtroom).
+  const copy = (text: string) => {
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).catch(() => {}); return; }
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch { /* ignore */ }
+    ta.remove();
+  };
+  // "העתקת השורה" copies the row AS SHOWN — the visible data columns, in the user's own column order. The
+  // icon-only columns have no text to give, and the note is deliberately left out: it is the user's private
+  // writing and should not ride along in a copy they did not ask it into.
+  const rowText = (d: CaseDoc) => {
+    const num = docNumbers[d.id];
+    const cell: Partial<Record<string, string | undefined>> = {
+      num: num != null ? `#${num}` : undefined,
+      date: d.date, time: d.time, process: docProcessIds(d).length ? processTitle(d) : undefined,
+      name: d.name, summary: d.summary, type: d.type, submitter: d.submitter, words: d.words,
+    };
+    return ["checkbox", ...layout]
+      .map((k) => (k === "name" || visibleCols[k as DocColKey] ? cell[k] : undefined))
+      .filter((v): v is string => !!v)
+      .join(" · ");
+  };
+  const ctxItems = (d: CaseDoc): CtxItem[] => {
+    const rel = d.related.length, att = d.attachments?.length ?? 0, procs = docProcessIds(d);
+    const items: CtxItem[] = [
+      { label: "פתיחת המסמך", icon: FileText, onSelect: () => onOpenDoc?.(d) },
+      { label: d.checked ? "הסרה מהשיחה" : "הוספה לשיחה", icon: d.checked ? CircleMinus : CirclePlus, onSelect: () => toggleDoc(d.id) },
+    ];
+    if (att || rel || procs.length) {
+      items.push("sep");
+      if (att) items.push({ label: `נספחים (${att})`, icon: Paperclip, onSelect: () => togglePanel(d.id, "attachments") });
+      if (rel) items.push({ label: `מסמכים קשורים (${rel})`, icon: Link, onSelect: () => {
+        // Hang the list off the row's own 🔗 button when it is on screen, so it opens exactly where a click would
+        // have put it (and so that button stays the toggle that closes it again).
+        const el = rowRefs.current[d.id]?.querySelector('button[title^="מסמכים קשורים"]') as HTMLElement | null;
+        if (el) setRelPop({ doc: d, rect: el.getBoundingClientRect(), el });
+      } });
+      if (procs.length) items.push({ label: `התהליך: ${processTitle(d)}`, icon: CornerDownRight, onSelect: () => togglePanel(d.id, "process") });
+    }
+    items.push("sep");
+    items.push({ label: d.note ? "עריכת ההערה" : "הוספת הערה", icon: StickyNote, onSelect: () => editCtx.start(d.id, "note") });
+    items.push({ label: "עריכת שם ותקציר", icon: Pencil, onSelect: () => editCtx.start(d.id, "name") });
+    items.push("sep");
+    items.push({ label: "העתקת שם המסמך", icon: ClipboardCopy, onSelect: () => copy(d.name) });
+    items.push({ label: "העתקת השורה", icon: ClipboardList, onSelect: () => copy(rowText(d)) });
+    return items;
+  };
   const flashTimer = useRef<number | null>(null);
   const closeRelPop = () => { setRelPop(null); setRelActiveId(null); };
   // Go to the related document's OWN row and ring it. When the row isn't on screen at all — filtered out, or in a
@@ -1865,7 +1965,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const headerCellContent = (key: string) => {
     switch (key) {
       case "checkbox": return columnsBtn; // the table's own corner — where users look for column controls
-      case "num":      return <span className="text-center w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>;
+      case "num":      return <span className="text-center w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>; // the cells' # carries the meaning; the column is too narrow for "מס׳ מסמך"
       case "date":     return sortHead("date", "תאריך");
       case "time":     return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>שעה</span>;
       case "process":  return sortHead("process", "תהליך", { center: true, hideIcon: true });
@@ -2194,6 +2294,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     <DocEditCtx.Provider value={editCtx}>
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
       {columnsMenu}
+      {ctxMenu && (
+        <RowContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxItems(ctxMenu.doc)} isDark={isDark} onClose={() => setCtxMenu(null)} />
+      )}
       {/* 🔗 מסמכים קשורים — floats over the table instead of expanding inside it (see RelatedPopover) */}
       {relPop && (
         <RelatedPopover
@@ -2381,7 +2484,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(true)}px` }}>
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
           </HScroll>
@@ -2444,18 +2547,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id).filter((k) => k !== "process")} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id).filter((k) => k !== "process")} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
                         })}
                         {noProcess.map((doc) => (
-                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                          <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={undefined} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                         ))}
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
