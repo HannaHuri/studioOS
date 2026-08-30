@@ -6,7 +6,7 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
-  Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield, StickyNote,
   Split, Sun, ThumbsDown, ThumbsUp,
   Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
@@ -133,6 +133,8 @@ interface CaseDoc {
   key?: boolean;         // central/pivotal document
   keyReason?: string;    // why it's central — shown in tooltip (transparency)
   isNew?: boolean;       // new since the judge's last visit
+  note?: string;         // the user's own note about this document (never written by the system)
+  noteShared?: boolean;  // false/undefined = לעיני בלבד · true = visible to the user's team, with their name
   nameOriginal?: string;    // the system's own name, kept the first time the user renames the display name
   summaryOriginal?: string; // the system's own summary, kept the first time the user rewrites it
   caseId?: string;       // which case this document belongs to
@@ -716,7 +718,8 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
-      case "words":    return <span className="text-[11.5px] text-center w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      case "note":     return <span />;
+      case "words":    return <span className="text-[11.5px] text-right w-full" style={{ color: doc.missing ? "#d83a52" : metaCol, fontFamily: "Figtree, sans-serif", paddingInlineStart: "4px" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
       default:         return null;
     }
   };
@@ -743,8 +746,8 @@ const attKey = (docId: string, name: string) => `${docId}::${name}`;
 // ── Table columns (customizable) ────────────────────────────────────────────
 // Toggleable columns the user can show/hide. The checkbox, document name, and the related/attachment icons are
 // structural and always shown, so they're not in this list. "num" (מספר מסמך) and "time" (שעת הגשה) are OFF by default.
-type DocColKey = "num" | "date" | "time" | "process" | "summary" | "type" | "submitter" | "related" | "attachments" | "words";
-const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary", "type", "submitter", "related", "attachments", "words"]; // data keys (labels + visibility defaults)
+type DocColKey = "num" | "date" | "time" | "process" | "summary" | "type" | "submitter" | "related" | "attachments" | "note" | "words";
+const DOC_COL_ORDER: DocColKey[] = ["num", "date", "time", "process", "summary", "type", "submitter", "related", "attachments", "note", "words"]; // data keys (labels + visibility defaults)
 // The LAYOUT order includes the "name" anchor. Columns before it are frozen (stay put on horizontal scroll); columns
 // after it scroll. Default puts process · date right of the name, like before — but every column is freely movable
 // (drag it across the name line to change whether it scrolls).
@@ -754,7 +757,7 @@ type LayoutKey = DocColKey | "name";
 // metadata block. Adjacency is what makes that distinction readable without explaining it.
 // שעת הגשה follows תאריך — the layout drives the columns popover too, so the two time fields read as a pair in the
 // menu, and the column lands beside the date when it is switched on.
-const DEFAULT_LAYOUT: LayoutKey[] = ["date", "time", "process", "num", "name", "attachments", "summary", "type", "submitter", "related", "words"];
+const DEFAULT_LAYOUT: LayoutKey[] = ["date", "time", "process", "num", "name", "attachments", "summary", "type", "submitter", "related", "words", "note"]; // הערה sits at the far end: its own column, and the one spot where its label cannot crowd a neighbour
 const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const all: LayoutKey[] = ["name", ...DOC_COL_ORDER];
   const valid = stored.filter((k): k is LayoutKey => all.includes(k as LayoutKey));
@@ -762,9 +765,9 @@ const reconcileLayout = (stored: string[]): LayoutKey[] => {
   const missing = all.filter((k) => !withName.includes(k));
   return [...withName, ...missing];
 };
-const DOC_COL_LABELS: Record<DocColKey, string> = { num: "מספר מסמך", date: "תאריך", time: "שעת הגשה", process: "תהליך", summary: "תקציר", type: "סוג", submitter: "מגיש", related: "מסמכים קשורים", attachments: "נספחים", words: "מספר מילים" };
-const DOC_COL_DEFAULTS: Record<DocColKey, boolean> = { num: false, date: true, time: false, process: true, summary: true, type: true, submitter: true, related: true, attachments: true, words: true };
-const DOC_COLS_LS_KEY = "mishpat-lab-docCols-v2"; // key bumped → old saved column state is discarded, everyone gets fresh defaults
+const DOC_COL_LABELS: Record<DocColKey, string> = { num: "מספר מסמך", date: "תאריך", time: "שעת הגשה", process: "תהליך", summary: "תקציר", type: "סוג", submitter: "מגיש", related: "מסמכים קשורים", attachments: "נספחים", note: "הערה", words: "מספר מילים" };
+const DOC_COL_DEFAULTS: Record<DocColKey, boolean> = { num: false, date: true, time: false, process: true, summary: true, type: true, submitter: true, related: true, attachments: true, note: true, words: true };
+const DOC_COLS_LS_KEY = "mishpat-lab-docCols-v3"; // key bumped → old saved column state is discarded, everyone gets fresh defaults
 const loadDocCols = (): Record<DocColKey, boolean> => {
   if (typeof window === "undefined") return { ...DOC_COL_DEFAULTS };
   try {
@@ -774,7 +777,7 @@ const loadDocCols = (): Record<DocColKey, boolean> => {
   return { ...DOC_COL_DEFAULTS };
 };
 // Persisted column LAYOUT (order + freeze line via the "name" anchor). Bumped key ("v2") so the old order format is ignored.
-const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v6"; // bump on EVERY default-order change (v5 נספחים beside the name, v6 שעת הגשה after תאריך) — without it, anyone who has opened the page keeps the old order and never sees the change
+const DOC_COLORDER_LS_KEY = "mishpat-lab-docLayout-v7"; // bump on EVERY default-order change (v5 נספחים beside the name, v6 שעת הגשה after תאריך) — without it, anyone who has opened the page keeps the old order and never sees the change
 const loadLayout = (): LayoutKey[] => {
   if (typeof window === "undefined") return [...DEFAULT_LAYOUT];
   try {
@@ -790,8 +793,10 @@ const loadLayout = (): LayoutKey[] => {
 // (2) the edit is PERSONAL (2026-08-19 decision) — a judge may well use the summary as a private reminder of what the
 // document is, so it must not rewrite what colleagues see. Personal scope is also why it persists to localStorage
 // rather than to the document. If this ever becomes shared-per-case, this overlay is the thing that moves server-side.
-type EditField = "name" | "summary";
-type DocEdit = Partial<Record<EditField, string>>;
+type EditField = "name" | "summary" | "note";
+// note has no "original" — the system never writes one, so there is nothing to restore to; an emptied note is
+// simply gone. noteShared rides along with it because it is a property of that note, not of the document.
+type DocEdit = Partial<Record<EditField, string>> & { noteShared?: boolean };
 const DOC_EDITS_LS_KEY = "mishpat-lab-docEdits-v1";
 const loadDocEdits = (): Record<string, DocEdit> => {
   if (typeof window === "undefined") return {};
@@ -814,6 +819,7 @@ const applyDocEdits = (list: CaseDoc[]): CaseDoc[] => {
     const next = { ...d };
     if (e.name != null && e.name !== d.name) { next.nameOriginal = d.name; next.name = e.name; }
     if (e.summary != null && e.summary !== d.summary) { next.summaryOriginal = d.summary; next.summary = e.summary; }
+    if (e.note != null) { next.note = e.note; next.noteShared = !!e.noteShared; }
     return next;
   });
 };
@@ -823,7 +829,7 @@ const DocEditCtx = createContext<{
   editing: { id: string; field: EditField } | null;
   start: (id: string, field: EditField) => void;
   cancel: () => void;
-  commit: (id: string, values: Partial<Record<EditField, string | null>>) => void;
+  commit: (id: string, values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => void;
   setDirty: (dirty: boolean) => void;
 } | null>(null);
 
@@ -832,18 +838,24 @@ const DocEditCtx = createContext<{
 // edited together — the pencil that was clicked only decides which one gets the focus.
 function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChange }: {
   doc: CaseDoc; focusField: EditField; isDark: boolean;
-  onCommit: (values: Partial<Record<EditField, string | null>>) => void; onCancel: () => void;
+  onCommit: (values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => void; onCancel: () => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const [name, setName] = useState(doc.name);
   const [summary, setSummary] = useState(doc.summary);
+  const [note, setNote] = useState(doc.note ?? "");
+  const [noteShared, setNoteShared] = useState(!!doc.noteShared);
   // Reported up so a second click on the pencil can close an untouched panel without ever discarding typed text.
-  const editName = (v: string) => { setName(v); onDirtyChange(v !== doc.name || summary !== doc.summary); };
-  const editSummary = (v: string) => { setSummary(v); onDirtyChange(name !== doc.name || v !== doc.summary); };
+  const dirty = (n: string, s2: string, nt: string, sh: boolean) => n !== doc.name || s2 !== doc.summary || nt !== (doc.note ?? "") || sh !== !!doc.noteShared;
+  const editName = (v: string) => { setName(v); onDirtyChange(dirty(v, summary, note, noteShared)); };
+  const editSummary = (v: string) => { setSummary(v); onDirtyChange(dirty(name, v, note, noteShared)); };
+  const editNote = (v: string) => { setNote(v); onDirtyChange(dirty(name, summary, v, noteShared)); };
+  const editNoteShared = (v: boolean) => { setNoteShared(v); onDirtyChange(dirty(name, summary, note, v)); };
   const nameRef = useRef<HTMLInputElement | null>(null);
   const sumRef = useRef<HTMLTextAreaElement | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
-    const el = focusField === "name" ? nameRef.current : sumRef.current;
+    const el = focusField === "name" ? nameRef.current : focusField === "note" ? noteRef.current : sumRef.current;
     if (el) { el.focus(); el.select(); }
   }, [focusField]);
   const labelCol = isDark ? dk.textMuted : c.textLight;
@@ -858,7 +870,11 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
     const out: Partial<Record<EditField, string | null>> = {};
     const n = norm(name, doc.name, doc.nameOriginal); if (n !== undefined) out.name = n;
     const s = norm(summary, doc.summary, doc.summaryOriginal); if (s !== undefined) out.summary = s;
-    onCommit(out);
+    // The note has no system text behind it: emptied means deleted, not restored.
+    const nt = note.trim();
+    if (nt !== (doc.note ?? "")) out.note = nt === "" ? null : nt;
+    else if (nt !== "" && noteShared !== !!doc.noteShared) out.note = nt; // only the visibility changed
+    onCommit(out, noteShared);
   };
   const fieldStyle: React.CSSProperties = {
     fontFamily: "Noto Sans Hebrew, sans-serif", border: `1px solid ${isDark ? dk.border : "#cfe1f7"}`, resize: "none",
@@ -881,7 +897,7 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
     >
       <span className="flex items-center gap-1.5 text-[12px]" style={{ color: labelCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
         <Pencil size={12} className="flex-shrink-0" />
-        השם והתקציר נכתבו על ידי המערכת — הנוסח שתשמרו כאן נשמר עבורכם בלבד
+        השם והתקציר נכתבו על ידי המערכת — הנוסח שתשמרו עבורם נשמר עבורכם בלבד
       </span>
 
       <div className="flex flex-col gap-1">
@@ -897,6 +913,32 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
       <div className="flex flex-col gap-1">
         <span className="flex items-center gap-2">{label("תקציר")}<span className="flex-1" />{restoreBtn(doc.summaryOriginal, () => editSummary(doc.summaryOriginal!))}</span>
         <textarea ref={sumRef} value={summary} onChange={(e) => editSummary(e.target.value)} rows={4}
+          className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
+      </div>
+
+      {/* The note is the user's own — the system never writes one — so it has no "restore" and no system text to
+          fall back on. Who may read it is part of the note, and it is asked right where the note is written rather
+          than buried in a setting: לעיני בלבד is the default, because a judge's note reads as private unless they
+          decide otherwise. */}
+      <div className="flex flex-col gap-1">
+        <span className="flex items-center gap-2">
+          {label("הערה")}
+          <span className="flex-1" />
+          <span className="flex items-center h-6 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
+            {([[false, "לעיני בלבד"], [true, "לי ולצוותי"]] as [boolean, string][]).map(([val, lbl], i) => (
+              <button
+                key={lbl}
+                onClick={() => editNoteShared(val)}
+                className="h-full px-2 flex items-center text-[11.5px] whitespace-nowrap transition-colors"
+                style={{ backgroundColor: noteShared === val ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: noteShared === val ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif", borderInlineStart: i === 1 ? `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` : undefined }}
+                title={val ? "כל מי שעובד על התיק יראה את ההערה, בציון שמך" : "ההערה נשמרת עבורך בלבד"}
+              >
+                {lbl}
+              </button>
+            ))}
+          </span>
+        </span>
+        <textarea ref={noteRef} value={note} onChange={(e) => editNote(e.target.value)} rows={2} placeholder="הערה אישית על המסמך"
           className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
       </div>
 
@@ -1295,6 +1337,20 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           )}
         </span>
       );
+      case "note":     return (
+        <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => { e.stopPropagation(); edit?.start(doc.id, "note"); }}
+            onMouseEnter={(e) => { if (doc.note) colMeta.onCellTip?.(doc.note, e); }}
+            onMouseLeave={() => colMeta.onCellTip?.(null)}
+            className={`flex items-center justify-center flex-shrink-0 rounded transition-opacity ${doc.note ? "" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"}`}
+            style={{ color: doc.note ? c.primary : (isDark ? dk.textMuted : c.iconGray), width: "18px", height: "18px" }}
+            title={doc.note ? (doc.noteShared ? "הערה — גלויה לך ולצוותך" : "הערה — לעיניך בלבד") : "הוספת הערה"}
+          >
+            <StickyNote size={13} />
+          </button>
+        </span>
+      );
       case "attachments": return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length ?? 0) > 0 && (
@@ -1304,7 +1360,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           )}
         </span>
       );
-      case "words":    return <span className="text-[11.5px] text-center w-full" style={doc.missing ? { color: "#d83a52", fontFamily: "Figtree, sans-serif" } : { color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
+      case "words":    return <span className="text-[11.5px] text-right w-full" style={{ color: doc.missing ? "#d83a52" : metaCol, fontFamily: "Figtree, sans-serif", paddingInlineStart: "4px" }} title={doc.missing ? "המסמך ללא תוכן" : "מספר מילים"}>{doc.words}</span>;
       default:         return null;
     }
   };
@@ -1331,7 +1387,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       </div>
       {editingField && edit && (
         <DocEditPanel doc={doc} focusField={editingField} isDark={isDark}
-          onCommit={(values) => edit.commit(doc.id, values)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
+          onCommit={(values, noteShared) => edit.commit(doc.id, values, noteShared)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
       )}
       {/* Open detail panels stack as separate labeled cards (related / process / attachments can be open in parallel). */}
       {openPanels.map((kind) => (
@@ -1683,6 +1739,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 44 },
     related:     { track: roomy ? "38px" : "36px", show: () => visibleCols.related, fixed: roomy ? 38 : 36 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
+    note:        { track: roomy ? "28px" : "26px", show: () => visibleCols.note, fixed: roomy ? 28 : 26 },        // marker only — the note itself is written in the pencil panel
     attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
     words:       { track: roomy ? "minmax(58px,66px)" : "minmax(54px,62px)", show: () => visibleCols.words, fixed: 54 }, // fits the "מס׳ מילים" header
   };
@@ -1777,7 +1834,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       case "submitter":return sortHead("submitter", "מגיש");
       case "related":  return sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
       case "attachments": return sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" });
-      case "words":    return sortHead("words", "מס׳ מילים", { center: true, titleText: "מיון לפי מספר מילים" });
+      case "note":     return <span className="w-full text-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="הערות אישיות על המסמך">הערה</span>;
+      case "words":    return (
+        <span className="flex w-full" style={{ paddingInlineStart: "4px" }}>
+          {sortHead("words", "מס׳ מילים", { titleText: "מיון לפי מספר מילים" })}
+        </span>
+      );
       default:         return <span />;
     }
   };
@@ -1874,7 +1936,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // not to the document). `value === null` = restore the system's text.
   const [editing, setEditing] = useState<{ id: string; field: EditField } | null>(null);
   const editDirty = useRef(false); // has anything been typed in the open panel? (a second pencil click closes it only if not)
-  const commitEdit = (id: string, values: Partial<Record<EditField, string | null>>) => {
+  const commitEdit = (id: string, values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => {
     setEditing(null);
     editDirty.current = false;
     if (!Object.keys(values).length) return; // nothing was changed
@@ -1889,12 +1951,17 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         if (values.summary === null) { next.summary = d.summaryOriginal ?? d.summary; next.summaryOriginal = undefined; }
         else { next.summaryOriginal = d.summaryOriginal ?? d.summary; next.summary = values.summary; }
       }
+      if (values.note !== undefined) {
+        if (values.note === null) { next.note = undefined; next.noteShared = undefined; }
+        else { next.note = values.note; next.noteShared = !!noteShared; }
+      }
       return next;
     }));
     const edits = loadDocEdits();
     const e: DocEdit = { ...edits[id] };
     (Object.keys(values) as EditField[]).forEach((f) => { const v = values[f]; if (v === null) delete e[f]; else if (v !== undefined) e[f] = v; });
-    if (e.name == null && e.summary == null) delete edits[id]; else edits[id] = e;
+    if (values.note === null) delete e.noteShared; else if (values.note !== undefined) e.noteShared = !!noteShared;
+    if (e.name == null && e.summary == null && e.note == null) delete edits[id]; else edits[id] = e;
     saveDocEdits(edits);
   };
   const editCtx = {
