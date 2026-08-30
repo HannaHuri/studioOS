@@ -422,7 +422,7 @@ function FilterDropdown({
         <>
           <div className="fixed inset-0 z-30" onClick={() => { setOpen(false); setQ(""); }} />
           <div
-            className="absolute z-40 mt-1 rounded-lg py-1 overflow-hidden"
+            className="absolute z-40 mt-1 rounded-[8px] py-1 overflow-hidden"
             style={{ top: "100%", right: 0, minWidth: "180px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             {searchable && (
@@ -497,7 +497,7 @@ function DateRangeFilter({
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
-            className="absolute z-40 mt-1 rounded-lg p-3 flex flex-col gap-2.5"
+            className="absolute z-40 mt-1 rounded-[8px] p-3 flex flex-col gap-2.5"
             style={{ top: "100%", right: 0, width: "164px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.13)" }}
           >
             <label className="flex flex-col gap-1 text-[14px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
@@ -1227,7 +1227,7 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, activeId, isDark, o
     <div
       ref={ref}
       dir="rtl"
-      className="fixed z-[280] rounded-lg flex flex-col overflow-hidden"
+      className="fixed z-[280] rounded-[8px] flex flex-col overflow-hidden"
       style={{ left, width: W, ...pos, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : "#dde3ec"}`, boxShadow: "0 10px 30px rgba(0,0,0,0.18)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
     >
       <div className="flex items-start justify-between gap-2 px-3 pt-2.5 pb-2" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#eef1f6"}` }}>
@@ -1286,6 +1286,8 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, activeId, isDark, o
 // is already on the row, except the two copy actions, which have no home at all today.
 // It deliberately acts on the row that was clicked and NEVER on "the selection": the checkbox here means
 // "in the conversation", not "picked for an operation", and letting a menu act on it would collide with that.
+// NOTE: every floating layer on this page is pinned to an explicit 8px. Tailwind's scale is overridden here
+// (--radius: 0.625rem), so `rounded-lg` renders 10px and `rounded-md` 8px — the class names lie about the number.
 type CtxItem = { label: string; icon: LucideIcon; onSelect: () => void; active?: boolean } | "sep";
 function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number; items: CtxItem[]; isDark: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -1307,7 +1309,7 @@ function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number
       ref={ref}
       dir="rtl"
       className="fixed z-[290] overflow-hidden py-1"
-      style={{ left: Math.max(8, Math.min(x - W, vw - W - 8)), top: Math.max(8, Math.min(y, vh - h - 8)), width: W, borderRadius: "6px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.2)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+      style={{ left: Math.max(8, Math.min(x - W, vw - W - 8)), top: Math.max(8, Math.min(y, vh - h - 8)), width: W, borderRadius: "8px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.2)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
     >
       {items.map((it, i) => it === "sep" ? (
         <div key={`sep${i}`} className="my-1" style={{ height: "1px", backgroundColor: isDark ? dk.border : "#eef1f4" }} />
@@ -2265,7 +2267,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const columnsMenu = colsMenuOpen && colsMenuRect && (
     <>
       <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
-      <div className="fixed z-[200] rounded-lg overflow-hidden" style={{ top: colsMenuRect.bottom + 6, left: Math.max(8, Math.min(colsMenuRect.right - 212, (typeof window !== "undefined" ? window.innerWidth : 1280) - 220)), width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
+      <div className="fixed z-[200] rounded-[8px] overflow-hidden" style={{ top: colsMenuRect.bottom + 6, left: Math.max(8, Math.min(colsMenuRect.right - 212, (typeof window !== "undefined" ? window.innerWidth : 1280) - 220)), width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
         <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
         <div className="py-1">
           {layout.filter((k) => k !== "name").map((k, i, list) => (
@@ -3236,7 +3238,7 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
           {/* Dropdown menu */}
           {menuOpen && (
             <div
-              className="absolute top-full mt-1 left-0 rounded-lg py-1 z-50"
+              className="absolute top-full mt-1 left-0 rounded-[8px] py-1 z-50"
               style={{
                 minWidth: "180px",
                 backgroundColor: isDark ? dk.surface : "white",
