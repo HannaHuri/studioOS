@@ -1286,7 +1286,7 @@ function RelatedPopover({ doc, siblingDocs, anchor, trigger, activeId, isDark, o
 // is already on the row, except the two copy actions, which have no home at all today.
 // It deliberately acts on the row that was clicked and NEVER on "the selection": the checkbox here means
 // "in the conversation", not "picked for an operation", and letting a menu act on it would collide with that.
-type CtxItem = { label: string; icon: LucideIcon; onSelect: () => void; danger?: boolean } | "sep";
+type CtxItem = { label: string; icon: LucideIcon; onSelect: () => void; active?: boolean } | "sep";
 function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number; items: CtxItem[]; isDark: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1306,8 +1306,8 @@ function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number
     <div
       ref={ref}
       dir="rtl"
-      className="fixed z-[290] rounded-lg overflow-hidden py-1"
-      style={{ left: Math.max(8, Math.min(x - W, vw - W - 8)), top: Math.max(8, Math.min(y, vh - h - 8)), width: W, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.2)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+      className="fixed z-[290] overflow-hidden py-1"
+      style={{ left: Math.max(8, Math.min(x - W, vw - W - 8)), top: Math.max(8, Math.min(y, vh - h - 8)), width: W, borderRadius: "6px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.2)", fontFamily: "Noto Sans Hebrew, sans-serif" }}
     >
       {items.map((it, i) => it === "sep" ? (
         <div key={`sep${i}`} className="my-1" style={{ height: "1px", backgroundColor: isDark ? dk.border : "#eef1f4" }} />
@@ -1316,10 +1316,12 @@ function RowContextMenu({ x, y, items, isDark, onClose }: { x: number; y: number
           key={it.label}
           onClick={() => { it.onSelect(); onClose(); }}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 text-right transition-colors hover:bg-black/[0.04]"
-          style={{ color: isDark ? dk.text : c.text }}
+          style={{ color: it.active ? c.primary : (isDark ? dk.text : c.text) }}
+          title={it.active ? "פתוח כעת — לחיצה תסגור" : undefined}
         >
-          <it.icon size={14} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+          <it.icon size={14} style={{ flexShrink: 0, color: it.active ? c.primary : (isDark ? dk.textMuted : c.iconGray) }} />
           <span className="text-[13px] truncate">{it.label}</span>
+          {it.active && <><span className="flex-1" /><Check size={13} style={{ flexShrink: 0 }} /></>}
         </button>
       ))}
     </div>
@@ -1696,14 +1698,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     ];
     if (att || rel || procs.length) {
       items.push("sep");
-      if (att) items.push({ label: `נספחים (${att})`, icon: Paperclip, onSelect: () => togglePanel(d.id, "attachments") });
-      if (rel) items.push({ label: `מסמכים קשורים (${rel})`, icon: Link, onSelect: () => {
+      if (att) items.push({ label: `נספחים (${att})`, icon: Paperclip, active: openPanels.has(panelK(d.id, "attachments")), onSelect: () => togglePanel(d.id, "attachments") });
+      if (rel) items.push({ label: `מסמכים קשורים (${rel})`, icon: Link, active: relPop?.doc.id === d.id, onSelect: () => {
         // Hang the list off the row's own 🔗 button when it is on screen, so it opens exactly where a click would
         // have put it (and so that button stays the toggle that closes it again).
+        if (relPop?.doc.id === d.id) { closeRelPop(); return; }
         const el = rowRefs.current[d.id]?.querySelector('button[title^="מסמכים קשורים"]') as HTMLElement | null;
         if (el) setRelPop({ doc: d, rect: el.getBoundingClientRect(), el });
       } });
-      if (procs.length) items.push({ label: `התהליך: ${processTitle(d)}`, icon: CornerDownRight, onSelect: () => togglePanel(d.id, "process") });
+      if (procs.length) items.push({ label: `התהליך: ${processTitle(d)}`, icon: CornerDownRight, active: openPanels.has(panelK(d.id, "process")), onSelect: () => togglePanel(d.id, "process") });
     }
     items.push("sep");
     items.push({ label: d.note ? "עריכת ההערה" : "הוספת הערה", icon: StickyNote, onSelect: () => editCtx.start(d.id, "note") });
