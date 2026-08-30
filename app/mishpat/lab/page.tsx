@@ -918,8 +918,10 @@ function EditPencil({ edited, title, isDark, onStart }: { edited: boolean; title
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onStart(); }}
-      className={`flex-shrink-0 flex items-center transition-opacity hover:!opacity-100 ${edited ? "opacity-70" : "opacity-0 group-hover:opacity-60"}`}
-      style={{ color: edited ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
+      className={`flex-shrink-0 flex items-center transition-opacity hover:!opacity-100 ${edited ? "opacity-70" : "absolute inset-y-0 opacity-0 group-hover:opacity-60"}`}
+      style={edited
+        ? { color: c.primary }
+        : { color: isDark ? dk.textMuted : c.iconGray, insetInlineEnd: 0, paddingInlineStart: "9px", background: "linear-gradient(to left, transparent, var(--row-bg) 9px)" }}
       title={title}
     >
       <Pencil size={11} />
@@ -1267,7 +1269,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       // the panel edits both fields anyway, and an icon that lands at the same x on every row fades in like a column
       // instead of chasing the cursor. Two pencils at two text-dependent positions was the noise.
       case "name":     return (
-        <span className="flex items-center gap-1.5 min-w-0 w-full">
+        <span className="relative flex items-center gap-1.5 min-w-0 w-full">
           <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
           <span className="flex-1 min-w-0" />
@@ -2983,7 +2985,7 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>ש</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>כש</div>
             <div className="flex flex-col leading-tight text-right">
               <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>כבוד השופט/ת</span>
             </div>
