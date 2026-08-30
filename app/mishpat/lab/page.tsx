@@ -701,10 +701,10 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
   const cellContent = (key: string) => {
     switch (key) {
       case "checkbox": return onToggleCheck ? <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span> : <span className="flex-shrink-0" />;
-      case "num":      return <span dir="ltr" className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
+      case "num":      return <span dir="ltr" className="text-right w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
-      case "process":  return <span className="min-w-0 flex justify-center w-full" style={{ color: metaCol }}>{docProcessIds(doc).length > 0 && <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />}</span>;
+      case "process":  return <span className="min-w-0 flex justify-start w-full" style={{ color: metaCol }}>{docProcessIds(doc).length > 0 && <ProcessChips ids={docProcessIds(doc)} isDark={isDark} />}</span>;
       case "name":     return (
         <span className="flex items-center gap-1 min-w-0" style={{ paddingInlineStart: "6px" }}>
           {variant === "process"
@@ -1374,7 +1374,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const cellContent = (key: string) => {
     switch (key) {
       case "checkbox": return <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span>;
-      case "num":      return <span dir="ltr" className="text-center w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
+      case "num":      return <span dir="ltr" className="text-right w-full text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="מספר מסמך">{num != null ? `#${num}` : ""}</span>;
       case "date":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title={doc.time ? `${doc.date} ${doc.time}` : doc.date}>{doc.date}</span>;
       case "time":     return <span className="text-right text-[12px]" style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }} title="שעת הגשה">{doc.time ?? "—"}</span>;
       // Process — the id(s). Clickable in the flat views, and there it wears the SAME boxed chip as 🔗 קשורים / 📎 נספחים
@@ -1383,7 +1383,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       // numbers stay but are static — they still matter there to reveal that a doc is linked to OTHER processes beyond the
       // folder's own — so they keep the plain pill and NOT the button chip. Pill = data, box = button.
       case "process":  return (
-        <span className="min-w-0 flex items-center justify-center gap-0.5 w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="min-w-0 flex items-center justify-start gap-0.5 w-full" onClick={(e) => e.stopPropagation()}>
           {procIds.length > 0 && (lockProcess
             ? <ProcessChips ids={procIds} isDark={isDark} />
             : (
@@ -1427,7 +1427,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
       case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
       case "related":  return (
-        <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="flex justify-start w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
             <RowIconTrigger active={!!relatedOpen} onClick={(e) => { e.stopPropagation(); const el = e.currentTarget as HTMLElement; onOpenRelated?.(el.getBoundingClientRect(), el); }} title={`מסמכים קשורים (${doc.related.length})`} isDark={isDark} boxed outline>
               <Link size={13} />
@@ -1436,7 +1436,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "note":     return (
-        <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="flex justify-start w-full" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={(e) => { e.stopPropagation(); edit?.start(doc.id, "note"); }}
             onMouseEnter={(e) => { if (doc.note) colMeta.onCellTip?.(doc.note, e); }}
@@ -1450,7 +1450,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "attachments": return (
-        <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="flex justify-start w-full" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length ?? 0) > 0 && (
             <RowIconTrigger active={openKinds.has("attachments")} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`} isDark={isDark} picked={attPicked} boxed>
               <Paperclip size={13} />
@@ -1885,15 +1885,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
     name:        { track: roomy ? "minmax(140px,240px)" : "minmax(74px,1.4fr)", show: () => true, fixed: roomy ? 140 : 74 },
     num:         { track: "36px", show: () => visibleCols.num, fixed: 36 },
-    process:     { track: roomy ? "44px" : "32px", show: () => visibleCols.process, fixed: roomy ? 44 : 32 }, // roomy fits the boxed trigger with "2,3" or "2 +3"
+    process:     { track: roomy ? "44px" : "36px", show: () => visibleCols.process, fixed: roomy ? 44 : 36 }, // roomy fits the boxed trigger with "2,3" or "2 +3"
     date:        { track: "52px", show: () => visibleCols.date, fixed: 52 },
     time:        { track: "44px", show: () => visibleCols.time, fixed: 44 },
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
     submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 44 },
-    related:     { track: roomy ? "38px" : "36px", show: () => visibleCols.related, fixed: roomy ? 38 : 36 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
-    note:        { track: roomy ? "28px" : "26px", show: () => visibleCols.note, fixed: roomy ? 28 : 26 },        // marker only — the note itself is written in the pencil panel
-    attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
+    related:     { track: roomy ? "44px" : "42px", show: () => visibleCols.related, fixed: roomy ? 44 : 42 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
+    note:        { track: roomy ? "34px" : "32px", show: () => visibleCols.note, fixed: roomy ? 34 : 32 },        // marker only — the note itself is written in the pencil panel
+    attachments: { track: roomy ? "44px" : "42px", show: () => visibleCols.attachments, fixed: roomy ? 44 : 42 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
     words:       { track: roomy ? "minmax(58px,66px)" : "minmax(54px,62px)", show: () => visibleCols.words, fixed: 54 }, // fits the "מס׳ מילים" header
   };
   // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
@@ -1970,13 +1970,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const headerCellContent = (key: string) => {
     switch (key) {
       case "checkbox": return columnsBtn; // the table's own corner — where users look for column controls
-      case "num":      return <span className="text-center w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>; // the cells' # carries the meaning; the column is too narrow for "מס׳ מסמך"
+      case "num":      return <span className="text-right w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>; // the cells' # carries the meaning; the column is too narrow for "מס׳ מסמך"
       case "date":     return sortHead("date", "תאריך");
       case "time":     return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>שעה</span>;
-      case "process":  return sortHead("process", "תהליך", { center: true, hideIcon: true });
+      case "process":  return sortHead("process", "תהליך", { hideIcon: true });
       case "name":     return sortHead("name", "שם מסמך");
       case "summary":  return (
-        <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "8px" }}>
+        <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
           <span>תקציר</span>
           <button onClick={() => setSummaryWrap((v) => !v)} title={summaryWrap ? "צמצום התקציר לשורה אחת" : "פריסת התקציר לכמה שורות"} className="flex items-center hover:opacity-70" style={{ color: summaryWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}>
             <CornerDownLeft size={13} />
@@ -1985,11 +1985,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       );
       case "type":     return sortHead("type", "סוג");
       case "submitter":return sortHead("submitter", "מגיש");
-      case "related":  return sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
-      case "attachments": return sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" });
-      case "note":     return <span className="w-full text-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="הערות אישיות על המסמך">הערה</span>;
+      case "related":  return sortHead("related", "קשורים", { hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
+      case "attachments": return sortHead("attachments", "נספחים", { hideIcon: true, titleText: "מיון לפי נספחים" });
+      case "note":     return <span className="w-full text-right" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="הערות אישיות על המסמך">הערה</span>;
       case "words":    return (
-        <span className="flex w-full" style={{ paddingInlineStart: "4px" }}>
+        <span className="flex w-full">
           {sortHead("words", "מס׳ מילים", { titleText: "מיון לפי מספר מילים" })}
         </span>
       );
