@@ -135,6 +135,7 @@ interface CaseDoc {
   isNew?: boolean;       // new since the judge's last visit
   note?: string;         // the user's own note about this document (never written by the system)
   noteShared?: boolean;  // false/undefined = לעיני בלבד · true = visible to the user's team, with their name
+  noteInChat?: boolean;  // opt-in: hand the note to the chat as context whenever this document is in scope
   nameOriginal?: string;    // the system's own name, kept the first time the user renames the display name
   summaryOriginal?: string; // the system's own summary, kept the first time the user rewrites it
   caseId?: string;       // which case this document belongs to
@@ -794,9 +795,10 @@ const loadLayout = (): LayoutKey[] => {
 // document is, so it must not rewrite what colleagues see. Personal scope is also why it persists to localStorage
 // rather than to the document. If this ever becomes shared-per-case, this overlay is the thing that moves server-side.
 type EditField = "name" | "summary" | "note";
+type NoteOpts = { shared: boolean; inChat: boolean };
 // note has no "original" — the system never writes one, so there is nothing to restore to; an emptied note is
 // simply gone. noteShared rides along with it because it is a property of that note, not of the document.
-type DocEdit = Partial<Record<EditField, string>> & { noteShared?: boolean };
+type DocEdit = Partial<Record<EditField, string>> & { noteShared?: boolean; noteInChat?: boolean };
 const DOC_EDITS_LS_KEY = "mishpat-lab-docEdits-v1";
 const loadDocEdits = (): Record<string, DocEdit> => {
   if (typeof window === "undefined") return {};
@@ -819,7 +821,7 @@ const applyDocEdits = (list: CaseDoc[]): CaseDoc[] => {
     const next = { ...d };
     if (e.name != null && e.name !== d.name) { next.nameOriginal = d.name; next.name = e.name; }
     if (e.summary != null && e.summary !== d.summary) { next.summaryOriginal = d.summary; next.summary = e.summary; }
-    if (e.note != null) { next.note = e.note; next.noteShared = !!e.noteShared; }
+    if (e.note != null) { next.note = e.note; next.noteShared = !!e.noteShared; next.noteInChat = !!e.noteInChat; }
     return next;
   });
 };
@@ -829,7 +831,7 @@ const DocEditCtx = createContext<{
   editing: { id: string; field: EditField } | null;
   start: (id: string, field: EditField) => void;
   cancel: () => void;
-  commit: (id: string, values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => void;
+  commit: (id: string, values: Partial<Record<EditField, string | null>>, noteOpts?: NoteOpts) => void;
   setDirty: (dirty: boolean) => void;
 } | null>(null);
 
@@ -922,24 +924,26 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
 
 function DocNotePanel({ doc, isDark, onCommit, onCancel, onDirtyChange }: {
   doc: CaseDoc; isDark: boolean;
-  onCommit: (values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => void; onCancel: () => void;
+  onCommit: (values: Partial<Record<EditField, string | null>>, noteOpts?: NoteOpts) => void; onCancel: () => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const [note, setNote] = useState(doc.note ?? "");
   const [shared, setShared] = useState(!!doc.noteShared);
+  const [inChat, setInChat] = useState(!!doc.noteInChat);
   const ref = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => { const el = ref.current; if (el) { el.focus(); el.select(); } }, []);
-  const dirty = (nt: string, sh: boolean) => nt !== (doc.note ?? "") || (nt !== "" && sh !== !!doc.noteShared);
-  const editNote = (v: string) => { setNote(v); onDirtyChange(dirty(v, shared)); };
-  const editShared = (v: boolean) => { setShared(v); onDirtyChange(dirty(note, v)); };
+  const dirty = (nt: string, sh: boolean, ic: boolean) => nt !== (doc.note ?? "") || (nt !== "" && (sh !== !!doc.noteShared || ic !== !!doc.noteInChat));
+  const editNote = (v: string) => { setNote(v); onDirtyChange(dirty(v, shared, inChat)); };
+  const editShared = (v: boolean) => { setShared(v); onDirtyChange(dirty(note, v, inChat)); };
+  const editInChat = (v: boolean) => { setInChat(v); onDirtyChange(dirty(note, shared, v)); };
   const labelCol = isDark ? dk.textMuted : c.textLight;
   const save = () => {
     // The note has no system text behind it: emptied means deleted, not restored to anything.
     const nt = note.trim();
     const out: Partial<Record<EditField, string | null>> = {};
     if (nt !== (doc.note ?? "")) out.note = nt === "" ? null : nt;
-    else if (nt !== "" && shared !== !!doc.noteShared) out.note = nt; // only the visibility changed
-    onCommit(out, shared);
+    else if (nt !== "" && (shared !== !!doc.noteShared || inChat !== !!doc.noteInChat)) out.note = nt; // only a flag changed
+    onCommit(out, { shared, inChat });
   };
   return (
     <div
@@ -978,7 +982,16 @@ function DocNotePanel({ doc, isDark, onCommit, onCancel, onDirtyChange }: {
         className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none"
         style={{ fontFamily: "Noto Sans Hebrew, sans-serif", border: `1px solid ${isDark ? dk.border : "#cfe1f7"}`, resize: "none", backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text }}
       />
-      <div className="flex items-center gap-2 justify-end">
+      <div className="flex items-center gap-2">
+        {/* Opt-in, never a default: the note is the user's own framing of the document — the one piece of context
+            the model cannot infer — but a note written "לעיני בלבד" must not leak into a prompt unasked. Worded as
+            a standing rule rather than "send now", because a note only matters while its document is in scope;
+            ticking it for an unselected document would otherwise appear to do nothing. */}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none" title="ההערה תימסר לצ׳אט כהקשר נוסף, בכל שיחה שהמסמך הזה נכלל בה">
+          <SelectionDimmed.Provider value={false}><CheckboxBlue checked={inChat} onToggle={() => editInChat(!inChat)} /></SelectionDimmed.Provider>
+          <span className="text-[12px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>לצרף את ההערה לשיחה כשהמסמך נכלל בה</span>
+        </label>
+        <span className="flex-1" />
         <button onClick={onCancel} className="rounded-md px-3 h-7 text-[13px] hover:bg-black/5 transition-colors"
           style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>ביטול</button>
         <button onClick={save} className="rounded-md px-3 h-7 text-[13px] hover:opacity-90 transition-opacity"
@@ -1378,7 +1391,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
             onMouseLeave={() => colMeta.onCellTip?.(null)}
             className={`flex items-center justify-center flex-shrink-0 rounded transition-opacity ${doc.note ? "" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"}`}
             style={{ color: doc.note ? c.primary : (isDark ? dk.textMuted : c.iconGray), width: "18px", height: "18px" }}
-            title={doc.note ? (doc.noteShared ? "הערה — גלויה לך ולצוותך" : "הערה — לעיניך בלבד") : "הוספת הערה"}
+            title={doc.note ? [doc.noteShared ? "הערה — גלויה לך ולצוותך" : "הערה — לעיניך בלבד", doc.noteInChat ? "מצורפת לשיחה עם הצ׳אט" : null].filter(Boolean).join("\n") : "הוספת הערה"}
           >
             <StickyNote size={13} />
           </button>
@@ -1420,7 +1433,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       </div>
       {editingField && edit && (editingField === "note"
         ? <DocNotePanel doc={doc} isDark={isDark}
-            onCommit={(values, noteShared) => edit.commit(doc.id, values, noteShared)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
+            onCommit={(values, noteOpts) => edit.commit(doc.id, values, noteOpts)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
         : <DocEditPanel doc={doc} focusField={editingField} isDark={isDark}
             onCommit={(values) => edit.commit(doc.id, values)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
       )}
@@ -1971,7 +1984,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // not to the document). `value === null` = restore the system's text.
   const [editing, setEditing] = useState<{ id: string; field: EditField } | null>(null);
   const editDirty = useRef(false); // has anything been typed in the open panel? (a second pencil click closes it only if not)
-  const commitEdit = (id: string, values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => {
+  const commitEdit = (id: string, values: Partial<Record<EditField, string | null>>, noteOpts?: NoteOpts) => {
     setEditing(null);
     editDirty.current = false;
     if (!Object.keys(values).length) return; // nothing was changed
@@ -1987,15 +2000,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         else { next.summaryOriginal = d.summaryOriginal ?? d.summary; next.summary = values.summary; }
       }
       if (values.note !== undefined) {
-        if (values.note === null) { next.note = undefined; next.noteShared = undefined; }
-        else { next.note = values.note; next.noteShared = !!noteShared; }
+        if (values.note === null) { next.note = undefined; next.noteShared = undefined; next.noteInChat = undefined; }
+        else { next.note = values.note; next.noteShared = !!noteOpts?.shared; next.noteInChat = !!noteOpts?.inChat; }
       }
       return next;
     }));
     const edits = loadDocEdits();
     const e: DocEdit = { ...edits[id] };
     (Object.keys(values) as EditField[]).forEach((f) => { const v = values[f]; if (v === null) delete e[f]; else if (v !== undefined) e[f] = v; });
-    if (values.note === null) delete e.noteShared; else if (values.note !== undefined) e.noteShared = !!noteShared;
+    if (values.note === null) { delete e.noteShared; delete e.noteInChat; }
+    else if (values.note !== undefined) { e.noteShared = !!noteOpts?.shared; e.noteInChat = !!noteOpts?.inChat; }
     if (e.name == null && e.summary == null && e.note == null) delete edits[id]; else edits[id] = e;
     saveDocEdits(edits);
   };
