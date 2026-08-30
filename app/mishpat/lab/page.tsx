@@ -6,9 +6,9 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
-  Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
-  Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
+  Calendar, Columns3, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
   type LucideIcon,
 } from "lucide-react";
@@ -1601,6 +1601,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const [dragFreeze, setDragFreeze] = useState<Record<string, number> | null>(null); // temp: pins ALL columns to px DURING a resize drag, released on mouseup so untouched columns flex again
   const [summaryWrap, setSummaryWrap] = useState(false); // תקציר column: wrap to multiple lines vs. single-line ellipsis
   // Custom (larger, styled) tooltip for the summary cell — the native `title` tooltip's size is OS-controlled and reads small.
+  const [colsMenuRect, setColsMenuRect] = useState<DOMRect | null>(null); // anchor of the (fixed) column menu, taken from the header button
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
   const handleCellTip = (text: string | null, e?: ReactMouseEvent) => { if (text && e) setTip({ text, x: e.clientX, y: e.clientY }); else setTip(null); };
   useEffect(() => { try { const raw = window.localStorage.getItem(DOC_COLW_LS_KEY); if (raw) setColWidths(JSON.parse(raw)); } catch { /* ignore */ } }, []);
@@ -1730,6 +1731,24 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   }, 8 /* px-2 padding */);
   const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false), summaryWrap, onCellTip: handleCellTip };
 
+  // Column customization. It used to be a bare ⋮ out on the filter row, and validation showed users simply never
+  // found it — an ellipsis reads as "more actions" wherever it sits, and the filter row is not where anyone looks
+  // for column controls. It now lives in the table's own corner (the otherwise-empty checkbox header cell, beside
+  // תאריך) and wears a columns icon. Its menu is position:fixed off the button's rect, because the header sits
+  // inside the horizontal-scroll container and an absolutely-positioned menu would be clipped by it.
+  const columnsBtn = (
+    <button
+      onClick={(e) => { setColsMenuRect(e.currentTarget.getBoundingClientRect()); setColsMenuOpen((v) => !v); }}
+      title="התאמת עמודות"
+      className="flex items-center justify-center rounded transition-colors"
+      style={{ width: "18px", height: "18px", color: colsMenuOpen ? c.primary : (isDark ? dk.textMuted : c.textGray), /* same weight as the header labels beside it — a fainter icon is what made the old one invisible */ backgroundColor: colsMenuOpen ? (isDark ? "#22304a" : "#eff4ff") : "transparent" }}
+      onMouseEnter={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
+      onMouseLeave={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      <Columns3 size={14} />
+    </button>
+  );
+
   const sortHead = (key: "date" | "name" | "words" | "submitter" | "type" | "process" | "related" | "attachments", label: string, opts?: { center?: boolean; hideIcon?: boolean; alignLeft?: boolean; titleText?: string }) => (
     <button onClick={() => toggleSort(key)} className={`flex items-center gap-0.5 h-full whitespace-nowrap hover:opacity-80 ${opts?.center ? "justify-center w-full" : ""} ${opts?.alignLeft ? "justify-end w-full" : ""}`} style={{ color: sortKey === key ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }} title={opts?.titleText ?? `מיון לפי ${label}`}>
       <span>{label}</span>
@@ -1738,7 +1757,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   );
   const headerCellContent = (key: string) => {
     switch (key) {
-      case "checkbox": return <span />;
+      case "checkbox": return columnsBtn; // the table's own corner — where users look for column controls
       case "num":      return <span className="text-center w-full" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="מספר מסמך">מס׳</span>;
       case "date":     return sortHead("date", "תאריך");
       case "time":     return <span style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>שעה</span>;
@@ -1981,53 +2000,39 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     <div className="flex items-center h-8 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
       <button
         onClick={() => setGrouping("chrono")}
-        className="h-full w-7 flex items-center justify-center transition-colors"
-        style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray) }}
-        title="תצוגה כרונולוגית"
+        className="h-full px-2.5 flex items-center text-[13px] whitespace-nowrap transition-colors"
+        style={{ backgroundColor: grouping === "chrono" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "chrono" ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        title="כל מסמכי התיק ברצף, לפי סדר ההגשה"
       >
-        <Clock size={15} />
+        כרונולוגי
       </button>
       <button
         onClick={() => { setGrouping("type"); setOpenType(null); }}
-        className="h-full w-7 flex items-center justify-center transition-colors"
-        style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}
-        title="קיבוץ המסמכים לפי סוג"
+        className="h-full px-2.5 flex items-center text-[13px] whitespace-nowrap transition-colors"
+        style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        title="קיבוץ המסמכים לתיקיות לפי סוג"
       >
-        <FolderOpen size={15} />
+        לפי סוג
       </button>
     </div>
   );
 
-  // Column customization — a borderless vertical-ellipsis (⋮) button pushed to the far (left) end so it reads as its own
-  // control, distinct from the chrono/type view toggle. The checklist popover is LEFT-aligned to the button (left:0,
-  // opens rightward): the button sits at the left edge, and in the expanded/full-width table right-aligning would push
-  // the popover off the left side of the screen.
-  const columnsBtn = (
-    <div className="relative flex-shrink-0" style={{ marginInlineStart: "auto" }}>
-      <button
-        onClick={() => setColsMenuOpen((v) => !v)}
-        title="התאמת עמודות"
-        className="size-8 flex items-center justify-center rounded-md transition-colors"
-        style={{ color: colsMenuOpen ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: colsMenuOpen ? (isDark ? "#22304a" : "#eff4ff") : "transparent" }}
-        onMouseEnter={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
-        onMouseLeave={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = "transparent"; }}
-      >
-        <MoreVertical size={18} />
-      </button>
-      {colsMenuOpen && (
-        <>
-          <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
-          <div className="absolute z-[200] rounded-lg overflow-hidden" style={{ top: "calc(100% + 4px)", left: 0, width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
-            <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
-            <div className="py-1">
-              {layout.filter((k) => k !== "name").map((k, i, list) => (
-                <div
-                  key={k}
-                  ref={(el) => { colRowRefs.current[k] = el; }}
-                  onMouseDown={(e) => startColDrag(k, e)}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 relative"
-                  style={{ opacity: dragColKey.current === k ? 0.4 : 1, cursor: "grab" }}
-                >
+  // The column menu (its trigger lives up in the table header — see columnsBtn), rendered at the panel root so the
+  // table's scroll container can't clip it. It hangs off the button's rect with its (right, in RTL) edge aligned to it.
+  const columnsMenu = colsMenuOpen && colsMenuRect && (
+    <>
+      <div className="fixed inset-0 z-[190]" onClick={() => setColsMenuOpen(false)} />
+      <div className="fixed z-[200] rounded-lg overflow-hidden" style={{ top: colsMenuRect.bottom + 6, left: Math.max(8, Math.min(colsMenuRect.right - 212, (typeof window !== "undefined" ? window.innerWidth : 1280) - 220)), width: "212px", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }} dir="rtl">
+        <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef1f4"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}>עמודות בטבלה <span className="font-normal" style={{ color: isDark ? dk.textMuted : c.textLight }}>· גררו לשינוי סדר</span></div>
+        <div className="py-1">
+          {layout.filter((k) => k !== "name").map((k, i, list) => (
+            <div
+              key={k}
+              ref={(el) => { colRowRefs.current[k] = el; }}
+              onMouseDown={(e) => startColDrag(k, e)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-black/5 relative"
+              style={{ opacity: dragColKey.current === k ? 0.4 : 1, cursor: "grab" }}
+            >
                   {dragColKey.current != null && dropColIdx.current === i && <div className="absolute left-2 right-2 top-0" style={{ height: "2px", backgroundColor: c.primary }} />}
                   {dragColKey.current != null && dropColIdx.current === list.length && i === list.length - 1 && <div className="absolute left-2 right-2 bottom-0" style={{ height: "2px", backgroundColor: c.primary }} />}
                   <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
@@ -2036,20 +2041,19 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                     <span className="text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{DOC_COL_LABELS[k as DocColKey]}</span>
                   </span>
                 </div>
-              ))}
-            </div>
-            <div className="px-3 py-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
-              <button onClick={resetCols} className="text-[12.5px] hover:underline" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title="החזרת סדר, רוחב והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+          ))}
+        </div>
+        <div className="px-3 py-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
+          <button onClick={resetCols} className="text-[12.5px] hover:underline" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title="החזרת סדר, רוחב והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
+        </div>
+      </div>
+    </>
   );
 
   return (
     <DocEditCtx.Provider value={editCtx}>
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, "--doc-link-color": isDark ? dk.text : "#323338", "--doc-link-hover": isDark ? "#5aa2ef" : "#0073ea" } as any}>
+      {columnsMenu}
       {/* 🔗 מסמכים קשורים — floats over the table instead of expanding inside it (see RelatedPopover) */}
       {relPop && (
         <RelatedPopover
@@ -2156,10 +2160,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 </button>
               )}
 
-              {/* View toggle — chrono / group-by-type (inside an open case it lives here on the filter row) */}
-              {openCaseId && viewToggle}
-              {/* Column customization — only meaningful once a case (and its table) is open */}
-              {openCaseId && columnsBtn}
+              {/* View toggle — chrono / group-by-type (inside an open case it lives here on the filter row,
+                  pushed to the far end now that the columns control has moved onto the table header) */}
+              {openCaseId && <div className="flex-shrink-0" style={{ marginInlineStart: "auto" }}>{viewToggle}</div>}
             </div>
           )}
         </div>
