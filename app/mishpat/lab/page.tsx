@@ -6,9 +6,9 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
-  Moon, MoreHorizontal, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp,
-  Calendar, Columns3, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
+  Calendar, ExternalLink, Check, Key, Maximize2, Pencil, X, Rows3, LayoutGrid, Paperclip, SlidersHorizontal,
   ZoomIn, ZoomOut, GripHorizontal, GripVertical,
   type LucideIcon,
 } from "lucide-react";
@@ -1731,11 +1731,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   }, 8 /* px-2 padding */);
   const colMeta: ColMeta = { visible: visibleCols, order: fullOrder, pin: pinMap, gapPx, docNumbers, minWidthType: tableMinWidth(true), minWidthNoType: tableMinWidth(false), summaryWrap, onCellTip: handleCellTip };
 
-  // Column customization. It used to be a bare ⋮ out on the filter row, and validation showed users simply never
-  // found it — an ellipsis reads as "more actions" wherever it sits, and the filter row is not where anyone looks
-  // for column controls. It now lives in the table's own corner (the otherwise-empty checkbox header cell, beside
-  // תאריך) and wears a columns icon. Its menu is position:fixed off the button's rect, because the header sits
-  // inside the horizontal-scroll container and an absolutely-positioned menu would be clipped by it.
+  // Column customization — the ⋮, moved off the filter row (where validation showed users never found it) into the
+  // table's own corner: the otherwise-empty checkbox header cell, beside תאריך. Its menu is position:fixed off the
+  // button's rect, because the header sits inside the horizontal-scroll container and an absolutely-positioned menu
+  // would be clipped by it.
   const columnsBtn = (
     <button
       onClick={(e) => { setColsMenuRect(e.currentTarget.getBoundingClientRect()); setColsMenuOpen((v) => !v); }}
@@ -1745,7 +1744,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       onMouseEnter={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg; }}
       onMouseLeave={(e) => { if (!colsMenuOpen) e.currentTarget.style.backgroundColor = "transparent"; }}
     >
-      <Columns3 size={14} />
+      <MoreVertical size={15} />
     </button>
   );
 
@@ -2145,8 +2144,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 </>
               )}
 
-              {/* Inside an open case ממתין joins the filter row (on the case list it lives up on Row A instead) */}
+              {/* Inside an open case ממתין joins the filter row (on the case list it lives up on Row A instead), with the
+                  chrono / by-type toggle right beside it */}
               {openCaseId && openProcBtn}
+              {openCaseId && viewToggle}
 
               {filterActive && (
                 <button
@@ -2160,9 +2161,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 </button>
               )}
 
-              {/* View toggle — chrono / group-by-type (inside an open case it lives here on the filter row,
-                  pushed to the far end now that the columns control has moved onto the table header) */}
-              {openCaseId && <div className="flex-shrink-0" style={{ marginInlineStart: "auto" }}>{viewToggle}</div>}
             </div>
           )}
         </div>
