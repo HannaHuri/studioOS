@@ -843,19 +843,13 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
 }) {
   const [name, setName] = useState(doc.name);
   const [summary, setSummary] = useState(doc.summary);
-  const [note, setNote] = useState(doc.note ?? "");
-  const [noteShared, setNoteShared] = useState(!!doc.noteShared);
   // Reported up so a second click on the pencil can close an untouched panel without ever discarding typed text.
-  const dirty = (n: string, s2: string, nt: string, sh: boolean) => n !== doc.name || s2 !== doc.summary || nt !== (doc.note ?? "") || sh !== !!doc.noteShared;
-  const editName = (v: string) => { setName(v); onDirtyChange(dirty(v, summary, note, noteShared)); };
-  const editSummary = (v: string) => { setSummary(v); onDirtyChange(dirty(name, v, note, noteShared)); };
-  const editNote = (v: string) => { setNote(v); onDirtyChange(dirty(name, summary, v, noteShared)); };
-  const editNoteShared = (v: boolean) => { setNoteShared(v); onDirtyChange(dirty(name, summary, note, v)); };
+  const editName = (v: string) => { setName(v); onDirtyChange(v !== doc.name || summary !== doc.summary); };
+  const editSummary = (v: string) => { setSummary(v); onDirtyChange(name !== doc.name || v !== doc.summary); };
   const nameRef = useRef<HTMLInputElement | null>(null);
   const sumRef = useRef<HTMLTextAreaElement | null>(null);
-  const noteRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
-    const el = focusField === "name" ? nameRef.current : focusField === "note" ? noteRef.current : sumRef.current;
+    const el = focusField === "name" ? nameRef.current : sumRef.current;
     if (el) { el.focus(); el.select(); }
   }, [focusField]);
   const labelCol = isDark ? dk.textMuted : c.textLight;
@@ -870,11 +864,7 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
     const out: Partial<Record<EditField, string | null>> = {};
     const n = norm(name, doc.name, doc.nameOriginal); if (n !== undefined) out.name = n;
     const s = norm(summary, doc.summary, doc.summaryOriginal); if (s !== undefined) out.summary = s;
-    // The note has no system text behind it: emptied means deleted, not restored.
-    const nt = note.trim();
-    if (nt !== (doc.note ?? "")) out.note = nt === "" ? null : nt;
-    else if (nt !== "" && noteShared !== !!doc.noteShared) out.note = nt; // only the visibility changed
-    onCommit(out, noteShared);
+    onCommit(out);
   };
   const fieldStyle: React.CSSProperties = {
     fontFamily: "Noto Sans Hebrew, sans-serif", border: `1px solid ${isDark ? dk.border : "#cfe1f7"}`, resize: "none",
@@ -897,7 +887,7 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
     >
       <span className="flex items-center gap-1.5 text-[12px]" style={{ color: labelCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
         <Pencil size={12} className="flex-shrink-0" />
-        השם והתקציר נכתבו על ידי המערכת — הנוסח שתשמרו עבורם נשמר עבורכם בלבד
+        השם והתקציר נכתבו על ידי המערכת — הנוסח שתשמרו כאן נשמר עבורכם בלבד
       </span>
 
       <div className="flex flex-col gap-1">
@@ -916,35 +906,78 @@ function DocEditPanel({ doc, focusField, isDark, onCommit, onCancel, onDirtyChan
           className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
       </div>
 
-      {/* The note is the user's own — the system never writes one — so it has no "restore" and no system text to
-          fall back on. Who may read it is part of the note, and it is asked right where the note is written rather
-          than buried in a setting: לעיני בלבד is the default, because a judge's note reads as private unless they
-          decide otherwise. */}
-      <div className="flex flex-col gap-1">
-        <span className="flex items-center gap-2">
-          {label("הערה")}
-          <span className="flex-1" />
-          <span className="flex items-center h-6 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
-            {([[false, "לעיני בלבד"], [true, "לי ולצוותי"]] as [boolean, string][]).map(([val, lbl], i) => (
-              <button
-                key={lbl}
-                onClick={() => editNoteShared(val)}
-                className="h-full px-2 flex items-center text-[11.5px] whitespace-nowrap transition-colors"
-                style={{ backgroundColor: noteShared === val ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: noteShared === val ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif", borderInlineStart: i === 1 ? `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` : undefined }}
-                title={val ? "כל מי שעובד על התיק יראה את ההערה, בציון שמך" : "ההערה נשמרת עבורך בלבד"}
-              >
-                {lbl}
-              </button>
-            ))}
-          </span>
-        </span>
-        <textarea ref={noteRef} value={note} onChange={(e) => editNote(e.target.value)} rows={2} placeholder="הערה אישית על המסמך"
-          className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none" style={fieldStyle} />
-      </div>
 
       {/* Buttons pinned to the far (left, in RTL) end of the panel, שמירה outermost with ביטול to its right. The
           Esc / Ctrl+Enter shortcuts still work but are deliberately NOT advertised — the hint read as one more
           thing to learn. */}
+      <div className="flex items-center gap-2 justify-end">
+        <button onClick={onCancel} className="rounded-md px-3 h-7 text-[13px] hover:bg-black/5 transition-colors"
+          style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>ביטול</button>
+        <button onClick={save} className="rounded-md px-3 h-7 text-[13px] hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: c.primary, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif" }}>שמירה</button>
+      </div>
+    </div>
+  );
+}
+
+function DocNotePanel({ doc, isDark, onCommit, onCancel, onDirtyChange }: {
+  doc: CaseDoc; isDark: boolean;
+  onCommit: (values: Partial<Record<EditField, string | null>>, noteShared?: boolean) => void; onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [note, setNote] = useState(doc.note ?? "");
+  const [shared, setShared] = useState(!!doc.noteShared);
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => { const el = ref.current; if (el) { el.focus(); el.select(); } }, []);
+  const dirty = (nt: string, sh: boolean) => nt !== (doc.note ?? "") || (nt !== "" && sh !== !!doc.noteShared);
+  const editNote = (v: string) => { setNote(v); onDirtyChange(dirty(v, shared)); };
+  const editShared = (v: boolean) => { setShared(v); onDirtyChange(dirty(note, v)); };
+  const labelCol = isDark ? dk.textMuted : c.textLight;
+  const save = () => {
+    // The note has no system text behind it: emptied means deleted, not restored to anything.
+    const nt = note.trim();
+    const out: Partial<Record<EditField, string | null>> = {};
+    if (nt !== (doc.note ?? "")) out.note = nt === "" ? null : nt;
+    else if (nt !== "" && shared !== !!doc.noteShared) out.note = nt; // only the visibility changed
+    onCommit(out, shared);
+  };
+  return (
+    <div
+      className="px-3 py-2.5 flex flex-col gap-2" dir="rtl"
+      style={{ backgroundColor: isDark ? "#181f33" : "#f4f8fd", borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+      }}
+    >
+      <span className="flex items-center gap-2">
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: labelCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+          <StickyNote size={12} className="flex-shrink-0" />
+          הערה משלכם על המסמך
+        </span>
+        <span className="flex-1" />
+        {/* Who may read it is part of the note, so it is asked right where the note is written rather than buried
+            in a setting — people write differently when they know who is reading. */}
+        <span className="flex items-center h-6 rounded-md overflow-hidden flex-shrink-0" style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` }}>
+          {([[false, "לעיני בלבד"], [true, "לי ולצוותי"]] as [boolean, string][]).map(([val, lbl], i) => (
+            <button
+              key={lbl}
+              onClick={() => editShared(val)}
+              className="h-full px-2 flex items-center text-[11.5px] whitespace-nowrap transition-colors"
+              style={{ backgroundColor: shared === val ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: shared === val ? c.primary : (isDark ? dk.textMuted : c.textGray), fontFamily: "Noto Sans Hebrew, sans-serif", borderInlineStart: i === 1 ? `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}` : undefined }}
+              title={val ? "כל מי שעובד על התיק יראה את ההערה, בציון שמך" : "ההערה נשמרת עבורך בלבד"}
+            >
+              {lbl}
+            </button>
+          ))}
+        </span>
+      </span>
+      <textarea
+        ref={ref} value={note} onChange={(e) => editNote(e.target.value)} rows={3} placeholder="מה חשוב לזכור על המסמך הזה"
+        className="w-full rounded px-2 py-1.5 text-[13px] leading-snug outline-none"
+        style={{ fontFamily: "Noto Sans Hebrew, sans-serif", border: `1px solid ${isDark ? dk.border : "#cfe1f7"}`, resize: "none", backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text }}
+      />
       <div className="flex items-center gap-2 justify-end">
         <button onClick={onCancel} className="rounded-md px-3 h-7 text-[13px] hover:bg-black/5 transition-colors"
           style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>ביטול</button>
@@ -1385,9 +1418,11 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           </div>
         ))}
       </div>
-      {editingField && edit && (
-        <DocEditPanel doc={doc} focusField={editingField} isDark={isDark}
-          onCommit={(values, noteShared) => edit.commit(doc.id, values, noteShared)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
+      {editingField && edit && (editingField === "note"
+        ? <DocNotePanel doc={doc} isDark={isDark}
+            onCommit={(values, noteShared) => edit.commit(doc.id, values, noteShared)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
+        : <DocEditPanel doc={doc} focusField={editingField} isDark={isDark}
+            onCommit={(values) => edit.commit(doc.id, values)} onCancel={() => edit.cancel()} onDirtyChange={edit.setDirty} />
       )}
       {/* Open detail panels stack as separate labeled cards (related / process / attachments can be open in parallel). */}
       {openPanels.map((kind) => (
