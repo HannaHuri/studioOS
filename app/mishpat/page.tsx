@@ -5,7 +5,7 @@ import {
   ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  Moon, MoreHorizontal, Paperclip, Plus, Quote, RotateCw, Search, Shield,
+  Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Bot, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -1280,45 +1280,178 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-function HistoryPanel({ isDark }: { isDark: boolean }) {
-  const items = [
-    { t: "תביעה כספית — כהן נ׳ לוי", d: "היום, 14:32" },
-    { t: "סכסוך מקרקעין — חלקה 1123", d: "אתמול, 09:10" },
-    { t: "ערעור על החלטת ביניים", d: "2 ביוני 2026" },
-    { t: "בקשה לסעד זמני דחוף", d: "30 במאי 2026" },
-    { t: "תצהיר עדות ראשית — עד מומחה", d: "28 במאי 2026" },
-    { t: "כתב הגנה מתוקן", d: "21 במאי 2026" },
-    { t: "בקשת רשות ערעור", d: "18 במאי 2026" },
-    { t: "סיכומים בכתב — התובע", d: "14 במאי 2026" },
-    { t: "החלטה בבקשת ביניים", d: "9 במאי 2026" },
-    { t: "תביעה לפיצויים — נזיקין", d: "2 במאי 2026" },
-    { t: "בקשה למינוי מומחה", d: "27 באפריל 2026" },
-    { t: "דיון מקדמי — סיכום", d: "20 באפריל 2026" },
-    { t: "כתב תביעה מתוקן", d: "11 באפריל 2026" },
-    { t: "בקשה לעיכוב הליכים", d: "3 באפריל 2026" },
-  ];
+// ── History (שיחות אחרונות) ────────────────────────────────────────────────
+// Ported from the product's Figma (node 15215:8559). Every conversation carries the
+// case it ran on as a tag above its title; a conversation that spans several cases
+// hides them behind a "N תיקים" chip that opens in place.
+type HistCase = { name: string; num: string; kind: string };
+type HistConv = { id: string; title: string; cases: HistCase[] };
+type HistGroup = { label: string; items: HistConv[] };
+
+const hc = (name: string, num: string, kind = 'ת"א'): HistCase => ({ name, num, kind });
+
+const CASE_POOL: HistCase[] = [
+  hc('משה כהן ובניו בע"מ נ׳ משה לוי ובניו בע"מ', "59198-67-89"),
+  hc('שרה יוסף בע"מ נ׳ דוד פרץ בע"מ', "59198-67-90"),
+  hc("אורי אברהם נגד מיה גולד", "59198-67-91"),
+  hc("יוסי רוזן נגד רונית דליה ואחרים", "59198-67-92"),
+  hc("בת שבע אלמוג נ׳ עידו שחר", "59198-67-93"),
+  hc('דניאל שמש בע"מ נ׳ אורלי בר', "59198-67-94"),
+];
+// A multi-case conversation just cycles the pool — what the seed is really showing is the count.
+const manyCases = (n: number): HistCase[] =>
+  Array.from({ length: n }, (_, i) => hc(CASE_POOL[i % CASE_POOL.length].name, `${59198 + i}-67-${89 + i}`));
+
+const HISTORY_GROUPS: HistGroup[] = [
+  {
+    label: "היום",
+    items: [
+      { id: "h1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CASE_POOL[0]] },
+      { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: manyCases(5) },
+      { id: "h3", title: "סכם את החלטת הביניים מיום 12.6", cases: [CASE_POOL[0]] },
+    ],
+  },
+  {
+    label: "אתמול",
+    items: [
+      { id: "y1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CASE_POOL[0]] },
+      { id: "y2", title: "אתר סתירות בין כתב התביעה לתצהיר", cases: manyCases(5) },
+      { id: "y3", title: "טיוטת החלטה בבקשה לסעד זמני", cases: [CASE_POOL[1]] },
+      { id: "y4", title: "רשימת מועדים דיוניים פתוחים", cases: [CASE_POOL[2]] },
+    ],
+  },
+  {
+    label: "ישן יותר",
+    items: [
+      { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(20) },
+      { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CASE_POOL[3]] },
+      { id: "o3", title: "סכם את חוות דעת המומחה מטעם בית המשפט", cases: [CASE_POOL[4]] },
+    ],
+  },
+];
+
+// The tag reads right-to-left: case name (truncates), — number • סוג.
+function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
+  return (
+    <div className="w-full h-5 flex items-center rounded-[4px] pr-1 pl-2 overflow-hidden" style={{ backgroundColor: bg }}>
+      <div className="flex-1 min-w-0 flex items-center text-[12px] leading-[18px] whitespace-nowrap" style={{ color: fg }}>
+        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{cs.name}</span>
+        <span className="flex-shrink-0">{" — "}</span>
+        <span className="flex-shrink-0">{cs.num}</span>
+        <span className="flex-shrink-0 px-[2px] font-light">•</span>
+        <span className="flex-shrink-0">{cs.kind}</span>
+      </div>
+    </div>
+  );
+}
+
+function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => void }) {
+  const [q, setQ] = useState("");
+  // Which multi-case conversations have their case list open. Collapsed by default.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleCases = (id: string) =>
+    setExpanded((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
-  const subCol = isDark ? dk.textMuted : c.textLight;
+  const subCol = isDark ? dk.textMuted : c.iconGray;
+  const line = isDark ? dk.border : "#e6e9ef";
+  const tagBg = isDark ? "#233150" : "#ebf3ff";
+  const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
+  const font = "Noto Sans Hebrew, sans-serif";
+
+  const term = q.trim();
+  const groups = term
+    ? HISTORY_GROUPS
+        .map((g) => ({
+          ...g,
+          items: g.items.filter(
+            (it) => it.title.includes(term) || it.cases.some((cs) => cs.name.includes(term) || cs.num.includes(term)),
+          ),
+        }))
+        .filter((g) => g.items.length > 0)
+    : HISTORY_GROUPS;
+
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-        <Clock size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
-        <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>היסטוריית שיחות</span>
+    <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: font }} dir="rtl">
+      {/* Header — the title and the collapse control sit together on the right */}
+      <div className="px-[18px] pt-4 pb-3 flex items-center gap-2">
+        <button
+          onClick={onClose}
+          className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+          style={{ color: subCol }}
+          title="סגור היסטוריה"
+        >
+          <PanelRightClose size={18} />
+        </button>
+        <span className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
       </div>
+
+      {/* Search — magnifier on the left, placeholder on the right, as in the design */}
+      <div className="px-[18px] pb-3">
+        <div className="h-[42px] flex items-center gap-2 rounded-[3px] px-3" style={{ backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : "#e6e6e6"}` }}>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="חיפוש שיחה"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-right"
+            style={{ color: titleCol, fontFamily: font }}
+          />
+          <Search size={16} style={{ color: subCol }} className="flex-shrink-0" />
+        </div>
+      </div>
+
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-        <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
-          {items.map((it, i) => (
-            <button
-              key={i}
-              className="text-right rounded-lg px-3 py-2.5 transition-colors hover:bg-black/[0.03]"
-              style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-            >
-              <div className="text-[14px]" style={{ color: titleCol }}>{it.t}</div>
-              <div className="text-[12px] mt-0.5" style={{ color: subCol }}>{it.d}</div>
-            </button>
+        <div className="px-[18px] pb-4" dir="rtl">
+          {groups.length === 0 && (
+            <p className="text-[14px] pt-4 text-center" style={{ color: subCol }}>לא נמצאו שיחות</p>
+          )}
+          {groups.map((g) => (
+            <div key={g.label}>
+              <div className="pt-2 pb-1.5 text-[14px] leading-[1.25]" style={{ color: subCol }}>{g.label}</div>
+              {g.items.map((it) => {
+                const multi = it.cases.length > 1;
+                const isOpen = expanded.has(it.id);
+                return (
+                  <div key={it.id} className="py-2.5" style={{ borderBottom: `1px solid ${line}` }}>
+                    {multi ? (
+                      <div className="flex flex-col gap-1 items-end">
+                        <button
+                          onClick={() => toggleCases(it.id)}
+                          className="flex items-center gap-0.5 rounded-[3px] px-[3px] py-[2px] cursor-pointer"
+                          style={{ backgroundColor: chipBg, color: titleCol }}
+                        >
+                          <span className="text-[14px] leading-4">{it.cases.length} תיקים</span>
+                          <ChevronDown size={14} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+                        </button>
+                        {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} />)}
+                      </div>
+                    ) : (
+                      <CaseTag cs={it.cases[0]} bg={tagBg} fg={titleCol} />
+                    )}
+
+                    <div className="flex items-center gap-2 mt-1">
+                      <button className="flex-1 min-w-0 text-right text-[14px] leading-4" style={{ color: titleCol }}>
+                        <span
+                          className="block overflow-hidden"
+                          style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}
+                        >
+                          {it.title}
+                        </span>
+                      </button>
+                      <button
+                        className="size-6 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/5 transition-colors"
+                        style={{ color: titleCol }}
+                        title="אפשרויות"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ))}
         </div>
       </div>
@@ -1971,10 +2104,8 @@ export default function MishpatPage() {
           {/* History drawer (narrow) — overlays from the right */}
           {narrow && isHistoryOpen && (
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
-              <HistoryPanel isDark={isDark} />
-              <button onClick={() => setIsHistoryOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", left: "8px", border: `1px solid ${c.border}` }} title="סגור">
-                <X size={14} style={{ color: c.iconGray }} />
-              </button>
+              {/* the panel's own header control closes it — no floating X on top of it */}
+              <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} />
             </div>
           )}
 
@@ -2020,7 +2151,7 @@ export default function MishpatPage() {
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
         {!narrow && isHistoryOpen && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
-            <HistoryPanel isDark={isDark} />
+            <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} />
           </div>
         )}
 
