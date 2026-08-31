@@ -1397,6 +1397,7 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
   const line = isDark ? dk.border : "#e6e9ef";
   const tagBg = isDark ? "#233150" : "#ebf3ff";
   const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
+  const filterCol = isDark ? dk.blue : c.primary;
   const font = "Noto Sans Hebrew, sans-serif";
 
   const term = q.trim();
@@ -1416,13 +1417,13 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
   const menuItem = (label: string, Icon: LucideIcon, onClick: () => void) => (
     <button
       onClick={() => { setMenu(null); onClick(); }}
-      className="w-full flex items-center justify-end gap-2 px-[18px] py-2.5 text-[14px] transition-colors"
+      className="w-full flex items-center justify-start gap-2 px-[18px] py-2.5 text-[14px] transition-colors"
       style={{ color: titleCol }}
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#ebf3ff")}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
-      {label}
       <Icon size={18} style={{ color: subCol, flexShrink: 0 }} />
+      {label}
     </button>
   );
 
@@ -1455,31 +1456,31 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
         </div>
       </div>
 
-      {/* Case filter — on by default, and it says so in one line you can undo in one click. */}
-      <div className="px-[18px] pt-2">
+      {/* Case filter — on by default. It reads as a link rather than as a tag: styled like case
+          metadata it disappeared into the rows below it, and a filtered list that doesn't announce
+          itself looks like an empty history. Blue in both states, so the control is equally findable
+          whether the filter is on or off. */}
+      <div className="px-[18px] pt-2.5">
         {caseOnly ? (
-          <div className="h-6 flex items-center gap-1 rounded-[4px] pr-2 pl-1" style={{ backgroundColor: tagBg }}>
-            <FolderOpen size={13} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 truncate text-[12px] leading-[18px]" style={{ color: titleCol }}>
-              רק {CURRENT_CASE.kind} • {CURRENT_CASE.num}
-            </span>
+          <div className="flex items-center gap-1.5 text-[14px] leading-[18px]" style={{ color: filterCol, fontWeight: 500 }}>
+            <FolderOpen size={15} style={{ flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 truncate">מוצגות רק שיחות התיק הזה</span>
             <button
               onClick={() => setCaseOnly(false)}
-              className="size-4 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/10 transition-colors"
-              style={{ color: subCol }}
+              className="size-5 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/5 transition-colors"
               title="הצג את כל השיחות"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </div>
         ) : (
           <button
             onClick={() => setCaseOnly(true)}
-            className="h-6 flex items-center gap-1 text-[12px] rounded px-1 -mr-1 hover:bg-black/5 transition-colors"
-            style={{ color: subCol }}
+            className="flex items-center gap-1.5 text-[14px] leading-[18px] underline underline-offset-2"
+            style={{ color: filterCol, fontWeight: 500 }}
           >
-            <FolderOpen size={13} style={{ flexShrink: 0 }} />
-            הצג רק את שיחות התיק הנוכחי
+            <FolderOpen size={15} style={{ flexShrink: 0 }} />
+            הצג רק את שיחות התיק הזה
           </button>
         )}
       </div>
