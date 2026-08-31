@@ -1364,6 +1364,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
 }) {
   const [data, setData] = useState<HistGroup[]>(HISTORY_GROUPS);
   const [q, setQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<HistConv | null>(null);
   // Which multi-case conversations have their case list open. Collapsed by default.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -1472,17 +1473,52 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           panel names its own subject. The scope isn't a filter bolted onto the list; it's what this
           panel is showing, stated where an interface normally states context. That's what makes the
           default read as a default: there is no control to dismiss, only a subject to change. */}
-      <div className="px-[18px] pt-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onClose}
-            className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-            style={{ color: subCol }}
-            title="סגור היסטוריה"
-          >
-            <PanelRightClose size={18} />
-          </button>
-          <span className="text-[13px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+      <div className="px-[18px] pt-4 pb-2">
+        {/* Search is a button until it's wanted, and then it takes this row over. A permanent field
+            made the header a third band; on demand it costs nothing while the panel sits idle. */}
+        <div className="flex items-center gap-2 h-8">
+          {searchOpen ? (
+            <>
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") { setQ(""); setSearchOpen(false); } }}
+                placeholder="חיפוש שיחה"
+                className="flex-1 min-w-0 h-8 rounded-md px-2.5 outline-none text-[14px] text-right"
+                style={{ color: titleCol, fontFamily: font, backgroundColor: isDark ? dk.input : "white", border: `1px solid ${c.primary}` }}
+              />
+              <button
+                onClick={() => { setQ(""); setSearchOpen(false); }}
+                className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+                style={{ color: subCol }}
+                title="סגור חיפוש"
+              >
+                <X size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+                style={{ color: subCol }}
+                title="סגור היסטוריה"
+              >
+                <PanelRightClose size={18} />
+              </button>
+              <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+              <div className="flex-1" />
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+                style={{ color: subCol }}
+                title="חיפוש שיחה"
+              >
+                <Search size={17} />
+              </button>
+            </>
+          )}
         </div>
         <div className="relative mt-1">
           {/* One header object, not two bands: the panel name is a small label and the case is the
@@ -1525,20 +1561,6 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 {scopeItem(false, "כל התיקים", "כל השיחות, מכל התיקים")}
               </div>
             )}
-        </div>
-      </div>
-
-      {/* Search — magnifier on the left, placeholder on the right, as in the design */}
-      <div className="px-[18px] pt-2">
-        <div className="h-[42px] flex items-center gap-2 rounded-[3px] px-3" style={{ backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : "#e6e6e6"}` }}>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="חיפוש שיחה"
-            className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-right"
-            style={{ color: titleCol, fontFamily: font }}
-          />
-          <Search size={16} style={{ color: subCol }} className="flex-shrink-0" />
         </div>
       </div>
 
