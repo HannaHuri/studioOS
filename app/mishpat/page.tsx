@@ -1417,6 +1417,11 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
   const line = isDark ? dk.border : "#e6e9ef";
   const tagBg = isDark ? "#233150" : "#ebf3ff";
   const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
+  // Scoping the list to one case removed every case tag, and with them the panel's only colour.
+  // The header line is where it comes back — it's also the element that should carry the most weight.
+  const scopeBg = isDark ? "#1e2a44" : "#f0f7ff";
+  const scopeBgHover = isDark ? "#24344f" : "#e4efff";
+  const rowHover = isDark ? "#222a40" : "#f7fafd";
   const font = "Noto Sans Hebrew, sans-serif";
 
   const term = q.trim();
@@ -1477,20 +1482,24 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           >
             <PanelRightClose size={18} />
           </button>
-          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+          <span className="text-[13px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
         </div>
         <div className="relative mt-1">
-          {/* The case number is fixed-width and is the part that must stay whole — a truncated
-              number reads as a mistake — so the name is what gives way, same rule as the case tag. */}
+          {/* One header object, not two bands: the panel name is a small label and the case is the
+              line that matters, so they read as label-and-value. The right padding is set so the case
+              text starts exactly where the title text does, past the collapse icon.
+              The case number is fixed-width and must stay whole — a truncated number reads as a
+              mistake — so the name is what gives way, the same rule the case tag follows. */}
           <button
             onClick={() => setScopeOpen((v) => !v)}
-            className="w-full h-[30px] flex items-center gap-1.5 rounded-md px-1.5 -mx-1.5 transition-colors"
+            className="w-full h-8 flex items-center gap-1.5 rounded-md pr-3 pl-2 transition-colors"
+            style={{ backgroundColor: scopeBg }}
             title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = scopeBgHover)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = scopeBg)}
           >
-            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: titleCol, fontWeight: 500 }}>
+            <FolderOpen size={14} style={{ color: c.primary, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol, fontWeight: 500 }}>
               {caseOnly ? (
                 <>
                   <span className="flex-shrink-0">{CURRENT_CASE.kind} • {CURRENT_CASE.num}</span>
@@ -1499,7 +1508,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 </>
               ) : "כל התיקים"}
             </span>
-            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+            <ChevronDown size={15} style={{ color: c.primary, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
           </button>
           {scopeOpen && (
               <div
@@ -1556,7 +1565,13 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
                 return (
-                  <div key={it.id} className="pt-2 pb-2.5" style={{ borderBottom: `1px solid ${line}` }}>
+                  <div
+                    key={it.id}
+                    className="pt-2 pb-2.5 px-2 -mx-2 rounded-md transition-colors"
+                    style={{ borderBottom: `1px solid ${line}` }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = rowHover)}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
                     {multi ? (
                       <div className="flex flex-col gap-1 items-start">
                         <button
