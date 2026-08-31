@@ -1415,7 +1415,6 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         <span className="relative flex items-center gap-1.5 min-w-0 w-full">
           <span className="doc-link truncate text-[12.5px] font-medium leading-tight" title={doc.name} onClick={(e) => { e.stopPropagation(); onOpenDoc?.(); }} style={{ fontFamily: "Noto Sans Hebrew, sans-serif", color: active ? c.primary : undefined, textDecoration: active ? "underline" : undefined, textDecorationColor: active ? c.primary : undefined, textUnderlineOffset: "2px", paddingBottom: "2px" }}>{doc.name}</span>
           {doc.used && <span className="size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="שימש בתשובת הצ׳אט האחרונה" />}
-          <span className="flex-1 min-w-0" />
           {edit && <EditPencil edited={editedAny} title={editTitle} isDark={isDark} onStart={() => edit.start(doc.id, "name")} />}
         </span>
       );
@@ -1879,7 +1878,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,44px)";
-  const submitterTrack = roomy ? "minmax(46px,58px)" : "minmax(38px,46px)"; // narrowed to pay for the named קשורים/נספחים headers — the submitter is identifiable from the start of the word
+  const submitterTrack = roomy ? "minmax(40px,50px)" : "minmax(36px,40px)"; // "ביהמ״ש" is the widest value at 37px, so 40 is the floor // narrowed to pay for the named קשורים/נספחים headers — the submitter is identifiable from the start of the word
   type ColDef = { track: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
