@@ -716,7 +716,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       );
       case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "בימ״ש" : doc.submitter}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
       case "note":     return <span />;
@@ -1424,7 +1424,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "ביהמ״ש" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "בימ״ש" : doc.submitter}</span>;
       case "related":  return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
@@ -1878,7 +1878,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,44px)";
-  const submitterTrack = roomy ? "minmax(40px,50px)" : "minmax(36px,40px)"; // "ביהמ״ש" is the widest value at 37px, so 40 is the floor // narrowed to pay for the named קשורים/נספחים headers — the submitter is identifiable from the start of the word
+  const submitterTrack = roomy ? "minmax(34px,44px)" : "minmax(30px,32px)"; // floor set by "בימ״ש" (30.1px) — the standard abbreviation, 7px narrower than ביהמ״ש and never truncated
   type ColDef = { track: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
