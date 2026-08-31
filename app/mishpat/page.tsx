@@ -1281,14 +1281,18 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 }
 
 // ── History (שיחות אחרונות) ────────────────────────────────────────────────
-// Ported from the product's Figma (node 15215:8559). Every conversation carries the
-// case it ran on as a tag above its title; a conversation that spans several cases
-// hides them behind a "N תיקים" chip that opens in place.
+// Ported from the product's Figma (node 15215:8559), with the ⋯ menu from 17660:11727.
+// Every conversation carries the case it ran on as a tag above its title; a conversation
+// that spans several cases hides them behind a "N תיקים" chip that opens in place.
 type HistCase = { name: string; num: string; kind: string };
 type HistConv = { id: string; title: string; cases: HistCase[] };
 type HistGroup = { label: string; items: HistConv[] };
 
 const hc = (name: string, num: string, kind = 'ת"א'): HistCase => ({ name, num, kind });
+
+// The case the chat is open on — the same one the composer shows. Users asked for the
+// history to open already narrowed to it, so this is what the default filter matches.
+const CURRENT_CASE = hc('יעקב אברמוב נ׳ המרכז הרפואי קדם בע"מ', "12345-67-89");
 
 const CASE_POOL: HistCase[] = [
   hc('משה כהן ובניו בע"מ נ׳ משה לוי ובניו בע"מ', "59198-67-89"),
@@ -1298,16 +1302,20 @@ const CASE_POOL: HistCase[] = [
   hc("בת שבע אלמוג נ׳ עידו שחר", "59198-67-93"),
   hc('דניאל שמש בע"מ נ׳ אורלי בר', "59198-67-94"),
 ];
-// A multi-case conversation just cycles the pool — what the seed is really showing is the count.
-const manyCases = (n: number): HistCase[] =>
-  Array.from({ length: n }, (_, i) => hc(CASE_POOL[i % CASE_POOL.length].name, `${59198 + i}-67-${89 + i}`));
+// A multi-case conversation just cycles the pool — what the seed is really showing is the
+// count. `withCurrent` puts the open case in the list, so the filter has a multi-case hit too.
+const manyCases = (n: number, withCurrent = false): HistCase[] => {
+  const rest = Array.from({ length: withCurrent ? n - 1 : n }, (_, i) =>
+    hc(CASE_POOL[i % CASE_POOL.length].name, `${59198 + i}-67-${89 + i}`));
+  return withCurrent ? [CURRENT_CASE, ...rest] : rest;
+};
 
 const HISTORY_GROUPS: HistGroup[] = [
   {
     label: "היום",
     items: [
-      { id: "h1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CASE_POOL[0]] },
-      { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: manyCases(5) },
+      { id: "h1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CURRENT_CASE] },
+      { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: manyCases(5, true) },
       { id: "h3", title: "סכם את החלטת הביניים מיום 12.6", cases: [CASE_POOL[0]] },
     ],
   },
@@ -1316,7 +1324,7 @@ const HISTORY_GROUPS: HistGroup[] = [
     items: [
       { id: "y1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CASE_POOL[0]] },
       { id: "y2", title: "אתר סתירות בין כתב התביעה לתצהיר", cases: manyCases(5) },
-      { id: "y3", title: "טיוטת החלטה בבקשה לסעד זמני", cases: [CASE_POOL[1]] },
+      { id: "y3", title: "טיוטת החלטה בבקשה לסעד זמני", cases: [CURRENT_CASE] },
       { id: "y4", title: "רשימת מועדים דיוניים פתוחים", cases: [CASE_POOL[2]] },
     ],
   },
@@ -1324,33 +1332,64 @@ const HISTORY_GROUPS: HistGroup[] = [
     label: "ישן יותר",
     items: [
       { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(20) },
-      { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CASE_POOL[3]] },
+      { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CURRENT_CASE] },
       { id: "o3", title: "סכם את חוות דעת המומחה מטעם בית המשפט", cases: [CASE_POOL[4]] },
     ],
   },
 ];
 
-// The tag reads right-to-left: case name (truncates), — number • סוג.
+// The tag reads right-to-left: סוג • מספר — שם התיק. The name sits on the left and is the
+// part that gives way, so the identifying half (סוג + מספר) is never the thing that truncates.
 function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
   return (
-    <div className="w-full h-5 flex items-center rounded-[4px] pr-1 pl-2 overflow-hidden" style={{ backgroundColor: bg }}>
+    <div className="w-full h-5 flex items-center rounded-[4px] pr-2 pl-1 overflow-hidden" style={{ backgroundColor: bg }}>
       <div className="flex-1 min-w-0 flex items-center text-[12px] leading-[18px] whitespace-nowrap" style={{ color: fg }}>
-        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{cs.name}</span>
-        <span className="flex-shrink-0">{" — "}</span>
-        <span className="flex-shrink-0">{cs.num}</span>
-        <span className="flex-shrink-0 px-[2px] font-light">•</span>
         <span className="flex-shrink-0">{cs.kind}</span>
+        <span className="flex-shrink-0 px-[2px] font-light">•</span>
+        <span className="flex-shrink-0">{cs.num}</span>
+        <span className="flex-shrink-0">{" — "}</span>
+        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{cs.name}</span>
       </div>
     </div>
   );
 }
 
 function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => void }) {
+  const [data, setData] = useState<HistGroup[]>(HISTORY_GROUPS);
   const [q, setQ] = useState("");
+  // Users asked for this: opening the history while a case is open shows that case only.
+  const [caseOnly, setCaseOnly] = useState(true);
   // Which multi-case conversations have their case list open. Collapsed by default.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; draft: string } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const toggleCases = (id: string) =>
     setExpanded((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  // Close the ⋯ menu on an outside press. Containment is tested rather than relying on
+  // stopPropagation: mousedown fires before click, so closing blindly here would unmount
+  // the menu and its own items would never receive the click.
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(null); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menu]);
+
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 1800);
+    return () => clearTimeout(t);
+  }, [note]);
+
+  const editItems = (id: string, fn: (it: HistConv) => HistConv[]) =>
+    setData((d) => d.map((g) => ({ ...g, items: g.items.flatMap((it) => (it.id === id ? fn(it) : [it])) })));
+  const removeConv = (id: string) => editItems(id, () => []);
+  const duplicateConv = (it: HistConv) => editItems(it.id, (x) => [x, { ...x, id: `${x.id}-${uid()}` }]);
+  const renameConv = (id: string, title: string) => editItems(id, (x) => [{ ...x, title: title.trim() || x.title }]);
 
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
@@ -1361,19 +1400,34 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
   const font = "Noto Sans Hebrew, sans-serif";
 
   const term = q.trim();
-  const groups = term
-    ? HISTORY_GROUPS
-        .map((g) => ({
-          ...g,
-          items: g.items.filter(
-            (it) => it.title.includes(term) || it.cases.some((cs) => cs.name.includes(term) || cs.num.includes(term)),
-          ),
-        }))
-        .filter((g) => g.items.length > 0)
-    : HISTORY_GROUPS;
+  const matchesCase = (it: HistConv) => it.cases.some((cs) => cs.num === CURRENT_CASE.num);
+  const groups = data
+    .map((g) => ({
+      ...g,
+      items: g.items.filter(
+        (it) =>
+          (!caseOnly || matchesCase(it)) &&
+          (!term || it.title.includes(term) || it.cases.some((cs) => cs.name.includes(term) || cs.num.includes(term))),
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  // The Figma keeps מחיקה in the same colour as the rest — no red — so this does too.
+  const menuItem = (label: string, Icon: LucideIcon, onClick: () => void) => (
+    <button
+      onClick={() => { setMenu(null); onClick(); }}
+      className="w-full flex items-center justify-end gap-2 px-[18px] py-2.5 text-[14px] transition-colors"
+      style={{ color: titleCol }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#ebf3ff")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+    >
+      {label}
+      <Icon size={18} style={{ color: subCol, flexShrink: 0 }} />
+    </button>
+  );
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: font }} dir="rtl">
+    <div className="h-full flex flex-col relative" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: font }} dir="rtl">
       {/* Header — the title and the collapse control sit together on the right */}
       <div className="px-[18px] pt-4 pb-3 flex items-center gap-2">
         <button
@@ -1388,7 +1442,7 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
       </div>
 
       {/* Search — magnifier on the left, placeholder on the right, as in the design */}
-      <div className="px-[18px] pb-3">
+      <div className="px-[18px]">
         <div className="h-[42px] flex items-center gap-2 rounded-[3px] px-3" style={{ backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : "#e6e6e6"}` }}>
           <input
             value={q}
@@ -1401,22 +1455,61 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
         </div>
       </div>
 
+      {/* Case filter — on by default, and it says so in one line you can undo in one click. */}
+      <div className="px-[18px] pt-2">
+        {caseOnly ? (
+          <div className="h-6 flex items-center gap-1 rounded-[4px] pr-2 pl-1" style={{ backgroundColor: tagBg }}>
+            <FolderOpen size={13} style={{ color: subCol, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 truncate text-[12px] leading-[18px]" style={{ color: titleCol }}>
+              רק {CURRENT_CASE.kind} • {CURRENT_CASE.num}
+            </span>
+            <button
+              onClick={() => setCaseOnly(false)}
+              className="size-4 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/10 transition-colors"
+              style={{ color: subCol }}
+              title="הצג את כל השיחות"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setCaseOnly(true)}
+            className="h-6 flex items-center gap-1 text-[12px] rounded px-1 -mr-1 hover:bg-black/5 transition-colors"
+            style={{ color: subCol }}
+          >
+            <FolderOpen size={13} style={{ flexShrink: 0 }} />
+            הצג רק את שיחות התיק הנוכחי
+          </button>
+        )}
+      </div>
+
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-[18px] pb-4" dir="rtl">
           {groups.length === 0 && (
-            <p className="text-[14px] pt-4 text-center" style={{ color: subCol }}>לא נמצאו שיחות</p>
+            <div className="pt-6 flex flex-col items-center gap-2 text-center">
+              <p className="text-[14px]" style={{ color: subCol }}>
+                {caseOnly && !term ? "אין שיחות קודמות בתיק הזה" : "לא נמצאו שיחות"}
+              </p>
+              {caseOnly && (
+                <button onClick={() => setCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
+                  הצג את כל השיחות
+                </button>
+              )}
+            </div>
           )}
-          {groups.map((g) => (
+          {groups.map((g, gi) => (
             <div key={g.label}>
-              <div className="pt-2 pb-1.5 text-[14px] leading-[1.25]" style={{ color: subCol }}>{g.label}</div>
+              {/* the day label belongs to the rows under it, so it sits close to them and far from the group above */}
+              <div className={`${gi === 0 ? "pt-1" : "pt-4"} text-[14px] leading-[1.25]`} style={{ color: subCol }}>{g.label}</div>
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
                 return (
-                  <div key={it.id} className="py-2.5" style={{ borderBottom: `1px solid ${line}` }}>
+                  <div key={it.id} className="pt-2 pb-2.5" style={{ borderBottom: `1px solid ${line}` }}>
                     {multi ? (
-                      <div className="flex flex-col gap-1 items-end">
+                      <div className="flex flex-col gap-1 items-start">
                         <button
                           onClick={() => toggleCases(it.id)}
                           className="flex items-center gap-0.5 rounded-[3px] px-[3px] py-[2px] cursor-pointer"
@@ -1432,22 +1525,63 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
                     )}
 
                     <div className="flex items-center gap-2 mt-1">
-                      <button className="flex-1 min-w-0 text-right text-[14px] leading-4" style={{ color: titleCol }}>
-                        <span
-                          className="block overflow-hidden"
-                          style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}
-                        >
-                          {it.title}
-                        </span>
-                      </button>
+                      {renaming?.id === it.id ? (
+                        <input
+                          autoFocus
+                          value={renaming.draft}
+                          onChange={(e) => setRenaming({ id: it.id, draft: e.target.value })}
+                          onBlur={() => { renameConv(it.id, renaming.draft); setRenaming(null); }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { renameConv(it.id, renaming.draft); setRenaming(null); }
+                            if (e.key === "Escape") setRenaming(null);
+                          }}
+                          className="flex-1 min-w-0 text-right text-[14px] leading-4 rounded px-1 py-0.5 outline-none"
+                          style={{ color: titleCol, backgroundColor: isDark ? dk.input : "white", border: `1px solid ${c.primary}`, fontFamily: font }}
+                        />
+                      ) : (
+                        <button className="flex-1 min-w-0 text-right text-[14px] leading-4" style={{ color: titleCol }}>
+                          <span
+                            className="block overflow-hidden"
+                            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}
+                          >
+                            {it.title}
+                          </span>
+                        </button>
+                      )}
                       <button
+                        onClick={(e) => {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          setMenu((m) => (m?.id === it.id ? null : { id: it.id, top: Math.min(r.bottom + 4, window.innerHeight - 150), left: r.left }));
+                        }}
                         className="size-6 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/5 transition-colors"
-                        style={{ color: titleCol }}
+                        style={{ color: titleCol, backgroundColor: menu?.id === it.id ? (isDark ? dk.border : c.hoverBg) : undefined }}
                         title="אפשרויות"
                       >
                         <MoreHorizontal size={16} />
                       </button>
                     </div>
+
+                    {menu?.id === it.id && (
+                      <div
+                        ref={menuRef}
+                        className="fixed z-[70] py-1 overflow-hidden"
+                        style={{
+                          top: menu.top, left: menu.left, width: "176px",
+                          backgroundColor: isDark ? dk.surface : "white",
+                          border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
+                          borderRadius: "5px",
+                          boxShadow: "0px 6px 20px rgba(0,0,0,0.2)",
+                        }}
+                        dir="rtl"
+                      >
+                        {menuItem("העתקת שיחה", Copy, () => {
+                          navigator.clipboard?.writeText(it.title);
+                          setNote("השיחה הועתקה");
+                        })}
+                        {menuItem("שינוי שם", Pencil, () => setRenaming({ id: it.id, draft: it.title }))}
+                        {menuItem("מחיקה", Trash2, () => removeConv(it.id))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1455,6 +1589,15 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
           ))}
         </div>
       </div>
+
+      {note && (
+        <div
+          className="absolute left-1/2 bottom-4 z-[75] px-3 py-1.5 rounded-md text-[13px] whitespace-nowrap"
+          style={{ transform: "translateX(-50%)", backgroundColor: "#2b3247", color: "white" }}
+        >
+          {note}
+        </div>
+      )}
     </div>
   );
 }
