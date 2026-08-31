@@ -1354,11 +1354,17 @@ function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
   );
 }
 
-function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => void }) {
+function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
+  isDark: boolean;
+  onClose?: () => void;
+  // Users asked for this: opening the history while a case is open shows that case only. The state
+  // lives on the page, not here, so turning the filter off survives closing and reopening the panel.
+  caseOnly: boolean;
+  onCaseOnly: (v: boolean) => void;
+}) {
   const [data, setData] = useState<HistGroup[]>(HISTORY_GROUPS);
   const [q, setQ] = useState("");
-  // Users asked for this: opening the history while a case is open shows that case only.
-  const [caseOnly, setCaseOnly] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<HistConv | null>(null);
   // Which multi-case conversations have their case list open. Collapsed by default.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
@@ -1397,7 +1403,6 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
   const line = isDark ? dk.border : "#e6e9ef";
   const tagBg = isDark ? "#233150" : "#ebf3ff";
   const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
-  const filterCol = isDark ? dk.blue : c.primary;
   const font = "Noto Sans Hebrew, sans-serif";
 
   const term = q.trim();
@@ -1456,33 +1461,24 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
         </div>
       </div>
 
-      {/* Case filter — on by default. It reads as a link rather than as a tag: styled like case
-          metadata it disappeared into the rows below it, and a filtered list that doesn't announce
-          itself looks like an empty history. Blue in both states, so the control is equally findable
-          whether the filter is on or off. */}
-      <div className="px-[18px] pt-2.5">
-        {caseOnly ? (
-          <div className="flex items-center gap-1.5 text-[14px] leading-[18px]" style={{ color: filterCol, fontWeight: 500 }}>
-            <FolderOpen size={15} style={{ flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 truncate">מוצגות רק שיחות התיק הזה</span>
-            <button
-              onClick={() => setCaseOnly(false)}
-              className="size-5 flex items-center justify-center rounded flex-shrink-0 hover:bg-black/5 transition-colors"
-              title="הצג את כל השיחות"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setCaseOnly(true)}
-            className="flex items-center gap-1.5 text-[14px] leading-[18px] underline underline-offset-2"
-            style={{ color: filterCol, fontWeight: 500 }}
-          >
-            <FolderOpen size={15} style={{ flexShrink: 0 }} />
-            הצג רק את שיחות התיק הזה
-          </button>
-        )}
+      {/* Case filter — a toggle that is always in this spot and simply starts switched on, not a
+          line you dismiss. Anything with an ✕ reads as a temporary notice; a control that holds an
+          on/off state reads as a setting that has a default. Same on/off vocabulary as the citations
+          toggle in the composer, so it looks like a control of this product rather than a banner. */}
+      <div className="px-[18px] pt-2.5 flex">
+        <button
+          onClick={() => onCaseOnly(!caseOnly)}
+          className="h-7 flex items-center gap-1.5 rounded-md px-2 text-[13px] transition-colors"
+          style={{
+            backgroundColor: caseOnly ? (isDark ? "#24344f" : c.primaryLight) : "transparent",
+            border: `1px solid ${caseOnly ? c.primary : isDark ? dk.border : c.border}`,
+            color: caseOnly ? (isDark ? dk.text : c.darkBlue) : subCol,
+          }}
+          title={caseOnly ? "לחיצה תציג את כל השיחות" : "לחיצה תציג רק את שיחות התיק הזה"}
+        >
+          <FolderOpen size={14} style={{ flexShrink: 0 }} />
+          רק שיחות התיק הזה
+        </button>
       </div>
 
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
@@ -1494,7 +1490,7 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
                 {caseOnly && !term ? "אין שיחות קודמות בתיק הזה" : "לא נמצאו שיחות"}
               </p>
               {caseOnly && (
-                <button onClick={() => setCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
+                <button onClick={() => onCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
                   הצג את כל השיחות
                 </button>
               )}
@@ -1580,7 +1576,7 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
                           setNote("השיחה הועתקה");
                         })}
                         {menuItem("שינוי שם", Pencil, () => setRenaming({ id: it.id, draft: it.title }))}
-                        {menuItem("מחיקה", Trash2, () => removeConv(it.id))}
+                        {menuItem("מחיקה", Trash2, () => setPendingDelete(it))}
                       </div>
                     )}
                   </div>
@@ -1598,6 +1594,16 @@ function HistoryPanel({ isDark, onClose }: { isDark: boolean; onClose?: () => vo
         >
           {note}
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDelete
+          isDark={isDark}
+          kind="שיחה"
+          name={pendingDelete.title}
+          onConfirm={() => { removeConv(pendingDelete.id); setPendingDelete(null); }}
+          onClose={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );
@@ -2095,7 +2101,7 @@ function ExampleModal({
   );
 }
 
-function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boolean; kind: "דוגמה" | "טקסט"; name: string; onConfirm: () => void; onClose: () => void }) {
+function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boolean; kind: "דוגמה" | "טקסט" | "שיחה"; name: string; onConfirm: () => void; onClose: () => void }) {
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
@@ -2127,6 +2133,10 @@ export default function MishpatPage() {
   const [isDark, setIsDark] = useState(false);
   const [convKey, setConvKey] = useState(0);
   const [vw, setVw] = useState(1280);
+  // History defaults to the open case. Turning it off is remembered while this conversation lasts —
+  // it lives here rather than in the panel so closing and reopening the panel doesn't undo the
+  // choice; a new conversation puts the default back.
+  const [histCaseOnly, setHistCaseOnly] = useState(true);
 
   // Examples (דוגמאות) — the panel list, the open editor, the pending delete, and the save toast
   const [examples, setExamples] = useState<Example[]>(SEED_EXAMPLES);
@@ -2249,7 +2259,7 @@ export default function MishpatPage() {
           {narrow && isHistoryOpen && (
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               {/* the panel's own header control closes it — no floating X on top of it */}
-              <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} />
+              <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
             </div>
           )}
 
@@ -2295,7 +2305,7 @@ export default function MishpatPage() {
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
         {!narrow && isHistoryOpen && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
-            <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} />
+            <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
           </div>
         )}
 
@@ -2316,7 +2326,7 @@ export default function MishpatPage() {
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setHistCaseOnly(true); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
