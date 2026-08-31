@@ -1467,29 +1467,41 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           panel names its own subject. The scope isn't a filter bolted onto the list; it's what this
           panel is showing, stated where an interface normally states context. That's what makes the
           default read as a default: there is no control to dismiss, only a subject to change. */}
-      <div className="px-[18px] pt-4 pb-3 flex items-start gap-2">
-        <button
-          onClick={onClose}
-          className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-          style={{ color: subCol }}
-          title="סגור היסטוריה"
-        >
-          <PanelRightClose size={18} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</div>
-          <div className="relative">
-            <button
-              onClick={() => setScopeOpen((v) => !v)}
-              className="flex items-center gap-1 mt-1 rounded px-1 -mr-1 hover:bg-black/5 transition-colors max-w-full"
-              title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
-            >
-              <span className="truncate text-[14px] leading-[18px]" style={{ color: titleCol, fontWeight: 500 }}>
-                {caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num}` : "כל התיקים"}
-              </span>
-              <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
-            </button>
-            {scopeOpen && (
+      <div className="px-[18px] pt-4 pb-2.5" style={{ borderBottom: `1px solid ${line}` }}>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+            style={{ color: subCol }}
+            title="סגור היסטוריה"
+          >
+            <PanelRightClose size={18} />
+          </button>
+          <span className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+        </div>
+        <div className="relative mt-1.5">
+          {/* The case number is fixed-width and is the part that must stay whole — a truncated
+              number reads as a mistake — so the name is what gives way, same rule as the case tag. */}
+          <button
+            onClick={() => setScopeOpen((v) => !v)}
+            className="w-full h-[30px] flex items-center gap-1.5 rounded-md px-1.5 -mx-1.5 transition-colors"
+            title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: titleCol, fontWeight: 500 }}>
+              {caseOnly ? (
+                <>
+                  <span className="flex-shrink-0">{CURRENT_CASE.kind} • {CURRENT_CASE.num}</span>
+                  <span className="flex-shrink-0 px-1">—</span>
+                  <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{CURRENT_CASE.name}</span>
+                </>
+              ) : "כל התיקים"}
+            </span>
+            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+          </button>
+          {scopeOpen && (
               <div
                 ref={scopeRef}
                 className="absolute right-0 top-full mt-1 z-[65] py-1 w-[236px]"
@@ -1504,12 +1516,11 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 {scopeItem(false, "כל התיקים", "כל השיחות, מכל התיקים")}
               </div>
             )}
-          </div>
         </div>
       </div>
 
       {/* Search — magnifier on the left, placeholder on the right, as in the design */}
-      <div className="px-[18px]">
+      <div className="px-[18px] pt-3">
         <div className="h-[42px] flex items-center gap-2 rounded-[3px] px-3" style={{ backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : "#e6e6e6"}` }}>
           <input
             value={q}
