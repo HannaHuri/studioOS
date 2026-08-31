@@ -1367,6 +1367,8 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
   const [pendingDelete, setPendingDelete] = useState<HistConv | null>(null);
   // Which multi-case conversations have their case list open. Collapsed by default.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; draft: string } | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -1384,6 +1386,18 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [menu]);
+
+  // Same containment test as the ⋯ menu — the trigger sits outside scopeRef, so a blind close on
+  // mousedown would swallow the click that is meant to toggle it shut.
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!scopeRef.current?.contains(t) && !scopeRef.current?.parentElement?.contains(t)) setScopeOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [scopeOpen]);
 
   useEffect(() => {
     if (!note) return;
@@ -1418,6 +1432,21 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
     }))
     .filter((g) => g.items.length > 0);
 
+  const scopeItem = (v: boolean, label: string, sub: string) => (
+    <button
+      onClick={() => { setScopeOpen(false); onCaseOnly(v); }}
+      className="w-full flex items-start gap-2 px-3 py-2 text-right transition-colors"
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#ebf3ff")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+    >
+      <Check size={16} style={{ color: c.primary, flexShrink: 0, marginTop: "2px", visibility: caseOnly === v ? "visible" : "hidden" }} />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] leading-[18px]" style={{ color: titleCol }}>{label}</span>
+        <span className="block truncate text-[12px] leading-[16px]" style={{ color: subCol }}>{sub}</span>
+      </span>
+    </button>
+  );
+
   // The Figma keeps מחיקה in the same colour as the rest — no red — so this does too.
   const menuItem = (label: string, Icon: LucideIcon, onClick: () => void) => (
     <button
@@ -1434,8 +1463,11 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
 
   return (
     <div className="h-full flex flex-col relative" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: font }} dir="rtl">
-      {/* Header — the title and the collapse control sit together on the right */}
-      <div className="px-[18px] pt-4 pb-3 flex items-center gap-2">
+      {/* Header — the title and the collapse control sit together on the right, and under them the
+          panel names its own subject. The scope isn't a filter bolted onto the list; it's what this
+          panel is showing, stated where an interface normally states context. That's what makes the
+          default read as a default: there is no control to dismiss, only a subject to change. */}
+      <div className="px-[18px] pt-4 pb-3 flex items-start gap-2">
         <button
           onClick={onClose}
           className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
@@ -1444,7 +1476,36 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
         >
           <PanelRightClose size={18} />
         </button>
-        <span className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</div>
+          <div className="relative">
+            <button
+              onClick={() => setScopeOpen((v) => !v)}
+              className="flex items-center gap-1 mt-1 rounded px-1 -mr-1 hover:bg-black/5 transition-colors max-w-full"
+              title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
+            >
+              <span className="truncate text-[14px] leading-[18px]" style={{ color: titleCol, fontWeight: 500 }}>
+                {caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num}` : "כל התיקים"}
+              </span>
+              <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+            </button>
+            {scopeOpen && (
+              <div
+                ref={scopeRef}
+                className="absolute right-0 top-full mt-1 z-[65] py-1 w-[236px]"
+                style={{
+                  backgroundColor: isDark ? dk.surface : "white",
+                  border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
+                  borderRadius: "5px",
+                  boxShadow: "0px 6px 20px rgba(0,0,0,0.2)",
+                }}
+              >
+                {scopeItem(true, `${CURRENT_CASE.kind} • ${CURRENT_CASE.num}`, CURRENT_CASE.name)}
+                {scopeItem(false, "כל התיקים", "כל השיחות, מכל התיקים")}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Search — magnifier on the left, placeholder on the right, as in the design */}
@@ -1461,26 +1522,6 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
         </div>
       </div>
 
-      {/* Case filter — a toggle that is always in this spot and simply starts switched on, not a
-          line you dismiss. Anything with an ✕ reads as a temporary notice; a control that holds an
-          on/off state reads as a setting that has a default. Same on/off vocabulary as the citations
-          toggle in the composer, so it looks like a control of this product rather than a banner. */}
-      <div className="px-[18px] pt-2.5 flex">
-        <button
-          onClick={() => onCaseOnly(!caseOnly)}
-          className="h-7 flex items-center gap-1.5 rounded-md px-2 text-[13px] transition-colors"
-          style={{
-            backgroundColor: caseOnly ? (isDark ? "#24344f" : c.primaryLight) : "transparent",
-            border: `1px solid ${caseOnly ? c.primary : isDark ? dk.border : c.border}`,
-            color: caseOnly ? (isDark ? dk.text : c.darkBlue) : subCol,
-          }}
-          title={caseOnly ? "לחיצה תציג את כל השיחות" : "לחיצה תציג רק את שיחות התיק הזה"}
-        >
-          <FolderOpen size={14} style={{ flexShrink: 0 }} />
-          רק שיחות התיק הזה
-        </button>
-      </div>
-
       {/* outer ltr → scrollbar on the right (like the chat); inner rtl keeps the content */}
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-[18px] pb-4" dir="rtl">
@@ -1491,7 +1532,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
               </p>
               {caseOnly && (
                 <button onClick={() => onCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
-                  הצג את כל השיחות
+                  הצג את כל התיקים
                 </button>
               )}
             </div>
@@ -1517,7 +1558,9 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                         </button>
                         {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} />)}
                       </div>
-                    ) : (
+                    ) : caseOnly ? null : (
+                      // scoped to one case, every row would carry the same tag — the header already
+                      // says it, so the list itself is what changes shape between the two scopes
                       <CaseTag cs={it.cases[0]} bg={tagBg} fg={titleCol} />
                     )}
 
