@@ -1467,7 +1467,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           panel names its own subject. The scope isn't a filter bolted onto the list; it's what this
           panel is showing, stated where an interface normally states context. That's what makes the
           default read as a default: there is no control to dismiss, only a subject to change. */}
-      <div className="px-[18px] pt-4 pb-2.5" style={{ borderBottom: `1px solid ${line}` }}>
+      <div className="px-[18px] pt-4">
         <div className="flex items-center gap-2">
           <button
             onClick={onClose}
@@ -1477,9 +1477,9 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           >
             <PanelRightClose size={18} />
           </button>
-          <span className="text-[18px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
+          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
         </div>
-        <div className="relative mt-1.5">
+        <div className="relative mt-1">
           {/* The case number is fixed-width and is the part that must stay whole — a truncated
               number reads as a mistake — so the name is what gives way, same rule as the case tag. */}
           <button
@@ -1520,7 +1520,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
       </div>
 
       {/* Search — magnifier on the left, placeholder on the right, as in the design */}
-      <div className="px-[18px] pt-3">
+      <div className="px-[18px] pt-2">
         <div className="h-[42px] flex items-center gap-2 rounded-[3px] px-3" style={{ backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : "#e6e6e6"}` }}>
           <input
             value={q}
