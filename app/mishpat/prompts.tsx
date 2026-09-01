@@ -32,7 +32,10 @@ export type Prompt = {
   name: string;
   body: string;
   source: PromptSource;
+  // The name alone, so a list of authors sorts by name. The title is stored apart and shown
+  // after it — "השופט א׳ מזרחי" filed every judge under ה and no one could be found by name.
   author: string | null;   // null = המערכת; "אנונימי" for an anonymous share
+  authorRole?: string;     // כב׳ / עו״ד — shown after the name, never sorted on
   fav: boolean;            // my flag — separate from source
   basedOn?: string;        // the prompt this was forked from, kept for orientation only
   caseType: string; matter: string; stage: string; court: string;
@@ -61,6 +64,9 @@ export const fitsCase = (pr: { caseType: string; matter: string; stage: string; 
   (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
   (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
   (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
+
+// whoever is signed in — the name a prompt shared בשמי carries
+export const ME = "טל חבקין";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -111,7 +117,7 @@ export const SEED_PROMPTS: Prompt[] = [
   p({
     name: "הגהה לשונית לפני הוצאה",
     body: "עבור על המסמך והגה אותו לשונית בלבד — שגיאות כתיב, תחביר, אחידות מונחים, ומספור סעיפים. אל תשנה ניסוח משפטי ואל תוסיף תוכן. הצג את התיקונים כרשימה.",
-    source: "shared", author: "עו״ד רונית שגב", stage: GENERAL,
+    source: "shared", author: "רונית שגב", authorRole: "עו״ד", stage: GENERAL,
     tags: ["הגהה"], uses: 188, ratingSum: 431, ratingCount: 97, edited: "18/02/2025",
   }),
   p({
@@ -123,7 +129,7 @@ export const SEED_PROMPTS: Prompt[] = [
   p({
     name: "תמצית תיק לקראת דיון",
     body: "הכן תמצית של התיק לקראת הדיון הקרוב: הצדדים, מה נטען, מה כבר הוכרע בהחלטות ביניים, ומה פתוח להכרעה. עד עמוד אחד.",
-    source: "shared", author: "השופט א׳ מזרחי", stage: "לפני דיון",
+    source: "shared", author: "עמית מזרחי", authorRole: "כב׳", stage: "לפני דיון",
     tags: ["סיכום"], uses: 421, ratingSum: 1180, ratingCount: 249, edited: "03/02/2025",
   }),
   p({
@@ -237,7 +243,7 @@ function SourceMark({ pr, isDark, size = 13 }: { pr: Prompt; isDark: boolean; si
 const sourceLabel = (pr: Prompt) =>
   pr.source === "system" ? "מערכת"
   : pr.source === "mine" ? "שלי"
-  : `משותף · ${pr.author ?? "אנונימי"}`;
+  : `משותף · ${authorFull(pr)}`;
 
 function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
   const [hov, setHov] = useState(0);
@@ -541,7 +547,7 @@ const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
   return (!q || pr.name.includes(q)) &&
     (ff.source === ANY || srcName(pr) === ff.source) &&
-    (ff.author === ANY || authorName(pr) === ff.author) &&
+    (ff.author === ANY || authorFull(pr) === ff.author) &&
     (ff.caseType === ANY || pr.caseType === ff.caseType) &&
     (ff.matter === ANY || pr.matter === ff.matter) &&
     (ff.stage === ANY || pr.stage === ff.stage) &&
@@ -562,6 +568,8 @@ const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.sour
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
 const authorName = (pr: Prompt) => (pr.source === "shared" ? pr.author ?? "אנונימי" : srcName(pr));
+// The title trails the name, so the column reads as people and sorts as names.
+const authorFull = (pr: Prompt) => (pr.source === "shared" && pr.authorRole ? `${authorName(pr)} (${pr.authorRole})` : authorName(pr));
 
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
@@ -577,7 +585,7 @@ const menuFor = (
   { label: pr.fav ? "הסרה מהמועדפים" : "שמירה במועדפים", Icon: Bookmark, act: () => onFav(pr.id) },
   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
   ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
-  ...(pr.source === "mine" || pr.author === "אני"
+  ...(pr.source === "mine" || pr.author === ME
     ? [{ label: pr.source === "mine" ? "מחיקה" : "הסרה משיתוף", Icon: Trash2, act: () => onDelete(pr), danger: true }]
     : []),
 ];
@@ -630,7 +638,7 @@ export function PromptLibrary({
       relevance: (a, b) => fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
-      author: (a, b) => authorName(a).localeCompare(authorName(b), "he"),
+      author: (a, b) => authorName(a).localeCompare(authorName(b), "he"),   // the name, never the title
       caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
@@ -650,7 +658,7 @@ export function PromptLibrary({
   // The authors are whoever actually appears, not a fixed list — the point of the filter is to
   // find one person's prompts, and that set grows as people share.
   const authors = useMemo(
-    () => [...new Set(prompts.map(authorName))].sort((a, b) => a.localeCompare(b, "he")),
+    () => [...new Set(prompts.map(authorFull))].sort((a, b) => a.localeCompare(b, "he")),
     [prompts],
   );
 
@@ -664,7 +672,7 @@ export function PromptLibrary({
     };
     return {
       source: tally("source", SOURCE_OPTS, srcName),
-      author: tally("author", authors, authorName),
+      author: tally("author", authors, authorFull),
       caseType: tally("caseType", CASE_TYPES, (pr) => pr.caseType),
       matter: tally("matter", MATTERS, (pr) => pr.matter),
       stage: tally("stage", STAGES, (pr) => pr.stage),
@@ -801,8 +809,9 @@ export function PromptLibrary({
                       <SourceMark pr={pr} isDark={isDark} size={15} />
                     </div>
 
-                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorName(pr)}>
+                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr)}>
                       {authorName(pr)}
+                      {pr.source === "shared" && pr.authorRole && <span style={{ color: subCol }}> ({pr.authorRole})</span>}
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
@@ -1079,7 +1088,7 @@ export function PromptShare({
     if (!name.trim() || !body.trim()) { setAttempted(true); return; }
     onShare({
       id: uid(), name: name.trim(), body: body.trim(), source: "shared",
-      author: anon ? "אנונימי" : "אני", fav: false, caseType, matter, stage, court,
+      author: anon ? "אנונימי" : ME, fav: false, caseType, matter, stage, court,
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
     });
   };
