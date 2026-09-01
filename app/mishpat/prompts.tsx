@@ -522,12 +522,12 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-type SortKey = "relevance" | "name" | "source" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
+type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
 type Filters = {
-  q: string; source: string; caseType: string; matter: string; stage: string; court: string;
+  q: string; source: string; author: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
-const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
+const EMPTY_FILTERS: Filters = { q: "", source: ANY, author: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
 const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
 const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
@@ -541,6 +541,7 @@ const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
   return (!q || pr.name.includes(q)) &&
     (ff.source === ANY || srcName(pr) === ff.source) &&
+    (ff.author === ANY || authorName(pr) === ff.author) &&
     (ff.caseType === ANY || pr.caseType === ff.caseType) &&
     (ff.matter === ANY || pr.matter === ff.matter) &&
     (ff.stage === ANY || pr.stage === ff.stage) &&
@@ -548,10 +549,11 @@ const matches = (pr: Prompt, ff: Filters) => {
     (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
     (!ff.favOnly || pr.fav);
 };
-// ★ | שם + תקציר | מקור ומחבר | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
-// Each classification is its own column: they are four separate things to filter and sort by,
-// and one joined cell could only ever be truncated.
-const COLS = "34px minmax(0,1fr) 148px 84px 112px 100px 92px 96px 78px 36px";
+// ★ | שם + תקציר | מקור | מחבר | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
+// Every dimension is its own column: each is a separate thing to filter and sort by, and one
+// joined cell could only ever be truncated. מקור and מחבר are two such questions — which kind of
+// prompt is this, and whose is it — and a reader looking for one judge's prompts needs the second.
+const COLS = "34px minmax(0,1fr) 54px 136px 84px 108px 96px 90px 92px 74px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
@@ -627,7 +629,8 @@ export function PromptLibrary({
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
       relevance: (a, b) => fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
-      source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || (a.author ?? "").localeCompare(b.author ?? "", "he"),
+      source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
+      author: (a, b) => authorName(a).localeCompare(authorName(b), "he"),
       caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
@@ -644,6 +647,13 @@ export function PromptLibrary({
   // Every value carries how many prompts it would leave — counted against the OTHER filters in
   // force, not against the whole מאגר, so the number answers the question actually being asked:
   // if I pick this one, what do I get. That's also what makes a (0) worth showing.
+  // The authors are whoever actually appears, not a fixed list — the point of the filter is to
+  // find one person's prompts, and that set grows as people share.
+  const authors = useMemo(
+    () => [...new Set(prompts.map(authorName))].sort((a, b) => a.localeCompare(b, "he")),
+    [prompts],
+  );
+
   const facets = useMemo(() => {
     const tally = (key: keyof Filters, values: readonly string[], of: (pr: Prompt) => string | string[]) => {
       const base = prompts.filter((pr) => matches(pr, { ...f, [key]: ANY }));
@@ -654,13 +664,14 @@ export function PromptLibrary({
     };
     return {
       source: tally("source", SOURCE_OPTS, srcName),
+      author: tally("author", authors, authorName),
       caseType: tally("caseType", CASE_TYPES, (pr) => pr.caseType),
       matter: tally("matter", MATTERS, (pr) => pr.matter),
       stage: tally("stage", STAGES, (pr) => pr.stage),
       court: tally("court", COURTS, (pr) => pr.court),
       tag: tally("tag", TAGS, (pr) => pr.tags),
     };
-  }, [prompts, f]);
+  }, [prompts, f, authors]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -706,7 +717,7 @@ export function PromptLibrary({
             enough to hold them side by side. */}
         <div className="px-6 pb-3" style={{ paddingInlineStart: GUTTER }}>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative" style={{ width: "280px" }}>
+            <div className="relative" style={{ width: "224px" }}>
               <Search size={14} style={{ position: "absolute", top: 9, right: 9, color: subCol }} />
               <input
                 value={f.q}
@@ -716,12 +727,13 @@ export function PromptLibrary({
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />
             </div>
-            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={140} counts={facets.source} />
-            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} counts={facets.caseType} />
-            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
-            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} counts={facets.stage} />
-            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={124} counts={facets.court} />
-            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={124} counts={facets.tag} />
+            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={112} counts={facets.source} />
+            <Dropdown label="מחבר" value={f.author} options={authors} onChange={(v) => set("author", v)} isDark={isDark} width={148} counts={facets.author} />
+            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={116} counts={facets.caseType} />
+            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={138} counts={facets.matter} />
+            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={126} counts={facets.stage} />
+            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={114} counts={facets.court} />
+            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={114} counts={facets.tag} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
@@ -746,7 +758,8 @@ export function PromptLibrary({
                 <Bookmark size={14} fill={f.favOnly ? c.primary : "none"} style={{ color: f.favOnly ? c.primary : subCol }} />
               </button>
               {th("name", "שם הפרומפט")}
-              {th("source", "מקור")}
+              {th("source", "מקור", "center")}
+              {th("author", "מחבר")}
               {th("caseType", "סוג תיק")}
               {th("matter", "סוג עניין")}
               {th("stage", "שלב")}
@@ -784,9 +797,12 @@ export function PromptLibrary({
                       )}
                     </button>
 
-                    <div className="px-2 min-w-0 flex items-center gap-1.5" title={sourceLabel(pr)}>
+                    <div className="flex items-center justify-center" title={srcName(pr)}>
                       <SourceMark pr={pr} isDark={isDark} size={15} />
-                      <span className="text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>{authorName(pr)}</span>
+                    </div>
+
+                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorName(pr)}>
+                      {authorName(pr)}
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
