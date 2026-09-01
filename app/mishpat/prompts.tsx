@@ -376,7 +376,9 @@ function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () =>
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
       // quiet: in a long table only the saved rows carry a mark, and the empty one comes out on
       // hover — a column of grey outlines reads as a column of half-done things.
-      className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus:opacity-100" : "colors"}`}
+      // focus-VISIBLE, not focus: a click leaves the button focused, and plain focus: kept the
+      // mark on screen after unsaving a row, so that row alone behaved unlike the rest.
+      className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
       {/* Filled means saved — that one is learned, and not worth being clever about. It is the
