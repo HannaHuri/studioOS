@@ -1055,7 +1055,7 @@ export function PromptEditor({
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
-            שיוך — קובע באילו תיקים הפרומפט יוצג לך בפאנל
+            סיווג — קובע באילו תיקים הפרומפט יוצג לך בפאנל
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
@@ -1206,7 +1206,7 @@ export function PromptShare({
             style={{ border: `1px solid ${attempted && !body.trim() ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: "150px" }}
           />
 
-          <div className="text-[13px] mt-4 mb-2" style={{ color: subCol }}>שיוך הפרומפט — כך אחרים ימצאו אותו</div>
+          <div className="text-[13px] mt-4 mb-2" style={{ color: subCol }}>סיווג הפרומפט — כך אחרים ימצאו אותו</div>
           {/* Four boxes that can all read "כללי" need their names above them, not in a tooltip. */}
           <div className="flex items-start gap-2 flex-wrap">
             {([
