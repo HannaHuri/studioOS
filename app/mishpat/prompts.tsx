@@ -1053,10 +1053,7 @@ export function PromptEditor({
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
-            {/* Said once, and about a field rather than about a value: "כללי" on one field does
-                not mean the prompt is always shown — that takes all four. It means this field
-                doesn't narrow anything. */}
-            שיוך — קובע באילו תיקים הפרומפט יוצג לך בפאנל. שדה שנשאר ״כללי״ לא מגביל.
+            שיוך — קובע באילו תיקים הפרומפט יוצג לך בפאנל
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
@@ -1222,7 +1219,6 @@ export function PromptShare({
               </div>
             ))}
           </div>
-          <div className="text-[12.5px] mt-1.5" style={{ color: subCol }}>ברירת המחדל היא &quot;כללי&quot; — פרומפט כללי יופיע לכל התיקים.</div>
 
           <div className="text-[13px] mt-4 mb-2" style={{ color: subCol }}>מי מופיע כמחבר</div>
           <div className="flex items-center gap-2">
