@@ -1053,7 +1053,10 @@ export function PromptEditor({
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
-            שיוך — קובע באילו תיקים הפרומפט יוצע לך בפאנל
+            {/* Said once, and about a field rather than about a value: "כללי" on one field does
+                not mean the prompt is always shown — that takes all four. It means this field
+                doesn't narrow anything. */}
+            שיוך — קובע באילו תיקים הפרומפט יוצג לך בפאנל. שדה שנשאר ״כללי״ לא מגביל.
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
