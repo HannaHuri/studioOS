@@ -636,10 +636,11 @@ export function PromptLibrary({
         style={{ width: "min(1240px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start gap-3 px-6 pt-5 pb-4">
-          <div className="flex-1 min-w-0">
-            <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>מאגר הפרומפטים</div>
-            {/* the count belongs to the title — it's what the title is currently showing */}
-            <div className="text-[12.5px] mt-0.5" style={{ color: subCol }}>{list.length} פרומפטים</div>
+          {/* A count of everything says nothing. It only earns its place once a filter is on,
+              where it reports how much of the מאגר is left — so it appears then, and not before. */}
+          <div className="flex-1 min-w-0 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>
+            מאגר הפרומפטים
+            {filtered && <span style={{ color: subCol }}> ({list.length})</span>}
           </div>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
