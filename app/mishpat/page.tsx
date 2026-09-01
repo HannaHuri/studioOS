@@ -1429,12 +1429,11 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
   const subCol = isDark ? dk.textMuted : c.iconGray;
   const line = isDark ? dk.border : "#e6e9ef";
   const tagBg = isDark ? "#233150" : "#ebf3ff";
-  const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
-  // Scoping the list to one case removed every case tag, and with them the panel's only colour.
-  // The header line is where it comes back — it's also the element that should carry the most weight.
-  // A shade deeper than the tags' #ebf3ff — at the lighter tint the row read as white on white.
-  const scopeBg = isDark ? "#22304f" : "#e4eefb";
-  const scopeBgHover = isDark ? "#293a5e" : "#d8e6f8";
+  const chipBg = isDark ? "#22304f" : "#e4eefb";
+  // The case row is outlined rather than tinted, so the panel's colour now comes only from the
+  // tags and chips in the list itself.
+  const scopeBg = "transparent";
+  const scopeBgHover = isDark ? dk.border : c.hoverBg;
   const rowHover = isDark ? "#222a40" : "#f7fafd";
   const font = "Noto Sans Hebrew, sans-serif";
 
@@ -1544,7 +1543,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           <button
             onClick={() => setScopeOpen((v) => !v)}
             className="w-full h-8 flex items-center gap-1.5 rounded-[4px] pr-3 pl-2 transition-colors"
-            style={{ backgroundColor: scopeBg }}
+            style={{ backgroundColor: scopeBg, border: `1px solid ${isDark ? dk.border : c.border}` }}
             title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = scopeBgHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = scopeBg)}
