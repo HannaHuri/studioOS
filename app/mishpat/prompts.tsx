@@ -879,16 +879,16 @@ export function PromptLibrary({
                       style={{ color: isDark ? dk.textMuted : c.textGray }}
                       title={pr.myRating !== null ? `דירגת ${pr.myRating}` : "לדירוג הפרומפט"}
                     >
+                      {/* No star: the column is headed דירוג, so the number needs no glyph to
+                          announce what it is. And nothing to rate reads as a dash, the same way
+                          an authorless row does — a sentence would be three words spent on
+                          absence. The panel keeps its star, because there it has no header. */}
                       {pr.ratingCount ? (
                         <>
-                          {/* The number is the rating; this star only says which number it is,
-                              so it stays an outline. Fill belongs to the control, where filling
-                              stars in is how a rating is read and given. */}
-                          <Star size={12} strokeWidth={1.8} style={{ color: markCol(isDark), flexShrink: 0 }} />
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
-                      ) : <span style={{ color: subCol }}>טרם דורג</span>}
+                      ) : <span style={{ color: subCol }}>—</span>}
                     </button>
 
                     <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
