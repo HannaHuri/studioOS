@@ -323,8 +323,10 @@ function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny 
               style={{ color: txt }}
             >
               <span className="w-3.5 flex-none">{o === value && <Check size={13} style={{ color: c.primary }} />}</span>
-              <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>{o}</span>
-              {counts && <span className="flex-none text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{counts[o] ?? 0}</span>}
+              <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>
+                {o}
+                {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}
+              </span>
             </button>
           ))}
         </div>
@@ -509,7 +511,7 @@ export function PromptsPanel({
                   )}
                 </div>
               </button>
-              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
             </div>
           ))}
         </div>
@@ -565,8 +567,12 @@ const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 
 const menuFor = (
   pr: Prompt,
   onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
+  onFav: (id: string) => void,
 ) => [
   { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
+  // The bookmark is the quick gesture; this is where the action is named. A mark that only
+  // appears on hover can't teach anyone that it exists.
+  { label: pr.fav ? "הסרה מהמועדפים" : "שמירה במועדפים", Icon: Bookmark, act: () => onFav(pr.id) },
   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
   ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
   ...(pr.source === "mine" || pr.author === "אני"
@@ -587,7 +593,9 @@ export function PromptLibrary({
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FILTER_KEY);
-      if (raw) setF({ ...EMPTY_FILTERS, ...(JSON.parse(raw) as Partial<Filters>) });
+      // The search and the filters come back; the sort doesn't. Relevance is the default and no
+      // column owns it, so a remembered sort would be one there's no way back from.
+      if (raw) setF({ ...EMPTY_FILTERS, ...(JSON.parse(raw) as Partial<Filters>), sort: "relevance", dir: "desc" });
     } catch { /* private mode / cleared storage — the defaults are fine */ }
   }, []);
   // Skip the write that belongs to the mount render: it would run before the effect above has
@@ -719,19 +727,6 @@ export function PromptLibrary({
                 ניקוי
               </button>
             )}
-            {/* Relevance is the default and no column owns it, so once a header is clicked there
-                is no way back to it. This is that way, and it costs nothing while it's the sort
-                in force — the same rule ניקוי follows. */}
-            {f.sort !== "relevance" && (
-              <button
-                onClick={() => setF((prev) => ({ ...prev, sort: "relevance", dir: "desc" }))}
-                className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors"
-                style={{ color: subCol }}
-                title="חזרה למיון לפי התאמה לתיק"
-              >
-                מיון לפי רלוונטיות
-              </button>
-            )}
           </div>
         </div>
 
@@ -825,7 +820,7 @@ export function PromptLibrary({
                     <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
 
                     <div className="flex items-center justify-center">
-                      <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+                      <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
                     </div>
                   </div>
 
@@ -874,6 +869,12 @@ export function PromptEditor({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
+  // The classification isn't only for sharing: it's what decides whether a prompt shows up in
+  // the panel for the case you have open, so it has to be settable on your own prompts too.
+  const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
+  const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
+  const [stage, setStage] = useState(initial?.stage ?? GENERAL);
+  const [court, setCourt] = useState(initial?.court ?? GENERAL);
   const [attempted, setAttempted] = useState(false);
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -910,10 +911,8 @@ export function PromptEditor({
       ...(keep ?? {
         id: uid(), source: "mine", author: null, fav: true, uses: 0,
         ratingSum: 0, ratingCount: 0, myRating: null,
-        // a fork keeps the original's classification — it's the same kind of work
-        caseType: initial?.caseType ?? GENERAL, matter: initial?.matter ?? GENERAL,
-        stage: initial?.stage ?? GENERAL, court: initial?.court ?? GENERAL,
       } as Prompt),
+      caseType, matter, stage, court,
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
       name: name.trim(), body: body.trim(), tags, edited: today(),
       source: "mine",
@@ -980,6 +979,24 @@ export function PromptEditor({
               {tags.map((t) => <Tag key={t} t={t} isDark={isDark} />)}
             </div>
           )}
+
+          {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
+          <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
+            שיוך — קובע באילו תיקים הפרומפט יוצע לך בפאנל
+          </div>
+          <div className="flex items-start gap-2 flex-wrap">
+            {([
+              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
+              { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
+              { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+              { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
+            ] as const).map(({ t, v, o, set, w }) => (
+              <div key={t}>
+                <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
+                <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
