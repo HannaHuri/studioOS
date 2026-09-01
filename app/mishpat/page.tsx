@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
+import { UseExampleIcon } from "./icons";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
   SEED_PROMPTS, fieldsOf, type Prompt,
@@ -24,18 +25,6 @@ function ListSortDescendingIcon({ size = 24, strokeWidth = 2, style }: { size?: 
       <path d="M15 12H3" />
       <path d="M3 5h18" />
       <path d="M9 19H3" />
-    </svg>
-  );
-}
-
-// "שימוש בדוגמה" — a boxed return arrow (apply/insert). Not in lucide as a single glyph,
-// so it's hand-drawn here to match the icon in the design.
-function UseExampleIcon({ size = 24, style, className }: { size?: number; style?: React.CSSProperties; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <path d="M16 8.5v3a1.5 1.5 0 0 1-1.5 1.5H9" />
-      <path d="m11 11-2 2 2 2" />
     </svg>
   );
 }
@@ -2261,6 +2250,9 @@ export default function MishpatPage() {
   // Prompts (מאגר הפרומפטים) — one library in place of the three separate pools.
   // The rail's bookmark used to be the old favourite-questions list; it opens this now.
   const [isPromptsOpen, setIsPromptsOpen] = useState(false);
+  // Same rule as היסטוריה: the panel opens on the case, and turning that off lasts as long as
+  // the conversation does.
+  const [promptsCaseOnly, setPromptsCaseOnly] = useState(true);
   const [prompts, setPrompts] = useState<Prompt[]>(SEED_PROMPTS);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
@@ -2435,7 +2427,9 @@ export default function MishpatPage() {
               <PromptsPanel
                 isDark={isDark}
               prompts={prompts}
-              caseLine={`תיק ${CURRENT_CASE.num}`}
+              caseInfo={CURRENT_CASE}
+              caseOnly={promptsCaseOnly}
+              onCaseOnly={setPromptsCaseOnly}
               onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
@@ -2514,7 +2508,9 @@ export default function MishpatPage() {
             <PromptsPanel
               isDark={isDark}
               prompts={prompts}
-              caseLine={`תיק ${CURRENT_CASE.num}`}
+              caseInfo={CURRENT_CASE}
+              caseOnly={promptsCaseOnly}
+              onCaseOnly={setPromptsCaseOnly}
               onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
@@ -2530,7 +2526,7 @@ export default function MishpatPage() {
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); setPromptsCaseOnly(true); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"

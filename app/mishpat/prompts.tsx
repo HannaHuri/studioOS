@@ -18,10 +18,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Check, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, X, PanelRightClose, Copy, ShieldCheck, Sparkles,
+  Check, ChevronDown, FolderOpen, MoreHorizontal, Pencil, Plus, Search, Share2,
+  Star, Trash2, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
+import { UseExampleIcon } from "./icons";
 
 // ── Model ──────────────────────────────────────────────────────────────────
 export type PromptSource = "system" | "shared" | "mine";
@@ -398,9 +399,11 @@ function RowMenu({ items, isDark }: { items: { label: string; Icon: React.Compon
 
 // ── The side panel — a short, case-shaped shortlist; the full library is a window ──
 export function PromptsPanel({
-  isDark, prompts, caseLine, onClose, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
+  isDark, prompts, caseInfo, caseOnly, onCaseOnly, onClose, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
 }: {
-  isDark: boolean; prompts: Prompt[]; caseLine: string;
+  isDark: boolean; prompts: Prompt[];
+  caseInfo: { kind: string; num: string; name: string };
+  caseOnly: boolean; onCaseOnly: (v: boolean) => void;
   onClose: () => void; onUse: (pr: Prompt) => void; onFav: (id: string) => void;
   onEdit: (pr: Prompt) => void; onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
   onNew: () => void; onOpenLibrary: () => void;
@@ -408,18 +411,46 @@ export function PromptsPanel({
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!scopeRef.current?.contains(t) && !scopeRef.current?.parentElement?.contains(t)) setScopeOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [scopeOpen]);
 
-  // The panel states its subject rather than offering a filter: prompts fitted to the open
-  // case, plus the ones marked כללי. Everything else is one click away in the full library.
+  // Prompts fitted to the open case, plus the ones marked כללי. The scope row above is the one
+  // from היסטוריה — same shape, same two options — so whatever gets decided for that control
+  // applies here without a second conversation.
   const shortlist = useMemo(() => {
     const fits = (pr: Prompt) =>
-      (pr.caseType === GENERAL || pr.caseType === CASE_CONTEXT.caseType) &&
-      (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
-      (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
-      (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
+      !caseOnly || (
+        (pr.caseType === GENERAL || pr.caseType === CASE_CONTEXT.caseType) &&
+        (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
+        (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
+        (pr.court === GENERAL || pr.court === CASE_CONTEXT.court));
     const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : pr.source === "system" ? 2 : 3);
     return prompts.filter(fits).sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
-  }, [prompts]);
+  }, [prompts, caseOnly]);
+
+  const scopeItem = (v: boolean, label: string, sub: string) => (
+    <button
+      onClick={() => { setScopeOpen(false); onCaseOnly(v); }}
+      className="w-full flex items-start gap-2 px-3 py-2 text-right transition-colors"
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#ebf3ff")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+    >
+      <Check size={16} style={{ color: c.primary, flexShrink: 0, marginTop: "2px", visibility: caseOnly === v ? "visible" : "hidden" }} />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] leading-[18px]" style={{ color: titleCol }}>{label}</span>
+        <span className="block truncate text-[12px] leading-[16px]" style={{ color: subCol }}>{sub}</span>
+      </span>
+    </button>
+  );
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: FONT }} dir="rtl">
@@ -430,14 +461,62 @@ export function PromptsPanel({
           </button>
           <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
           <div className="flex-1" />
-          <button onClick={onNew} className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0" style={{ color: subCol }} title="פרומפט חדש">
-            <Plus size={16} />
+          {/* boxed, like the + in דוגמאות — the two panels offer the same kind of action */}
+          <button
+            onClick={onNew}
+            className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0"
+            style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray }}
+            title="פרומפט חדש"
+          >
+            <Plus size={14} />
           </button>
         </div>
-        {/* the subject, stated — not a control to dismiss */}
-        <div className="mt-1 text-[13px] leading-[20px] truncate" style={{ color: subCol }} title={caseLine}>
-          מותאם ל{caseLine}
+
+        {/* The scope row is the one from היסטוריה, unchanged — the panel names its subject. */}
+        <div className="relative mt-1">
+          <button
+            onClick={() => setScopeOpen((v) => !v)}
+            className="w-full h-8 flex items-center gap-1.5 rounded-[4px] pr-3 pl-2 transition-colors"
+            style={{ backgroundColor: "transparent", border: `1px solid ${isDark ? dk.border : c.border}` }}
+            title={caseOnly ? `${caseInfo.kind} • ${caseInfo.num} — ${caseInfo.name}` : "כל התיקים"}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol }}>
+              {caseOnly ? (
+                <>
+                  <span className="flex-shrink-0">{caseInfo.kind} • {caseInfo.num}</span>
+                  <span className="flex-shrink-0 px-1">—</span>
+                  <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{caseInfo.name}</span>
+                </>
+              ) : "כל התיקים"}
+            </span>
+            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+          </button>
+          {scopeOpen && (
+            <div
+              ref={scopeRef}
+              className="absolute inset-x-0 top-full mt-1 z-[65] py-1"
+              style={{ backgroundColor: bg, border: `1px solid ${isDark ? dk.border : c.inputBorder}`, borderRadius: "4px", boxShadow: "0px 6px 20px rgba(0,0,0,0.2)" }}
+            >
+              {scopeItem(true, `${caseInfo.kind} • ${caseInfo.num}`, caseInfo.name)}
+              {scopeItem(false, "כל התיקים", "כל הפרומפטים במאגר, מכל התיקים")}
+            </div>
+          )}
         </div>
+
+        {/* The way into the full library sits with the header, not at the far bottom — it's the
+            panel's main offer, and a shortlist that scrolls would have buried it. */}
+        <button
+          onClick={onOpenLibrary}
+          className="w-full h-8 mt-1.5 flex items-center gap-1.5 px-3 rounded-[4px] text-[13.5px] transition-opacity hover:opacity-85"
+          style={{ backgroundColor: isDark ? "#243354" : "#eaf2ff", color: c.primary }}
+        >
+          <LibraryBig size={15} className="flex-none" />
+          <span className="flex-1 text-right">כל מאגר הפרומפטים</span>
+          <ChevronDown size={14} style={{ transform: "rotate(90deg)" }} className="flex-none" />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
@@ -449,7 +528,7 @@ export function PromptsPanel({
               style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
             >
               <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
-              <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="הכנסה לשורת השאלה">
+              <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
                 <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
                   {pr.source === "system" && <ShieldCheck size={12} style={{ flexShrink: 0 }} />}
@@ -460,7 +539,7 @@ export function PromptsPanel({
               <RowMenu
                 isDark={isDark}
                 items={[
-                  { label: "הכנסה לשורת השאלה", Icon: Sparkles, act: () => onUse(pr) },
+                  { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
                   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
                   ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
                   ...(pr.source === "mine" || pr.author === "אני"
@@ -473,15 +552,6 @@ export function PromptsPanel({
         </div>
       </div>
 
-      <div className="px-3 py-3" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}>
-        <button
-          onClick={onOpenLibrary}
-          className="w-full h-9 rounded-[4px] text-[14px] transition-colors hover:bg-black/[0.03]"
-          style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.text : c.text }}
-        >
-          כל מאגר הפרומפטים
-        </button>
-      </div>
     </div>
   );
 }
@@ -794,12 +864,12 @@ export function PromptEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 py-4">
-          <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            שמירה במועדפים שלי
-          </button>
+        <div className="flex items-center justify-end gap-2 px-6 py-4">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
+          </button>
+          <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
+            שמירה במועדפים שלי
           </button>
         </div>
       </div>
@@ -808,6 +878,12 @@ export function PromptEditor({
 }
 
 // ── Share ──────────────────────────────────────────────────────────────────
+// NOTE (open, parked 2026-09-01): a shared prompt goes straight to every user — no approval
+// step, and no way to report one that turns out to be wrong or inappropriate. Both were
+// deliberately left out of this version. If the two are ever added, they belong together:
+// reporting is only useful if something happens to the report, and an approval queue is what
+// gives it somewhere to go. There is also no route yet from משותף to מאושר ע״י הלשכה, and a
+// well-rated shared prompt is the obvious candidate for one.
 export function PromptShare({
   isDark, initial, onShare, onClose,
 }: {
@@ -953,12 +1029,12 @@ export function PromptShare({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 py-4">
-          <button onClick={share} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            שיתוף
-          </button>
+        <div className="flex items-center justify-end gap-2 px-6 py-4">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
+          </button>
+          <button onClick={share} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
+            שיתוף
           </button>
         </div>
       </div>
@@ -1033,12 +1109,12 @@ export function PromptFill({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 py-4">
-          <button onClick={insert} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            הכנסה לשורת השאלה
-          </button>
+        <div className="flex items-center justify-end gap-2 px-6 py-4">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
+          </button>
+          <button onClick={insert} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
+            הכנסה לשורת השאלה
           </button>
         </div>
       </div>
@@ -1064,12 +1140,12 @@ export function PromptConfirm({
       >
         <div className="text-[17px]" style={{ color: textCol }}>{title}</div>
         <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
-        <div className="flex items-center gap-2 mt-5">
-          <button onClick={onConfirm} className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: RED }}>
-            {confirmLabel}
-          </button>
+        <div className="flex items-center justify-end gap-2 mt-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
+          </button>
+          <button onClick={onConfirm} className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: RED }}>
+            {confirmLabel}
           </button>
         </div>
       </div>
@@ -1080,14 +1156,14 @@ export function PromptConfirm({
 // ── The two actions under a question that was sent ─────────────────────────
 export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; onSave: () => void; onShare: () => void }) {
   const col = isDark ? dk.textMuted : c.iconGray;
-  const btn = "flex items-center gap-1.5 h-7 px-2 rounded-md text-[12.5px] transition-colors hover:bg-black/5";
+  const btn = "size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5";
   return (
-    <div className="flex items-center gap-1 mt-1.5" dir="rtl" style={{ fontFamily: FONT }}>
-      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירת השאלה כפרומפט מועדף">
-        <Star size={15} /> שמירה למועדפים
+    <div className="flex items-center mt-0.5" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
+      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה למועדפים">
+        <Star size={16} />
       </button>
-      <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף השאלה כפרומפט">
-        <Share2 size={15} /> שיתוף
+      <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
+        <Share2 size={16} />
       </button>
     </div>
   );
