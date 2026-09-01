@@ -270,11 +270,14 @@ function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void
   );
 }
 
-function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false }: {
+function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false, counts }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void; isDark: boolean; width?: number;
   // noAny: a form field always has a value (כללי is one), so it gets no "הכל" row —
   // that row only makes sense for a filter, where nothing chosen means everything.
   noAny?: boolean;
+  // counts: how many rows each value would leave. A filter row is a promise about the result;
+  // the number is the promise made explicit, and an empty one says so before it's clicked.
+  counts?: Record<string, number>;
 }) {
   // The menu is positioned fixed, anchored to the button: inside a scrolling dialog an
   // absolutely-positioned list gets clipped by the scroll container and loses its last rows.
@@ -320,7 +323,8 @@ function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny 
               style={{ color: txt }}
             >
               <span className="w-3.5 flex-none">{o === value && <Check size={13} style={{ color: c.primary }} />}</span>
-              <span className="flex-1">{o}</span>
+              <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>{o}</span>
+              {counts && <span className="flex-none text-[12px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>{counts[o] ?? 0}</span>}
             </button>
           ))}
         </div>
@@ -348,11 +352,13 @@ function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean; onCli
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-function FavMark({ on, onToggle, isDark }: { on: boolean; onToggle: () => void; isDark: boolean }) {
+function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+      // quiet: in a long table only the saved rows carry a mark, and the empty one comes out on
+      // hover — a column of grey outlines reads as a column of half-done things.
+      className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
       <Bookmark size={16} fill={on ? c.primary : "none"} style={{ color: on ? c.primary : isDark ? dk.textMuted : c.iconGray }} />
@@ -432,16 +438,14 @@ export function PromptsPanel({
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
-  // Two short lists, and between them they give "מועדף" its meaning: a saved prompt is here in
-  // EVERY case, while the second list comes and goes with the case you happen to have open.
-  // That's the whole difference, and it's why the panel is the shortcut it was meant to be.
-  const [favs, fitting] = useMemo(() => {
-    const rank = (pr: Prompt) => (pr.source === "mine" ? 0 : pr.source === "system" ? 1 : 2);
-    const by = (a: Prompt, b: Prompt) => rank(a) - rank(b) || b.uses - a.uses;
-    return [
-      prompts.filter((pr) => pr.fav).sort(by),
-      prompts.filter((pr) => !pr.fav && fitsCase(pr)).sort(by),
-    ];
+  // One list, scoped to the case, saved prompts first. Giving favourites a section of their own
+  // put an unbounded list above the case's — with thirty saved prompts, what the panel is for
+  // would sit below the fold. Most saved prompts are כללי and so appear here anyway; the ones
+  // tagged for another kind of case are exactly the ones that don't belong on this screen, and
+  // the whole set is one bookmark-click away in the library.
+  const shortlist = useMemo(() => {
+    const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : pr.source === "system" ? 2 : 3);
+    return prompts.filter(fitsCase).sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
   }, [prompts]);
 
   return (
@@ -471,50 +475,42 @@ export function PromptsPanel({
             <Plus size={14} />
           </button>
         </div>
+        {/* stated, not offered: saying the list is scoped is what keeps a prompt that isn't here
+            from reading as a prompt that's gone */}
+        <div className="mt-1 text-[13px] leading-[18px]" style={{ color: subCol }}>מותאם לתיק זה</div>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
-          {favs.length === 0 && fitting.length === 0 && (
+          {shortlist.length === 0 && (
             <div className="pt-10 px-4 text-center">
-              <p className="text-[13.5px] leading-relaxed" style={{ color: subCol }}>אין כאן פרומפטים עדיין.</p>
+              <p className="text-[13.5px] leading-relaxed" style={{ color: subCol }}>אין פרומפטים המותאמים לתיק זה.</p>
               <button onClick={onOpenLibrary} className="text-[13px] underline mt-2" style={{ color: c.primary }}>
                 פתיחת מאגר הפרומפטים
               </button>
             </div>
           )}
-          {([
-            { label: "המועדפים שלי", items: favs },
-            { label: "מותאמים לתיק זה", items: fitting },
-          ] as const).map(({ label, items }) => (
-            items.length === 0 ? null : (
-              <div key={label} className="flex flex-col gap-1.5">
-                {/* headings, not controls: they say what each list is and why it's here */}
-                <div className="px-1 pt-1.5 text-[12px]" style={{ color: subCol }}>{label}</div>
-                {items.map((pr) => (
-                  <div
-                    key={pr.id}
-                    className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
-                    style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
-                  >
-                    <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
-                    <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
-                      <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
-                      <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
-                        <SourceMark pr={pr} isDark={isDark} />
-                        <span className="truncate">{sourceLabel(pr)}</span>
-                        {pr.ratingCount > 0 && (
-                          <span className="flex-none flex items-center gap-0.5">
-                            · <Star size={10} fill="#fdab3d" style={{ color: "#fdab3d" }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                    <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
-                  </div>
-                ))}
-              </div>
-            )
+          {shortlist.map((pr) => (
+            <div
+              key={pr.id}
+              className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
+              style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
+            >
+              <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+              <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
+                <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
+                <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
+                  <SourceMark pr={pr} isDark={isDark} />
+                  <span className="truncate">{sourceLabel(pr)}</span>
+                  {pr.ratingCount > 0 && (
+                    <span className="flex-none flex items-center gap-0.5">
+                      · <Star size={10} fill="#fdab3d" style={{ color: "#fdab3d" }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              </button>
+              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+            </div>
           ))}
         </div>
       </div>
@@ -530,8 +526,26 @@ type Filters = {
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
 const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
-const SOURCE_OPTS = ["מערכת", "משותף", "שלי"];
+// mine first, then the vetted ones, then what other people shared — the order they matter in
+const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
+const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
 const FILTER_KEY = "mishpat.prompts.filters";
+// The table scrolls and its scrollbar (8px, see globals.css) eats into the row's right edge.
+// The rows above it don't scroll, so they reserve the same strip — otherwise the search field
+// hangs a few pixels past the table it belongs to.
+const GUTTER = "calc(1.5rem + 8px)";
+
+const matches = (pr: Prompt, ff: Filters) => {
+  const q = ff.q.trim();
+  return (!q || pr.name.includes(q)) &&
+    (ff.source === ANY || srcName(pr) === ff.source) &&
+    (ff.caseType === ANY || pr.caseType === ff.caseType) &&
+    (ff.matter === ANY || pr.matter === ff.matter) &&
+    (ff.stage === ANY || pr.stage === ff.stage) &&
+    (ff.court === ANY || pr.court === ff.court) &&
+    (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
+    (!ff.favOnly || pr.fav);
+};
 // ★ | שם + תקציר | מקור ומחבר | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
 // Each classification is its own column: they are four separate things to filter and sort by,
 // and one joined cell could only ever be truncated.
@@ -597,17 +611,7 @@ export function PromptLibrary({
     setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
   const list = useMemo(() => {
-    const q = f.q.trim();
-    const out = prompts.filter((pr) =>
-      (!q || pr.name.includes(q)) &&
-      (f.source === ANY || srcName(pr) === f.source) &&
-      (f.caseType === ANY || pr.caseType === f.caseType) &&
-      (f.matter === ANY || pr.matter === f.matter) &&
-      (f.stage === ANY || pr.stage === f.stage) &&
-      (f.court === ANY || pr.court === f.court) &&
-      (f.tag === ANY || pr.tags.includes(f.tag)) &&
-      (!f.favOnly || pr.fav)
-    );
+    const out = prompts.filter((pr) => matches(pr, f));
     const fit = (pr: Prompt) =>
       (pr.caseType === CASE_CONTEXT.caseType ? 2 : pr.caseType === GENERAL ? 1 : 0) +
       (pr.matter === CASE_CONTEXT.matter ? 2 : pr.matter === GENERAL ? 1 : 0) +
@@ -615,7 +619,7 @@ export function PromptLibrary({
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
       relevance: (a, b) => fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
-      source: (a, b) => srcName(b).localeCompare(srcName(a), "he") || (b.author ?? "").localeCompare(a.author ?? "", "he"),
+      source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || (a.author ?? "").localeCompare(b.author ?? "", "he"),
       caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
@@ -627,6 +631,27 @@ export function PromptLibrary({
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
+  }, [prompts, f]);
+
+  // Every value carries how many prompts it would leave — counted against the OTHER filters in
+  // force, not against the whole מאגר, so the number answers the question actually being asked:
+  // if I pick this one, what do I get. That's also what makes a (0) worth showing.
+  const facets = useMemo(() => {
+    const tally = (key: keyof Filters, values: readonly string[], of: (pr: Prompt) => string | string[]) => {
+      const base = prompts.filter((pr) => matches(pr, { ...f, [key]: ANY }));
+      const m: Record<string, number> = { [ANY]: base.length };
+      for (const v of values) m[v] = 0;
+      for (const pr of base) for (const v of [of(pr)].flat()) if (v in m) m[v] += 1;
+      return m;
+    };
+    return {
+      source: tally("source", SOURCE_OPTS, srcName),
+      caseType: tally("caseType", CASE_TYPES, (pr) => pr.caseType),
+      matter: tally("matter", MATTERS, (pr) => pr.matter),
+      stage: tally("stage", STAGES, (pr) => pr.stage),
+      court: tally("court", COURTS, (pr) => pr.court),
+      tag: tally("tag", TAGS, (pr) => pr.tags),
+    };
   }, [prompts, f]);
 
   const surface = isDark ? dk.surface : "white";
@@ -657,7 +682,7 @@ export function PromptLibrary({
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{ width: "min(1240px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
-        <div className="flex items-start gap-3 px-6 pt-5 pb-4">
+        <div className="flex items-start gap-3 px-6 pt-5 pb-4" style={{ paddingInlineStart: GUTTER }}>
           {/* A count of everything says nothing. It only earns its place once a filter is on,
               where it reports how much of the מאגר is left — so it appears then, and not before. */}
           <div className="flex-1 min-w-0 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>
@@ -671,7 +696,7 @@ export function PromptLibrary({
 
         {/* One row: the search and the six filters do the same job, and the window is wide
             enough to hold them side by side. */}
-        <div className="px-6 pb-3">
+        <div className="px-6 pb-3" style={{ paddingInlineStart: GUTTER }}>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative" style={{ width: "280px" }}>
               <Search size={14} style={{ position: "absolute", top: 9, right: 9, color: subCol }} />
@@ -683,22 +708,35 @@ export function PromptLibrary({
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />
             </div>
-            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={140} />
-            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} />
-            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} />
-            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} />
-            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={124} />
-            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={124} />
+            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={140} counts={facets.source} />
+            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} counts={facets.caseType} />
+            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
+            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} counts={facets.stage} />
+            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={124} counts={facets.court} />
+            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={124} counts={facets.tag} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
+              </button>
+            )}
+            {/* Relevance is the default and no column owns it, so once a header is clicked there
+                is no way back to it. This is that way, and it costs nothing while it's the sort
+                in force — the same rule ניקוי follows. */}
+            {f.sort !== "relevance" && (
+              <button
+                onClick={() => setF((prev) => ({ ...prev, sort: "relevance", dir: "desc" }))}
+                className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors"
+                style={{ color: subCol }}
+                title="חזרה למיון לפי התאמה לתיק"
+              >
+                מיון לפי רלוונטיות
               </button>
             )}
           </div>
         </div>
 
         {/* table */}
-        <div className="flex-1 overflow-y-auto docs-scroll px-6 pb-5" dir="ltr">
+        <div className="flex-1 overflow-y-auto docs-scroll px-6 pb-5" dir="ltr" style={{ scrollbarGutter: "stable" }}>
           <div dir="rtl" style={{ border: `1px solid ${rowLine}`, borderRadius: "4px", overflow: "hidden" }}>
             <div
               className="sticky top-0 z-10 grid items-stretch h-8"
@@ -731,18 +769,12 @@ export function PromptLibrary({
               const expanded = open === pr.id;
               return (
                 <div key={pr.id} style={{ borderBottom: `1px solid ${rowLine}` }}>
-                  {/* The only thing colour marks here is relevance to the open case — one meaning,
-                      the same one the panel is built on. The shield and the gold stars keep theirs. */}
                   <div
-                    className="grid items-center transition-colors hover:bg-black/[0.02]"
-                    style={{
-                      gridTemplateColumns: COLS, minHeight: "46px",
-                      backgroundColor: expanded ? (isDark ? "#222a40" : "#f7fafd")
-                        : fitsCase(pr) ? (isDark ? "rgba(0,115,234,0.07)" : "#f4f9ff") : undefined,
-                    }}
+                    className="group grid items-center transition-colors hover:bg-black/[0.02]"
+                    style={{ gridTemplateColumns: COLS, minHeight: "46px", backgroundColor: expanded ? (isDark ? "#222a40" : "#f7fafd") : undefined }}
                   >
                     <div className="flex items-center justify-center">
-                      <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+                      <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
                     </div>
 
                     {/* the name column carries a line of the prompt itself: unlike a document, a
