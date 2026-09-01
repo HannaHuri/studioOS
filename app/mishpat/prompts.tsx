@@ -743,7 +743,8 @@ export function PromptLibrary({
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{ width: "min(1240px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
-        <div className="flex items-start gap-3 px-6 pt-5 pb-4" style={{ paddingInlineStart: GUTTER }}>
+        {/* the filter row sits close under the title: they are one header, not two bands */}
+        <div className="flex items-start gap-3 px-6 pt-4 pb-2" style={{ paddingInlineStart: GUTTER }}>
           {/* A count of everything says nothing. It only earns its place once a filter is on,
               where it reports how much of the מאגר is left — so it appears then, and not before. */}
           <div className="flex-1 min-w-0 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>
