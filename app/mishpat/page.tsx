@@ -1477,6 +1477,16 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
         {/* Search is a button until it's wanted, and then it takes this row over. A permanent field
             made the header a third band; on demand it costs nothing while the panel sits idle. */}
         <div className="flex items-center gap-2 h-8">
+          {/* The collapse control is the panel's own chrome, so it stays put in both states — only
+              the title gives way to the field. Chrome persists, content swaps. */}
+          <button
+            onClick={onClose}
+            className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
+            style={{ color: subCol }}
+            title="סגור היסטוריה"
+          >
+            <PanelRightClose size={18} />
+          </button>
           {searchOpen ? (
             <>
               <input
@@ -1499,14 +1509,6 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
             </>
           ) : (
             <>
-              <button
-                onClick={onClose}
-                className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-                style={{ color: subCol }}
-                title="סגור היסטוריה"
-              >
-                <PanelRightClose size={18} />
-              </button>
               <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
               <div className="flex-1" />
               <button
@@ -1589,7 +1591,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 return (
                   <div
                     key={it.id}
-                    className="pt-2 pb-2.5 px-2 -mx-2 rounded-md transition-colors"
+                    className="pt-2 pb-2.5 px-2 -mx-2 transition-colors"
                     style={{ borderBottom: `1px solid ${line}` }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = rowHover)}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
