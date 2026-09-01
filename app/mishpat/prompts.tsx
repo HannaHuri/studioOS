@@ -53,6 +53,12 @@ const markCol = (isDark: boolean) => (isDark ? dk.textMuted : c.iconGray);
 // a step back from markCol, for the one mark that is solid when it is on
 const subtle = (isDark: boolean) => (isDark ? dk.textMuted : c.textLight);
 
+// The two keys both lists order by, in this order. Saved comes first because it is a choice the
+// reader made; whose it is comes second, and only then does popularity get a say. Read together
+// they say: my saved things, then anyone's that I saved, then what I wrote, then the rest.
+const saved = (pr: Prompt) => (pr.fav ? 0 : 1);
+const mine = (pr: Prompt) => (pr.source === "mine" ? 0 : pr.source === "system" ? 1 : 2);
+
 export const ANY = "הכל";
 export const GENERAL = "כללי";
 
@@ -473,10 +479,9 @@ export function PromptsPanel({
   // browsed in the library, where a list is only a list. The exception is a shared prompt I saved
   // myself: that choice is mine, and it's already been made.
   const shortlist = useMemo(() => {
-    const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : 2);
     return prompts
       .filter((pr) => (pr.source !== "shared" || pr.fav) && fitsCase(pr))
-      .sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
+      .sort((a, b) => saved(a) - saved(b) || mine(a) - mine(b) || b.uses - a.uses);
   }, [prompts]);
 
   return (
@@ -682,9 +687,8 @@ export function PromptLibrary({
     // The window opens on what the reader built for themselves — saved first, then written.
     // The panel already answers "what suits this case", and it is the screen this one is reached
     // FROM: opening on the same order would hand back the rows the panel just showed.
-    const mineFirst = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : 2);
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => mineFirst(a) - mineFirst(b) || fit(b) - fit(a) || b.uses - a.uses,
+      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       // the name, never the title; the authorless system rows land at the end of the list
