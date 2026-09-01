@@ -476,8 +476,8 @@ export function PromptsPanel({
             with the header — at the bottom a scrolling shortlist buried it. */}
         <button
           onClick={onOpenLibrary}
-          className="w-full h-9 mt-2 flex items-center justify-center gap-2 rounded-[4px] text-[14px] transition-opacity hover:opacity-90"
-          style={{ backgroundColor: c.primary, color: "white" }}
+          className="w-full h-9 mt-2 flex items-center justify-center gap-2 rounded-[4px] text-[14px] transition-colors hover:bg-black/[0.03]"
+          style={{ border: `1px solid ${c.primary}`, color: c.primary, backgroundColor: "transparent" }}
         >
           <LibraryBig size={16} className="flex-none" />
           כל מאגר הפרומפטים
@@ -495,7 +495,7 @@ export function PromptsPanel({
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
           >
             <FolderOpen size={13} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: subCol }}>
+            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: titleCol }}>
               {caseOnly ? (
                 <>
                   <span className="flex-shrink-0">{caseInfo.num}</span>
@@ -547,21 +547,26 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-type SortKey = "relevance" | "name" | "source" | "subject" | "rating" | "uses";
+type SortKey = "relevance" | "name" | "source" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
 const SORT_LABEL: Record<SortKey, string> = {
-  relevance: "רלוונטיות", name: "שם", source: "מקור", subject: "שיוך", rating: "דירוג", uses: "שימושים",
+  relevance: "רלוונטיות", name: "שם", source: "מקור", caseType: "סוג תיק", matter: "סוג עניין",
+  stage: "שלב", court: "ערכאה", rating: "דירוג", uses: "שימושים",
 };
 type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
 const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
-const SOURCE_OPTS = ["מוצע ע״י המערכת", "משותף", "שלי"];
+const SOURCE_OPTS = ["מערכת", "משותף", "שלי"];
 const FILTER_KEY = "mishpat.prompts.filters";
-// ★ | שם + תקציר | מקור | שיוך | דירוג | שימושים | ⋮
-const COLS = "34px minmax(0,1fr) 150px 220px 104px 84px 36px";
+// ★ | שם + תקציר | מקור | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
+// Each classification is its own column: they are four separate things to filter and sort by,
+// and one joined cell could only ever be truncated.
+const COLS = "34px minmax(0,1fr) 78px 84px 112px 100px 92px 96px 78px 36px";
 
-const srcName = (pr: Prompt) => (pr.source === "system" ? "מוצע ע״י המערכת" : pr.source === "shared" ? "משותף" : "שלי");
+// The column value is one word, so it can be scanned down a column and matched against the
+// filter. The fuller phrasing ("מוצע ע״י המערכת") belongs to the panel, where it's a sentence.
+const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
 // One menu, used by both the panel and the table, so the two never drift apart.
@@ -629,7 +634,10 @@ export function PromptLibrary({
       relevance: (a, b) => fits(b) - fits(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => srcName(b).localeCompare(srcName(a), "he") || (b.author ?? "").localeCompare(a.author ?? "", "he"),
-      subject: (a, b) => b.caseType.localeCompare(a.caseType, "he") || b.matter.localeCompare(a.matter, "he"),
+      caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
+      matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
+      stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
+      court: (a, b) => b.court.localeCompare(a.court, "he"),
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
@@ -665,7 +673,7 @@ export function PromptLibrary({
       <div
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(1100px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
+        style={{ width: "min(1240px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-center gap-3 px-6 pt-5 pb-4">
           <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>מאגר הפרומפטים</div>
@@ -733,7 +741,10 @@ export function PromptLibrary({
               <div />
               {th("name", "שם הפרומפט")}
               {th("source", "מקור")}
-              {th("subject", "שיוך")}
+              {th("caseType", "סוג תיק")}
+              {th("matter", "סוג עניין")}
+              {th("stage", "שלב")}
+              {th("court", "ערכאה")}
               {th("rating", "דירוג")}
               {th("uses", "שימושים", "center")}
               <div />
@@ -770,16 +781,19 @@ export function PromptLibrary({
 
                     <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={sourceLabel(pr)}>
                       {srcName(pr)}
-                      {pr.author && <span style={{ color: subCol }}> · {pr.author}</span>}
                     </div>
 
-                    <div
-                      className="px-2 min-w-0 text-[12.5px] truncate"
-                      style={{ color: isDark ? dk.textMuted : c.textGray }}
-                      title={[pr.caseType, pr.matter, pr.stage, pr.court].filter((x) => x !== GENERAL).join(" · ") || GENERAL}
-                    >
-                      {[pr.caseType, pr.matter, pr.stage, pr.court].filter((x) => x !== GENERAL).join(" · ") || GENERAL}
-                    </div>
+                    {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
+                    {([pr.caseType, pr.matter, pr.stage, pr.court] as const).map((v, i) => (
+                      <div
+                        key={i}
+                        className="px-2 min-w-0 text-[12.5px] truncate"
+                        style={{ color: v === GENERAL ? subCol : isDark ? dk.textMuted : c.textGray }}
+                        title={v}
+                      >
+                        {v}
+                      </div>
+                    ))}
 
                     <div className="px-2 text-[12.5px] flex items-center gap-1" style={{ color: isDark ? dk.textMuted : c.textGray }}>
                       {pr.ratingCount ? (
@@ -805,7 +819,8 @@ export function PromptLibrary({
                       </p>
                       <div className="flex items-center gap-2 mt-3 flex-wrap" style={{ paddingInlineStart: "27px" }}>
                         {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
-                        {pr.basedOn && <span className="text-[12px]" style={{ color: subCol }}>מבוסס על &quot;{pr.basedOn}&quot;</span>}
+                        <span className="text-[12px]" style={{ color: subCol }}>{sourceLabel(pr)}</span>
+                        {pr.basedOn && <span className="text-[12px]" style={{ color: subCol }}>· מבוסס על &quot;{pr.basedOn}&quot;</span>}
                         <div className="flex-1" />
                         <Stars pr={pr} isDark={isDark} onRate={(n) => onRate(pr.id, n)} />
                         <button
