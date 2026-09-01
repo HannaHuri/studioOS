@@ -51,7 +51,7 @@ export const GENERAL = "כללי";
 
 export const CASE_TYPES = [GENERAL, "אזרחי", "פלילי", "משפחה", "עבודה", "מנהלי"];
 export const MATTERS = [GENERAL, "רשלנות רפואית", "נזקי גוף", "חוזים", "מקרקעין", "לשון הרע", "משמורת"];
-export const STAGES = [GENERAL, "קדם משפט", "לפני דיון", "הוכחות", "סיכומים", "כתיבת פסק דין", "ערעור"];
+export const STAGES = [GENERAL, "קדם משפט", "לפני דיון", "הוכחות", "סיכומים", "פס״ד", "ערעור"];
 export const COURTS = [GENERAL, "שלום", "מחוזי", "עליון", "בית דין לעבודה"];
 export const TAGS = ["הגהה", "ניסוח", "סיכום", "השוואה", "בדיקת טיוטה", "איתור", "חקיקה ופסיקה"];
 
@@ -93,7 +93,7 @@ export const SEED_PROMPTS: Prompt[] = [
   p({
     name: "בדיקת טיוטת פסק דין",
     body: "עבור על טיוטת פסק הדין ובדוק: האם כל טענה מרכזית של הצדדים נדונה, האם כל קביעה עובדתית נסמכת על ראיה שהוצגה, והאם ההכרעה האופרטיבית עקבית עם ההנמקה. חייבים לציין במפורש האם התביעה נדחית או מתקבלת.",
-    source: "system", stage: "כתיבת פסק דין",
+    source: "system", stage: "פס״ד",
     tags: ["בדיקת טיוטה", "הגהה"], uses: 907, ratingSum: 2371, ratingCount: 502, edited: "05/01/2025",
   }),
   p({
@@ -567,9 +567,12 @@ const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.sour
 
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
-const authorName = (pr: Prompt) => (pr.source === "shared" ? pr.author ?? "אנונימי" : srcName(pr));
+// מחבר is a person, so it holds a person: my own prompts are signed with my name, and a prompt
+// the system supplies has no author at all — מקור is the column that says where it came from.
+const authorName = (pr: Prompt) =>
+  pr.source === "system" ? "" : pr.source === "mine" ? ME : pr.author ?? "אנונימי";
 // The title trails the name, so the column reads as people and sorts as names.
-const authorFull = (pr: Prompt) => (pr.source === "shared" && pr.authorRole ? `${authorName(pr)} (${pr.authorRole})` : authorName(pr));
+const authorFull = (pr: Prompt) => (pr.authorRole && authorName(pr) ? `${authorName(pr)} (${pr.authorRole})` : authorName(pr));
 
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
@@ -638,7 +641,8 @@ export function PromptLibrary({
       relevance: (a, b) => fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
-      author: (a, b) => authorName(a).localeCompare(authorName(b), "he"),   // the name, never the title
+      // the name, never the title; the authorless system rows land at the end of the list
+      author: (a, b) => (authorName(a) ? 0 : 1) - (authorName(b) ? 0 : 1) || authorName(a).localeCompare(authorName(b), "he"),
       caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
@@ -658,7 +662,7 @@ export function PromptLibrary({
   // The authors are whoever actually appears, not a fixed list — the point of the filter is to
   // find one person's prompts, and that set grows as people share.
   const authors = useMemo(
-    () => [...new Set(prompts.map(authorFull))].sort((a, b) => a.localeCompare(b, "he")),
+    () => [...new Set(prompts.map(authorFull))].filter(Boolean).sort((a, b) => a.localeCompare(b, "he")),
     [prompts],
   );
 
@@ -810,8 +814,8 @@ export function PromptLibrary({
                     </div>
 
                     <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr)}>
-                      {authorName(pr)}
-                      {pr.source === "shared" && pr.authorRole && <span style={{ color: subCol }}> ({pr.authorRole})</span>}
+                      {authorName(pr) || <span style={{ color: subCol }}>—</span>}
+                      {pr.authorRole && authorName(pr) && <span style={{ color: subCol }}> ({pr.authorRole})</span>}
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
