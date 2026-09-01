@@ -46,6 +46,11 @@ export type Prompt = {
   edited: string;
 };
 
+// The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
+// that survives a busy table, a print, and colour-blindness. Filled means on, outline means off —
+// the shape carries it, not the hue.
+const markCol = (isDark: boolean) => (isDark ? dk.textMuted : c.iconGray);
+
 export const ANY = "הכל";
 export const GENERAL = "כללי";
 
@@ -236,7 +241,7 @@ const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 
 function SourceMark({ pr, isDark, size = 13 }: { pr: Prompt; isDark: boolean; size?: number }) {
   const I = SOURCE_ICON[pr.source];
-  return <I size={size} style={{ flexShrink: 0, color: pr.source === "system" ? c.primary : isDark ? dk.textMuted : c.iconGray }} />;
+  return <I size={size} style={{ flexShrink: 0, color: markCol(isDark) }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
@@ -265,8 +270,8 @@ function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void
             style={{ cursor: locked ? "default" : "pointer" }}
           >
             <Star size={14} strokeWidth={1.8}
-              style={{ color: n <= shown ? "#fdab3d" : sub, opacity: n <= shown ? 1 : 0.55 }}
-              fill={n <= shown ? "#fdab3d" : "none"} />
+              style={{ color: n <= shown ? markCol(isDark) : sub, opacity: n <= shown ? 1 : 0.55 }}
+              fill={n <= shown ? markCol(isDark) : "none"} />
           </button>
         ))}
       </div>
@@ -370,7 +375,7 @@ function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () =>
       className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      <Bookmark size={16} fill={on ? c.primary : "none"} style={{ color: on ? c.primary : isDark ? dk.textMuted : c.iconGray }} />
+      <Bookmark size={16} fill={on ? markCol(isDark) : "none"} style={{ color: markCol(isDark) }} />
     </button>
   );
 }
@@ -502,10 +507,12 @@ export function PromptsPanel({
           {shortlist.map((pr) => (
             <div
               key={pr.id}
-              className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
+              className="group relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
               style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
             >
-              <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+              {/* same rule as the table: a mark only where something is saved, and on hover where
+                  it is not — one behaviour, so the gesture is learned once */}
+              <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
               <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
                 <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
@@ -513,7 +520,7 @@ export function PromptsPanel({
                   <span className="truncate">{sourceLabel(pr)}</span>
                   {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5">
-                      · <Star size={10} fill="#fdab3d" style={{ color: "#fdab3d" }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
+                      · <Star size={10} fill={markCol(isDark)} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
                     </span>
                   )}
                 </div>
@@ -774,7 +781,7 @@ export function PromptLibrary({
                 className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
                 title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים שלי בלבד"}
               >
-                <Bookmark size={14} fill={f.favOnly ? c.primary : "none"} style={{ color: f.favOnly ? c.primary : subCol }} />
+                <Bookmark size={14} fill={f.favOnly ? markCol(isDark) : "none"} style={{ color: f.favOnly ? markCol(isDark) : subCol }} />
               </button>
               {th("name", "שם הפרומפט")}
               {th("source", "מקור", "center")}
@@ -846,7 +853,7 @@ export function PromptLibrary({
                     >
                       {pr.ratingCount ? (
                         <>
-                          <Star size={12} fill="#fdab3d" style={{ color: "#fdab3d", flexShrink: 0 }} />
+                          <Star size={12} fill={markCol(isDark)} style={{ color: markCol(isDark), flexShrink: 0 }} />
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
