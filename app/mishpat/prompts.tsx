@@ -546,7 +546,9 @@ const GUTTER = "calc(1.5rem + 8px)";
 
 const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
-  return (!q || pr.name.includes(q)) &&
+  // name or author: with no author filter left, typing a name is how you find one person's
+  // prompts in a מאגר the whole court writes into.
+  return (!q || pr.name.includes(q) || authorFull(pr).includes(q)) &&
     (ff.source === ANY || srcName(pr) === ff.source) &&
     (ff.caseType === ANY || pr.caseType === ff.caseType) &&
     (ff.matter === ANY || pr.matter === ff.matter) &&
@@ -639,12 +641,20 @@ export function PromptLibrary({
 
   const list = useMemo(() => {
     const out = prompts.filter((pr) => matches(pr, f));
+    // How well a prompt suits the open case: an exact match on a field is worth more than כללי,
+    // which is worth more than a field that contradicts it. All four fields, the same four the
+    // panel checks.
     const fit = (pr: Prompt) =>
       (pr.caseType === CASE_CONTEXT.caseType ? 2 : pr.caseType === GENERAL ? 1 : 0) +
       (pr.matter === CASE_CONTEXT.matter ? 2 : pr.matter === GENERAL ? 1 : 0) +
-      (pr.stage === CASE_CONTEXT.stage ? 2 : pr.stage === GENERAL ? 1 : 0);
+      (pr.stage === CASE_CONTEXT.stage ? 2 : pr.stage === GENERAL ? 1 : 0) +
+      (pr.court === CASE_CONTEXT.court ? 2 : pr.court === GENERAL ? 1 : 0);
+    // The window opens on what the reader built for themselves — saved first, then written.
+    // The panel already answers "what suits this case", and it is the screen this one is reached
+    // FROM: opening on the same order would hand back the rows the panel just showed.
+    const mineFirst = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : 2);
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => fit(b) - fit(a) || b.uses - a.uses,
+      relevance: (a, b) => mineFirst(a) - mineFirst(b) || fit(b) - fit(a) || b.uses - a.uses,
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       // the name, never the title; the authorless system rows land at the end of the list
@@ -732,7 +742,7 @@ export function PromptLibrary({
               <input
                 value={f.q}
                 onChange={(e) => set("q", e.target.value)}
-                placeholder="חיפוש לפי שם הפרומפט"
+                placeholder="חיפוש לפי שם הפרומפט או מחבר"
                 className="w-full h-8 rounded-[4px] pr-7 pl-3 outline-none text-[13px] text-right"
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />

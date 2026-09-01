@@ -813,8 +813,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = "auto";                                  // measure from scratch, so it shrinks too
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+    const fit = () => {
+      el.style.height = "auto";                                // measure from scratch, so it shrinks too
+      // An empty field is one line by definition — measuring it can read a stretched box before
+      // the first layout settles, and the field would open at its full height for no text at all.
+      el.style.height = inputText ? `${Math.min(el.scrollHeight, 220)}px` : "24px";
+    };
+    fit();
+    const id = requestAnimationFrame(fit);                     // once more, after layout has settled
+    return () => cancelAnimationFrame(id);
   }, [inputText, isEmpty, messages.length]);
 
   // ── Input box (shared between empty and normal state) ──────────────────
