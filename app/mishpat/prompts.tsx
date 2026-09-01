@@ -1156,14 +1156,14 @@ export function PromptConfirm({
 // ── The two actions under a question that was sent ─────────────────────────
 export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; onSave: () => void; onShare: () => void }) {
   const col = isDark ? dk.textMuted : c.iconGray;
-  const btn = "size-7 flex items-center justify-center rounded-md transition-colors hover:bg-black/5";
+  const btn = "size-6 flex items-center justify-center rounded transition-colors hover:bg-black/10";
   return (
-    <div className="flex items-center mt-0.5" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
+    <div className="flex items-center" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
       <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה למועדפים">
-        <Star size={16} />
+        <Star size={15} />
       </button>
       <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
-        <Share2 size={16} />
+        <Share2 size={15} />
       </button>
     </div>
   );

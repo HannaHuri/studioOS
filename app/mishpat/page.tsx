@@ -2,11 +2,11 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
-  Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
+  Split, Star, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Bot, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -1145,13 +1145,16 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               const showingAgentProgress = !!msg.agent && isLast && agentRunning;
               return (
                 <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
-                  <div className="group">
-                    <div className="rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                      <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
-                    </div>
-                    {/* Saving and sharing sit on the question, not on the answer — the question is
-                        the reusable part. Hidden until the row is hovered so the thread stays quiet. */}
-                    <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  {/* Saving and sharing sit on the question, not on the answer — the question is
+                      the reusable part. They live INSIDE the bubble, absolutely placed at its free
+                      left corner, so they cost the thread no height at all: a reserved strip under
+                      every question pushed the answer down whether or not anyone was hovering. */}
+                  <div className="group relative rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
+                    <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
+                    <div
+                      className="absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                      style={{ left: "6px", bottom: "4px" }}
+                    >
                       <QuestionActions
                         isDark={isDark}
                         onSave={() => onSaveQuestion?.(msg.q)}
@@ -2344,7 +2347,8 @@ export default function MishpatPage() {
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
-    { Icon: Bookmark, label: "פרומפטים" },
+    // a star, the same mark the library uses for a favourite — the rail names the same idea
+    { Icon: Star, label: "פרומפטים" },
     { Icon: Paperclip, label: "דוגמאות" },
   ];
   const botIcons = [
