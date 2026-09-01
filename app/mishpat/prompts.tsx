@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check, ChevronDown, FolderOpen, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
+  Star, Trash2, User, Users, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -461,7 +461,18 @@ export function PromptsPanel({
           </button>
           <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
           <div className="flex-1" />
-          {/* boxed, like the + in דוגמאות — the two panels offer the same kind of action */}
+          {/* Both boxed, like the + in דוגמאות. The library keeps its word: an icon alone in a
+              header row is the least findable control on the panel, and this is the way out of
+              the shortlist when what you need isn't in it. */}
+          <button
+            onClick={onOpenLibrary}
+            className="h-6 px-1.5 flex items-center gap-1 rounded transition-colors hover:bg-black/5 flex-shrink-0 text-[12.5px]"
+            style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray }}
+            title="כל מאגר הפרומפטים"
+          >
+            <LibraryBig size={14} />
+            כל המאגר
+          </button>
           <button
             onClick={onNew}
             className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5 flex-shrink-0"
@@ -472,21 +483,10 @@ export function PromptsPanel({
           </button>
         </div>
 
-        {/* The way into the full library is the panel's main offer, so it's a button and it sits
-            with the header — at the bottom a scrolling shortlist buried it. */}
-        <button
-          onClick={onOpenLibrary}
-          className="w-full h-9 mt-2 flex items-center justify-center gap-2 rounded-[4px] text-[14px] transition-colors hover:bg-black/[0.03]"
-          style={{ border: `1px solid ${c.primary}`, color: c.primary, backgroundColor: "transparent" }}
-        >
-          <LibraryBig size={16} className="flex-none" />
-          כל מאגר הפרומפטים
-        </button>
-
         {/* The case is the list's subject, so it reads as a line of text with the list under it —
             a bordered box made it look like a third field competing with the button above.
             Same two options as היסטוריה's scope control, minus the box. */}
-        <div className="relative mt-3">
+        <div className="relative mt-1.5">
           <button
             onClick={() => setScopeOpen((v) => !v)}
             className="w-full h-6 flex items-center gap-1.5 rounded-[4px] px-1 -mx-1 transition-colors"
@@ -562,11 +562,16 @@ const FILTER_KEY = "mishpat.prompts.filters";
 // ★ | שם + תקציר | מקור | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
 // Each classification is its own column: they are four separate things to filter and sort by,
 // and one joined cell could only ever be truncated.
-const COLS = "34px minmax(0,1fr) 78px 84px 112px 100px 92px 96px 78px 36px";
+const COLS = "34px minmax(0,1fr) 56px 84px 112px 100px 92px 96px 78px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter. The fuller phrasing ("מוצע ע״י המערכת") belongs to the panel, where it's a sentence.
 const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
+
+// In the table the source is a mark rather than a word: it repeats on every row, three values
+// only, and a shape is read faster down a column than text is. The shield is the same one the
+// לשכה approval badge used, so it keeps saying "vetted" — one head is mine, two are shared.
+const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
 // One menu, used by both the panel and the table, so the two never drift apart.
@@ -740,7 +745,7 @@ export function PromptLibrary({
             >
               <div />
               {th("name", "שם הפרומפט")}
-              {th("source", "מקור")}
+              {th("source", "מקור", "center")}
               {th("caseType", "סוג תיק")}
               {th("matter", "סוג עניין")}
               {th("stage", "שלב")}
@@ -772,15 +777,14 @@ export function PromptLibrary({
                       <div className="flex items-center gap-1.5">
                         <ChevronDown size={13} style={{ color: subCol, flexShrink: 0, transform: expanded ? "rotate(180deg)" : "rotate(90deg)", transition: "transform .15s" }} />
                         <span className="text-[14px] truncate" style={{ color: textCol }}>{pr.name}</span>
-                        {pr.source === "system" && <ShieldCheck size={12} style={{ color: c.primary, flexShrink: 0 }} />}
                       </div>
                       {!expanded && (
                         <div className="text-[12px] truncate mt-0.5" style={{ color: subCol, paddingInlineStart: "19px" }} title={pr.body}>{pr.body}</div>
                       )}
                     </button>
 
-                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={sourceLabel(pr)}>
-                      {srcName(pr)}
+                    <div className="flex items-center justify-center" title={sourceLabel(pr)}>
+                      {(() => { const I = SOURCE_ICON[pr.source]; return <I size={16} style={{ color: pr.source === "system" ? c.primary : isDark ? dk.textMuted : c.iconGray }} />; })()}
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
