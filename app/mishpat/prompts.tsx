@@ -520,7 +520,7 @@ export function PromptsPanel({
                   <span className="truncate">{sourceLabel(pr)}</span>
                   {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5">
-                      · <Star size={10} fill={markCol(isDark)} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
+                      · <Star size={10} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
                     </span>
                   )}
                 </div>
@@ -853,7 +853,10 @@ export function PromptLibrary({
                     >
                       {pr.ratingCount ? (
                         <>
-                          <Star size={12} fill={markCol(isDark)} style={{ color: markCol(isDark), flexShrink: 0 }} />
+                          {/* The number is the rating; this star only says which number it is,
+                              so it stays an outline. Fill belongs to the control, where filling
+                              stars in is how a rating is read and given. */}
+                          <Star size={12} style={{ color: markCol(isDark), flexShrink: 0 }} />
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
