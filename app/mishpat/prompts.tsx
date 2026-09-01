@@ -444,17 +444,14 @@ export function PromptsPanel({
           </button>
           <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
           <div className="flex-1" />
-          {/* Blue, so the way out of the shortlist is the one thing in the header that is not
-              grey. It keeps its word: an icon alone in a header row is the least findable
-              control on the panel. */}
+          {/* Blue, so the way out of the shortlist is the one thing in the header that isn't grey */}
           <button
             onClick={onOpenLibrary}
-            className="h-6 px-1.5 flex items-center gap-1 rounded transition-colors hover:bg-black/[0.03] flex-shrink-0 text-[12.5px]"
+            className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/[0.03] flex-shrink-0"
             style={{ border: `1px solid ${c.primary}`, color: c.primary }}
             title="כל מאגר הפרומפטים"
           >
             <LibraryBig size={14} />
-            כל המאגר
           </button>
           <button
             onClick={onNew}
@@ -510,10 +507,6 @@ export function PromptsPanel({
 
 // ── The library window ─────────────────────────────────────────────────────
 type SortKey = "relevance" | "name" | "source" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
-const SORT_LABEL: Record<SortKey, string> = {
-  relevance: "רלוונטיות", name: "שם", source: "מקור", caseType: "סוג תיק", matter: "סוג עניין",
-  stage: "שלב", court: "ערכאה", rating: "דירוג", uses: "שימושים",
-};
 type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
@@ -570,7 +563,11 @@ export function PromptLibrary({
   }, [f]);
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
-  const dirty = JSON.stringify(f) !== JSON.stringify(EMPTY_FILTERS);
+  // Sorting isn't filtering: clicking a column header shouldn't put a "ניקוי" on screen, and
+  // ניקוי shouldn't throw away the order the user chose.
+  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
+  const filtered = FILTER_KEYS.some((k) => f[k] !== EMPTY_FILTERS[k]);
+  const clearFilters = () => setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir }));
 
   // Clicking a column header is the sort control — there is no separate מיון menu to keep in
   // step with it. Same column again reverses; the default is relevance, which no column owns.
@@ -638,15 +635,19 @@ export function PromptLibrary({
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{ width: "min(1240px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
-        <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-          <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>מאגר הפרומפטים</div>
-          <div className="flex-1" />
+        <div className="flex items-start gap-3 px-6 pt-5 pb-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>מאגר הפרומפטים</div>
+            {/* the count belongs to the title — it's what the title is currently showing */}
+            <div className="text-[12.5px] mt-0.5" style={{ color: subCol }}>{list.length} פרומפטים</div>
+          </div>
           <button
             onClick={onNew}
-            className="h-8 px-3 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+            className="size-8 flex-none flex items-center justify-center rounded transition-opacity hover:opacity-90"
             style={{ backgroundColor: c.primary, color: "white" }}
+            title="פרומפט חדש"
           >
-            <Plus size={14} /> פרומפט חדש
+            <Plus size={16} />
           </button>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
@@ -672,25 +673,11 @@ export function PromptLibrary({
             <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} />
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={124} />
             <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={124} />
-            <button
-              onClick={() => set("favOnly", !f.favOnly)}
-              className="h-8 px-2.5 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
-              style={{ border: `1px solid ${f.favOnly ? c.primary : isDark ? dk.border : c.border}`, color: f.favOnly ? c.primary : textCol, backgroundColor: isDark ? dk.input : "white" }}
-              title="המועדפים שלי — דגל אישי, לא מקור"
-            >
-              <Star size={13} fill={f.favOnly ? "#fdab3d" : "none"} style={{ color: f.favOnly ? "#fdab3d" : undefined }} />
-              המועדפים שלי
-            </button>
-            {dirty && (
-              <button onClick={() => setF(EMPTY_FILTERS)} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
+            {filtered && (
+              <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
               </button>
             )}
-            <div className="flex-1" />
-            {/* the sort is stated rather than controlled twice — the headers are the control */}
-            <span className="text-[12.5px]" style={{ color: subCol }}>
-              {list.length} פרומפטים · ממוינים לפי {SORT_LABEL[f.sort]}
-            </span>
           </div>
         </div>
 
@@ -701,7 +688,14 @@ export function PromptLibrary({
               className="sticky top-0 z-10 grid items-stretch h-8"
               style={{ gridTemplateColumns: COLS, backgroundColor: headBg, borderBottom: `1px solid ${rowLine}` }}
             >
-              <div />
+              {/* the column's own header is its filter: click the star, see only starred rows */}
+              <button
+                onClick={() => set("favOnly", !f.favOnly)}
+                className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
+                title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים שלי בלבד"}
+              >
+                <Star size={14} fill={f.favOnly ? "#fdab3d" : "none"} style={{ color: f.favOnly ? "#fdab3d" : subCol }} />
+              </button>
               {th("name", "שם הפרומפט")}
               {th("source", "מקור", "center")}
               {th("caseType", "סוג תיק")}
