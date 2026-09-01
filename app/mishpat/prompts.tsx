@@ -945,15 +945,22 @@ export function PromptEditor({
             className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
             style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: "180px" }}
           />
-          <div className="flex items-center gap-2 mt-2 flex-wrap text-[12.5px]" style={{ color: subCol }}>
-            <span>שדות למילוי:</span>
-            {fields.length ? fields.map((x) => <Tag key={x} t={`[${x}]`} isDark={isDark} />) : <span>אין. אפשר להוסיף בסוגריים מרובעים.</span>}
-            {fields.includes(EXAMPLE_FIELD) && <span>· [{EXAMPLE_FIELD}] נבחרת מתוך פאנל הדוגמאות</span>}
-          </div>
-          <div className="flex items-center gap-2 mt-2 flex-wrap text-[12.5px]" style={{ color: subCol }}>
-            <span>תגיות אוטומטיות:</span>
-            {tags.length ? tags.map((t) => <Tag key={t} t={t} isDark={isDark} />) : <span>—</span>}
-          </div>
+          {/* Both lines report what the text already produced, so neither appears until there is
+              something to report — the placeholder inside the field is what explains the brackets,
+              and saying it twice made an empty editor look like it had a problem. */}
+          {fields.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap text-[12.5px]" style={{ color: subCol }}>
+              <span>שדות למילוי:</span>
+              {fields.map((x) => <Tag key={x} t={`[${x}]`} isDark={isDark} />)}
+              {fields.includes(EXAMPLE_FIELD) && <span>· [{EXAMPLE_FIELD}] נבחרת מתוך פאנל הדוגמאות</span>}
+            </div>
+          )}
+          {tags.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap text-[12.5px]" style={{ color: subCol }}>
+              <span>תגיות שזוהו:</span>
+              {tags.map((t) => <Tag key={t} t={t} isDark={isDark} />)}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
@@ -961,7 +968,7 @@ export function PromptEditor({
             ביטול
           </button>
           <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            שמירה במועדפים שלי
+            שמירה למועדפים
           </button>
         </div>
       </div>
