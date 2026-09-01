@@ -1495,7 +1495,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Escape") { setQ(""); setSearchOpen(false); } }}
                 placeholder="חיפוש שיחה"
-                className="flex-1 min-w-0 h-8 rounded-md px-2.5 outline-none text-[14px] text-right"
+                className="flex-1 min-w-0 h-8 rounded-[4px] px-2.5 outline-none text-[14px] text-right"
                 style={{ color: titleCol, fontFamily: font, backgroundColor: isDark ? dk.input : "white", border: `1px solid ${c.primary}` }}
               />
               <button
@@ -1530,14 +1530,14 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
               mistake — so the name is what gives way, the same rule the case tag follows. */}
           <button
             onClick={() => setScopeOpen((v) => !v)}
-            className="w-full h-8 flex items-center gap-1.5 rounded-md pr-3 pl-2 transition-colors"
+            className="w-full h-8 flex items-center gap-1.5 rounded-[4px] pr-3 pl-2 transition-colors"
             style={{ backgroundColor: scopeBg }}
             title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = scopeBgHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = scopeBg)}
           >
-            <FolderOpen size={14} style={{ color: c.primary, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol, fontWeight: 500 }}>
+            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: subCol }}>
               {caseOnly ? (
                 <>
                   <span className="flex-shrink-0">{CURRENT_CASE.kind} • {CURRENT_CASE.num}</span>
@@ -1546,16 +1546,16 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                 </>
               ) : "כל התיקים"}
             </span>
-            <ChevronDown size={15} style={{ color: c.primary, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
           </button>
           {scopeOpen && (
               <div
                 ref={scopeRef}
-                className="absolute right-0 top-full mt-1 z-[65] py-1 w-[236px]"
+                className="absolute inset-x-0 top-full mt-1 z-[65] py-1"
                 style={{
                   backgroundColor: isDark ? dk.surface : "white",
                   border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
-                  borderRadius: "5px",
+                  borderRadius: "4px",
                   boxShadow: "0px 6px 20px rgba(0,0,0,0.2)",
                 }}
               >
@@ -1659,7 +1659,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
                           top: menu.top, left: menu.left, width: "176px",
                           backgroundColor: isDark ? dk.surface : "white",
                           border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
-                          borderRadius: "5px",
+                          borderRadius: "4px",
                           boxShadow: "0px 6px 20px rgba(0,0,0,0.2)",
                         }}
                         dir="rtl"
