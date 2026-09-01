@@ -632,6 +632,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // A prompt chosen in the library lands here. The counter is what makes it fire, so choosing
   // the same prompt twice still works, and mounting doesn't overwrite what the user typed.
   const insertN = useRef(0);
+  // A prompt is several lines long, so the question line grows to hold it rather than hiding
+  // most of it behind a caret. It grows to a ceiling and scrolls past it, so the conversation
+  // above never disappears behind the input.
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [responseMode, setResponseMode] = useState<ResponseMode>("agents"); // independent of scope — can run alongside any scope level
   const [modeOpen, setModeOpen] = useState(false);
   const modeBtnRef = useRef<HTMLButtonElement>(null);
@@ -806,6 +810,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setInputText(insert.text);
   }, [insert]);
 
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";                                  // measure from scratch, so it shrinks too
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [inputText, isEmpty, messages.length]);
+
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
     return (
@@ -833,12 +844,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         }}
         dir="rtl"
       >
-        <input
-          className="w-full bg-transparent outline-none text-right text-[16px] min-h-[24px]"
-          style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        <textarea
+          ref={inputRef}
+          rows={1}
+          className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
+          style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
           placeholder={isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
