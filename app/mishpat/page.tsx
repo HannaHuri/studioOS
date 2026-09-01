@@ -14,7 +14,7 @@ import { c, dk, RED } from "./theme";
 import { UseExampleIcon } from "./icons";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
-  SEED_PROMPTS, fieldsOf, type Prompt,
+  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
@@ -2301,10 +2301,21 @@ export default function MishpatPage() {
   const ratePrompt = (id: string, n: number) =>
     setPrompts((prev) => prev.map((x) => (x.id === id && x.myRating === null
       ? { ...x, myRating: n, ratingSum: x.ratingSum + n, ratingCount: x.ratingCount + 1 } : x)));
-  const savePrompt = (pr: Prompt) => {
-    setPrompts((prev) => (prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev]));
+  // Saving can carry a share with it. Two prompts come out of it: mine, which stays mine, and
+  // the copy that goes to everyone under the name I chose — the same two objects the separate
+  // share screen produces, just decided in one place.
+  const savePrompt = (pr: Prompt, share?: { anon: boolean }) => {
+    setPrompts((prev) => {
+      const next = prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev];
+      if (!share) return next;
+      return [{
+        ...pr, id: Math.random().toString(36).slice(2, 9), source: "shared" as const,
+        author: share.anon ? "אנונימי" : ME, authorRole: share.anon ? undefined : MY_ROLE,
+        fav: false, uses: 0, ratingSum: 0, ratingCount: 0, myRating: null,
+      }, ...next];
+    });
     setPromptEdit(null);
-    setToast(pr.fav ? "הפרומפט נשמר במועדפים" : "הפרומפט נשמר");
+    setToast(share ? "הפרומפט נשמר ושותף למאגר" : pr.fav ? "הפרומפט נשמר במועדפים" : "הפרומפט נשמר");
   };
   const doShare = (pr: Prompt) => {
     setPrompts((prev) => [pr, ...prev]);

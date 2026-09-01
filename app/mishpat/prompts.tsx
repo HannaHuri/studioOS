@@ -186,7 +186,7 @@ export const fillFields = (body: string, values: Record<string, string>) =>
 // the case. We do NOT strike the details out — a redacted prompt is unusable. Each one is
 // swapped for a field, which is the same mechanism the prompt already has for its variables,
 // so the next person gets a prompt that still works. Replaced by default, undoable per item.
-type Hit = { start: number; end: number; text: string; field: string };
+export type Hit = { start: number; end: number; text: string; field: string };
 
 const FIRST_NAMES = ["יעקב", "משה", "שרה", "דוד", "אורי", "מיה", "יוסי", "רונית", "דניאל", "אורלי", "בת שבע", "עידו", "אברהם", "רחל", "נועה", "איתי"];
 const LAST_NAMES = ["אברמוב", "כהן", "לוי", "יוסף", "פרץ", "גולד", "רוזן", "דליה", "אלמוג", "שחר", "שמש", "בר", "מזרחי", "שגב"];
@@ -955,7 +955,7 @@ export function PromptEditor({
   isDark: boolean;
   initial: Partial<Prompt> | null;
   mode: "new" | "edit" | "fork" | "fromMessage";
-  onSave: (pr: Prompt) => void;
+  onSave: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -972,6 +972,40 @@ export function PromptEditor({
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
   const [court, setCourt] = useState(initial?.court ?? GENERAL);
   const [attempted, setAttempted] = useState(false);
+  // Sharing is decided here, at the moment the prompt is written — that is when a person knows
+  // whether it's worth passing on, and a second screen later is a second decision to remember.
+  // Ticking the box does what the share screen does on open: it swaps identifying details for
+  // fields, and asks whose name it goes out under.
+  const [share, setShare] = useState(false);
+  const [anon, setAnon] = useState(false);
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [kept, setKept] = useState<Set<number>>(new Set());
+  const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
+  const labels = hitLabels(hits, kept);
+
+  const toggleShare = () => {
+    if (share) {
+      // untick puts the original text back, unless it has been edited since
+      if (preShare !== null && body === scrub(preShare, hits, kept)) setBody(preShare);
+      setShare(false); setHits([]); setKept(new Set()); setPreShare(null);
+      return;
+    }
+    const found = findIdentifiers(body);
+    setHits(found); setKept(new Set()); setPreShare(body);
+    setBody(scrub(body, found, new Set()));
+    // the name goes out with it, so it gets the same treatment — quietly, since it is one line
+    setName((n) => scrub(n, findIdentifiers(n), new Set()));
+    setShare(true);
+  };
+
+  const toggleHit = (i: number) => {
+    if (preShare === null) return;
+    const next = new Set(kept);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    setKept(next);
+    setBody(scrub(preShare, hits, next));
+  };
+
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
@@ -1016,7 +1050,7 @@ export function PromptEditor({
       // so it lands starred; writing one from scratch, or forking someone else's, does not. If
       // every prompt of mine were starred, the star would stop sorting anything.
       fav: keep ? keep.fav : mode === "fromMessage",
-    });
+    }, share ? { anon } : undefined);
   };
 
   return (
@@ -1097,6 +1131,64 @@ export function PromptEditor({
               </div>
             ))}
           </div>
+
+          <button onClick={toggleShare} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
+            <span
+              className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
+              style={{ border: `1px solid ${share ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: share ? c.primary : "transparent" }}
+            >
+              {share && <Check size={12} style={{ color: "white" }} />}
+            </span>
+            שיתוף עם כל המשתמשים
+          </button>
+
+          {share && (
+            <div className="mt-2 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+              {hits.length > 0 && (
+                <>
+                  <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
+                    {hits.length - kept.size > 0
+                      ? `${hits.length - kept.size} פרטים שעשויים לזהות את התיק הוחלפו בשדות למילוי, כדי שהפרומפט יישאר שמיש למי שיפעיל אותו.`
+                      : "כל הפרטים שזוהו הוחזרו לנוסח."}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    {hits.map((h, i) => (
+                      <button
+                        key={i}
+                        onClick={() => toggleHit(i)}
+                        className="px-2 h-[22px] rounded-[3px] text-[12px] transition-colors"
+                        style={{
+                          backgroundColor: kept.has(i) ? (isDark ? "#3a2530" : "#fdeaec") : (isDark ? dk.surface : "white"),
+                          color: kept.has(i) ? RED : c.primary,
+                          border: `1px solid ${kept.has(i) ? RED : c.primary}`,
+                        }}
+                        title={kept.has(i) ? "החלפה בשדה" : "השארת הפרט המקורי"}
+                      >
+                        <bdi>{h.text}</bdi> {kept.has(i) ? "— נשאר בנוסח" : `→ [${labels[i]}]`}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
+              <div className="flex items-center gap-2">
+                {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
+                  <button
+                    key={t}
+                    onClick={() => setAnon(k)}
+                    className="h-7 px-3 rounded-[4px] text-[12.5px] transition-colors"
+                    style={{
+                      border: `1px solid ${anon === k ? c.primary : isDark ? dk.border : c.border}`,
+                      color: anon === k ? c.primary : textCol,
+                      backgroundColor: isDark ? dk.surface : "white",
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
@@ -1104,7 +1196,7 @@ export function PromptEditor({
             ביטול
           </button>
           <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            {mode === "fromMessage" ? "שמירה למועדפים" : "שמירה"}
+            {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : "שמירה"}
           </button>
         </div>
       </div>
