@@ -2283,7 +2283,7 @@ export default function MishpatPage() {
   const savePrompt = (pr: Prompt) => {
     setPrompts((prev) => (prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev]));
     setPromptEdit(null);
-    setToast("הפרומפט נשמר במועדפים");
+    setToast(pr.fav ? "הפרומפט נשמר במועדפים" : "הפרומפט נשמר");
   };
   const doShare = (pr: Prompt) => {
     setPrompts((prev) => [pr, ...prev]);

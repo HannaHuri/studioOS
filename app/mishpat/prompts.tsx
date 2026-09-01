@@ -135,7 +135,8 @@ export const SEED_PROMPTS: Prompt[] = [
   p({
     name: "מכתב תזכורת לצדדים",
     body: "נסח הודעה לצדדים לקראת הדיון ביום [תאריך הדיון]: תזכורת להגשת רשימת עדים שבעה ימים מראש, ואזהרה לגבי אי-התייצבות. נוסח קצר ופורמלי.",
-    source: "mine", fav: true, stage: "לפני דיון",
+    // written by me but not starred — "שלי" and "מועדף" are two different things
+    source: "mine", fav: false, stage: "לפני דיון",
     tags: ["ניסוח"], uses: 12, ratingSum: 0, ratingCount: 0, edited: "20/02/2025",
   }),
 ];
@@ -511,14 +512,18 @@ type Filters = {
 const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 const SOURCE_OPTS = ["מערכת", "משותף", "שלי"];
 const FILTER_KEY = "mishpat.prompts.filters";
-// ★ | שם + תקציר | מקור | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
+// ★ | שם + תקציר | מקור ומחבר | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
 // Each classification is its own column: they are four separate things to filter and sort by,
 // and one joined cell could only ever be truncated.
-const COLS = "34px minmax(0,1fr) 56px 84px 112px 100px 92px 96px 78px 36px";
+const COLS = "34px minmax(0,1fr) 148px 84px 112px 100px 92px 96px 78px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
 const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
+
+// What the cell shows: the mark already says which of the three kinds it is, so the text can
+// spend itself on who — which is the part worth reading, and worth being credited for.
+const authorName = (pr: Prompt) => (pr.source === "shared" ? pr.author ?? "אנונימי" : srcName(pr));
 
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
@@ -688,7 +693,7 @@ export function PromptLibrary({
                 <Star size={14} fill={f.favOnly ? "#fdab3d" : "none"} style={{ color: f.favOnly ? "#fdab3d" : subCol }} />
               </button>
               {th("name", "שם הפרומפט")}
-              {th("source", "מקור", "center")}
+              {th("source", "מקור")}
               {th("caseType", "סוג תיק")}
               {th("matter", "סוג עניין")}
               {th("stage", "שלב")}
@@ -726,8 +731,9 @@ export function PromptLibrary({
                       )}
                     </button>
 
-                    <div className="flex items-center justify-center" title={sourceLabel(pr)}>
-                      <SourceMark pr={pr} isDark={isDark} size={16} />
+                    <div className="px-2 min-w-0 flex items-center gap-1.5" title={sourceLabel(pr)}>
+                      <SourceMark pr={pr} isDark={isDark} size={15} />
+                      <span className="text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }}>{authorName(pr)}</span>
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
@@ -846,7 +852,11 @@ export function PromptEditor({
       } as Prompt),
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
       name: name.trim(), body: body.trim(), tags, edited: today(),
-      source: "mine", fav: keep ? keep.fav : true,
+      source: "mine",
+      // Only the star gesture stars: saving a question that was sent came from pressing a star,
+      // so it lands starred; writing one from scratch, or forking someone else's, does not. If
+      // every prompt of mine were starred, the star would stop sorting anything.
+      fav: keep ? keep.fav : mode === "fromMessage",
     });
   };
 
@@ -913,7 +923,7 @@ export function PromptEditor({
             ביטול
           </button>
           <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            שמירה למועדפים
+            {mode === "fromMessage" ? "שמירה למועדפים" : "שמירה"}
           </button>
         </div>
       </div>
