@@ -1512,7 +1512,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
         <div className="flex items-center gap-2 h-8">
           {/* both sized so the two never meet: the panel is 300px wide and the title and the
               control have to share one line without either giving way */}
-          <span className="text-[15px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
+          <span className="text-[16px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
           <div className="flex-1" />
           {/* pulled out to the search field's edge, so the header has one left margin and not two */}
           <div
@@ -1523,7 +1523,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
               <button
                 key={label}
                 onClick={() => onCaseOnly(v)}
-                className="h-[22px] px-1.5 text-[11.5px] whitespace-nowrap transition-colors"
+                className="h-[22px] px-2 text-[12.5px] whitespace-nowrap transition-colors"
                 style={{
                   backgroundColor: caseOnly === v ? (isDark ? "#243354" : "#eaf2ff") : "transparent",
                   color: caseOnly === v ? c.primary : subCol,
@@ -1775,9 +1775,11 @@ function ExamplesPanel({
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
-      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-        {/* the title starts the line — the rail already carries the icon for this panel */}
-        <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
+      {/* same header box as the other two panels — same padding, same 32px line — so the three
+          titles land on exactly the same baseline when you switch between them */}
+      <div className="px-[18px] pt-4 pb-2">
+        <div className="flex items-center gap-2 h-8">
+        <span className="text-[16px] leading-[1.25]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
         <div className="flex-1" />
         <button
           onClick={(e) => { e.stopPropagation(); onAdd(); }}
@@ -1787,8 +1789,8 @@ function ExamplesPanel({
         >
           <Plus size={14} />
         </button>
+        </div>
       </div>
-
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
