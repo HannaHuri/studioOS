@@ -2443,12 +2443,14 @@ export default function MishpatPage() {
               const isHist = label === "היסטוריה";
               const isEx = label === "דוגמאות";
               const active = (isHist && isHistoryOpen) || (isEx && isExamplesOpen);
+              // Active is carried by the icon's colour alone: a filled square reads as a primary
+              // action, which is what the + button above actually is — not what a toggle is.
               return (
                 <button
                   key={label}
                   onClick={isHist ? toggleHistory : isEx ? toggleExamples : undefined}
                   className="size-8 flex items-center justify-center rounded transition-colors hover:bg-black/5"
-                  style={{ color: active ? "white" : iconCol, backgroundColor: active ? c.primary : undefined }}
+                  style={{ color: active ? c.primary : iconCol }}
                   title={label}
                 >
                   <Icon size={19} />
