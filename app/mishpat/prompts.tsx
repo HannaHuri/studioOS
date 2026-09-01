@@ -16,9 +16,9 @@
    out of the model rather than needing a rule.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Check, ChevronDown, FolderOpen, MoreHorizontal, Pencil, Plus, Search, Share2,
+  Check, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Share2,
   Star, Trash2, User, Users, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -214,10 +214,22 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 }
 
 // ── Small pieces ───────────────────────────────────────────────────────────
+// The source is a mark rather than a word wherever it repeats: three values only, and a shape
+// is read faster than text down a column or across a row. The shield is the one the לשכה badge
+// carried, so it keeps saying "vetted" — one head is mine, two are shared.
+const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
+
+function SourceMark({ pr, isDark, size = 13 }: { pr: Prompt; isDark: boolean; size?: number }) {
+  const I = SOURCE_ICON[pr.source];
+  return <I size={size} style={{ flexShrink: 0, color: pr.source === "system" ? c.primary : isDark ? dk.textMuted : c.iconGray }} />;
+}
+
+// One wording, used wherever the source is named: the same word the column shows and the filter
+// offers. The author rides along with it — "משותף" without a name says less than it could.
 const sourceLabel = (pr: Prompt) =>
-  pr.source === "system" ? "מוצע ע״י המערכת"
+  pr.source === "system" ? "מערכת"
   : pr.source === "mine" ? "שלי"
-  : `שותף ע״י ${pr.author ?? "אנונימי"}`;
+  : `משותף · ${pr.author ?? "אנונימי"}`;
 
 function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
   const [hov, setHov] = useState(0);
@@ -399,11 +411,9 @@ function RowMenu({ items, isDark }: { items: { label: string; Icon: React.Compon
 
 // ── The side panel — a short, case-shaped shortlist; the full library is a window ──
 export function PromptsPanel({
-  isDark, prompts, caseInfo, caseOnly, onCaseOnly, onClose, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
+  isDark, prompts, onClose, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
 }: {
   isDark: boolean; prompts: Prompt[];
-  caseInfo: { kind: string; num: string; name: string };
-  caseOnly: boolean; onCaseOnly: (v: boolean) => void;
   onClose: () => void; onUse: (pr: Prompt) => void; onFav: (id: string) => void;
   onEdit: (pr: Prompt) => void; onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
   onNew: () => void; onOpenLibrary: () => void;
@@ -411,46 +421,19 @@ export function PromptsPanel({
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
-  const [scopeOpen, setScopeOpen] = useState(false);
-  const scopeRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!scopeOpen) return;
-    const close = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!scopeRef.current?.contains(t) && !scopeRef.current?.parentElement?.contains(t)) setScopeOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [scopeOpen]);
-
-  // Prompts fitted to the open case, plus the ones marked כללי. The scope row above is the one
-  // from היסטוריה — same shape, same two options — so whatever gets decided for that control
-  // applies here without a second conversation.
-  const shortlist = useMemo(() => {
+  // The case now ORDERS the panel instead of filtering it: what fits the open case comes first,
+  // the rest follows under its own heading. There is no control, so there is nothing to get
+  // wrong — and no state in which the list quietly excludes the prompt you were looking for.
+  const [fitting, rest] = useMemo(() => {
     const fits = (pr: Prompt) =>
-      !caseOnly || (
-        (pr.caseType === GENERAL || pr.caseType === CASE_CONTEXT.caseType) &&
-        (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
-        (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
-        (pr.court === GENERAL || pr.court === CASE_CONTEXT.court));
+      (pr.caseType === GENERAL || pr.caseType === CASE_CONTEXT.caseType) &&
+      (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
+      (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
+      (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
     const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : pr.source === "system" ? 2 : 3);
-    return prompts.filter(fits).sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
-  }, [prompts, caseOnly]);
-
-  const scopeItem = (v: boolean, label: string, sub: string) => (
-    <button
-      onClick={() => { setScopeOpen(false); onCaseOnly(v); }}
-      className="w-full flex items-start gap-2 px-3 py-2 text-right transition-colors"
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : "#ebf3ff")}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-    >
-      <Check size={16} style={{ color: c.primary, flexShrink: 0, marginTop: "2px", visibility: caseOnly === v ? "visible" : "hidden" }} />
-      <span className="flex-1 min-w-0">
-        <span className="block text-[14px] leading-[18px]" style={{ color: titleCol }}>{label}</span>
-        <span className="block truncate text-[12px] leading-[16px]" style={{ color: subCol }}>{sub}</span>
-      </span>
-    </button>
-  );
+    const by = (a: Prompt, b: Prompt) => rank(a) - rank(b) || b.uses - a.uses;
+    return [prompts.filter(fits).sort(by), prompts.filter((pr) => !fits(pr)).sort(by)];
+  }, [prompts]);
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: FONT }} dir="rtl">
@@ -461,13 +444,13 @@ export function PromptsPanel({
           </button>
           <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
           <div className="flex-1" />
-          {/* Both boxed, like the + in דוגמאות. The library keeps its word: an icon alone in a
-              header row is the least findable control on the panel, and this is the way out of
-              the shortlist when what you need isn't in it. */}
+          {/* Blue, so the way out of the shortlist is the one thing in the header that is not
+              grey. It keeps its word: an icon alone in a header row is the least findable
+              control on the panel. */}
           <button
             onClick={onOpenLibrary}
-            className="h-6 px-1.5 flex items-center gap-1 rounded transition-colors hover:bg-black/5 flex-shrink-0 text-[12.5px]"
-            style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: isDark ? dk.textMuted : c.iconGray }}
+            className="h-6 px-1.5 flex items-center gap-1 rounded transition-colors hover:bg-black/[0.03] flex-shrink-0 text-[12.5px]"
+            style={{ border: `1px solid ${c.primary}`, color: c.primary }}
             title="כל מאגר הפרומפטים"
           >
             <LibraryBig size={14} />
@@ -483,61 +466,40 @@ export function PromptsPanel({
           </button>
         </div>
 
-        {/* The case is the list's subject, so it reads as a line of text with the list under it —
-            a bordered box made it look like a third field competing with the button above.
-            Same two options as היסטוריה's scope control, minus the box. */}
-        <div className="relative mt-1.5">
-          <button
-            onClick={() => setScopeOpen((v) => !v)}
-            className="w-full h-6 flex items-center gap-1.5 rounded-[4px] px-1 -mx-1 transition-colors"
-            title={caseOnly ? `${caseInfo.kind} • ${caseInfo.num} — ${caseInfo.name}` : "כל התיקים"}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-          >
-            <FolderOpen size={13} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: titleCol }}>
-              {caseOnly ? (
-                <>
-                  <span className="flex-shrink-0">{caseInfo.num}</span>
-                  <span className="flex-shrink-0 px-1">—</span>
-                  <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{caseInfo.name}</span>
-                </>
-              ) : "כל התיקים"}
-            </span>
-            <ChevronDown size={13} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
-          </button>
-          {scopeOpen && (
-            <div
-              ref={scopeRef}
-              className="absolute inset-x-0 top-full mt-1 z-[65] py-1"
-              style={{ backgroundColor: bg, border: `1px solid ${isDark ? dk.border : c.inputBorder}`, borderRadius: "4px", boxShadow: "0px 6px 20px rgba(0,0,0,0.2)" }}
-            >
-              {scopeItem(true, `${caseInfo.kind} • ${caseInfo.num}`, caseInfo.name)}
-              {scopeItem(false, "כל התיקים", "כל הפרומפטים במאגר, מכל התיקים")}
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
-          {shortlist.map((pr) => (
-            <div
-              key={pr.id}
-              className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
-              style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
-            >
-              <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
-              <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
-                <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
-                <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
-                  {pr.source === "system" && <ShieldCheck size={12} style={{ flexShrink: 0 }} />}
-                  <span className="truncate">{sourceLabel(pr)}</span>
-                  {pr.ratingCount > 0 && <span className="flex-none">· {(pr.ratingSum / pr.ratingCount).toFixed(1)}★</span>}
-                </div>
-              </button>
-              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
-            </div>
+          {([
+            { label: "מתאימים לתיק", items: fitting },
+            { label: "שאר המאגר", items: rest },
+          ] as const).map(({ label, items }) => (
+            items.length === 0 ? null : (
+              <Fragment key={label}>
+                {/* headings, not filters: they say why the order is what it is */}
+                {fitting.length > 0 && rest.length > 0 && (
+                  <div className="px-1 pt-1.5 text-[12px]" style={{ color: subCol }}>{label}</div>
+                )}
+                {items.map((pr) => (
+                  <div
+                    key={pr.id}
+                    className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
+                    style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
+                  >
+                    <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+                    <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
+                      <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
+                      <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
+                        <SourceMark pr={pr} isDark={isDark} />
+                        <span className="truncate">{sourceLabel(pr)}</span>
+                        {pr.ratingCount > 0 && <span className="flex-none">· {(pr.ratingSum / pr.ratingCount).toFixed(1)}★</span>}
+                      </div>
+                    </button>
+                    <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+                  </div>
+                ))}
+              </Fragment>
+            )
           ))}
         </div>
       </div>
@@ -565,13 +527,9 @@ const FILTER_KEY = "mishpat.prompts.filters";
 const COLS = "34px minmax(0,1fr) 56px 84px 112px 100px 92px 96px 78px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
-// filter. The fuller phrasing ("מוצע ע״י המערכת") belongs to the panel, where it's a sentence.
+// filter.
 const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
 
-// In the table the source is a mark rather than a word: it repeats on every row, three values
-// only, and a shape is read faster down a column than text is. The shield is the same one the
-// לשכה approval badge used, so it keeps saying "vetted" — one head is mine, two are shared.
-const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
 // One menu, used by both the panel and the table, so the two never drift apart.
@@ -784,7 +742,7 @@ export function PromptLibrary({
                     </button>
 
                     <div className="flex items-center justify-center" title={sourceLabel(pr)}>
-                      {(() => { const I = SOURCE_ICON[pr.source]; return <I size={16} style={{ color: pr.source === "system" ? c.primary : isDark ? dk.textMuted : c.iconGray }} />; })()}
+                      <SourceMark pr={pr} isDark={isDark} size={16} />
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
@@ -823,7 +781,9 @@ export function PromptLibrary({
                       </p>
                       <div className="flex items-center gap-2 mt-3 flex-wrap" style={{ paddingInlineStart: "27px" }}>
                         {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
-                        <span className="text-[12px]" style={{ color: subCol }}>{sourceLabel(pr)}</span>
+                        <span className="text-[12px] flex items-center gap-1" style={{ color: subCol }}>
+                          <SourceMark pr={pr} isDark={isDark} size={12} /> {sourceLabel(pr)}
+                        </span>
                         {pr.basedOn && <span className="text-[12px]" style={{ color: subCol }}>· מבוסס על &quot;{pr.basedOn}&quot;</span>}
                         <div className="flex-1" />
                         <Stars pr={pr} isDark={isDark} onRate={(n) => onRate(pr.id, n)} />

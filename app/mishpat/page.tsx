@@ -2253,9 +2253,6 @@ export default function MishpatPage() {
   // Prompts (מאגר הפרומפטים) — one library in place of the three separate pools.
   // The rail's bookmark used to be the old favourite-questions list; it opens this now.
   const [isPromptsOpen, setIsPromptsOpen] = useState(false);
-  // Same rule as היסטוריה: the panel opens on the case, and turning that off lasts as long as
-  // the conversation does.
-  const [promptsCaseOnly, setPromptsCaseOnly] = useState(true);
   const [prompts, setPrompts] = useState<Prompt[]>(SEED_PROMPTS);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
@@ -2432,9 +2429,6 @@ export default function MishpatPage() {
               <PromptsPanel
                 isDark={isDark}
               prompts={prompts}
-              caseInfo={CURRENT_CASE}
-              caseOnly={promptsCaseOnly}
-              onCaseOnly={setPromptsCaseOnly}
               onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
@@ -2513,9 +2507,6 @@ export default function MishpatPage() {
             <PromptsPanel
               isDark={isDark}
               prompts={prompts}
-              caseInfo={CURRENT_CASE}
-              caseOnly={promptsCaseOnly}
-              onCaseOnly={setPromptsCaseOnly}
               onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
@@ -2531,7 +2522,7 @@ export default function MishpatPage() {
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); setPromptsCaseOnly(true); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
