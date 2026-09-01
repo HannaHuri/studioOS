@@ -962,13 +962,15 @@ export function PromptEditor({
   const [body, setBody] = useState(initial?.body ?? "");
   // The classification isn't only for sharing: it's what decides whether a prompt shows up in
   // the panel for the case you have open, so it has to be settable on your own prompts too.
-  // ערכאה and סוג תיק describe the writer more than the prompt — a judge sits in one court and
-  // works one kind of docket — so a new prompt starts filled in with them and can be widened.
-  // עניין and שלב change from case to case and from week to week, so they start כללי.
-  const [caseType, setCaseType] = useState(initial?.caseType ?? CASE_CONTEXT.caseType);
+  // These four have two jobs: they decide what the panel offers ME, and how anyone else finds
+  // this prompt once it is shared. Filling them in from the case I happen to have open would
+  // serve the first and quietly damage the second — a prompt born "מחוזי + אזרחי" is invisible to
+  // a שלום judge forever, and nobody ever learns that it was. Too narrow fails silently; too
+  // general is a little noise that shows itself and gets corrected. So: כללי until stated.
+  const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
-  const [court, setCourt] = useState(initial?.court ?? CASE_CONTEXT.court);
+  const [court, setCourt] = useState(initial?.court ?? GENERAL);
   const [attempted, setAttempted] = useState(false);
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1080,7 +1082,7 @@ export function PromptEditor({
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
-            סיווג — קובע באילו תיקים הפרומפט יוצג לך בפאנל
+            סיווג — קובע באילו תיקים הפרומפט יוצג לך בפאנל, ולפי מה אחרים ימצאו אותו אם תשתפו
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
