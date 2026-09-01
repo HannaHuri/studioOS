@@ -1170,7 +1170,7 @@ export function PromptEditor({
                   </div>
                 </>
               )}
-              <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
+              <div className={`text-[12.5px] mb-1.5 ${hits.length ? "mt-2" : ""}`} style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
               <div className="flex items-center gap-2">
                 {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
                   <button

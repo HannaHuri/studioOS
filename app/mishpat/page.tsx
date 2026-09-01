@@ -1518,14 +1518,16 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           >
             <PanelRightClose size={18} />
           </button>
-          <span className="text-[16px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
+          {/* both sized so the two never meet: the panel is 300px wide and the title and the
+              control have to share one line without either giving way */}
+          <span className="text-[15px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
           <div className="flex-1" />
           <div className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
             {([[true, "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
               <button
                 key={label}
                 onClick={() => onCaseOnly(v)}
-                className="h-[22px] px-2 text-[12px] transition-colors"
+                className="h-[22px] px-1.5 text-[11.5px] whitespace-nowrap transition-colors"
                 style={{
                   backgroundColor: caseOnly === v ? (isDark ? "#243354" : "#eaf2ff") : "transparent",
                   color: caseOnly === v ? c.primary : subCol,
@@ -1537,7 +1539,9 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
             ))}
           </div>
         </div>
-        <div className="relative mt-2">
+        {/* the field reaches as wide as the rows below it do — their hover band bleeds 8px past
+            the header padding, and a search that stopped short of it read as inset */}
+        <div className="relative mt-2 -mx-2">
           <Search size={15} style={{ position: "absolute", top: 8, right: 8, color: subCol }} />
           <input
             value={q}
@@ -1568,7 +1572,9 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           {groups.map((g, gi) => (
             <div key={g.label}>
               {/* the day label belongs to the rows under it, so it sits close to them and far from the group above */}
-              <div className={`${gi === 0 ? "pt-0.5" : "pt-5"} text-[12px] leading-[1.2]`} style={{ color: subCol }}>{g.label}</div>
+              {/* the label belongs to the rows under it, so it sits right on top of them and far
+                  from the group above */}
+              <div className={`${gi === 0 ? "pt-0.5" : "pt-5"} -mb-1 text-[12px] leading-[1.2]`} style={{ color: subCol }}>{g.label}</div>
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
