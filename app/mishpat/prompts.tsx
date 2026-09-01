@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bookmark, Check, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Share2,
+  Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
   Star, Trash2, User, Users, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -65,8 +65,9 @@ export const fitsCase = (pr: { caseType: string; matter: string; stage: string; 
   (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
   (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
 
-// whoever is signed in — the name a prompt shared בשמי carries
+// whoever is signed in — the name and title a prompt shared בשמי carries
 export const ME = "טל חבקין";
+export const MY_ROLE = "כב׳";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -530,10 +531,10 @@ export function PromptsPanel({
 // ── The library window ─────────────────────────────────────────────────────
 type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
 type Filters = {
-  q: string; source: string; author: string; caseType: string; matter: string; stage: string; court: string;
+  q: string; source: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
-const EMPTY_FILTERS: Filters = { q: "", source: ANY, author: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
+const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
 const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
 const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
@@ -547,7 +548,6 @@ const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
   return (!q || pr.name.includes(q)) &&
     (ff.source === ANY || srcName(pr) === ff.source) &&
-    (ff.author === ANY || authorFull(pr) === ff.author) &&
     (ff.caseType === ANY || pr.caseType === ff.caseType) &&
     (ff.matter === ANY || pr.matter === ff.matter) &&
     (ff.stage === ANY || pr.stage === ff.stage) &&
@@ -571,8 +571,14 @@ const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.sour
 // the system supplies has no author at all — מקור is the column that says where it came from.
 const authorName = (pr: Prompt) =>
   pr.source === "system" ? "" : pr.source === "mine" ? ME : pr.author ?? "אנונימי";
+// My own prompts aren't stamped with my title in the data — it's mine, and it follows me.
+const roleOf = (pr: Prompt) => (pr.source === "mine" ? MY_ROLE : pr.authorRole);
 // The title trails the name, so the column reads as people and sorts as names.
-const authorFull = (pr: Prompt) => (pr.authorRole && authorName(pr) ? `${authorName(pr)} (${pr.authorRole})` : authorName(pr));
+const authorFull = (pr: Prompt) => {
+  const n = authorName(pr);
+  const r = roleOf(pr);
+  return n && r ? `${n} (${r})` : n;
+};
 
 const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
@@ -659,13 +665,6 @@ export function PromptLibrary({
   // Every value carries how many prompts it would leave — counted against the OTHER filters in
   // force, not against the whole מאגר, so the number answers the question actually being asked:
   // if I pick this one, what do I get. That's also what makes a (0) worth showing.
-  // The authors are whoever actually appears, not a fixed list — the point of the filter is to
-  // find one person's prompts, and that set grows as people share.
-  const authors = useMemo(
-    () => [...new Set(prompts.map(authorFull))].filter(Boolean).sort((a, b) => a.localeCompare(b, "he")),
-    [prompts],
-  );
-
   const facets = useMemo(() => {
     const tally = (key: keyof Filters, values: readonly string[], of: (pr: Prompt) => string | string[]) => {
       const base = prompts.filter((pr) => matches(pr, { ...f, [key]: ANY }));
@@ -676,14 +675,13 @@ export function PromptLibrary({
     };
     return {
       source: tally("source", SOURCE_OPTS, srcName),
-      author: tally("author", authors, authorFull),
       caseType: tally("caseType", CASE_TYPES, (pr) => pr.caseType),
       matter: tally("matter", MATTERS, (pr) => pr.matter),
       stage: tally("stage", STAGES, (pr) => pr.stage),
       court: tally("court", COURTS, (pr) => pr.court),
       tag: tally("tag", TAGS, (pr) => pr.tags),
     };
-  }, [prompts, f, authors]);
+  }, [prompts, f]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -729,7 +727,7 @@ export function PromptLibrary({
             enough to hold them side by side. */}
         <div className="px-6 pb-3" style={{ paddingInlineStart: GUTTER }}>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative" style={{ width: "224px" }}>
+            <div className="relative" style={{ width: "268px" }}>
               <Search size={14} style={{ position: "absolute", top: 9, right: 9, color: subCol }} />
               <input
                 value={f.q}
@@ -739,13 +737,12 @@ export function PromptLibrary({
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />
             </div>
-            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={112} counts={facets.source} />
-            <Dropdown label="מחבר" value={f.author} options={authors} onChange={(v) => set("author", v)} isDark={isDark} width={148} counts={facets.author} />
-            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={116} counts={facets.caseType} />
-            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={138} counts={facets.matter} />
-            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={126} counts={facets.stage} />
-            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={114} counts={facets.court} />
-            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={114} counts={facets.tag} />
+            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
+            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
+            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
+            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
+            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
+            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={122} counts={facets.tag} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
@@ -815,7 +812,7 @@ export function PromptLibrary({
 
                     <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr)}>
                       {authorName(pr) || <span style={{ color: subCol }}>—</span>}
-                      {pr.authorRole && authorName(pr) && <span style={{ color: subCol }}> ({pr.authorRole})</span>}
+                      {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
                     </div>
 
                     {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
@@ -967,8 +964,12 @@ export function PromptEditor({
         </div>
 
         {mode === "fork" && (
-          <div className="mx-6 mb-3 px-3 py-2 rounded-[4px] text-[13px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
-            הפרומפט המקורי נשאר במאגר כפי שהוא. מה שנשמור כאן הוא עותק שלך{initial?.source === "system" ? " — ולכן הוא כבר לא נושא את אישור הלשכה המשפטית" : ""}.
+          <div
+            className="mx-6 mb-3 px-3 py-2 rounded-[4px] text-[12.5px] leading-relaxed flex items-start gap-2"
+            style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}
+          >
+            <Info size={14} className="flex-none" style={{ marginTop: "2px" }} />
+            <span>הפרומפט המקורי נשאר במאגר כפי שהוא. נשמור בנוסף גם עותק שלך.</span>
           </div>
         )}
 
@@ -1092,7 +1093,8 @@ export function PromptShare({
     if (!name.trim() || !body.trim()) { setAttempted(true); return; }
     onShare({
       id: uid(), name: name.trim(), body: body.trim(), source: "shared",
-      author: anon ? "אנונימי" : ME, fav: false, caseType, matter, stage, court,
+      author: anon ? "אנונימי" : ME, authorRole: anon ? undefined : MY_ROLE,
+      fav: false, caseType, matter, stage, court,
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
     });
   };
