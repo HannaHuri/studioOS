@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -458,10 +458,10 @@ function RowMenu({ items, isDark }: { items: { label: string; Icon: React.Compon
 
 // ── The side panel — a short, case-shaped shortlist; the full library is a window ──
 export function PromptsPanel({
-  isDark, prompts, onClose, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
+  isDark, prompts, onUse, onFav, onEdit, onShare, onDelete, onNew, onOpenLibrary,
 }: {
   isDark: boolean; prompts: Prompt[];
-  onClose: () => void; onUse: (pr: Prompt) => void; onFav: (id: string) => void;
+  onUse: (pr: Prompt) => void; onFav: (id: string) => void;
   onEdit: (pr: Prompt) => void; onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
   onNew: () => void; onOpenLibrary: () => void;
 }) {
@@ -487,10 +487,9 @@ export function PromptsPanel({
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: FONT }} dir="rtl">
       <div className="px-[18px] pt-4 pb-2">
+        {/* No collapse control: the rail icon that opened the panel closes it, and a second way
+            out cost a slot at the start of the line where the title should begin. */}
         <div className="flex items-center gap-2 h-8">
-          <button onClick={onClose} className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0" style={{ color: subCol }} title="סגור פרומפטים">
-            <PanelRightClose size={18} />
-          </button>
           <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
           <div className="flex-1" />
           {/* Blue, so the way out of the shortlist is the one thing in the header that isn't grey */}

@@ -1377,7 +1377,7 @@ function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
   );
 }
 
-function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
+function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
   isDark: boolean;
   onClose?: () => void;
   // Users asked for this: opening the history while a case is open shows that case only. The state
@@ -1510,14 +1510,6 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           already. */}
       <div className="px-[18px] pt-4 pb-2">
         <div className="flex items-center gap-2 h-8">
-          <button
-            onClick={onClose}
-            className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-            style={{ color: subCol }}
-            title="סגור היסטוריה"
-          >
-            <PanelRightClose size={18} />
-          </button>
           {/* both sized so the two never meet: the panel is 300px wide and the title and the
               control have to share one line without either giving way */}
           <span className="text-[15px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
@@ -1784,7 +1776,7 @@ function ExamplesPanel({
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}` }} dir="rtl">
       <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-        <Paperclip size={18} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
+        {/* the title starts the line — the rail already carries the icon for this panel */}
         <span className="text-[16px]" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>דוגמאות</span>
         <div className="flex-1" />
         <button
@@ -2410,7 +2402,7 @@ export default function MishpatPage() {
           {narrow && isHistoryOpen && (
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               {/* the panel's own header control closes it — no floating X on top of it */}
-              <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
+              <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
             </div>
           )}
 
@@ -2420,7 +2412,6 @@ export default function MishpatPage() {
               <PromptsPanel
                 isDark={isDark}
               prompts={prompts}
-              onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
               onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
@@ -2474,7 +2465,7 @@ export default function MishpatPage() {
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
         {!narrow && isHistoryOpen && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
-            <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
+            <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
           </div>
         )}
 
@@ -2498,7 +2489,6 @@ export default function MishpatPage() {
             <PromptsPanel
               isDark={isDark}
               prompts={prompts}
-              onClose={() => setIsPromptsOpen(false)}
               onUse={usePrompt}
               onFav={toggleFav}
               onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
