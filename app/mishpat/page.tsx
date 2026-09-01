@@ -1432,8 +1432,9 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
   const chipBg = isDark ? "#1e2a44" : "#f0f7ff";
   // Scoping the list to one case removed every case tag, and with them the panel's only colour.
   // The header line is where it comes back — it's also the element that should carry the most weight.
-  const scopeBg = isDark ? "#1e2a44" : "#f0f7ff";
-  const scopeBgHover = isDark ? "#24344f" : "#e4efff";
+  // A shade deeper than the tags' #ebf3ff — at the lighter tint the row read as white on white.
+  const scopeBg = isDark ? "#22304f" : "#e4eefb";
+  const scopeBgHover = isDark ? "#293a5e" : "#d8e6f8";
   const rowHover = isDark ? "#222a40" : "#f7fafd";
   const font = "Noto Sans Hebrew, sans-serif";
 
