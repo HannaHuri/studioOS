@@ -1596,14 +1596,14 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           {groups.map((g, gi) => (
             <div key={g.label}>
               {/* the day label belongs to the rows under it, so it sits close to them and far from the group above */}
-              <div className={`${gi === 0 ? "pt-1" : "pt-4"} text-[14px] leading-[1.25]`} style={{ color: subCol }}>{g.label}</div>
+              <div className={`${gi === 0 ? "pt-0.5" : "pt-5"} text-[12px] leading-[1.2]`} style={{ color: subCol }}>{g.label}</div>
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
                 return (
                   <div
                     key={it.id}
-                    className="pt-2 pb-2.5 px-2 -mx-2 transition-colors"
+                    className="pt-1.5 pb-2.5 px-2 -mx-2 transition-colors"
                     style={{ borderBottom: `1px solid ${line}` }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = rowHover)}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
