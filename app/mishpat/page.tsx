@@ -10,6 +10,11 @@ import {
   Bot, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { c, dk, RED } from "./theme";
+import {
+  PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
+  SEED_PROMPTS, fieldsOf, type Prompt,
+} from "./prompts";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -38,27 +43,7 @@ function UseExampleIcon({ size = 24, style, className }: { size?: number; style?
 // ── Design tokens ──────────────────────────────────────────────────────────
 const FOOTER_HEIGHT = 90; // page-level disclaimer footer — 3 lines at 14px + 20px bottom padding
 
-const c = {
-  primary: "#0073ea",
-  primaryLight: "#cce5ff",
-  badgeBg: "#d4e7ff",
-  headerBg: "#ecedf5",
-  darkBlue: "#00376d",
-  text: "#323338",
-  textGray: "#707070",
-  textLight: "#8596af",
-  iconGray: "#676879",
-  border: "#c5c7d0",
-  inputBorder: "#dcdfec",
-  panelBg: "#ecedf5",
-  hoverBg: "#f5f6f8",
-} as const;
-
-const dk = {
-  bg: "#13172b", surface: "#1c2235", input: "#1e2538",
-  text: "#c8d6e5", textMuted: "#6b7da3", header: "#181c30",
-  border: "#2a3150", blue: "#90b8e0",
-} as const;
+// c / dk now live in ./theme so the prompt library can use the same values.
 
 function Logo() {
   // eslint-disable-next-line @next/next/no-img-element
@@ -636,7 +621,12 @@ const AGENT_STEPS: {
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse }: { isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void }) {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion }: {
+  isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
+  insert?: { text: string; n: number };
+  onSaveQuestion?: (q: string) => void;
+  onShareQuestion?: (q: string) => void;
+}) {
   const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -650,6 +640,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse }: { isDark
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [sendPressed, setSendPressed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null); // messages container — auto-scrolled to bottom as agent-step rows appear
+  // A prompt chosen in the library lands here. The counter is what makes it fire, so choosing
+  // the same prompt twice still works, and mounting doesn't overwrite what the user typed.
+  const insertN = useRef(0);
   const [responseMode, setResponseMode] = useState<ResponseMode>("agents"); // independent of scope — can run alongside any scope level
   const [modeOpen, setModeOpen] = useState(false);
   const modeBtnRef = useRef<HTMLButtonElement>(null);
@@ -817,6 +810,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse }: { isDark
       </div>
     );
   }
+
+  useEffect(() => {
+    if (!insert || insert.n === insertN.current) return;
+    insertN.current = insert.n;
+    setInputText(insert.text);
+  }, [insert]);
 
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
@@ -1157,8 +1156,19 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse }: { isDark
               const showingAgentProgress = !!msg.agent && isLast && agentRunning;
               return (
                 <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
-                  <div className="rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                    <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
+                  <div className="group">
+                    <div className="rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
+                      <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
+                    </div>
+                    {/* Saving and sharing sit on the question, not on the answer — the question is
+                        the reusable part. Hidden until the row is hovered so the thread stays quiet. */}
+                    <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <QuestionActions
+                        isDark={isDark}
+                        onSave={() => onSaveQuestion?.(msg.q)}
+                        onShare={() => onShareQuestion?.(msg.q)}
+                      />
+                    </div>
                   </div>
                   <div>
                     <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
@@ -1720,8 +1730,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
 // one example filling up takes nothing away from another.
 const MAX_TEXTS = 5;
 const MAX_WORDS = 50000;
-// Vibe's own status colours: --negative-color and --color-working_orange
-const RED = "#d83a52";
+// Vibe's own status colours: --negative-color and --color-working_orange (RED lives in ./theme)
 const AMBER = "#fdab3d";
 const NEAR_FULL = 0.8; // the bar turns amber from here up, so it warns instead of only mirroring
 
@@ -2248,6 +2257,19 @@ export default function MishpatPage() {
   const [editing, setEditing] = useState<{ ex: Example | null } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Example | null>(null);
   const [inUse, setInUse] = useState<Example | null>(null);
+
+  // Prompts (מאגר הפרומפטים) — one library in place of the three separate pools.
+  // The rail's bookmark used to be the old favourite-questions list; it opens this now.
+  const [isPromptsOpen, setIsPromptsOpen] = useState(false);
+  const [prompts, setPrompts] = useState<Prompt[]>(SEED_PROMPTS);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
+  const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
+  const [promptFill, setPromptFill] = useState<Prompt | null>(null);
+  const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
+  // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
+  // rather than as lifted state — the chat keeps owning what the user has typed.
+  const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
   const [toast, setToast] = useState("");
   useEffect(() => {
     if (!toast) return;
@@ -2276,20 +2298,23 @@ export default function MishpatPage() {
       setIsPanelOpen(false);
       setIsHistoryOpen(false);
       setIsExamplesOpen(false);
+      setIsPromptsOpen(false);
     }
     prevNarrow.current = nowNarrow;
     // When both can't fit, keep only one open — and do NOT auto-restore when the window grows again.
-    if (vw < BOTH_MIN && isPanelOpen && (isHistoryOpen || isExamplesOpen)) { setIsHistoryOpen(false); setIsExamplesOpen(false); }
-  }, [vw, isPanelOpen, isHistoryOpen, isExamplesOpen]);
+    if (vw < BOTH_MIN && isPanelOpen && (isHistoryOpen || isExamplesOpen || isPromptsOpen)) { setIsHistoryOpen(false); setIsExamplesOpen(false); setIsPromptsOpen(false); }
+  }, [vw, isPanelOpen, isHistoryOpen, isExamplesOpen, isPromptsOpen]);
 
   // Exclusive when there isn't room for both: opening one closes the other.
   // History and examples share the right-hand slot, so they always close each other.
   const toggleDocs = () =>
-    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) { setIsHistoryOpen(false); setIsExamplesOpen(false); } return nv; });
+    setIsPanelOpen((v) => { const nv = !v; if (nv && vw < BOTH_MIN) { setIsHistoryOpen(false); setIsExamplesOpen(false); setIsPromptsOpen(false); } return nv; });
   const toggleHistory = () =>
-    setIsHistoryOpen((v) => { const nv = !v; if (nv) { setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+    setIsHistoryOpen((v) => { const nv = !v; if (nv) { setIsExamplesOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   const toggleExamples = () =>
-    setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+    setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+  const togglePrompts = () =>
+    setIsPromptsOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
 
   const saveExample = (ex: Example) => {
     setExamples((prev) => (prev.some((p) => p.id === ex.id) ? prev.map((p) => (p.id === ex.id ? ex : p)) : [ex, ...prev]));
@@ -2297,9 +2322,37 @@ export default function MishpatPage() {
     setToast("הדוגמה נשמרה");
   };
 
+  // The uses counter is global and counts the insert, not the send — it's a popularity
+  // signal, so an insert the user then rewrites still says the prompt was worth reaching for.
+  // A saved question needs a name — the library is searched by name — so one is proposed
+  // from the opening words rather than asking for it before anything is on screen.
+  const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
+  const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
+  const usePrompt = (pr: Prompt) => {
+    if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
+    setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
+    insertPrompt(pr.body);
+    setLibraryOpen(false);
+  };
+  const toggleFav = (id: string) => setPrompts((prev) => prev.map((x) => (x.id === id ? { ...x, fav: !x.fav } : x)));
+  // A rating is cast once: there is no second click to change it, so the stars lock after the first.
+  const ratePrompt = (id: string, n: number) =>
+    setPrompts((prev) => prev.map((x) => (x.id === id && x.myRating === null
+      ? { ...x, myRating: n, ratingSum: x.ratingSum + n, ratingCount: x.ratingCount + 1 } : x)));
+  const savePrompt = (pr: Prompt) => {
+    setPrompts((prev) => (prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev]));
+    setPromptEdit(null);
+    setToast("הפרומפט נשמר במועדפים שלך");
+  };
+  const doShare = (pr: Prompt) => {
+    setPrompts((prev) => [pr, ...prev]);
+    setPromptShare(null);
+    setToast("הפרומפט שותף למאגר");
+  };
+
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
-    { Icon: Bookmark, label: "סימניות" },
+    { Icon: Bookmark, label: "פרומפטים" },
     { Icon: Paperclip, label: "דוגמאות" },
   ];
   const botIcons = [
@@ -2339,12 +2392,20 @@ export default function MishpatPage() {
 
         {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode ── */}
         <div className="flex-1 flex min-w-0 relative" style={{ paddingBottom: FOOTER_HEIGHT }}>
-          <ChatArea isDark={isDark} conversationKey={convKey} inUseName={inUse?.name ?? null} onClearInUse={() => setInUse(null)} />
+          <ChatArea
+            isDark={isDark}
+            conversationKey={convKey}
+            inUseName={inUse?.name ?? null}
+            onClearInUse={() => setInUse(null)}
+            insert={insert}
+            onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
+            onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
+          />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
-          {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen) && (
+          {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen || isPromptsOpen) && (
             <div
-              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); setIsExamplesOpen(false); }}
+              onClick={() => { setIsPanelOpen(false); setIsHistoryOpen(false); setIsExamplesOpen(false); setIsPromptsOpen(false); }}
               className="absolute inset-0 z-30"
               style={{ backgroundColor: "rgba(0,0,0,0.28)" }}
             />
@@ -2365,6 +2426,25 @@ export default function MishpatPage() {
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               {/* the panel's own header control closes it — no floating X on top of it */}
               <HistoryPanel isDark={isDark} onClose={() => setIsHistoryOpen(false)} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
+            </div>
+          )}
+
+          {/* Prompts drawer (narrow) — same slot as history and examples */}
+          {narrow && isPromptsOpen && (
+            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
+              <PromptsPanel
+                isDark={isDark}
+              prompts={prompts}
+              caseLine={`תיק ${CURRENT_CASE.num}`}
+              onClose={() => setIsPromptsOpen(false)}
+              onUse={usePrompt}
+              onFav={toggleFav}
+              onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
+              onShare={(pr) => setPromptShare(pr)}
+              onDelete={(pr) => setPromptDelete(pr)}
+              onNew={() => setPromptEdit({ initial: null, mode: "new" })}
+              onOpenLibrary={() => setLibraryOpen(true)}
+              />
             </div>
           )}
 
@@ -2428,10 +2508,29 @@ export default function MishpatPage() {
           </div>
         )}
 
+        {/* ── RIGHT: Prompts panel — same slot as history and examples (push mode only) ── */}
+        {!narrow && isPromptsOpen && (
+          <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
+            <PromptsPanel
+              isDark={isDark}
+              prompts={prompts}
+              caseLine={`תיק ${CURRENT_CASE.num}`}
+              onClose={() => setIsPromptsOpen(false)}
+              onUse={usePrompt}
+              onFav={toggleFav}
+              onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
+              onShare={(pr) => setPromptShare(pr)}
+              onDelete={(pr) => setPromptDelete(pr)}
+              onNew={() => setPromptEdit({ initial: null, mode: "new" })}
+              onOpenLibrary={() => setLibraryOpen(true)}
+            />
+          </div>
+        )}
+
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setHistCaseOnly(true); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
@@ -2442,13 +2541,14 @@ export default function MishpatPage() {
             {topIcons.map(({ Icon, label }) => {
               const isHist = label === "היסטוריה";
               const isEx = label === "דוגמאות";
-              const active = (isHist && isHistoryOpen) || (isEx && isExamplesOpen);
+              const isPr = label === "פרומפטים";
+              const active = (isHist && isHistoryOpen) || (isEx && isExamplesOpen) || (isPr && isPromptsOpen);
               // Active is carried by the icon's colour alone: a filled square reads as a primary
               // action, which is what the + button above actually is — not what a toggle is.
               return (
                 <button
                   key={label}
-                  onClick={isHist ? toggleHistory : isEx ? toggleExamples : undefined}
+                  onClick={isHist ? toggleHistory : isEx ? toggleExamples : isPr ? togglePrompts : undefined}
                   className="size-8 flex items-center justify-center rounded transition-colors hover:bg-black/5"
                   style={{ color: active ? c.primary : iconCol }}
                   title={label}
@@ -2502,6 +2602,73 @@ export default function MishpatPage() {
             setPendingDelete(null);
           }}
           onClose={() => setPendingDelete(null)}
+        />
+      )}
+      {/* ── Prompts: library, editor, share, field-fill, removal ── */}
+      {libraryOpen && (
+        <PromptLibrary
+          isDark={isDark}
+          prompts={prompts}
+          onClose={() => setLibraryOpen(false)}
+          onUse={usePrompt}
+          onFav={toggleFav}
+          onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
+          onShare={(pr) => setPromptShare(pr)}
+          onDelete={(pr) => setPromptDelete(pr)}
+          onRate={ratePrompt}
+          onNew={() => setPromptEdit({ initial: null, mode: "new" })}
+        />
+      )}
+      {promptEdit && (
+        <PromptEditor
+          key={promptEdit.initial?.id ?? promptEdit.mode}
+          isDark={isDark}
+          initial={promptEdit.initial}
+          mode={promptEdit.mode}
+          onSave={savePrompt}
+          onClose={() => setPromptEdit(null)}
+        />
+      )}
+      {promptShare && (
+        <PromptShare
+          isDark={isDark}
+          initial={promptShare}
+          onShare={doShare}
+          onClose={() => setPromptShare(null)}
+        />
+      )}
+      {promptFill && (
+        <PromptFill
+          isDark={isDark}
+          prompt={promptFill}
+          exampleNames={examples.map((e) => e.name)}
+          onInsert={(text, exName) => {
+            setPrompts((prev) => prev.map((x) => (x.id === promptFill.id ? { ...x, uses: x.uses + 1 } : x)));
+            insertPrompt(text);
+            // [דוגמה] doesn't just name an example — it puts that example into the conversation,
+            // the same state the examples panel's "שימוש בדוגמה" sets.
+            const ex = examples.find((e) => e.name === exName);
+            if (ex) setInUse(ex);
+            setPromptFill(null);
+            setLibraryOpen(false);
+          }}
+          onClose={() => setPromptFill(null)}
+        />
+      )}
+      {promptDelete && (
+        <PromptConfirm
+          isDark={isDark}
+          title={promptDelete.source === "shared" ? "הסרת הפרומפט מהמאגר המשותף" : "מחיקת הפרומפט"}
+          note={promptDelete.source === "shared"
+            ? "הפרומפט יפסיק להופיע לשאר המשתמשים. מי שכבר שמר אותו אצלו — העותק שלו נשאר, כי הוא כבר שלו."
+            : "הפרומפט יימחק מהמועדפים שלך. פרומפטים שמקורם במערכת או במשתמשים אחרים נשארים במאגר."}
+          confirmLabel={promptDelete.source === "shared" ? "הסרה משיתוף" : "מחיקה"}
+          onConfirm={() => {
+            setPrompts((prev) => prev.filter((x) => x.id !== promptDelete.id));
+            setToast(promptDelete.source === "shared" ? "הפרומפט הוסר מהמאגר" : "הפרומפט נמחק");
+            setPromptDelete(null);
+          }}
+          onClose={() => setPromptDelete(null)}
         />
       )}
       {toast && (
