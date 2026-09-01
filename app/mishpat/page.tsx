@@ -2608,7 +2608,6 @@ export default function MishpatPage() {
           onShare={(pr) => setPromptShare(pr)}
           onDelete={(pr) => setPromptDelete(pr)}
           onRate={ratePrompt}
-          onNew={() => setPromptEdit({ initial: null, mode: "new" })}
         />
       )}
       {promptEdit && (

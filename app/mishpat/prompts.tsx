@@ -539,11 +539,11 @@ const menuFor = (
 ];
 
 export function PromptLibrary({
-  isDark, prompts, onClose, onUse, onFav, onEdit, onShare, onDelete, onRate, onNew,
+  isDark, prompts, onClose, onUse, onFav, onEdit, onShare, onDelete, onRate,
 }: {
   isDark: boolean; prompts: Prompt[]; onClose: () => void;
   onUse: (pr: Prompt) => void; onFav: (id: string) => void; onEdit: (pr: Prompt) => void;
-  onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void; onRate: (id: string, n: number) => void; onNew: () => void;
+  onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void; onRate: (id: string, n: number) => void;
 }) {
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
   const [open, setOpen] = useState<string | null>(null);   // the row expanded in place
@@ -641,32 +641,25 @@ export function PromptLibrary({
             {/* the count belongs to the title — it's what the title is currently showing */}
             <div className="text-[12.5px] mt-0.5" style={{ color: subCol }}>{list.length} פרומפטים</div>
           </div>
-          <button
-            onClick={onNew}
-            className="size-8 flex-none flex items-center justify-center rounded transition-opacity hover:opacity-90"
-            style={{ backgroundColor: c.primary, color: "white" }}
-            title="פרומפט חדש"
-          >
-            <Plus size={16} />
-          </button>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
         </div>
 
-        {/* search + filters */}
-        <div className="px-6 pb-3 flex flex-col gap-2">
-          <div className="relative">
-            <Search size={15} style={{ position: "absolute", top: 10, right: 10, color: subCol }} />
-            <input
-              value={f.q}
-              onChange={(e) => set("q", e.target.value)}
-              placeholder="חיפוש לפי שם הפרומפט"
-              className="w-full h-9 rounded-[4px] pr-8 pl-3 outline-none text-[14px] text-right"
-              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
-            />
-          </div>
+        {/* One row: the search and the six filters do the same job, and the window is wide
+            enough to hold them side by side. */}
+        <div className="px-6 pb-3">
           <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative" style={{ width: "280px" }}>
+              <Search size={14} style={{ position: "absolute", top: 9, right: 9, color: subCol }} />
+              <input
+                value={f.q}
+                onChange={(e) => set("q", e.target.value)}
+                placeholder="חיפוש לפי שם הפרומפט"
+                className="w-full h-8 rounded-[4px] pr-7 pl-3 outline-none text-[13px] text-right"
+                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
+              />
+            </div>
             <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={140} />
             <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} />
             <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} />
