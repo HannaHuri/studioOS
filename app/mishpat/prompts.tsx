@@ -1082,7 +1082,7 @@ export function PromptEditor({
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
-            סיווג — קובע באילו תיקים הפרומפט יוצג לך בפאנל, ולפי מה אחרים ימצאו אותו אם תשתפו
+            סיווג — קובע באילו תיקים הפרומפט יוצג לך בפאנל, ולפי מה אחרים ימצאו אותו אם ישותף
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
