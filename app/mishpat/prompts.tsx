@@ -50,6 +50,8 @@ export type Prompt = {
 // that survives a busy table, a print, and colour-blindness. Filled means on, outline means off —
 // the shape carries it, not the hue.
 const markCol = (isDark: boolean) => (isDark ? dk.textMuted : c.iconGray);
+// a step back from markCol, for the one mark that is solid when it is on
+const subtle = (isDark: boolean) => (isDark ? dk.textMuted : c.textLight);
 
 export const ANY = "הכל";
 export const GENERAL = "כללי";
@@ -377,11 +379,11 @@ function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () =>
       className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      {/* No fill: at rest an unsaved row shows no mark at all, so the bookmark being THERE is
-          already the whole message — the solid shape was saying it a second time, and it was the
-          only solid icon on the screen. Under the cursor the two states still have to be told
-          apart, so the saved one is drawn in the text colour and the empty one a shade back. */}
-      <Bookmark size={16} style={{ color: on ? (isDark ? dk.text : c.text) : (isDark ? dk.textMuted : c.textLight) }} />
+      {/* Filled means saved — that one is learned, and not worth being clever about. It is the
+          only solid icon on screen because it is the only icon that is a STATE; the rest are
+          labels. So the weight is what gets tuned, not the fill: a shade lighter than the text
+          and a size smaller than the other marks. */}
+      <Bookmark size={15} fill={on ? subtle(isDark) : "none"} style={{ color: subtle(isDark) }} />
     </button>
   );
 }
@@ -529,7 +531,10 @@ export function PromptsPanel({
                     words too. The only text worth its room here is a person's name, which the
                     mark can't give. */}
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
-                  <SourceMark pr={pr} isDark={isDark} plain />
+                  {/* Only what departs from the norm is marked. Everything the panel offers is
+                      לשכה-approved unless it says otherwise, so a system prompt carries no mark
+                      at all — a shield on nearly every row states the rule, not the exception. */}
+                  {pr.source !== "system" && <SourceMark pr={pr} isDark={isDark} plain />}
                   {pr.source === "shared" && <span className="truncate">{authorFull(pr)}</span>}
                   {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5" title={`${pr.ratingCount} מדרגים`}>
@@ -797,7 +802,7 @@ export function PromptLibrary({
                 className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
                 title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים שלי בלבד"}
               >
-                <Bookmark size={14} style={{ color: f.favOnly ? (isDark ? dk.text : c.text) : subCol }} />
+                <Bookmark size={14} fill={f.favOnly ? subtle(isDark) : "none"} style={{ color: subtle(isDark) }} />
               </button>
               {th("name", "שם הפרומפט")}
               {th("source", "מקור", "center")}
