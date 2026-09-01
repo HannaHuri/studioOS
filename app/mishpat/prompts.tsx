@@ -239,11 +239,11 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
 const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 
-function SourceMark({ pr, isDark, size = 13 }: { pr: Prompt; isDark: boolean; size?: number }) {
+// plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
+// the row the reader is scanning for; in a six-row panel there is nothing to scan for.
+function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDark: boolean; size?: number; plain?: boolean }) {
   const I = SOURCE_ICON[pr.source];
-  // The one mark that carries colour: a prompt of mine. It is the row the reader is looking for
-  // in a table sorted around them, and blue finds it faster than a head-shaped outline does.
-  return <I size={size} style={{ flexShrink: 0, color: pr.source === "mine" ? c.primary : markCol(isDark) }} />;
+  return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
@@ -498,9 +498,6 @@ export function PromptsPanel({
             <Plus size={14} />
           </button>
         </div>
-        {/* stated, not offered: saying the list is scoped is what keeps a prompt that isn't here
-            from reading as a prompt that's gone */}
-        <div className="mt-1 text-[13px] leading-[18px]" style={{ color: subCol }}>מותאם לתיק זה</div>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
@@ -528,7 +525,7 @@ export function PromptsPanel({
                     words too. The only text worth its room here is a person's name, which the
                     mark can't give. */}
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
-                  <SourceMark pr={pr} isDark={isDark} />
+                  <SourceMark pr={pr} isDark={isDark} plain />
                   {pr.source === "shared" && <span className="truncate">{authorFull(pr)}</span>}
                   {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5" title={`${pr.ratingCount} מדרגים`}>
