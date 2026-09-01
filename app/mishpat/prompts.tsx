@@ -51,14 +51,6 @@ export type Prompt = {
 // the shape carries it, not the hue.
 const markCol = (isDark: boolean) => (isDark ? dk.textMuted : c.iconGray);
 
-// In the panel a rating is shown only when it says something: a high average that enough people
-// stand behind. Printing a score on every row made the mark noise and the number meaningless —
-// this way the few rows that carry one are exactly the ones worth noticing. Both numbers are a
-// dial; raise them and fewer rows earn the mark.
-const NOTABLE_AVG = 4.5;
-const NOTABLE_RATERS = 100;
-const isNotable = (pr: Prompt) => pr.ratingCount >= NOTABLE_RATERS && pr.ratingSum / pr.ratingCount >= NOTABLE_AVG;
-
 export const ANY = "הכל";
 export const GENERAL = "כללי";
 
@@ -538,11 +530,11 @@ export function PromptsPanel({
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
                   <SourceMark pr={pr} isDark={isDark} />
                   {pr.source === "shared" && <span className="truncate">{authorFull(pr)}</span>}
-                  {isNotable(pr) && (
+                  {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5" title={`${pr.ratingCount} מדרגים`}>
-                      {/* same size and stroke as the table's: at 10px lucide's outline lands on a
-                          half pixel and the star comes out with a broken edge */}
-                      <Star size={12} strokeWidth={1.8} fill={markCol(isDark)} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
+                      {/* outline, and the same size and stroke as the table's: at 10px lucide's
+                          line lands on a half pixel and the star comes out with a broken edge */}
+                      <Star size={12} strokeWidth={1.8} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
                     </span>
                   )}
                 </div>
