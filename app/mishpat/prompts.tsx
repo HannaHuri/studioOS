@@ -472,27 +472,39 @@ export function PromptsPanel({
           </button>
         </div>
 
-        {/* The scope row is the one from היסטוריה, unchanged — the panel names its subject. */}
-        <div className="relative mt-1">
+        {/* The way into the full library is the panel's main offer, so it's a button and it sits
+            with the header — at the bottom a scrolling shortlist buried it. */}
+        <button
+          onClick={onOpenLibrary}
+          className="w-full h-9 mt-2 flex items-center justify-center gap-2 rounded-[4px] text-[14px] transition-opacity hover:opacity-90"
+          style={{ backgroundColor: c.primary, color: "white" }}
+        >
+          <LibraryBig size={16} className="flex-none" />
+          כל מאגר הפרומפטים
+        </button>
+
+        {/* The case is the list's subject, so it reads as a line of text with the list under it —
+            a bordered box made it look like a third field competing with the button above.
+            Same two options as היסטוריה's scope control, minus the box. */}
+        <div className="relative mt-3">
           <button
             onClick={() => setScopeOpen((v) => !v)}
-            className="w-full h-8 flex items-center gap-1.5 rounded-[4px] pr-3 pl-2 transition-colors"
-            style={{ backgroundColor: "transparent", border: `1px solid ${isDark ? dk.border : c.border}` }}
+            className="w-full h-6 flex items-center gap-1.5 rounded-[4px] px-1 -mx-1 transition-colors"
             title={caseOnly ? `${caseInfo.kind} • ${caseInfo.num} — ${caseInfo.name}` : "כל התיקים"}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
           >
-            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol }}>
+            <FolderOpen size={13} style={{ color: subCol, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 flex items-center text-[13px] leading-[18px] whitespace-nowrap" style={{ color: subCol }}>
               {caseOnly ? (
                 <>
-                  <span className="flex-shrink-0">{caseInfo.kind} • {caseInfo.num}</span>
+                  <span className="flex-shrink-0">{caseInfo.num}</span>
                   <span className="flex-shrink-0 px-1">—</span>
                   <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{caseInfo.name}</span>
                 </>
               ) : "כל התיקים"}
             </span>
-            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+            <ChevronDown size={13} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
           </button>
           {scopeOpen && (
             <div
@@ -505,18 +517,6 @@ export function PromptsPanel({
             </div>
           )}
         </div>
-
-        {/* The way into the full library sits with the header, not at the far bottom — it's the
-            panel's main offer, and a shortlist that scrolls would have buried it. */}
-        <button
-          onClick={onOpenLibrary}
-          className="w-full h-8 mt-1.5 flex items-center gap-1.5 px-3 rounded-[4px] text-[13.5px] transition-opacity hover:opacity-85"
-          style={{ backgroundColor: isDark ? "#243354" : "#eaf2ff", color: c.primary }}
-        >
-          <LibraryBig size={15} className="flex-none" />
-          <span className="flex-1 text-right">כל מאגר הפרומפטים</span>
-          <ChevronDown size={14} style={{ transform: "rotate(90deg)" }} className="flex-none" />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
@@ -536,17 +536,7 @@ export function PromptsPanel({
                   {pr.ratingCount > 0 && <span className="flex-none">· {(pr.ratingSum / pr.ratingCount).toFixed(1)}★</span>}
                 </div>
               </button>
-              <RowMenu
-                isDark={isDark}
-                items={[
-                  { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
-                  { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
-                  ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
-                  ...(pr.source === "mine" || pr.author === "אני"
-                    ? [{ label: pr.source === "mine" ? "מחיקה" : "הסרה משיתוף", Icon: Trash2, act: () => onDelete(pr), danger: true }]
-                    : []),
-                ]}
-              />
+              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
             </div>
           ))}
         </div>
@@ -557,11 +547,35 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-type Filters = { q: string; source: string; caseType: string; matter: string; stage: string; court: string; tag: string; favOnly: boolean; sort: string };
-const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "רלוונטיות" };
-const SORTS = ["רלוונטיות", "דירוג", "שימושים", "שם", "עדכון אחרון", "מחבר"];
+type SortKey = "relevance" | "name" | "source" | "subject" | "rating" | "uses";
+const SORT_LABEL: Record<SortKey, string> = {
+  relevance: "רלוונטיות", name: "שם", source: "מקור", subject: "שיוך", rating: "דירוג", uses: "שימושים",
+};
+type Filters = {
+  q: string; source: string; caseType: string; matter: string; stage: string; court: string;
+  tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
+};
+const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 const SOURCE_OPTS = ["מוצע ע״י המערכת", "משותף", "שלי"];
 const FILTER_KEY = "mishpat.prompts.filters";
+// ★ | שם + תקציר | מקור | שיוך | דירוג | שימושים | ⋮
+const COLS = "34px minmax(0,1fr) 150px 220px 104px 84px 36px";
+
+const srcName = (pr: Prompt) => (pr.source === "system" ? "מוצע ע״י המערכת" : pr.source === "shared" ? "משותף" : "שלי");
+const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
+
+// One menu, used by both the panel and the table, so the two never drift apart.
+const menuFor = (
+  pr: Prompt,
+  onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
+) => [
+  { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
+  { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
+  ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
+  ...(pr.source === "mine" || pr.author === "אני"
+    ? [{ label: pr.source === "mine" ? "מחיקה" : "הסרה משיתוף", Icon: Trash2, act: () => onDelete(pr), danger: true }]
+    : []),
+];
 
 export function PromptLibrary({
   isDark, prompts, onClose, onUse, onFav, onEdit, onShare, onDelete, onRate, onNew,
@@ -571,6 +585,7 @@ export function PromptLibrary({
   onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void; onRate: (id: string, n: number) => void; onNew: () => void;
 }) {
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
+  const [open, setOpen] = useState<string | null>(null);   // the row expanded in place
   // the last search is remembered, so reopening the library resumes where it left off
   useEffect(() => {
     try {
@@ -587,10 +602,14 @@ export function PromptLibrary({
   }, [f]);
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
-  const dirty = JSON.stringify({ ...f, sort: "" }) !== JSON.stringify({ ...EMPTY_FILTERS, sort: "" });
+  const dirty = JSON.stringify(f) !== JSON.stringify(EMPTY_FILTERS);
+
+  // Clicking a column header is the sort control — there is no separate מיון menu to keep in
+  // step with it. Same column again reverses; the default is relevance, which no column owns.
+  const sortBy = (key: SortKey) =>
+    setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
   const list = useMemo(() => {
-    const srcName = (pr: Prompt) => (pr.source === "system" ? "מוצע ע״י המערכת" : pr.source === "shared" ? "משותף" : "שלי");
     const q = f.q.trim();
     const out = prompts.filter((pr) =>
       (!q || pr.name.includes(q)) &&
@@ -602,35 +621,51 @@ export function PromptLibrary({
       (f.tag === ANY || pr.tags.includes(f.tag)) &&
       (!f.favOnly || pr.fav)
     );
-    const avg = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
     const fits = (pr: Prompt) =>
       (pr.caseType === CASE_CONTEXT.caseType ? 2 : pr.caseType === GENERAL ? 1 : 0) +
       (pr.matter === CASE_CONTEXT.matter ? 2 : pr.matter === GENERAL ? 1 : 0) +
       (pr.stage === CASE_CONTEXT.stage ? 2 : pr.stage === GENERAL ? 1 : 0);
-    const cmp: Record<string, (a: Prompt, b: Prompt) => number> = {
+    const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
+      relevance: (a, b) => fits(b) - fits(a) || b.uses - a.uses,
+      name: (a, b) => b.name.localeCompare(a.name, "he"),
+      source: (a, b) => srcName(b).localeCompare(srcName(a), "he") || (b.author ?? "").localeCompare(a.author ?? "", "he"),
+      subject: (a, b) => b.caseType.localeCompare(a.caseType, "he") || b.matter.localeCompare(a.matter, "he"),
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
-      // forty — the number of raters is the tie-break, and it's on the card either way
-      "דירוג": (a, b) => avg(b) - avg(a) || b.ratingCount - a.ratingCount,
-      "שימושים": (a, b) => b.uses - a.uses,
-      "שם": (a, b) => a.name.localeCompare(b.name, "he"),
-      "עדכון אחרון": (a, b) => b.edited.split("/").reverse().join("").localeCompare(a.edited.split("/").reverse().join("")),
-      "מחבר": (a, b) => (a.author ?? "המערכת").localeCompare(b.author ?? "המערכת", "he"),
-      "רלוונטיות": (a, b) => fits(b) - fits(a) || b.uses - a.uses,
+      // forty — the number of raters is the tie-break, and it's in the cell either way
+      rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      uses: (a, b) => b.uses - a.uses,
     };
-    return out.sort(cmp[f.sort] ?? cmp["רלוונטיות"]);
+    const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
+    return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
   }, [prompts, f]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
+  const rowLine = isDark ? dk.border : "#eef2f7";
+  const headBg = isDark ? dk.header : "#f7f9fc";
+
+  const th = (key: SortKey, label: string, align: "right" | "center" = "right") => (
+    <button
+      onClick={() => sortBy(key)}
+      className="h-full w-full flex items-center gap-1 px-2 text-[12.5px] transition-colors hover:bg-black/[0.04]"
+      style={{ color: f.sort === key ? c.primary : subCol, justifyContent: align === "center" ? "center" : "flex-start" }}
+      title={`מיון לפי ${label}`}
+    >
+      <span>{label}</span>
+      {f.sort === key && (
+        <ChevronDown size={12} style={{ transform: f.dir === "asc" ? "rotate(180deg)" : "none", flexShrink: 0 }} />
+      )}
+    </button>
+  );
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(1100px, 92vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
+        style={{ width: "min(1100px, 94vw)", height: "min(760px, 88vh)", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-center gap-3 px-6 pt-5 pb-4">
           <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>מאגר הפרומפטים</div>
@@ -649,19 +684,15 @@ export function PromptLibrary({
 
         {/* search + filters */}
         <div className="px-6 pb-3 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search size={15} style={{ position: "absolute", top: 10, right: 10, color: subCol }} />
-              <input
-                value={f.q}
-                onChange={(e) => set("q", e.target.value)}
-                placeholder="חיפוש לפי שם הפרומפט"
-                className="w-full h-9 rounded-[4px] pr-8 pl-3 outline-none text-[14px] text-right"
-                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
-              />
-            </div>
-            <span className="text-[13px] whitespace-nowrap" style={{ color: subCol }}>מיון</span>
-            <Dropdown label="מיון" value={f.sort} options={SORTS} onChange={(v) => set("sort", v === ANY ? "רלוונטיות" : v)} isDark={isDark} width={130} />
+          <div className="relative">
+            <Search size={15} style={{ position: "absolute", top: 10, right: 10, color: subCol }} />
+            <input
+              value={f.q}
+              onChange={(e) => set("q", e.target.value)}
+              placeholder="חיפוש לפי שם הפרומפט"
+              className="w-full h-9 rounded-[4px] pr-8 pl-3 outline-none text-[14px] text-right"
+              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
+            />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={140} />
@@ -680,74 +711,116 @@ export function PromptLibrary({
               המועדפים שלי
             </button>
             {dirty && (
-              <button onClick={() => setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort }))} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
+              <button onClick={() => setF(EMPTY_FILTERS)} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
               </button>
             )}
             <div className="flex-1" />
-            <span className="text-[12.5px]" style={{ color: subCol }}>{list.length} פרומפטים</span>
+            {/* the sort is stated rather than controlled twice — the headers are the control */}
+            <span className="text-[12.5px]" style={{ color: subCol }}>
+              {list.length} פרומפטים · ממוינים לפי {SORT_LABEL[f.sort]}
+            </span>
           </div>
         </div>
 
-        {/* list */}
+        {/* table */}
         <div className="flex-1 overflow-y-auto docs-scroll px-6 pb-5" dir="ltr">
-          <div dir="rtl" className="flex flex-col gap-2">
+          <div dir="rtl" style={{ border: `1px solid ${rowLine}`, borderRadius: "4px", overflow: "hidden" }}>
+            <div
+              className="sticky top-0 z-10 grid items-stretch h-8"
+              style={{ gridTemplateColumns: COLS, backgroundColor: headBg, borderBottom: `1px solid ${rowLine}` }}
+            >
+              <div />
+              {th("name", "שם הפרומפט")}
+              {th("source", "מקור")}
+              {th("subject", "שיוך")}
+              {th("rating", "דירוג")}
+              {th("uses", "שימושים", "center")}
+              <div />
+            </div>
+
             {list.length === 0 && (
-              <div className="pt-16 text-center text-[13.5px]" style={{ color: subCol }}>לא נמצאו פרומפטים התואמים לחיפוש.</div>
+              <div className="py-16 text-center text-[13.5px]" style={{ color: subCol }}>לא נמצאו פרומפטים התואמים לחיפוש.</div>
             )}
-            {list.map((pr) => (
-              <div key={pr.id} className="rounded-lg px-3 py-3 flex items-start gap-2 transition-colors hover:bg-black/[0.02]" style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}>
-                <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[15px]" style={{ color: textCol }}>{pr.name}</span>
-                    {pr.source === "system" && (
-                      <span className="flex items-center gap-1 text-[11.5px] px-1.5 h-[19px] rounded-[3px]" style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue }}>
-                        <ShieldCheck size={11} /> אושר ע״י הלשכה המשפטית
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[13px] mt-1 leading-relaxed" style={{ color: isDark ? dk.textMuted : c.textGray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {pr.body}
-                  </p>
-                  <div className="text-[12px] mt-1.5 flex items-center gap-1.5 flex-wrap" style={{ color: subCol }}>
-                    <span>{sourceLabel(pr)}</span>
-                    {pr.basedOn && <span>· מבוסס על &quot;{pr.basedOn}&quot;</span>}
-                    <span>·</span>
-                    <span>{[pr.caseType, pr.matter, pr.stage, pr.court].filter((x) => x !== GENERAL).join(" · ") || GENERAL}</span>
-                    <span>·</span>
-                    <span>{pr.uses} שימושים</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
-                    <div className="flex-1" />
-                    <Stars pr={pr} isDark={isDark} onRate={(n) => onRate(pr.id, n)} />
-                    <button
-                      onClick={() => onUse(pr)}
-                      className="h-7 px-3 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
-                      style={{ border: `1px solid ${c.primary}`, color: c.primary }}
-                    >
-                      שימוש
+
+            {list.map((pr) => {
+              const expanded = open === pr.id;
+              return (
+                <div key={pr.id} style={{ borderBottom: `1px solid ${rowLine}` }}>
+                  <div
+                    className="grid items-center transition-colors hover:bg-black/[0.02]"
+                    style={{ gridTemplateColumns: COLS, minHeight: "46px", backgroundColor: expanded ? (isDark ? "#222a40" : "#f7fafd") : undefined }}
+                  >
+                    <div className="flex items-center justify-center">
+                      <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+                    </div>
+
+                    {/* the name column carries a line of the prompt itself: unlike a document, a
+                        prompt's name doesn't tell you whether it's the one you want */}
+                    <button onClick={() => setOpen(expanded ? null : pr.id)} className="min-w-0 text-right px-2 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <ChevronDown size={13} style={{ color: subCol, flexShrink: 0, transform: expanded ? "rotate(180deg)" : "rotate(90deg)", transition: "transform .15s" }} />
+                        <span className="text-[14px] truncate" style={{ color: textCol }}>{pr.name}</span>
+                        {pr.source === "system" && <ShieldCheck size={12} style={{ color: c.primary, flexShrink: 0 }} />}
+                      </div>
+                      {!expanded && (
+                        <div className="text-[12px] truncate mt-0.5" style={{ color: subCol, paddingInlineStart: "19px" }} title={pr.body}>{pr.body}</div>
+                      )}
                     </button>
+
+                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={sourceLabel(pr)}>
+                      {srcName(pr)}
+                      {pr.author && <span style={{ color: subCol }}> · {pr.author}</span>}
+                    </div>
+
+                    <div
+                      className="px-2 min-w-0 text-[12.5px] truncate"
+                      style={{ color: isDark ? dk.textMuted : c.textGray }}
+                      title={[pr.caseType, pr.matter, pr.stage, pr.court].filter((x) => x !== GENERAL).join(" · ") || GENERAL}
+                    >
+                      {[pr.caseType, pr.matter, pr.stage, pr.court].filter((x) => x !== GENERAL).join(" · ") || GENERAL}
+                    </div>
+
+                    <div className="px-2 text-[12.5px] flex items-center gap-1" style={{ color: isDark ? dk.textMuted : c.textGray }}>
+                      {pr.ratingCount ? (
+                        <>
+                          <Star size={12} fill="#fdab3d" style={{ color: "#fdab3d", flexShrink: 0 }} />
+                          <span>{avgOf(pr).toFixed(1)}</span>
+                          <span style={{ color: subCol }}>({pr.ratingCount})</span>
+                        </>
+                      ) : <span style={{ color: subCol }}>—</span>}
+                    </div>
+
+                    <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
+
+                    <div className="flex items-center justify-center">
+                      <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+                    </div>
                   </div>
+
+                  {expanded && (
+                    <div className="px-4 pb-4 pt-1" style={{ backgroundColor: isDark ? "#222a40" : "#f7fafd" }}>
+                      <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap" style={{ color: isDark ? dk.text : c.textGray, paddingInlineStart: "27px" }}>
+                        {pr.body}
+                      </p>
+                      <div className="flex items-center gap-2 mt-3 flex-wrap" style={{ paddingInlineStart: "27px" }}>
+                        {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
+                        {pr.basedOn && <span className="text-[12px]" style={{ color: subCol }}>מבוסס על &quot;{pr.basedOn}&quot;</span>}
+                        <div className="flex-1" />
+                        <Stars pr={pr} isDark={isDark} onRate={(n) => onRate(pr.id, n)} />
+                        <button
+                          onClick={() => onUse(pr)}
+                          className="h-7 px-3 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+                          style={{ backgroundColor: c.primary, color: "white" }}
+                        >
+                          שימוש בפרומפט
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <RowMenu
-                  isDark={isDark}
-                  items={[
-                    { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
-                    ...(pr.source === "mine"
-                      ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }, { label: "מחיקה", Icon: Trash2, act: () => onDelete(pr), danger: true }]
-                      : [
-                          { label: "שכפול לעריכה", Icon: Copy, act: () => onEdit(pr) },
-                          // Withdrawing a share has to be possible — the reason to want it is
-                          // usually that the prompt shouldn't have gone out. Copies others already
-                          // saved are theirs and stay.
-                          ...(pr.author === "אני" ? [{ label: "הסרה משיתוף", Icon: Trash2, act: () => onDelete(pr), danger: true }] : []),
-                        ]),
-                  ]}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

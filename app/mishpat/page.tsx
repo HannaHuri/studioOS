@@ -6,7 +6,7 @@ import {
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
-  Split, Star, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
+  LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Bot, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -2347,8 +2347,9 @@ export default function MishpatPage() {
 
   const topIcons = [
     { Icon: Clock, label: "היסטוריה" },
-    // a star, the same mark the library uses for a favourite — the rail names the same idea
-    { Icon: Star, label: "פרומפטים" },
+    // the library icon, the same one on the panel's button — a star would have said
+    // "favourites", which is only one part of what the panel holds
+    { Icon: LibraryBig, label: "פרומפטים" },
     { Icon: Paperclip, label: "דוגמאות" },
   ];
   const botIcons = [
