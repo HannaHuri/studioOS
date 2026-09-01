@@ -1522,7 +1522,11 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
               control have to share one line without either giving way */}
           <span className="text-[15px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
           <div className="flex-1" />
-          <div className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
+          {/* pulled out to the search field's edge, so the header has one left margin and not two */}
+          <div
+            className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden"
+            style={{ border: `1px solid ${isDark ? dk.border : c.primaryLight}`, marginInlineEnd: "-8px" }}
+          >
             {([[true, "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
               <button
                 key={label}
