@@ -856,19 +856,22 @@ export function PromptLibrary({
                     </div>
 
                     <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr)}>
-                      {authorName(pr) || <span style={{ color: subCol }}>—</span>}
+                      {authorName(pr)}
                       {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
                     </div>
 
-                    {/* כללי is the absence of a value, so it sits back a shade and the real ones read first */}
+                    {/* כללי is the absence of a restriction, and printing it four times a row
+                        states the rule instead of the exception — the same reason the panel
+                        dropped its shield. The cell is left empty so the eye finds only the
+                        fields that were actually set; the word is still in the tooltip. */}
                     {([pr.caseType, pr.matter, pr.stage, pr.court] as const).map((v, i) => (
                       <div
                         key={i}
                         className="px-2 min-w-0 text-[12.5px] truncate"
-                        style={{ color: v === GENERAL ? subCol : isDark ? dk.textMuted : c.textGray }}
+                        style={{ color: isDark ? dk.textMuted : c.textGray }}
                         title={v}
                       >
-                        {v}
+                        {v === GENERAL ? "" : v}
                       </div>
                     ))}
 
@@ -880,15 +883,15 @@ export function PromptLibrary({
                       title={pr.myRating !== null ? `דירגת ${pr.myRating}` : "לדירוג הפרומפט"}
                     >
                       {/* No star: the column is headed דירוג, so the number needs no glyph to
-                          announce what it is. And nothing to rate reads as a dash, the same way
-                          an authorless row does — a sentence would be three words spent on
-                          absence. The panel keeps its star, because there it has no header. */}
+                          announce what it is. Nothing to show is shown as nothing — one rule for
+                          the whole table, so an empty cell always means the same thing and never
+                          has to be read. The panel keeps its star, because there it has no header. */}
                       {pr.ratingCount ? (
                         <>
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
-                      ) : <span style={{ color: subCol }}>—</span>}
+                      ) : null}
                     </button>
 
                     <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
