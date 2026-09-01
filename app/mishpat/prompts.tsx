@@ -51,6 +51,14 @@ export type Prompt = {
 // the shape carries it, not the hue.
 const markCol = (isDark: boolean) => (isDark ? dk.textMuted : c.iconGray);
 
+// In the panel a rating is shown only when it says something: a high average that enough people
+// stand behind. Printing a score on every row made the mark noise and the number meaningless —
+// this way the few rows that carry one are exactly the ones worth noticing. Both numbers are a
+// dial; raise them and fewer rows earn the mark.
+const NOTABLE_AVG = 4.5;
+const NOTABLE_RATERS = 100;
+const isNotable = (pr: Prompt) => pr.ratingCount >= NOTABLE_RATERS && pr.ratingSum / pr.ratingCount >= NOTABLE_AVG;
+
 export const ANY = "הכל";
 export const GENERAL = "כללי";
 
@@ -241,7 +249,9 @@ const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 
 function SourceMark({ pr, isDark, size = 13 }: { pr: Prompt; isDark: boolean; size?: number }) {
   const I = SOURCE_ICON[pr.source];
-  return <I size={size} style={{ flexShrink: 0, color: markCol(isDark) }} />;
+  // The one mark that carries colour: a prompt of mine. It is the row the reader is looking for
+  // in a table sorted around them, and blue finds it faster than a head-shaped outline does.
+  return <I size={size} style={{ flexShrink: 0, color: pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
@@ -457,9 +467,16 @@ export function PromptsPanel({
   // would sit below the fold. Most saved prompts are כללי and so appear here anyway; the ones
   // tagged for another kind of case are exactly the ones that don't belong on this screen, and
   // the whole set is one bookmark-click away in the library.
+  //
+  // What another user shared does NOT appear here. Putting a prompt in this list is the system
+  // recommending it, and the system can only vouch for what the לשכה approved. Shared material is
+  // browsed in the library, where a list is only a list. The exception is a shared prompt I saved
+  // myself: that choice is mine, and it's already been made.
   const shortlist = useMemo(() => {
-    const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : pr.source === "system" ? 2 : 3);
-    return prompts.filter(fitsCase).sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
+    const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : 2);
+    return prompts
+      .filter((pr) => (pr.source !== "shared" || pr.fav) && fitsCase(pr))
+      .sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
   }, [prompts]);
 
   return (
@@ -521,9 +538,11 @@ export function PromptsPanel({
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
                   <SourceMark pr={pr} isDark={isDark} />
                   {pr.source === "shared" && <span className="truncate">{authorFull(pr)}</span>}
-                  {pr.ratingCount > 0 && (
-                    <span className="flex-none flex items-center gap-0.5">
-                      · <Star size={10} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
+                  {isNotable(pr) && (
+                    <span className="flex-none flex items-center gap-0.5" title={`${pr.ratingCount} מדרגים`}>
+                      {/* same size and stroke as the table's: at 10px lucide's outline lands on a
+                          half pixel and the star comes out with a broken edge */}
+                      <Star size={12} strokeWidth={1.8} fill={markCol(isDark)} style={{ color: markCol(isDark) }} /> {(pr.ratingSum / pr.ratingCount).toFixed(1)}
                     </span>
                   )}
                 </div>
@@ -859,7 +878,7 @@ export function PromptLibrary({
                           {/* The number is the rating; this star only says which number it is,
                               so it stays an outline. Fill belongs to the control, where filling
                               stars in is how a rating is read and given. */}
-                          <Star size={12} style={{ color: markCol(isDark), flexShrink: 0 }} />
+                          <Star size={12} strokeWidth={1.8} style={{ color: markCol(isDark), flexShrink: 0 }} />
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
