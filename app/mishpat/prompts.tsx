@@ -377,7 +377,11 @@ function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () =>
       className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      <Bookmark size={16} fill={on ? markCol(isDark) : "none"} style={{ color: markCol(isDark) }} />
+      {/* No fill: at rest an unsaved row shows no mark at all, so the bookmark being THERE is
+          already the whole message — the solid shape was saying it a second time, and it was the
+          only solid icon on the screen. Under the cursor the two states still have to be told
+          apart, so the saved one is drawn in the text colour and the empty one a shade back. */}
+      <Bookmark size={16} style={{ color: on ? (isDark ? dk.text : c.text) : (isDark ? dk.textMuted : c.textLight) }} />
     </button>
   );
 }
@@ -792,7 +796,7 @@ export function PromptLibrary({
                 className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
                 title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים שלי בלבד"}
               >
-                <Bookmark size={14} fill={f.favOnly ? markCol(isDark) : "none"} style={{ color: f.favOnly ? markCol(isDark) : subCol }} />
+                <Bookmark size={14} style={{ color: f.favOnly ? (isDark ? dk.text : c.text) : subCol }} />
               </button>
               {th("name", "שם הפרומפט")}
               {th("source", "מקור", "center")}
