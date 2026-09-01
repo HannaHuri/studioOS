@@ -592,11 +592,13 @@ const matches = (pr: Prompt, ff: Filters) => {
     (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
     (!ff.favOnly || pr.fav);
 };
-// ★ | שם + תקציר | מקור | מחבר | סוג תיק | סוג עניין | שלב | ערכאה | דירוג | שימושים | ⋮
+// ★ | שם + תקציר | מקור | מחבר | ערכאה | סוג תיק | סוג עניין | שלב | דירוג | שימושים | ⋮
+// The four run widest to narrowest — which court, then which kind of case, then what it is
+// about, then where it has got to — so the row reads the way the classification is decided.
 // Every dimension is its own column: each is a separate thing to filter and sort by, and one
 // joined cell could only ever be truncated. מקור and מחבר are two such questions — which kind of
 // prompt is this, and whose is it — and a reader looking for one judge's prompts needs the second.
-const COLS = "34px minmax(0,1fr) 54px 136px 84px 108px 96px 90px 92px 74px 36px";
+const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 74px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
@@ -783,10 +785,10 @@ export function PromptLibrary({
               />
             </div>
             <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
+            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
             <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
             <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
             <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
-            <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
             <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={122} counts={facets.tag} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
@@ -814,10 +816,10 @@ export function PromptLibrary({
               {th("name", "שם הפרומפט")}
               {th("source", "מקור", "center")}
               {th("author", "מחבר")}
+              {th("court", "ערכאה")}
               {th("caseType", "סוג תיק")}
               {th("matter", "סוג עניין")}
               {th("stage", "שלב")}
-              {th("court", "ערכאה")}
               {th("rating", "דירוג")}
               {th("uses", "שימושים", "center")}
               <div />
@@ -874,7 +876,7 @@ export function PromptLibrary({
                         states the rule instead of the exception — the same reason the panel
                         dropped its shield. The cell is left empty so the eye finds only the
                         fields that were actually set; the word is still in the tooltip. */}
-                    {([pr.caseType, pr.matter, pr.stage, pr.court] as const).map((v, i) => (
+                    {([pr.court, pr.caseType, pr.matter, pr.stage] as const).map((v, i) => (
                       <div
                         key={i}
                         className="px-2 min-w-0 text-[12.5px] truncate"
@@ -960,10 +962,13 @@ export function PromptEditor({
   const [body, setBody] = useState(initial?.body ?? "");
   // The classification isn't only for sharing: it's what decides whether a prompt shows up in
   // the panel for the case you have open, so it has to be settable on your own prompts too.
-  const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
+  // ערכאה and סוג תיק describe the writer more than the prompt — a judge sits in one court and
+  // works one kind of docket — so a new prompt starts filled in with them and can be widened.
+  // עניין and שלב change from case to case and from week to week, so they start כללי.
+  const [caseType, setCaseType] = useState(initial?.caseType ?? CASE_CONTEXT.caseType);
   const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
-  const [court, setCourt] = useState(initial?.court ?? GENERAL);
+  const [court, setCourt] = useState(initial?.court ?? CASE_CONTEXT.court);
   const [attempted, setAttempted] = useState(false);
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1079,10 +1084,10 @@ export function PromptEditor({
           </div>
           <div className="flex items-start gap-2 flex-wrap">
             {([
+              { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
               { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
-              { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
@@ -1230,10 +1235,10 @@ export function PromptShare({
           {/* Four boxes that can all read "כללי" need their names above them, not in a tooltip. */}
           <div className="flex items-start gap-2 flex-wrap">
             {([
+              { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
               { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
-              { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
