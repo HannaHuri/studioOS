@@ -832,7 +832,9 @@ export function PromptLibrary({
               return (
                 <div key={pr.id} style={{ borderBottom: `1px solid ${rowLine}` }}>
                   <div
-                    className="group grid items-center transition-colors hover:bg-black/[0.02]"
+                    // the whole row opens it: a target the width of the table beats a chevron
+                    onClick={() => setOpen(expanded ? null : pr.id)}
+                    className="group grid items-center transition-colors hover:bg-black/[0.02] cursor-pointer"
                     style={{ gridTemplateColumns: COLS, minHeight: "46px", backgroundColor: expanded ? (isDark ? "#222a40" : "#f7fafd") : undefined }}
                   >
                     <div className="flex items-center justify-center">
@@ -841,7 +843,7 @@ export function PromptLibrary({
 
                     {/* the name column carries a line of the prompt itself: unlike a document, a
                         prompt's name doesn't tell you whether it's the one you want */}
-                    <button onClick={() => setOpen(expanded ? null : pr.id)} className="min-w-0 text-right px-2 py-2">
+                    <div className="min-w-0 text-right px-2 py-2">
                       <div className="flex items-center gap-1.5">
                         <ChevronDown size={13} style={{ color: subCol, flexShrink: 0, transform: expanded ? "rotate(180deg)" : "rotate(90deg)", transition: "transform .15s" }} />
                         <span className="text-[14px] truncate" style={{ color: textCol }}>{pr.name}</span>
@@ -849,14 +851,22 @@ export function PromptLibrary({
                       {!expanded && (
                         <div className="text-[12px] truncate mt-0.5" style={{ color: subCol, paddingInlineStart: "19px" }} title={pr.body}>{pr.body}</div>
                       )}
-                    </button>
+                    </div>
 
                     <div className="flex items-center justify-center" title={srcName(pr)}>
                       <SourceMark pr={pr} isDark={isDark} size={15} />
                     </div>
 
-                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr)}>
-                      {authorName(pr)}
+                    {/* Two of the values in this column aren't names: מערכת, because the writer is
+                        the system, and אנונימי, because the writer chose not to be one. Both are
+                        said in grey — the column still answers, and the people in it still stand
+                        out from the two words that stand in for a person. */}
+                    <div className="px-2 min-w-0 text-[12.5px] truncate" style={{ color: isDark ? dk.textMuted : c.textGray }} title={authorFull(pr) || "מערכת"}>
+                      {(() => {
+                        const n = authorName(pr) || "מערכת";
+                        const named = n !== "מערכת" && n !== "אנונימי";
+                        return <span style={named ? undefined : { color: subCol }}>{n}</span>;
+                      })()}
                       {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
                     </div>
 
@@ -876,23 +886,23 @@ export function PromptLibrary({
                     ))}
 
                     {/* the cell is the way in: rating happens in the open row, where the stars are */}
-                    <button
-                      onClick={() => setOpen(expanded ? null : pr.id)}
-                      className="px-2 h-full text-[12.5px] flex items-center gap-1 transition-colors hover:bg-black/[0.04]"
+                    <div
+                      className="px-2 h-full text-[12.5px] flex items-center gap-1"
                       style={{ color: isDark ? dk.textMuted : c.textGray }}
                       title={pr.myRating !== null ? `דירגת ${pr.myRating}` : "לדירוג הפרומפט"}
                     >
                       {/* No star: the column is headed דירוג, so the number needs no glyph to
-                          announce what it is. Nothing to show is shown as nothing — one rule for
-                          the whole table, so an empty cell always means the same thing and never
-                          has to be read. The panel keeps its star, because there it has no header. */}
+                          announce what it is. A prompt nobody has rated yet is a dash and not an
+                          empty cell: the field exists and is waiting, which is a different thing
+                          from כללי, where nothing was ever meant to be chosen. The panel keeps
+                          its star, because there it has no header. */}
                       {pr.ratingCount ? (
                         <>
                           <span>{avgOf(pr).toFixed(1)}</span>
                           <span style={{ color: subCol }}>({pr.ratingCount})</span>
                         </>
-                      ) : null}
-                    </button>
+                      ) : <span style={{ color: subCol }}>—</span>}
+                    </div>
 
                     <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
 
