@@ -912,7 +912,9 @@ export function PromptLibrary({
                   </div>
 
                   {expanded && (
-                    <div className="px-4 pb-4 pt-1" style={{ backgroundColor: isDark ? "#222a40" : "#f7fafd" }}>
+                    // the open area closes it too, so the row shuts wherever the reader happens
+                    // to be looking — the controls inside it keep their own clicks
+                    <div onClick={() => setOpen(null)} className="px-4 pb-4 pt-1 cursor-pointer" style={{ backgroundColor: isDark ? "#222a40" : "#f7fafd" }}>
                       <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap" style={{ color: isDark ? dk.text : c.textGray, paddingInlineStart: "27px" }}>
                         {pr.body}
                       </p>
@@ -925,7 +927,7 @@ export function PromptLibrary({
                         <div className="flex-1" />
                         <Stars pr={pr} isDark={isDark} onRate={(n) => onRate(pr.id, n)} />
                         <button
-                          onClick={() => onUse(pr)}
+                          onClick={(e) => { e.stopPropagation(); onUse(pr); }}
                           className="h-7 px-3 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
                           style={{ backgroundColor: c.primary, color: "white" }}
                         >
