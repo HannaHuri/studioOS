@@ -1365,6 +1365,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
   const [data, setData] = useState<HistGroup[]>(HISTORY_GROUPS);
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const [pendingDelete, setPendingDelete] = useState<HistConv | null>(null);
   // Which multi-case conversations have their case list open. Collapsed by default.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -1399,6 +1400,17 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [scopeOpen]);
+
+  // A press outside the row puts the title back. It clears the query too: a closed search that
+  // still filtered the list would leave a shortened list with nothing on screen explaining it.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!searchRef.current?.contains(e.target as Node)) { setQ(""); setSearchOpen(false); }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [searchOpen]);
 
   useEffect(() => {
     if (!note) return;
@@ -1476,7 +1488,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
       <div className="px-[18px] pt-4 pb-2">
         {/* Search is a button until it's wanted, and then it takes this row over. A permanent field
             made the header a third band; on demand it costs nothing while the panel sits idle. */}
-        <div className="flex items-center gap-2 h-8">
+        <div ref={searchRef} className="flex items-center gap-2 h-8">
           {/* The collapse control is the panel's own chrome, so it stays put in both states — only
               the title gives way to the field. Chrome persists, content swaps. */}
           <button
@@ -1537,7 +1549,7 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = scopeBg)}
           >
             <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: subCol }}>
+            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol }}>
               {caseOnly ? (
                 <>
                   <span className="flex-shrink-0">{CURRENT_CASE.kind} • {CURRENT_CASE.num}</span>
