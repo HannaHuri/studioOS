@@ -529,15 +529,16 @@ export function PromptsPanel({
               <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
               <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
                 <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
-                {/* The mark says which kind of prompt this is, so it doesn't need to be said in
-                    words too. The only text worth its room here is a person's name, which the
-                    mark can't give. */}
+                {/* The second line goes to the prompt's own opening words: a name says what a
+                    prompt is called, not whether it's the one you want. The marks are few enough
+                    to ride along at the end of it rather than take the line for themselves. */}
                 <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
+                  <span className="flex-1 min-w-0 truncate">{pr.body}</span>
                   {/* Only what departs from the norm is marked. Everything the panel offers is
                       לשכה-approved unless it says otherwise, so a system prompt carries no mark
                       at all — a shield on nearly every row states the rule, not the exception. */}
                   {pr.source !== "system" && <SourceMark pr={pr} isDark={isDark} plain />}
-                  {pr.source === "shared" && <span className="truncate">{authorFull(pr)}</span>}
+                  {pr.source === "shared" && <span className="flex-none truncate" style={{ maxWidth: "96px" }}>{authorFull(pr)}</span>}
                   {pr.ratingCount > 0 && (
                     <span className="flex-none flex items-center gap-0.5" title={`${pr.ratingCount} מדרגים`}>
                       {/* outline, and the same size and stroke as the table's: at 10px lucide's
