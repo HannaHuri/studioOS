@@ -1483,16 +1483,12 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
 
   return (
     <div className="h-full flex flex-col relative" style={{ backgroundColor: bg, borderLeft: `1px solid ${isDark ? dk.border : c.inputBorder}`, fontFamily: font }} dir="rtl">
-      {/* Header — the title and the collapse control sit together on the right, and under them the
-          panel names its own subject. The scope isn't a filter bolted onto the list; it's what this
-          panel is showing, stated where an interface normally states context. That's what makes the
-          default read as a default: there is no control to dismiss, only a subject to change. */}
+      {/* Header — collapse, title and the scope control on one line, the search field under it.
+          The scope is two words rather than the case's name: what the reader needs from it is
+          which of the two lists they are looking at, and the case is named all over the screen
+          already. */}
       <div className="px-[18px] pt-4 pb-2">
-        {/* Search is a button until it's wanted, and then it takes this row over. A permanent field
-            made the header a third band; on demand it costs nothing while the panel sits idle. */}
-        <div ref={searchRef} className="flex items-center gap-2 h-8">
-          {/* The collapse control is the panel's own chrome, so it stays put in both states — only
-              the title gives way to the field. Chrome persists, content swaps. */}
+        <div className="flex items-center gap-2 h-8">
           <button
             onClick={onClose}
             className="size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
@@ -1501,82 +1497,35 @@ function HistoryPanel({ isDark, onClose, caseOnly, onCaseOnly }: {
           >
             <PanelRightClose size={18} />
           </button>
-          {searchOpen ? (
-            <>
-              <input
-                autoFocus
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Escape") { setQ(""); setSearchOpen(false); } }}
-                placeholder="חיפוש שיחה"
-                className="flex-1 min-w-0 h-8 rounded-[4px] px-2.5 outline-none text-[14px] text-right"
-                style={{ color: titleCol, fontFamily: font, backgroundColor: isDark ? dk.input : "white", border: `1px solid ${c.primary}` }}
-              />
+          <span className="text-[16px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
+          <div className="flex-1" />
+          <div className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
+            {([[true, "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
               <button
-                onClick={() => { setQ(""); setSearchOpen(false); }}
-                className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-                style={{ color: subCol }}
-                title="סגור חיפוש"
-              >
-                <X size={16} />
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>שיחות אחרונות</span>
-              <div className="flex-1" />
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="size-7 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0"
-                style={{ color: subCol }}
-                title="חיפוש שיחה"
-              >
-                <Search size={17} />
-              </button>
-            </>
-          )}
-        </div>
-        <div className="relative mt-1">
-          {/* One header object, not two bands: the panel name is a small label and the case is the
-              line that matters, so they read as label-and-value. The right padding is set so the case
-              text starts exactly where the title text does, past the collapse icon.
-              The case number is fixed-width and must stay whole — a truncated number reads as a
-              mistake — so the name is what gives way, the same rule the case tag follows. */}
-          <button
-            onClick={() => setScopeOpen((v) => !v)}
-            className="w-full h-8 flex items-center gap-1.5 rounded-[4px] pr-3 pl-2 transition-colors"
-            style={{ backgroundColor: scopeBg, border: `1px solid ${isDark ? dk.border : c.border}` }}
-            title={caseOnly ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל התיקים"}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = scopeBgHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = scopeBg)}
-          >
-            <FolderOpen size={14} style={{ color: subCol, flexShrink: 0 }} />
-            <span className="flex-1 min-w-0 flex items-center text-[14px] leading-[20px] whitespace-nowrap" style={{ color: titleCol }}>
-              {caseOnly ? (
-                <>
-                  <span className="flex-shrink-0">{CURRENT_CASE.kind} • {CURRENT_CASE.num}</span>
-                  <span className="flex-shrink-0 px-1">—</span>
-                  <span className="flex-1 min-w-0 overflow-hidden text-ellipsis">{CURRENT_CASE.name}</span>
-                </>
-              ) : "כל התיקים"}
-            </span>
-            <ChevronDown size={15} style={{ color: subCol, flexShrink: 0, transform: scopeOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
-          </button>
-          {scopeOpen && (
-              <div
-                ref={scopeRef}
-                className="absolute inset-x-0 top-full mt-1 z-[65] py-1"
+                key={label}
+                onClick={() => onCaseOnly(v)}
+                className="h-[22px] px-2 text-[12px] transition-colors"
                 style={{
-                  backgroundColor: isDark ? dk.surface : "white",
-                  border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
-                  borderRadius: "4px",
-                  boxShadow: "0px 6px 20px rgba(0,0,0,0.2)",
+                  backgroundColor: caseOnly === v ? (isDark ? "#243354" : "#eaf2ff") : "transparent",
+                  color: caseOnly === v ? c.primary : subCol,
                 }}
+                title={v ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל השיחות, מכל התיקים"}
               >
-                {scopeItem(true, `${CURRENT_CASE.kind} • ${CURRENT_CASE.num}`, CURRENT_CASE.name)}
-                {scopeItem(false, "כל התיקים", "כל השיחות, מכל התיקים")}
-              </div>
-            )}
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="relative mt-2">
+          <Search size={15} style={{ position: "absolute", top: 8, right: 8, color: subCol }} />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") setQ(""); }}
+            placeholder="חיפוש שיחה"
+            className="w-full h-8 rounded-[4px] pr-7 pl-2.5 outline-none text-[13.5px] text-right"
+            style={{ color: titleCol, fontFamily: font, backgroundColor: isDark ? dk.input : "white", border: `1px solid ${isDark ? dk.border : c.inputBorder}` }}
+          />
         </div>
       </div>
 

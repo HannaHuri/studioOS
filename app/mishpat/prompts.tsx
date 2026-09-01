@@ -16,7 +16,7 @@
    out of the model rather than needing a rule.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Share2,
   Star, Trash2, User, Users, X, PanelRightClose, Copy, ShieldCheck, LibraryBig,
@@ -421,18 +421,17 @@ export function PromptsPanel({
   const bg = isDark ? dk.surface : "white";
   const titleCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
-  // The case now ORDERS the panel instead of filtering it: what fits the open case comes first,
-  // the rest follows under its own heading. There is no control, so there is nothing to get
-  // wrong — and no state in which the list quietly excludes the prompt you were looking for.
-  const [fitting, rest] = useMemo(() => {
+  // The panel is the shortcut: what fits the open case, and nothing else. That's what makes it
+  // short, and it's why there is no control here — the way to everything else is the library,
+  // which is a window with a table, a search and six filters, and does that job properly.
+  const shortlist = useMemo(() => {
     const fits = (pr: Prompt) =>
       (pr.caseType === GENERAL || pr.caseType === CASE_CONTEXT.caseType) &&
       (pr.matter === GENERAL || pr.matter === CASE_CONTEXT.matter) &&
       (pr.stage === GENERAL || pr.stage === CASE_CONTEXT.stage) &&
       (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
     const rank = (pr: Prompt) => (pr.fav ? 0 : pr.source === "mine" ? 1 : pr.source === "system" ? 2 : 3);
-    const by = (a: Prompt, b: Prompt) => rank(a) - rank(b) || b.uses - a.uses;
-    return [prompts.filter(fits).sort(by), prompts.filter((pr) => !fits(pr)).sort(by)];
+    return prompts.filter(fits).sort((a, b) => rank(a) - rank(b) || b.uses - a.uses);
   }, [prompts]);
 
   return (
@@ -462,41 +461,39 @@ export function PromptsPanel({
             <Plus size={14} />
           </button>
         </div>
-
+        {/* Stated, not offered: the list is scoped, and saying so is what keeps a missing prompt
+            from reading as a lost one. There is nothing to click — the library icon above is the
+            way to the rest. */}
+        <div className="mt-1 text-[13px] leading-[18px]" style={{ color: subCol }}>מותאם לתיק זה</div>
       </div>
 
       <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
         <div className="px-3 pt-1 pb-3 flex flex-col gap-1.5" dir="rtl">
-          {([
-            { label: "מתאימים לתיק", items: fitting },
-            { label: "שאר המאגר", items: rest },
-          ] as const).map(({ label, items }) => (
-            items.length === 0 ? null : (
-              <Fragment key={label}>
-                {/* headings, not filters: they say why the order is what it is */}
-                {fitting.length > 0 && rest.length > 0 && (
-                  <div className="px-1 pt-1.5 text-[12px]" style={{ color: subCol }}>{label}</div>
-                )}
-                {items.map((pr) => (
-                  <div
-                    key={pr.id}
-                    className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
-                    style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
-                  >
-                    <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
-                    <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
-                      <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
-                      <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
-                        <SourceMark pr={pr} isDark={isDark} />
-                        <span className="truncate">{sourceLabel(pr)}</span>
-                        {pr.ratingCount > 0 && <span className="flex-none">· {(pr.ratingSum / pr.ratingCount).toFixed(1)}★</span>}
-                      </div>
-                    </button>
-                    <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
-                  </div>
-                ))}
-              </Fragment>
-            )
+          {shortlist.length === 0 && (
+            <div className="pt-10 px-4 text-center">
+              <p className="text-[13.5px] leading-relaxed" style={{ color: subCol }}>אין פרומפטים המותאמים לתיק זה.</p>
+              <button onClick={onOpenLibrary} className="text-[13px] underline mt-2" style={{ color: c.primary }}>
+                פתיחת מאגר הפרומפטים
+              </button>
+            </div>
+          )}
+          {shortlist.map((pr) => (
+            <div
+              key={pr.id}
+              className="relative rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] flex items-start gap-1"
+              style={{ border: `1px solid ${isDark ? dk.border : "#e8eef7"}` }}
+            >
+              <FavStar on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} />
+              <button className="flex-1 min-w-0 text-right py-0.5" onClick={() => onUse(pr)} title="שימוש בפרומפט">
+                <div className="text-[14px] truncate" style={{ color: titleCol }}>{pr.name}</div>
+                <div className="text-[12px] mt-0.5 flex items-center gap-1.5" style={{ color: subCol }}>
+                  <SourceMark pr={pr} isDark={isDark} />
+                  <span className="truncate">{sourceLabel(pr)}</span>
+                  {pr.ratingCount > 0 && <span className="flex-none">· {(pr.ratingSum / pr.ratingCount).toFixed(1)}★</span>}
+                </div>
+              </button>
+              <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete)} />
+            </div>
           ))}
         </div>
       </div>
