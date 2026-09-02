@@ -30,19 +30,19 @@ type TaskColKey =
   | "background" | "estimate" | "process" | "opened" | "submitter" | "notes" | "handler";
 type TaskLayoutKey = TaskColKey | "subject";
 
-// The text-wrap glyph, drawn here rather than pulled from a library — and deliberately without an arrow.
-// Every arrow-based version (lucide TextWrap, Material `wrap_text`, Fluent, and two hand-drawn attempts) needs a
-// curl and an arrowhead inside the same few pixels as the text lines; at the 13–15px this header affords they
-// merge into a smudge. What is left is the thing the toggle actually produces: a paragraph — three lines with a
-// short last one. Horizontal bars are the one shape that rasterizes cleanly at this size, the short third line is
-// what separates it from a generic list glyph, and the last line is short on the LEFT because Hebrew sets from the
-// right. Blue when the wrap is on (the caller sets the color); the tooltip carries the rest.
-function WrapIcon({ size = 15 }: { size?: number }) {
+// The text-wrap glyph. This is Google's own `format_text_wrap` (Material Symbols, Apache-2.0) — the icon Sheets
+// puts on this exact control, and the one the PM recognised on sight. Three rounds of stroke-based glyphs failed
+// here for a reason worth keeping: a stroke icon spends its budget on THREE horizontal text lines stacked inside
+// ~10px, so nothing has room. This one spends it on two long VERTICAL bars — the cell's edges — which stay crisp
+// at any size and carry the whole silhouette, leaving one big filled arrow between them. Filled beats stroked at
+// this size (more ink per pixel), so it holds together where our own drawings smudged.
+// Mirrored, because Hebrew wraps back to the RIGHT margin; the two bars make the flip almost invisible.
+function WrapIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 6H3" />
-      <path d="M21 12H3" />
-      <path d="M21 18h-9" />
+    <svg width={size} height={size} viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">
+      <g transform="translate(960,0) scale(-1,1)">
+        <path d="M160-160v-640h80v640h-80Zm560 0v-640h80v640h-80Zm-296-98L282-400l142-141 56 56-45 45h85q33 0 56.5-23.5T600-520q0-33-23.5-56.5T520-600H280v-80h240q66 0 113 47t47 113q0 66-47 113t-113 47h-85l45 45-56 57Z" />
+      </g>
     </svg>
   );
 }
