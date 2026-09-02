@@ -1091,58 +1091,75 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
   const textCol = isDark ? dk.text : c.text;
   const metaCol = isDark ? dk.textMuted : c.textLight;
 
+  // Which process folder is expanded. One process → it opens with the panel, because clicking the trigger already
+  // chose it and there is nothing left to pick. Several → all start collapsed, exactly like folders in תיקיות: the
+  // rows themselves already answer "which threads is this document in?", and the user opens the one they want.
+  const procIds = docProcessIds(doc);
+  const [openPid, setOpenPid] = useState<number | null>(procIds.length === 1 ? procIds[0] : null);
+
   let title = "";
   let TitleIcon: LucideIcon = FileText;
-  let meta: React.ReactNode = null;
   let body: React.ReactNode = null;
-  let preBody: React.ReactNode = null; // an optional block between the header and the rows (used to list process names)
   // Whether every selectable item in this group is currently picked, and the toggle that selects/clears all of them.
+  // Attachments only — a process now carries its own tri-state checkbox on its folder row.
   let allSelected = false;
   let onSelectAll: (() => void) | null = null;
 
   if (kind === "process") {
-    const docs = processDocs ?? [];
-    // In the by-type view (showSelfInThread === false) the folder already names the process and lists all its docs, so
-    // the source doc itself is dropped from its thread. In chronological it's kept (italic) — it helps locate the doc
-    // within a long thread.
-    const sorted = [...docs].filter((d) => showSelfInThread !== false || d.id !== doc.id).sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
-    const closed = docs.some(isResolutionDoc); // status reflects the FULL thread — even when the source doc (the decision itself) is hidden from its own thread
-
-    const procIds = docProcessIds(doc);
-    const multi = procIds.length > 1;
-    // One process → keep its name in the header (not crowded). Several → shorten the header to just "תהליכים" (a count
-    // like "(2)" read as process #2) and list the names on their own light lines below.
-    title = multi ? "תהליכים" : `${processTitle(doc)} (${docs.length})`;
-    TitleIcon = CornerDownRight;
-    if (multi) {
-      preBody = (
-        <div className="flex flex-col gap-0.5 mb-1.5 px-2" style={{ paddingInlineStart: "34px" }}>
-          {procIds.map((pid) => (
-            <div key={pid} className="flex items-center gap-1.5 text-[12px] min-w-0" style={{ color: metaCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-              <span style={{ fontFamily: "Figtree, sans-serif", fontWeight: 600, flexShrink: 0 }}>{pid}</span>
-              <span style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
-              <span className="truncate">{processLabel(doc.caseId, pid)}</span>
-              <span style={{ opacity: 0.6, flexShrink: 0 }}>({docs.filter((d) => docProcessIds(d).includes(pid)).length})</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    // Status only — open / closed (per feedback: drop doc-count and open/decision dates)
-    meta = (
-      <span className="text-[11px] rounded-full px-1.5 py-px whitespace-nowrap" style={{ fontWeight: 400, fontFamily: "Noto Sans Hebrew, sans-serif", backgroundColor: closed ? (isDark ? "#1c3a2c" : "#e5f4ec") : (isDark ? "#3a2e1c" : "#fbf0df"), color: closed ? "#0f8a5f" : "#b9670c" }}>
-        {closed ? "הושלם" : "פתוח"}
-      </span>
-    );
-    if (sorted.length > 0 && onSetChecked) {
-      allSelected = sorted.every((d) => d.checked);
-      onSelectAll = () => onSetChecked(sorted.map((d) => d.id), !allSelected);
-    }
+    // ONE FOLDER ROW PER PROCESS — the same row the תיקיות view already draws inside "בקשות והוראות".
+    // Validation kept showing users ticking a document and expecting its thread to follow, and that instinct is
+    // not imported from the web: it is the convention THIS table already teaches one tab away, where a process is
+    // a folder with a tri-state checkbox. So the panel stops speaking its own dialect — the header is that folder
+    // row, the checkbox leads (landing in the table's own checkbox column, not 500px away at the far end), and the
+    // "בחר הכל" link is gone because a parent checkbox says it better. A document on several processes gets several
+    // folder rows, again mirroring תיקיות, where it appears in each process folder: that also fixes something the
+    // merged list could not express at all — taking only ONE of the threads into the conversation.
+    const union = processDocs ?? [];
+    const groups = docProcessIds(doc).map((pid) => ({
+      pid,
+      label: processLabel(doc.caseId, pid),
+      // `processDocs` is the union across the document's threads, so filtering it by pid recovers each thread whole.
+      docs: union
+        .filter((d) => docProcessIds(d).includes(pid))
+        // In the by-type view (showSelfInThread === false) the folder already lists every doc of the process, so the
+        // source doc is dropped from its own thread. In chronological it stays (italic) — it locates the doc in a long thread.
+        .filter((d) => showSelfInThread !== false || d.id !== doc.id)
+        .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0)),
+    }));
     body = (
       <div className="flex flex-col">
-        {sorted.map((d) => (
-          <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} variant="process" onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
-        ))}
+        {groups.map((g, i) => {
+          const closed = g.docs.some(isResolutionDoc); // status reflects the whole thread
+          const allOn = g.docs.length > 0 && g.docs.every((d) => d.checked);
+          const someOn = !allOn && g.docs.some((d) => d.checked);
+          const open = openPid === g.pid;
+          return (
+            <div key={g.pid} className="flex flex-col" style={i > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` } : undefined}>
+              <div className="flex items-center gap-2 py-1" style={{ paddingInlineStart: "8px", paddingInlineEnd: "8px" }}>
+                <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                  <CheckboxBlue checked={allOn} mixed={someOn} onToggle={() => onSetChecked?.(g.docs.map((d) => d.id), !allOn)} />
+                </span>
+                <button onClick={() => setOpenPid((p) => (p === g.pid ? null : g.pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
+                  <span className="text-[13px] font-medium truncate" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                    <span dir="ltr" style={{ fontFamily: "Figtree, sans-serif" }}>{g.pid}</span> — {g.label} <span style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>({g.docs.length})</span>
+                  </span>
+                  <span className="flex-1" />
+                  <span className="text-[11px] rounded-full px-1.5 py-px whitespace-nowrap flex-shrink-0" style={{ fontWeight: 400, fontFamily: "Noto Sans Hebrew, sans-serif", backgroundColor: closed ? (isDark ? "#1c3a2c" : "#e5f4ec") : (isDark ? "#3a2e1c" : "#fbf0df"), color: closed ? "#0f8a5f" : "#b9670c" }}>
+                    {closed ? "הושלם" : "פתוח"}
+                  </span>
+                  <ChevronDown size={15} style={{ color: isDark ? dk.textMuted : c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
+                </button>
+                {/* The panel's one × rides on the first folder row; the rest reserve its width so every chevron shares an x. */}
+                {i === 0
+                  ? <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
+                  : <span className="flex-shrink-0" style={{ width: "20px" }} />}
+              </div>
+              {open && g.docs.map((d) => (
+                <NestedDocRow key={d.id} doc={d} gridCols={gridCols} colGap={colGap} colMeta={colMeta} showType={showType} isDark={isDark} isOpen={d.id === openDocId} isSelf={d.id === doc.id} variant="process" onOpenDoc={onOpenDoc} onToggleCheck={onToggleDocById ? () => onToggleDocById(d.id) : undefined} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     );
   } else {
@@ -1183,11 +1200,12 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
       style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
       dir="rtl"
     >
+      {/* נספחים keep the labelled header; a process does not, because its folder row IS its header. */}
+      {kind !== "process" && (
       <div className="flex items-center justify-between mb-1 px-2" style={{ paddingInlineStart: "34px" }}>
         <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <TitleIcon size={12} style={kind === "process" ? { transform: "scaleX(-1)" } : undefined} />
+          <TitleIcon size={12} />
           {title}
-          {meta && <><span style={{ opacity: 0.4 }}>·</span>{meta}</>}
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onSelectAll && (
@@ -1198,7 +1216,7 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
           <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
         </div>
       </div>
-      {preBody}
+      )}
       {body}
     </div>
   );
