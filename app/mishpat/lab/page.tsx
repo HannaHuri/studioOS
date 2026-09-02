@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownRight, WrapText,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownRight,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield, StickyNote,
@@ -649,6 +649,23 @@ function RowIconTrigger({ children, active, onClick, title, isDark, picked = fal
 
 // Process id(s) as small numeric chips for the process column — the numbers stay visible (they matter) but read as
 // structured tags rather than noisy "2, 3" plain text. Chip text inherits its color (so a clickable trigger can tint it).
+// The text-wrap glyph, drawn here rather than pulled from a library. Every library version (lucide TextWrap,
+// Material `wrap_text`, Fluent) carries three lines of text plus a small arrowhead — at the 13–15px this header
+// affords, those four marks merge into a smudge, which is exactly the complaint that sent us looking. This keeps
+// the two marks that carry the meaning — a line of text, and a line that reaches the margin and turns back — and
+// spends the room they free on an arrowhead large enough to survive rasterization.
+// The turn is baked into the path instead of a scaleX(-1) flip: Hebrew wraps back to the RIGHT margin, and a
+// mirrored icon is one transform away from being silently un-mirrored by whoever copies this next.
+function WrapIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 4H3" />
+      <path d="M21 11H3v7h8" />
+      <path d="m6.5 13.5 4.5 4.5-4.5 4.5" />
+    </svg>
+  );
+}
+
 function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
   return (
     <span className="flex items-center justify-center gap-px min-w-0">
@@ -1978,10 +1995,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "8px" }}>
           <span>תקציר</span>
           <button onClick={() => setSummaryWrap((v) => !v)} title={summaryWrap ? "צמצום התקציר לשורה אחת" : "פריסת התקציר לכמה שורות"} className="flex items-center hover:opacity-70" style={{ color: summaryWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}>
-            {/* Text-wrap convention across products (Excel "גלישת טקסט", Google Sheets, Material `wrap_text`, VS Code):
-                lines of text WITH a hooked return arrow. CornerDownLeft was that arrow without the lines, which reads
-                as Enter/reply. Mirrored: Hebrew wraps back to the RIGHT margin. */}
-            <WrapText size={13} style={{ transform: "scaleX(-1)" }} />
+            <WrapIcon />
           </button>
         </span>
       );

@@ -14,7 +14,7 @@
 // table. The one control that does something else is the תהליך chip, which opens the request's thread in place.
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { ChevronDown, ChevronLeft, ChevronUp, MoreVertical, Route, Search, WrapText, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronUp, MoreVertical, Route, Search, X } from "lucide-react";
 import { c, dk, type CaseDoc } from "./shared";
 import {
   TASKS, TASK_DOCS, TASK_KIND_COLORS, URGENCY_LABEL, URGENCY_ORDER,
@@ -29,6 +29,23 @@ type TaskColKey =
   | "urgency" | "kind" | "caseNumber" | "caseName" | "waiting" | "due" | "hearing"
   | "background" | "estimate" | "process" | "opened" | "submitter" | "notes" | "handler";
 type TaskLayoutKey = TaskColKey | "subject";
+
+// The text-wrap glyph, drawn here rather than pulled from a library. Every library version (lucide TextWrap,
+// Material `wrap_text`, Fluent) carries three lines of text plus a small arrowhead — at the 13–15px this header
+// affords, those four marks merge into a smudge, which is exactly the complaint that sent us looking. This keeps
+// the two marks that carry the meaning — a line of text, and a line that reaches the margin and turns back — and
+// spends the room they free on an arrowhead large enough to survive rasterization.
+// The turn is baked into the path instead of a scaleX(-1) flip: Hebrew wraps back to the RIGHT margin, and a
+// mirrored icon is one transform away from being silently un-mirrored by whoever copies this next.
+function WrapIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 4H3" />
+      <path d="M21 11H3v7h8" />
+      <path d="m6.5 13.5 4.5 4.5-4.5 4.5" />
+    </svg>
+  );
+}
 
 const TASK_COL_KEYS: TaskColKey[] = [
   "urgency", "kind", "caseNumber", "caseName", "waiting", "due", "hearing",
@@ -326,10 +343,7 @@ export default function TasksView({
             className="flex items-center hover:opacity-70"
             style={{ color: bgWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
           >
-            {/* Text-wrap convention across products (Excel "גלישת טקסט", Google Sheets, Material `wrap_text`, VS Code):
-                lines of text WITH a hooked return arrow. CornerDownLeft was that arrow without the lines, which reads
-                as Enter/reply. Mirrored: Hebrew wraps back to the RIGHT margin. */}
-            <WrapText size={13} style={{ transform: "scaleX(-1)" }} />
+            <WrapIcon />
           </button>
         </span>
       );
