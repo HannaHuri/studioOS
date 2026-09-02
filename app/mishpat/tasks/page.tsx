@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import dynamic from "next/dynamic";
 import {
-  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownLeft, CornerDownRight,
+  ArrowUp, Bookmark, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, CornerDownRight, WrapText,
   Clock, Copy, Eye, EyeClosed, FileText, Files, FolderOpen, Route,
   HelpCircle, Info, Link, Sparkles, Minimize2,
   Moon, MoreHorizontal, MoreVertical, Plus, Quote, RotateCw, Search, Shield,
@@ -1611,7 +1611,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         <span className="flex items-center gap-0.5" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}>
           <span>תקציר</span>
           <button onClick={() => setSummaryWrap((v) => !v)} title={summaryWrap ? "צמצום התקציר לשורה אחת" : "פריסת התקציר לכמה שורות"} className="flex items-center hover:opacity-70" style={{ color: summaryWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}>
-            <CornerDownLeft size={13} />
+            {/* Text-wrap convention across products (Excel "גלישת טקסט", Google Sheets, Material `wrap_text`, VS Code):
+                lines of text WITH a hooked return arrow. CornerDownLeft was that arrow without the lines, which reads
+                as Enter/reply. Mirrored: Hebrew wraps back to the RIGHT margin. */}
+            <WrapText size={13} style={{ transform: "scaleX(-1)" }} />
           </button>
         </span>
       );
@@ -1834,8 +1837,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       }}
       title="הצג רק תהליכים שטרם ניתנה בהם החלטה — כולל אלה הממתינים לתגובת הצד השני"
     >
-      {/* Route, not the mirrored process arrow: mirrored it draws the same shape as the summary-wrap control's
-          CornerDownLeft two buttons away. A path with a start and an end also says "תהליך" in a real-world metaphor,
+      {/* Route, not the mirrored process arrow (a bare corner arrow reads as Enter/reply, and the summary-wrap
+          control two buttons away now owns the return-arrow shape). A path with a start and an end also says "תהליך" in a real-world metaphor,
           and says nothing about "waiting" — the distinction this lens exists to make. */}
       <Route size={13} />
       תהליכים פתוחים

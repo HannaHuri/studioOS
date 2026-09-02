@@ -14,7 +14,7 @@
 // table. The one control that does something else is the תהליך chip, which opens the request's thread in place.
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { ChevronDown, ChevronLeft, ChevronUp, CornerDownLeft, MoreVertical, Route, Search, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronUp, MoreVertical, Route, Search, WrapText, X } from "lucide-react";
 import { c, dk, type CaseDoc } from "./shared";
 import {
   TASKS, TASK_DOCS, TASK_KIND_COLORS, URGENCY_LABEL, URGENCY_ORDER,
@@ -326,7 +326,10 @@ export default function TasksView({
             className="flex items-center hover:opacity-70"
             style={{ color: bgWrap ? c.primary : (isDark ? dk.textMuted : c.iconGray) }}
           >
-            <CornerDownLeft size={13} />
+            {/* Text-wrap convention across products (Excel "גלישת טקסט", Google Sheets, Material `wrap_text`, VS Code):
+                lines of text WITH a hooked return arrow. CornerDownLeft was that arrow without the lines, which reads
+                as Enter/reply. Mirrored: Hebrew wraps back to the RIGHT margin. */}
+            <WrapText size={13} style={{ transform: "scaleX(-1)" }} />
           </button>
         </span>
       );
