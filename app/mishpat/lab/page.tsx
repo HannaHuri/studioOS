@@ -733,7 +733,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       );
       case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "בימ״ש" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "" : doc.submitter}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
       case "note":     return <span />;
@@ -1441,7 +1441,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "בימ״ש" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "" : doc.submitter}</span>;
       case "related":  return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
@@ -1824,7 +1824,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Key bumped to v3: a pre-2026-08-13 build persisted EVERY column as a fixed px width the moment a resize drag
   // started, so anyone who ever grabbed a handle back then carries a fully-frozen table that can never spread on
   // expand. Bumping the key throws that saved state away and gives those users the flexible defaults back.
-  const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v4"; // v4: named קשורים/נספחים headers + "מס׳ מילים" changed the default widths
+  const DOC_COLW_LS_KEY = "mishpat-lab-docColW-v5"; // v5: מגיש lost "בימ״ש" and narrowed — a stored v4 width would keep the old, now-oversized track
   const [colWidths, setColWidths] = useState<Record<string, number>>({}); // ONLY columns the user explicitly resized (persisted)
   const [dragFreeze, setDragFreeze] = useState<Record<string, number> | null>(null); // temp: pins ALL columns to px DURING a resize drag, released on mouseup so untouched columns flex again
   const [summaryWrap, setSummaryWrap] = useState(false); // תקציר column: wrap to multiple lines vs. single-line ellipsis
@@ -1895,7 +1895,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,44px)";
-  const submitterTrack = roomy ? "minmax(34px,44px)" : "minmax(30px,32px)"; // floor set by "בימ״ש" (30.1px) — the standard abbreviation, 7px narrower than ביהמ״ש and never truncated
+  const submitterTrack = roomy ? "minmax(28px,36px)" : "minmax(27px,30px)"; // court documents leave this cell EMPTY (their type already says who filed them), so the floor is set by the widest party label — "נתבע", measured 25.6px at 11.5px — and no longer by "בימ״ש" (30.1px). The freed px fall through to the flexible name/summary tracks.
   type ColDef = { track: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
@@ -1906,7 +1906,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     time:        { track: "44px", show: () => visibleCols.time, fixed: 44 },
     summary:     { track: roomy ? "minmax(120px,1fr)" : "minmax(74px,1.1fr)", show: () => visibleCols.summary, fixed: 74 },
     type:        { track: typeTrack, show: (st) => visibleCols.type && st, fixed: 64 },
-    submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 44 },
+    submitter:   { track: submitterTrack, show: () => visibleCols.submitter, fixed: 27 },
     related:     { track: roomy ? "38px" : "36px", show: () => visibleCols.related, fixed: roomy ? 38 : 36 },       // narrower than its own "קשורים" header, which spills into the gap on both sides
     note:        { track: roomy ? "28px" : "26px", show: () => visibleCols.note, fixed: roomy ? 28 : 26 },        // marker only — the note itself is written in the pencil panel
     attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
