@@ -30,19 +30,19 @@ type TaskColKey =
   | "background" | "estimate" | "process" | "opened" | "submitter" | "notes" | "handler";
 type TaskLayoutKey = TaskColKey | "subject";
 
-// The text-wrap glyph, drawn here rather than pulled from a library. Every library version (lucide TextWrap,
-// Material `wrap_text`, Fluent) carries three lines of text plus a small arrowhead — at the 13–15px this header
-// affords, those four marks merge into a smudge, which is exactly the complaint that sent us looking. This keeps
-// the two marks that carry the meaning — a line of text, and a line that reaches the margin and turns back — and
-// spends the room they free on an arrowhead large enough to survive rasterization.
-// The turn is baked into the path instead of a scaleX(-1) flip: Hebrew wraps back to the RIGHT margin, and a
-// mirrored icon is one transform away from being silently un-mirrored by whoever copies this next.
+// The text-wrap glyph, drawn here rather than pulled from a library — and deliberately without an arrow.
+// Every arrow-based version (lucide TextWrap, Material `wrap_text`, Fluent, and two hand-drawn attempts) needs a
+// curl and an arrowhead inside the same few pixels as the text lines; at the 13–15px this header affords they
+// merge into a smudge. What is left is the thing the toggle actually produces: a paragraph — three lines with a
+// short last one. Horizontal bars are the one shape that rasterizes cleanly at this size, the short third line is
+// what separates it from a generic list glyph, and the last line is short on the LEFT because Hebrew sets from the
+// right. Blue when the wrap is on (the caller sets the color); the tooltip carries the rest.
 function WrapIcon({ size = 15 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 4H3" />
-      <path d="M21 11H3v7h8" />
-      <path d="m6.5 13.5 4.5 4.5-4.5 4.5" />
+      <path d="M21 6H3" />
+      <path d="M21 12H3" />
+      <path d="M21 18h-9" />
     </svg>
   );
 }
