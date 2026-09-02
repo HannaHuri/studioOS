@@ -269,7 +269,9 @@ function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void
   const sub = isDark ? dk.textMuted : c.textLight;
   return (
     <div className="flex items-center gap-1.5" dir="rtl" title={locked ? `דירגת ${pr.myRating}` : "דירוג — פעם אחת בלבד"}>
-      <div className="flex items-center" dir="ltr" onMouseLeave={() => setHov(0)}>
+      {/* RTL like everything else here: the first star is the rightmost one, and the row fills
+          from the right — a left-to-right rating reads backwards in Hebrew. */}
+      <div className="flex items-center" onMouseLeave={() => setHov(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -490,7 +492,7 @@ export function PromptsPanel({
         {/* No collapse control: the rail icon that opened the panel closes it, and a second way
             out cost a slot at the start of the line where the title should begin. */}
         <div className="flex items-center gap-2 h-8">
-          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים</span>
+          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים מוצעים</span>
           <div className="flex-1" />
           {/* Blue, so the way out of the shortlist is the one thing in the header that isn't grey */}
           <button

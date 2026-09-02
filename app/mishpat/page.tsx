@@ -1570,7 +1570,9 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
               {/* the day label belongs to the rows under it, so it sits close to them and far from the group above */}
               {/* the label belongs to the rows under it, so it sits right on top of them and far
                   from the group above */}
-              <div className={`${gi === 0 ? "pt-0.5" : "pt-5"} -mb-1 text-[12px] leading-[1.2]`} style={{ color: subCol }}>{g.label}</div>
+              {/* the lightest grey on the panel: the day is context for the rows, not a heading
+                  that competes with them */}
+              <div className={`${gi === 0 ? "pt-0.5" : "pt-5"} -mb-1 text-[12px] leading-[1.2]`} style={{ color: isDark ? dk.textMuted : c.textLight }}>{g.label}</div>
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
@@ -1589,8 +1591,8 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
                           className="flex items-center gap-0.5 rounded-[3px] px-[3px] py-[2px] cursor-pointer"
                           style={{ backgroundColor: chipBg, color: titleCol }}
                         >
-                          <span className="text-[14px] leading-4">{it.cases.length} תיקים</span>
-                          <ChevronDown size={14} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+                          <span className="text-[12.5px] leading-4">{it.cases.length} תיקים</span>
+                          <ChevronDown size={12} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
                         </button>
                         {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} />)}
                       </div>
