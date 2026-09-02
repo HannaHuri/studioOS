@@ -35,13 +35,14 @@ type TaskLayoutKey = TaskColKey | "subject";
 // here for a reason worth keeping: a stroke icon spends its budget on THREE horizontal text lines stacked inside
 // ~10px, so nothing has room. This one spends it on two long VERTICAL bars — the cell's edges — which stay crisp
 // at any size and carry the whole silhouette, leaving one big filled arrow between them. Filled beats stroked at
-// this size (more ink per pixel), so it holds together where our own drawings smudged.
+// this size (more ink per pixel), so it holds together where our own drawings smudged. Weight axis wght300, not
+// the default 400 — the 400 read heavy beside 12px header labels; 200 exists but its bars go sub-pixel and turn grey.
 // NOT mirrored for RTL, deliberately (her call): the arrow points left exactly as it does in Sheets, because what
 // this icon is doing here is being recognised, and it is recognised by the shape people already know.
 function WrapIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">
-      <path d="M160-160v-640h80v640h-80Zm560 0v-640h80v640h-80Zm-296-98L282-400l142-141 56 56-45 45h85q33 0 56.5-23.5T600-520q0-33-23.5-56.5T520-600H280v-80h240q66 0 113 47t47 113q0 66-47 113t-113 47h-85l45 45-56 57Z" />
+      <path d="M180-180v-600h60v600h-60Zm540 0v-600h60v600h-60Zm-290.61-92.23L301.62-400l127.77-126.77L471.15-485l-55 55h98.46q37.62 0 63.81-26.19 26.2-26.19 26.2-63.81 0-37.62-26.2-63.81Q552.23-610 514.61-610H295.39v-60h219.22q62.16 0 106.08 43.92 43.92 43.93 43.92 106.08t-43.92 106.08Q576.77-370 514.61-370h-98.46l55 55-41.76 42.77Z" />
     </svg>
   );
 }
