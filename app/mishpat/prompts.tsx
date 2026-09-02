@@ -492,7 +492,7 @@ export function PromptsPanel({
         {/* No collapse control: the rail icon that opened the panel closes it, and a second way
             out cost a slot at the start of the line where the title should begin. */}
         <div className="flex items-center gap-2 h-8">
-          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים לתיק</span>
+          <span className="text-[16px] leading-[1.25]" style={{ color: subCol }}>פרומפטים מוצעים</span>
           <div className="flex-1" />
           {/* Blue, so the way out of the shortlist is the one thing in the header that isn't grey */}
           <button
