@@ -694,17 +694,22 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
 // תיקיות already use. Colour splits the two jobs — blue says the number is live, grey keeps the caret from competing
 // with it. The caret is a hand-drawn solid triangle rather than a lucide chevron: those are open strokes, so `fill`
 // does nothing to them, and at 7px a stroked chevron is the smudge this file has already been through twice.
-function ProcessTrigger({ id, open, isDark, onClick, title }: { id: number; open: boolean; isDark: boolean; onClick: (e: ReactMouseEvent) => void; title: string }) {
+// One shape for every row control that OPENS A PANEL UNDER THE ROW: its own content, then a small caret that flips
+// when the panel is open. תהליך and 📎 נספחים both wear it. 🔗 מסמכים קשורים deliberately does NOT — it opens a
+// floating popup beside the row, not a panel under it, and it should not promise the same movement.
+// The caret is the palest thing in the group on purpose: the content is what you read, the caret only says how to
+// reach more of it. It is a hand-drawn solid triangle rather than a lucide chevron, because lucide chevrons are open
+// strokes (so `fill` does nothing to them) and a 7px stroked chevron is the smudge this file has been through twice.
+// No `transition` on the flip, deliberately. Measured in the browser: with `transition: transform 0.15s` the computed
+// transform sat at identity and never reached rotate(180deg) — on the svg AND on a wrapping span — while removing the
+// transition applied it instantly; something inside this row re-renders often enough to keep restarting the
+// interpolation. A caret that silently never turns is worse than one that turns without a tween.
+function CaretTrigger({ children, open, isDark, onClick, title }: { children: React.ReactNode; open: boolean; isDark: boolean; onClick: (e: ReactMouseEvent) => void; title: string }) {
   return (
     <button onClick={onClick} title={title} className="flex items-center gap-[3px] flex-shrink-0 hover:opacity-70 transition-opacity">
-      <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.blue : c.primary }}>{id}</span>
-      {/* No `transition` on this flip, deliberately. Measured in the browser: with `transition: transform 0.15s` the
-          computed transform sat at identity and never reached rotate(180deg) — on the svg AND on a wrapping span —
-          while removing the transition applied it instantly. Something inside this row re-renders often enough to
-          keep restarting the interpolation. The caret's job is to point the right way; it does not need to animate
-          getting there, and a caret that silently never turns is worse than one that turns without a tween. */}
+      {children}
       <svg width="7" height="5" viewBox="0 0 8 5" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
-        <path d="M0 0h8L4 5z" fill={isDark ? dk.textMuted : c.iconGray} />
+        <path d="M0 0h8L4 5z" fill={isDark ? dk.textMuted : c.textLight} />
       </svg>
     </button>
   );
@@ -1463,7 +1468,11 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
               // extra process differ only by a mark hanging beside it. (inset-inline-end:100% puts it just outside
               // the chip's leading edge — the right, in RTL.)
               <span className="relative flex items-center justify-center flex-shrink-0">
-                <ProcessTrigger id={procIds[0]} open={openKinds.has("process")} isDark={isDark} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} />
+                <CaretTrigger open={openKinds.has("process")} isDark={isDark} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`}>
+                  {/* Grey, not blue: the number is data the eye scans down the column, and at blue it shouted louder
+                      than the document names beside it. Blue in this table means "in the conversation". */}
+                  <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.text : c.text }}>{procIds[0]}</span>
+                </CaretTrigger>
                 {procIds.length > 1 && (
                   <span className="absolute flex items-center" style={{ insetInlineEnd: "100%", marginInlineEnd: "2px", top: 0, bottom: 0 }}>
                     <ProcessOverflowLink
@@ -1522,9 +1531,12 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "attachments": return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length ?? 0) > 0 && (
-            <RowIconTrigger active={openKinds.has("attachments")} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`} isDark={isDark} picked={attPicked} boxed>
-              <Paperclip size={13} />
-            </RowIconTrigger>
+            // Same caret as תהליך, because it does the same thing: opens a panel under this row. The paperclip keeps
+            // its blue for `attPicked` — that is a selection state, not an affordance, and it is the only place a
+            // picked נספח shows in the collapsed row.
+            <CaretTrigger open={openKinds.has("attachments")} isDark={isDark} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`}>
+              <Paperclip size={13} style={{ color: attPicked ? c.primary : (isDark ? dk.textMuted : c.iconGray) }} />
+            </CaretTrigger>
           )}
         </span>
       );
