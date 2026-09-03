@@ -686,14 +686,27 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
   );
 }
 
-// The label inside a CLICKABLE process trigger: ONE process number, as plain text. The boxed chip around it — the very
-// same chip 🔗 מסמכים קשורים and 📎 נספחים wear — is what says "this opens something"; a number on its own pill
-// background read as column content, which is why users never tried clicking it.
-function ProcessTriggerLabel({ id }: { id: number }) {
+// The CLICKABLE process trigger: a blue number with a small solid caret beside it.
+// History, because this is the second answer to the same question. A bare number was never clicked (it read as column
+// content), so it got the boxed chip that 🔗 קשורים and 📎 נספחים wear — and that fixed "is this a control?" but not
+// "what does it do?", and validation still found people hesitating. A caret is the more specific claim: not "you may
+// click me" but "I open downward", which is exactly what happens, and it is the same affordance the process folders in
+// תיקיות already use. Colour splits the two jobs — blue says the number is live, grey keeps the caret from competing
+// with it. The caret is a hand-drawn solid triangle rather than a lucide chevron: those are open strokes, so `fill`
+// does nothing to them, and at 7px a stroked chevron is the smudge this file has already been through twice.
+function ProcessTrigger({ id, open, isDark, onClick, title }: { id: number; open: boolean; isDark: boolean; onClick: (e: ReactMouseEvent) => void; title: string }) {
   return (
-    <span className="flex items-center justify-center text-[11.5px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", minWidth: "13px", minHeight: "13px" /* match the 13px icon in the 🔗/📎 chips so the three buttons are the same size */ }}>
-      {id}
-    </span>
+    <button onClick={onClick} title={title} className="flex items-center gap-[3px] flex-shrink-0 hover:opacity-70 transition-opacity">
+      <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.blue : c.primary }}>{id}</span>
+      {/* No `transition` on this flip, deliberately. Measured in the browser: with `transition: transform 0.15s` the
+          computed transform sat at identity and never reached rotate(180deg) — on the svg AND on a wrapping span —
+          while removing the transition applied it instantly. Something inside this row re-renders often enough to
+          keep restarting the interpolation. The caret's job is to point the right way; it does not need to animate
+          getting there, and a caret that silently never turns is worse than one that turns without a tween. */}
+      <svg width="7" height="5" viewBox="0 0 8 5" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
+        <path d="M0 0h8L4 5z" fill={isDark ? dk.textMuted : c.iconGray} />
+      </svg>
+    </button>
   );
 }
 
@@ -1450,9 +1463,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
               // extra process differ only by a mark hanging beside it. (inset-inline-end:100% puts it just outside
               // the chip's leading edge — the right, in RTL.)
               <span className="relative flex items-center justify-center flex-shrink-0">
-                <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} isDark={isDark} boxed>
-                  <ProcessTriggerLabel id={procIds[0]} />
-                </RowIconTrigger>
+                <ProcessTrigger id={procIds[0]} open={openKinds.has("process")} isDark={isDark} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} />
                 {procIds.length > 1 && (
                   <span className="absolute flex items-center" style={{ insetInlineEnd: "100%", marginInlineEnd: "2px", top: 0, bottom: 0 }}>
                     <ProcessOverflowLink
