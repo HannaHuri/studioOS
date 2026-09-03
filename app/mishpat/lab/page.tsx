@@ -698,8 +698,8 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
 // when the panel is open. תהליך and 📎 נספחים both wear it. 🔗 מסמכים קשורים deliberately does NOT — it opens a
 // floating popup beside the row, not a panel under it, and it should not promise the same movement.
 // The caret is the palest thing in the group on purpose: the content is what you read, the caret only says how to
-// reach more of it. It is a hand-drawn solid triangle rather than a lucide chevron, because lucide chevrons are open
-// strokes (so `fill` does nothing to them) and a 7px stroked chevron is the smudge this file has been through twice.
+// reach more of it. Drawn here rather than taken from lucide so its size and stroke are tuned for THIS size — an
+// outline chevron only survives small if it is one clean stroke with room around it (9x6 at 1.6, round caps).
 // No `transition` on the flip, deliberately. Measured in the browser: with `transition: transform 0.15s` the computed
 // transform sat at identity and never reached rotate(180deg) — on the svg AND on a wrapping span — while removing the
 // transition applied it instantly; something inside this row re-renders often enough to keep restarting the
@@ -708,8 +708,8 @@ function CaretTrigger({ children, open, isDark, onClick, title }: { children: Re
   return (
     <button onClick={onClick} title={title} className="flex items-center gap-[3px] flex-shrink-0 hover:opacity-70 transition-opacity">
       {children}
-      <svg width="7" height="5" viewBox="0 0 8 5" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
-        <path d="M0 0h8L4 5z" fill={isDark ? dk.textMuted : c.textLight} />
+      <svg width="9" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
+        <path d="M1 1.2 5 4.8 9 1.2" stroke={isDark ? dk.textMuted : c.textLight} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );
@@ -1123,7 +1123,6 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
   // selected and left the row that owns it indistinguishable from its neighbours. The תכלת now marks only the SOURCE
   // row (DocRowCompact activeBg) — the tint identifies whose panel this is, and the panel is just table.
   const panelBg = isDark ? dk.input : "#ffffff";
-  const titleCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
   const metaCol = isDark ? dk.textMuted : c.textLight;
 
@@ -1132,14 +1131,9 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
   // rows themselves already answer "which threads is this document in?", and the user opens the one they want.
   const procIds = docProcessIds(doc);
   const [openPid, setOpenPid] = useState<number | null>(procIds.length === 1 ? procIds[0] : null);
+  const [attOpen, setAttOpen] = useState(true); // one group, so it opens with the panel
 
-  let title = "";
-  let TitleIcon: LucideIcon = FileText;
   let body: React.ReactNode = null;
-  // Whether every selectable item in this group is currently picked, and the toggle that selects/clears all of them.
-  // Attachments only — a process now carries its own tri-state checkbox on its folder row.
-  let allSelected = false;
-  let onSelectAll: (() => void) | null = null;
 
   if (kind === "process") {
     // ONE FOLDER ROW PER PROCESS — the same row the תיקיות view already draws inside "בקשות והוראות".
@@ -1201,32 +1195,49 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
       </div>
     );
   } else {
-    title = "נספחים";
-    TitleIcon = Paperclip;
-    // Attachments are exhibits (not case documents) — no column data, so a simple labeled list with their own checkbox state.
+    // Attachments are exhibits (not case documents) — no column data, so a plain labelled list with their own
+    // checkbox state. They now wear the SAME folder row as a process: tri-state checkbox leading, name and count,
+    // chevron. There is only ever one group here, so the row is a header rather than a chooser — but giving it the
+    // same shape means the panel has one vocabulary instead of two, and it is what finally retires the last
+    // "בחר הכל" in the table.
     const names = doc.attachments ?? [];
     const keys = names.map((name) => attKey(doc.id, name));
-    if (keys.length > 0 && onSetAttachments) {
-      allSelected = keys.every((k) => attachmentSel?.has(k));
-      onSelectAll = () => onSetAttachments(keys, !allSelected);
-    }
+    const allOn = keys.length > 0 && keys.every((k) => attachmentSel?.has(k));
+    const someOn = !allOn && keys.some((k) => attachmentSel?.has(k));
     // When the מספר-מסמך column is on, attachments are numbered off their parent doc: 1א׳, 1ב׳ … (parent number + Hebrew letter).
     const parentNum = colMeta.docNumbers[doc.id];
     body = (
-      <div className="flex flex-col" style={{ paddingInlineStart: "16px", paddingInlineEnd: "8px" }}>
-        {names.map((name, i) => {
-          const key = attKey(doc.id, name);
-          return (
-            <div key={name} className="flex items-center gap-2 py-1 text-right">
-              <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={!!attachmentSel?.has(key)} onToggle={() => onToggleAttachment?.(key)} /></span>
-              {colMeta.visible.num && parentNum != null && (
-                <span dir="ltr" className="text-[11.5px] flex-shrink-0 tabular-nums" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="מספר נספח">{`#${parentNum}${hebLetter(i)}׳`}</span>
-              )}
-              <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
-              <span className="text-[12.5px] truncate flex-1 min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
-            </div>
-          );
-        })}
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2 py-1" style={{ paddingInlineStart: "8px", paddingInlineEnd: "8px" }}>
+          <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+            <CheckboxBlue checked={allOn} mixed={someOn} onToggle={() => onSetAttachments?.(keys, !allOn)} />
+          </span>
+          <button onClick={() => setAttOpen((o) => !o)} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={attOpen ? "כיווץ" : "פתיחה"}>
+            <span className="text-[13px] font-medium truncate min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              נספחים <span style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>({names.length})</span>
+            </span>
+            <span className="flex-1" />
+            <ChevronDown size={15} style={{ color: isDark ? dk.textMuted : c.iconGray, flexShrink: 0, transform: attOpen ? "rotate(180deg)" : undefined }} />
+          </button>
+          <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
+        </div>
+        {attOpen && (
+          <div className="flex flex-col" style={{ paddingInlineStart: "28px", paddingInlineEnd: "8px" }}>
+            {names.map((name, i) => {
+              const key = attKey(doc.id, name);
+              return (
+                <div key={name} className="flex items-center gap-2 py-1 text-right">
+                  <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={!!attachmentSel?.has(key)} onToggle={() => onToggleAttachment?.(key)} /></span>
+                  {colMeta.visible.num && parentNum != null && (
+                    <span dir="ltr" className="text-[11.5px] flex-shrink-0 tabular-nums" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }} title="מספר נספח">{`#${parentNum}${hebLetter(i)}׳`}</span>
+                  )}
+                  <FileText size={13} style={{ flexShrink: 0, color: isDark ? dk.textMuted : c.iconGray }} />
+                  <span className="text-[12.5px] truncate flex-1 min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -1239,23 +1250,8 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
       style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
       dir="rtl"
     >
-      {/* נספחים keep the labelled header; a process does not, because its folder row IS its header. */}
-      {kind !== "process" && (
-      <div className="flex items-center justify-between mb-1 px-2" style={{ paddingInlineStart: "34px" }}>
-        <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: titleCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-          <TitleIcon size={12} />
-          {title}
-        </span>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {onSelectAll && (
-            <button onClick={onSelectAll} className="text-[11.5px] rounded px-1.5 py-0.5 hover:bg-black/5 transition-colors" style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={allSelected ? "ביטול בחירת כל הפריטים" : "בחירת כל הפריטים לצ׳אט"}>
-              {allSelected ? "נקה הכל" : "בחר הכל"}
-            </button>
-          )}
-          <button onClick={onClose} className="flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: metaCol, width: "20px", height: "20px" }} title="סגירה"><X size={13} /></button>
-        </div>
-      </div>
-      )}
+      {/* No labelled header on either kind any more: the folder row IS the header, and it carries the checkbox that
+          replaced "בחר הכל". */}
       {body}
     </div>
   );
@@ -1469,9 +1465,11 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
               // the chip's leading edge — the right, in RTL.)
               <span className="relative flex items-center justify-center flex-shrink-0">
                 <CaretTrigger open={openKinds.has("process")} isDark={isDark} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`}>
-                  {/* Grey, not blue: the number is data the eye scans down the column, and at blue it shouted louder
-                      than the document names beside it. Blue in this table means "in the conversation". */}
-                  <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.text : c.text }}>{procIds[0]}</span>
+                  {/* Grey, and light: the number is a quiet label, not a headline. Blue shouted louder than the document names
+                      (and blue here already means "in the conversation"); c.text was still heavier than the summary text
+                      it sits beside. This is the summary's own grey — a step darker than the caret, so the caret stays
+                      subordinate to it. */}
+                  <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }}>{procIds[0]}</span>
                 </CaretTrigger>
                 {procIds.length > 1 && (
                   <span className="absolute flex items-center" style={{ insetInlineEnd: "100%", marginInlineEnd: "2px", top: 0, bottom: 0 }}>
