@@ -168,6 +168,12 @@ const processTitle = (d: CaseDoc): string =>
 // A decision / judgment closes the thread it belongs to. Everything else leaves it open — including a thread that is
 // currently waiting on the other side's response rather than on the judge.
 const isResolutionDoc = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
+
+// מגיש is a two-value distinction, and "תובע"/"נתבע" differ by a single glyph in the middle of a four-letter word —
+// at column size they read as the same shape and the eye stops separating them. One letter each IS the distinction;
+// the full word (with the party's name) stays in the cell's tooltip. Court documents render blank: their type already
+// says who filed them, which is why "בימ״ש" was dropped from this column.
+const submitterLetter = (s: string) => (s === "תובע" ? "ת" : s === "נתבע" ? "נ" : "");
 // Process keys are per-case (each case numbers its threads from 1), so any cross-case set must be keyed by both.
 const procKey = (caseId: string | undefined, pid: number) => `${caseId ?? ""}::${pid}`;
 
@@ -553,7 +559,7 @@ function DocRow({ doc, isDark, markNew, active, onOpenDoc, onToggleCheck, rowRef
   const textCol = isDark ? dk.text : c.text;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const baseBg = isDark ? dk.input : "white";
-  const activeBg = isDark ? "#212c42" : "#f1f6fd"; // gentle takhelet tint for the currently-open document
+  const activeBg = isDark ? "#212c42" : "#f4f8fd"; // gentle takhelet tint for the currently-open document
   return (
     <div
       ref={rowRef}
@@ -698,7 +704,7 @@ function ProcessOverflowLink({ onClick, title, isDark }: { onClick: (e: ReactMou
   // the panel opens — and buys back 5px of a column that was struggling to centre.
   // (Kept dir="ltr" as a guard: the moment anyone puts a digit back here, RTL reorders "+2" into "2+".)
   return (
-    <button dir="ltr" onClick={onClick} title={title} className="text-[11px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
+    <button dir="ltr" onClick={onClick} title={title} className="text-[14px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
       +
     </button>
   );
@@ -715,9 +721,9 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
   const num = colMeta.docNumbers[doc.id];
   // Opaque backgrounds (so pinned sticky cells occlude scrolling content): base = detail-panel bg, plus open/hover tints.
-  const baseBg = isDark ? "#181f33" : "#f4f8fd";
+  const baseBg = isDark ? dk.input : "white"; // matches the table: the panel is no longer a tinted block
   const restBg = isOpen ? (isDark ? "#22293f" : "#e8f0fc") : baseBg;
-  const hoverBg = isOpen ? restBg : (isDark ? "#232a3d" : "#edf1f8");
+  const hoverBg = isOpen ? restBg : (isDark ? "#232c44" : "#f6f9ff");
   const cellContent = (key: string) => {
     switch (key) {
       case "checkbox": return onToggleCheck ? <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={doc.checked} onToggle={onToggleCheck} /></span> : <span className="flex-shrink-0" />;
@@ -736,7 +742,7 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       );
       case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterLetter(doc.submitter)}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
       case "note":     return <span />;
@@ -1089,7 +1095,10 @@ function HScroll({ children, bg, isDark }: { children: React.ReactNode; bg: stri
 // underlying document's `checked`. Attachments are exhibits, not case documents, so they have no column data
 // and stay a simple labeled list with their own checkbox state (attachmentSel). Each group offers "בחר הכל".
 function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType, showSelfInThread, openDocId, isDark, onOpenDoc, onClose, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments }: { kind: "attachments" | "process"; doc: CaseDoc; processDocs?: CaseDoc[]; gridCols: string; colGap: string; colMeta: ColMeta; showType: boolean; showSelfInThread?: boolean; openDocId?: string; isDark: boolean; onOpenDoc?: (doc: CaseDoc) => void; onClose: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void }) {
-  const panelBg = isDark ? "#181f33" : "#f4f8fd";
+  // White, not a tint. The blue block used to shade the whole detail area, which made the panel itself look
+  // selected and left the row that owns it indistinguishable from its neighbours. The תכלת now marks only the SOURCE
+  // row (DocRowCompact activeBg) — the tint identifies whose panel this is, and the panel is just table.
+  const panelBg = isDark ? dk.input : "#ffffff";
   const titleCol = isDark ? dk.textMuted : c.textLight;
   const textCol = isDark ? dk.text : c.text;
   const metaCol = isDark ? dk.textMuted : c.textLight;
@@ -1202,7 +1211,8 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
     <div
       onClick={(e) => e.stopPropagation()}
       className="pt-1.5 pb-2"
-      style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
+      // Both edges now, not just the top: a tinted block ended itself, a white one needs a line to say where it stops.
+      style={{ backgroundColor: panelBg, borderTop: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}` }}
       dir="rtl"
     >
       {/* נספחים keep the labelled header; a process does not, because its folder row IS its header. */}
@@ -1383,7 +1393,7 @@ const pinCellStyle = (key: string, cm: ColMeta): React.CSSProperties | undefined
 // Dense table row — one line per document; columns come from `colMeta` (user-customizable, some pinned while scrolling).
 function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, showSelfInThread, lockProcess, processDocs, siblingDocs, openDocId, expandedKinds, onToggleExpand, relatedOpen, onOpenRelated, flash, onContextMenu, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; showSelfInThread?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKinds?: ("attachments" | "process")[]; onToggleExpand?: (kind: "attachments" | "process") => void; relatedOpen?: boolean; onOpenRelated?: (rect: DOMRect, el: HTMLElement) => void; flash?: boolean; onContextMenu?: (x: number, y: number) => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
   const baseBg = isDark ? dk.input : "white";
-  const activeBg = isDark ? "#212c42" : "#f1f6fd";
+  const activeBg = isDark ? "#212c42" : "#f4f8fd"; // the תכלת that used to fill the whole panel now marks just this row
   // Which detail panels are open for this row (parallel — related / process / attachments can all be open at once).
   const openKinds = new Set(expandedKinds ?? []);
   const anyOpen = openKinds.size > 0;
@@ -1466,7 +1476,7 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[11.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{doc.submitter === "בית המשפט" ? "" : doc.submitter}</span>;
+      case "submitter":return <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterLetter(doc.submitter)}</span>;
       case "related":  return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
@@ -1920,7 +1930,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const roomy = isFocus || panelWidth >= 720;
   const gapPx = isFocus ? 8 : 4;
   const typeTrack = roomy ? "minmax(60px,92px)" : "minmax(30px,44px)";
-  const submitterTrack = roomy ? "minmax(28px,36px)" : "minmax(27px,30px)"; // court documents leave this cell EMPTY (their type already says who filed them), so the floor is set by the widest party label — "נתבע", measured 25.6px at 11.5px — and no longer by "בימ״ש" (30.1px). The freed px fall through to the flexible name/summary tracks.
+  // The values are now single letters (ת / נ, blank for the court), so what sizes this column is its own HEADER:
+  // "מגיש" measures 26.1px at the header's 12.5px medium, against 8.6px for the widest value. Narrowing past ~27px
+  // would truncate the label, not the data — so the letters buy legibility here, not width.
+  const submitterTrack = roomy ? "minmax(28px,34px)" : "minmax(27px,29px)";
   type ColDef = { track: string; show: (st: boolean) => boolean; fixed?: number };
   const colDefs: Record<string, ColDef> = {
     checkbox:    { track: "18px", show: () => true, fixed: 18 },
