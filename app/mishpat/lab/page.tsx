@@ -169,11 +169,12 @@ const processTitle = (d: CaseDoc): string =>
 // currently waiting on the other side's response rather than on the judge.
 const isResolutionDoc = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
 
-// מגיש is a two-value distinction, and "תובע"/"נתבע" differ by a single glyph in the middle of a four-letter word —
-// at column size they read as the same shape and the eye stops separating them. One letter each IS the distinction;
-// the full word (with the party's name) stays in the cell's tooltip. Court documents render blank: their type already
-// says who filed them, which is why "בימ״ש" was dropped from this column.
-const submitterLetter = (s: string) => (s === "תובע" ? "ת" : s === "נתבע" ? "נ" : "");
+// מגיש is a two-value distinction, and "תובע"/"נתבע" differ by a single glyph in the MIDDLE of a four-letter word —
+// at column size they read as the same shape and the eye stops separating them. Cutting to the first two letters puts
+// the difference where reading starts, and the geresh says "abbreviation" rather than "typo" (same convention as
+// מס׳ / בימ״ש elsewhere here). The full word, with the party's name, stays in the cell's tooltip. Court documents
+// render blank: their type already says who filed them, which is why "בימ״ש" was dropped from this column.
+const submitterShort = (s: string) => (s === "תובע" ? "תו׳" : s === "נתבע" ? "נת׳" : "");
 // Process keys are per-case (each case numbers its threads from 1), so any cross-case set must be keyed by both.
 const procKey = (caseId: string | undefined, pid: number) => `${caseId ?? ""}::${pid}`;
 
@@ -742,7 +743,9 @@ function NestedDocRow({ doc, gridCols, colGap, colMeta, showType, isDark, isOpen
       );
       case "summary":  return <span className={colMeta.summaryWrap ? "text-[12.5px] min-w-0 whitespace-normal leading-snug" : "truncate text-[12.5px] min-w-0"} onMouseEnter={(e) => colMeta.onCellTip?.(doc.summary, e)} onMouseLeave={() => colMeta.onCellTip?.(null)} style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{doc.summary}</span>;
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterLetter(doc.submitter)}</span>;
+      // Centred, not right-aligned like the other values: a two-letter code reads as a marker rather than as text,
+      // and right-alignment left it stranded against the next column with a wide gap on its other side.
+      case "submitter":return <span className="text-[12.5px] truncate min-w-0 w-full text-center" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterShort(doc.submitter)}</span>;
       case "related":  return <span />;
       case "attachments": return <span />;
       case "note":     return <span />;
@@ -1476,7 +1479,9 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
         </span>
       );
       case "type":     return <span className="min-w-0 flex"><span className="text-[11.5px] truncate rounded px-1.5 py-px" style={{ backgroundColor: typeC.bg, color: typeC.color, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={doc.type}>{doc.type}</span></span>;
-      case "submitter":return <span className="text-[12.5px] truncate min-w-0" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterLetter(doc.submitter)}</span>;
+      // Centred, not right-aligned like the other values: a two-letter code reads as a marker rather than as text,
+      // and right-alignment left it stranded against the next column with a wide gap on its other side.
+      case "submitter":return <span className="text-[12.5px] truncate min-w-0 w-full text-center" style={{ color: subCol, fontFamily: "Noto Sans Hebrew, sans-serif" }} title={partyName ? `${doc.submitter} · ${partyName}` : doc.submitter}>{submitterShort(doc.submitter)}</span>;
       case "related":  return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {doc.related.length > 0 && (
@@ -2038,7 +2043,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         </span>
       );
       case "type":     return sortHead("type", "סוג");
-      case "submitter":return sortHead("submitter", "מגיש");
+      case "submitter":return sortHead("submitter", "מגיש", { center: true }); // follows its values — a right-aligned header over centred codes reads as a misalignment
       case "related":  return sortHead("related", "קשורים", { center: true, hideIcon: true, titleText: "מיון לפי מסמכים קשורים" });
       case "attachments": return sortHead("attachments", "נספחים", { center: true, hideIcon: true, titleText: "מיון לפי נספחים" });
       case "note":     return <span className="w-full text-center" style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }} title="הערות אישיות על המסמך">הערה</span>;
