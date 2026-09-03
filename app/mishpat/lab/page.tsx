@@ -692,11 +692,14 @@ function ProcessTriggerLabel({ id }: { id: number }) {
 // comma-joined "2,3" reads as the single number twenty-three. Outside, the chip is still one process and the +N is
 // plainly something else. It stays clickable (same panel — the panel lists every process by name and count), so the
 // blue is honest rather than decorative.
-function ProcessOverflowLink({ n, onClick, title, isDark }: { n: number; onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
-  // dir="ltr" + a single text node: `+{n}` is two separate text runs, and RTL reorders them into "1+".
+function ProcessOverflowLink({ onClick, title, isDark }: { onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
+  // A bare "+", not "+2": beside a chip that already shows a process NUMBER, a second digit reads as another process
+  // number rather than as a count. Dropping it loses "how many", which now lives in the tooltip and in the folder rows
+  // the panel opens — and buys back 5px of a column that was struggling to centre.
+  // (Kept dir="ltr" as a guard: the moment anyone puts a digit back here, RTL reorders "+2" into "2+".)
   return (
     <button dir="ltr" onClick={onClick} title={title} className="text-[11px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
-      {`+${n}`}
+      +
     </button>
   );
 }
@@ -1140,13 +1143,15 @@ function RowDetail({ kind, doc, processDocs, gridCols, colGap, colMeta, showType
                   <CheckboxBlue checked={allOn} mixed={someOn} onToggle={() => onSetChecked?.(g.docs.map((d) => d.id), !allOn)} />
                 </span>
                 <button onClick={() => setOpenPid((p) => (p === g.pid ? null : g.pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
-                  <span className="text-[13px] font-medium truncate" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                  <span className="text-[13px] font-medium truncate min-w-0" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                     <span dir="ltr" style={{ fontFamily: "Figtree, sans-serif" }}>{g.pid}</span> — {g.label} <span style={{ color: metaCol, fontFamily: "Figtree, sans-serif" }}>({g.docs.length})</span>
                   </span>
-                  <span className="flex-1" />
+                  {/* The status belongs to THIS thread, so it travels with its name rather than floating at the row's
+                      far end, where with several folder rows it read as a column of its own. */}
                   <span className="text-[11px] rounded-full px-1.5 py-px whitespace-nowrap flex-shrink-0" style={{ fontWeight: 400, fontFamily: "Noto Sans Hebrew, sans-serif", backgroundColor: closed ? (isDark ? "#1c3a2c" : "#e5f4ec") : (isDark ? "#3a2e1c" : "#fbf0df"), color: closed ? "#0f8a5f" : "#b9670c" }}>
                     {closed ? "הושלם" : "פתוח"}
                   </span>
+                  <span className="flex-1" />
                   <ChevronDown size={15} style={{ color: isDark ? dk.textMuted : c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }} />
                 </button>
                 {/* The panel's one × rides on the first folder row; the rest reserve its width so every chevron shares an x. */}
@@ -1418,28 +1423,30 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       // numbers stay but are static — they still matter there to reveal that a doc is linked to OTHER processes beyond the
       // folder's own — so they keep the plain pill and NOT the button chip. Pill = data, box = button.
       case "process":  return (
-        <span className="min-w-0 flex items-center justify-center gap-0.5 w-full" onClick={(e) => e.stopPropagation()}>
+        <span className="min-w-0 flex items-center justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {procIds.length > 0 && (lockProcess
             ? <ProcessChips ids={procIds} isDark={isDark} />
             : (
-              <>
-                {/* The "+N" slot leads (RTL → it renders to the RIGHT of the chip) and is a FIXED width that is there
-                    whether or not this row overflows. That keeps the group's width constant, so the process chip lands
-                    on the same x in every row and the column reads as one straight line of buttons. */}
-                <span className="flex items-center justify-center flex-shrink-0" style={{ width: "14px" }}>
-                  {procIds.length > 1 && (
+              // The "+" hangs OFF the chip instead of sitting in a reserved slot beside it. A fixed slot kept every
+              // chip on the same x, but it did that by pushing all of them off the column's centre — and it charged
+              // its width to every row, including the overwhelming majority with a single process. Positioned
+              // absolutely it costs no layout width at all, so the chip is simply centred, always, and rows with an
+              // extra process differ only by a mark hanging beside it. (inset-inline-end:100% puts it just outside
+              // the chip's leading edge — the right, in RTL.)
+              <span className="relative flex items-center justify-center flex-shrink-0">
+                <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} isDark={isDark} boxed>
+                  <ProcessTriggerLabel id={procIds[0]} />
+                </RowIconTrigger>
+                {procIds.length > 1 && (
+                  <span className="absolute flex items-center" style={{ insetInlineEnd: "100%", marginInlineEnd: "2px", top: 0, bottom: 0 }}>
                     <ProcessOverflowLink
-                      n={procIds.length - 1}
                       onClick={toggle("process")}
                       title={`תהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`}
                       isDark={isDark}
                     />
-                  )}
-                </span>
-                <RowIconTrigger active={openKinds.has("process")} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`} isDark={isDark} boxed>
-                  <ProcessTriggerLabel id={procIds[0]} />
-                </RowIconTrigger>
-              </>
+                  </span>
+                )}
+              </span>
             ))}
         </span>
       );
