@@ -170,11 +170,14 @@ const processTitle = (d: CaseDoc): string =>
 const isResolutionDoc = (d: CaseDoc) => d.type === "החלטות בתיק" || d.type === "פסקי דין";
 
 // מגיש is a two-value distinction, and "תובע"/"נתבע" differ by a single glyph in the MIDDLE of a four-letter word —
-// at column size they read as the same shape and the eye stops separating them. Cutting to the first two letters puts
-// the difference where reading starts, and the geresh says "abbreviation" rather than "typo" (same convention as
-// מס׳ / בימ״ש elsewhere here). The full word, with the party's name, stays in the cell's tooltip. Court documents
-// render blank: their type already says who filed them, which is why "בימ״ש" was dropped from this column.
-const submitterShort = (s: string) => (s === "תובע" ? "תו׳" : s === "נתבע" ? "נת׳" : "");
+// at column size they read as the same shape and the eye stops separating them. Shortening was the fix, and the length
+// took three passes worth recording: the full words are too alike, and "תו׳"/"נת׳" are too — they SHARE a ת, so the
+// pair still trades on one glyph of difference. A single letter is the only cut where the two codes have no glyph in
+// common at all. The geresh stays: it is what makes one Hebrew letter read as an abbreviation rather than a typo or a
+// list marker (the convention already used here in מס׳ / בימ״ש / 1א׳).
+// The full word, with the party's name, stays in the cell's tooltip. Court documents render blank: their type already
+// says who filed them, which is why "בימ״ש" was dropped from this column.
+const submitterShort = (s: string) => (s === "תובע" ? "ת׳" : s === "נתבע" ? "נ׳" : "");
 // Process keys are per-case (each case numbers its threads from 1), so any cross-case set must be keyed by both.
 const procKey = (caseId: string | undefined, pid: number) => `${caseId ?? ""}::${pid}`;
 
