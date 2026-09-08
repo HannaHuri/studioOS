@@ -5,7 +5,7 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
+  FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Telescope, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -992,7 +992,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <Paperclip size={15} />
+            <FileUp size={15} />
           </button>
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
@@ -2651,16 +2651,6 @@ export default function MishpatPage() {
           </div>
         </div>
 
-        {/* ── Responsive-mode indicator (demo aid — resize the window to watch it switch) ── */}
-        <div
-          className="absolute left-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] shadow-md"
-          style={{ bottom: FOOTER_HEIGHT + 12, transform: "translateX(-50%)", backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${c.border}`, color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
-        >
-          <span className="size-2 rounded-full" style={{ backgroundColor: narrow ? "#d83a52" : canBoth ? c.primary : "#e0a000" }} />
-          <span>{narrow ? "מגירה (Drawer)" : canBoth ? "שני פאנלים אפשריים" : "פאנל אחד בכל פעם"}</span>
-          <span style={{ color: c.textLight }}>·</span>
-          <span style={{ color: c.textLight }}>{vw}px</span>
-        </div>
       </div>
 
       {/* ── Examples: editor, delete confirmation, save toast ── */}
