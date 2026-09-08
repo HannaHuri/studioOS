@@ -13,6 +13,10 @@ import {
 import { c, dk, RED } from "./theme";
 import { UseExampleIcon } from "./icons";
 import {
+  DraftCard, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  type ProofKinds, type ProofRun, type RunStep,
+} from "./proofread";
+import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
@@ -114,7 +118,8 @@ const MIRRORED_MODE_ICONS: ResponseMode[] = ["direct", "agents"];
 const mirrorModeIcon = (m: ResponseMode) => (MIRRORED_MODE_ICONS.includes(m) ? "scaleX(-1)" : undefined);
 
 type DocItem = { name: string; words: string; summary: string };
-const initialDocs: { name: string; count: string; checked: boolean; items: DocItem[] }[] = [
+type CaseDocType = { name: string; count: string; checked: boolean; items: DocItem[] };
+const initialDocs: CaseDocType[] = [
   { name: "כתב תביעה", count: "320K", checked: false, items: [
     { name: "כתב תביעה מתוקן", words: "180K", summary: "כתב התביעה המתוקן המפרט את עילות התביעה, העובדות הנטענות, הבסיס המשפטי והסעדים הכספיים המבוקשים מבית המשפט." },
     { name: "כתב תביעה מקורי", words: "140K", summary: "כתב התביעה המקורי שהוגש בפתיחת ההליך, טרם תיקונו בעקבות החלטת בית המשפט להוספת ראשי נזק." },
@@ -174,11 +179,10 @@ function DocItemRow({ item, isDark }: { item: DocItem; isDark: boolean }) {
 }
 
 // ── Document panel (open) ──────────────────────────────────────────────────
-function DocumentPanelOpen({ isDark }: { isDark: boolean }) {
+function DocumentPanelOpen({ isDark, docs, setDocs }: { isDark: boolean; docs: CaseDocType[]; setDocs: React.Dispatch<React.SetStateAction<CaseDocType[]>> }) {
   const [isCaseOpen, setIsCaseOpen] = useState(true);
   const [isAuto, setIsAuto] = useState(true);
   const [allChecked, setAllChecked] = useState(true);
-  const [docs, setDocs] = useState(initialDocs);
   const [showTip, setShowTip] = useState(false);
   const autoRef = useRef<HTMLButtonElement>(null);
   const caseCardRef = useRef<HTMLDivElement>(null);
@@ -593,15 +597,12 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 }
 
 // ── Chat area ──────────────────────────────────────────────────────────────
-type Message = { q: string; isFirst: boolean; agent?: boolean };
+type Message = { q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
-type StepIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
-const AGENT_STEPS: {
-  Icon: StepIcon; text: string; subText?: string;
-  altIcon?: StepIcon; altText?: string; // "מגבש תכנית עבודה" and "מנתח את מורכבות" are the same real step — swap in place instead of two rows
-}[] = [
+// altText/altIcon swap a step label in place instead of adding a second row.
+const AGENT_STEPS: RunStep[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
   {
     Icon: ListSortDescendingIcon, text: "מגבש תכנית עבודה למענה",
@@ -614,11 +615,15 @@ const AGENT_STEPS: {
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, selectedDocCount, onOpenDocs, onProofDone }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
+  // How many case documents are selected in the left panel — what a content proofread is measured against
+  selectedDocCount: number;
+  onOpenDocs: () => void;
+  onProofDone: (title: string) => void;
 }) {
   const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
@@ -650,8 +655,28 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
-  const stepsReady = revealedSteps >= AGENT_STEPS.length; // every row is on screen
+  // ── Draft proofreading ──
+  const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
+  const [kinds, setKinds] = useState<ProofKinds>({ lang: true, content: true });
+  const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a proofread is the thing running
+  const fileRef = useRef<HTMLInputElement>(null);
+  // The tracker walks whichever list belongs to the run in progress.
+  const activeSteps = proofRun ? proofSteps(proofRun.kinds) : AGENT_STEPS;
+  const stepsReady = revealedSteps >= activeSteps.length; // every row is on screen
   const [dotsReady, setDotsReady] = useState(false); // a beat after stepsReady — the current step resumes "thinking" (dots) and progressing
+
+  // A run ends here whichever kind it was, so the finished-notification and the history
+  // entry have one place to hang off. Declared above the timer chain that calls it.
+  function finishRun() {
+    setAgentRunning(false);
+    if (!proofRun) return;
+    onProofDone(`${proofKindLabel(proofRun.kinds)} — ${proofRun.fileName}`);
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification("נט המשפט", { body: "התשובה לשאלתך מוכנה", icon: "/studioOS/logo.png" });
+      } catch { /* some browsers only allow notifications from a service worker */ }
+    }
+  }
 
   useEffect(() => {
     if (!agentRunning || !agentIntro) return;
@@ -684,18 +709,18 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // Demo-only timer chain (dev team: drive this from real step-completion events instead of a fixed delay).
   useEffect(() => {
     if (!agentRunning || !dotsReady) return;
-    const step = AGENT_STEPS[agentStep];
+    const step = activeSteps[agentStep];
     if (agentSub) {
       const t = setTimeout(() => {
-        if (agentStep < AGENT_STEPS.length - 1) { setAgentStep((s) => s + 1); setAgentSub(false); }
-        else setAgentRunning(false);
+        if (agentStep < activeSteps.length - 1) { setAgentStep((s) => s + 1); setAgentSub(false); }
+        else finishRun();
       }, 2800);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
       if (step.subText) { setAgentSub(true); return; } // hold on a static sub-line before advancing
-      if (agentStep < AGENT_STEPS.length - 1) setAgentStep((s) => s + 1);
-      else setAgentRunning(false); // last step done — reveal the final answer
+      if (agentStep < activeSteps.length - 1) setAgentStep((s) => s + 1);
+      else finishRun(); // last step done — reveal the final answer
     }, 3200);
     return () => clearTimeout(t);
   }, [agentRunning, agentStep, agentSub, dotsReady]);
@@ -734,6 +759,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setInputText("");
     setMessages([]);          // start fresh — empty state
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
+    setDraft(null);
+    setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
     setAgentIntro(false);
@@ -758,6 +785,25 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentRunning(false);
   }
 
+  // ── Proofreading a draft ────────────────────────────────────────────────
+  function handleRunProof() {
+    if (!draft) return;
+    const run: ProofRun = { fileName: draft.name, kinds: { ...kinds }, docCount: selectedDocCount };
+    // Asking here rather than on load: the click is the user gesture Chrome wants, and it's the
+    // first moment a notification is actually about to be useful.
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+    setMessages((prev) => [
+      ...prev,
+      { q: `${proofKindLabel(run.kinds)} — ${run.fileName}`, isFirst: prev.length === 0, proof: run },
+    ]);
+    setDraft(null);
+    setProofRun(run);
+    setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
+  }
+
+
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
   // (done / in-progress / pending) as agentStep advances.
   function renderAgentProgress() {
@@ -770,7 +816,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     }
     return (
       <div className="flex flex-col gap-2.5" dir="rtl" style={{ marginTop: "8px" }}>
-        {AGENT_STEPS.slice(0, revealedSteps).map((step, i) => {
+        {activeSteps.slice(0, revealedSteps).map((step, i) => {
           const done = i < agentStep;
           const isCurrent = i === agentStep;
           // The "alt" phase (in-place swap) only applies while the step is actively being worked — once
@@ -846,6 +892,21 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           </div>
         </div>
       )}
+      {/* An uploaded draft waiting to be proofread — the card carries the two checks and the run button */}
+      {draft && (
+        <DraftCard
+          isDark={isDark}
+          fileName={draft.name}
+          fileSize={draft.size}
+          kinds={kinds}
+          onKinds={setKinds}
+          docCount={selectedDocCount}
+          onOpenDocs={onOpenDocs}
+          onRemove={() => setDraft(null)}
+          onRun={handleRunProof}
+          running={agentRunning}
+        />
+      )}
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -909,6 +970,29 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               size={11}
               style={{ transition: "transform 0.15s", transform: modeOpen ? "rotate(180deg)" : "none" }}
             />
+          </button>
+
+          {/* Attach a draft for proofreading. Word only — the file comes back marked up as Word. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".docx,.doc"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setDraft({ name: f.name, size: f.size });
+              e.target.value = ""; // so picking the same file twice still fires
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            style={{ backgroundColor: "transparent", border: "none", color: c.iconGray }}
+            title="העלאת טיוטה להגהה"
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          >
+            <Paperclip size={15} />
           </button>
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
@@ -1167,7 +1251,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => {
               const isLast = i === messages.length - 1;
-              const showingAgentProgress = !!msg.agent && isLast && agentRunning;
+              const showingAgentProgress = (!!msg.agent || !!msg.proof) && isLast && agentRunning;
               return (
                 <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
                   {/* Saving and sharing sit on the question, not on the answer — the question is
@@ -1190,6 +1274,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   <div>
                     <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
                       {showingAgentProgress ? renderAgentProgress()
+                        : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
                         : msg.isFirst ? renderFirstAnswer()
                         : <p>מעבד את שאלתך...</p>}
@@ -1312,7 +1397,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 // Every conversation carries the case it ran on as a tag above its title; a conversation
 // that spans several cases hides them behind a "N תיקים" chip that opens in place.
 type HistCase = { name: string; num: string; kind: string };
-type HistConv = { id: string; title: string; cases: HistCase[] };
+type HistConv = { id: string; title: string; cases: HistCase[]; proof?: boolean };
 type HistGroup = { label: string; items: HistConv[] };
 
 const hc = (name: string, num: string, kind = 'ת"א'): HistCase => ({ name, num, kind });
@@ -1381,15 +1466,17 @@ function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
   );
 }
 
-function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
+function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
   isDark: boolean;
+  // The list lives on the page: a finished proofread has to be able to add to it.
+  data: HistGroup[];
+  setData: React.Dispatch<React.SetStateAction<HistGroup[]>>;
   onClose?: () => void;
   // Users asked for this: opening the history while a case is open shows that case only. The state
   // lives on the page, not here, so turning the filter off survives closing and reopening the panel.
   caseOnly: boolean;
   onCaseOnly: (v: boolean) => void;
 }) {
-  const [data, setData] = useState<HistGroup[]>(HISTORY_GROUPS);
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -1626,6 +1713,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly }: {
                             className="block overflow-hidden"
                             style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}
                           >
+                            {it.proof && <span className="inline-block align-middle ml-1"><ProofHistoryIcon color={c.primary} /></span>}
                             {it.title}
                           </span>
                         </button>
@@ -2214,6 +2302,16 @@ function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boo
 
 export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);     // documents
+  // The case documents and their selection — held here so the composer can say what a
+  // content proofread will be measured against, and so the selection survives closing the panel.
+  const [docs, setDocs] = useState(initialDocs);
+  const [histData, setHistData] = useState<HistGroup[]>(HISTORY_GROUPS);
+  // A finished proofread joins the conversations of היום, marked so it reads as a run, not a chat.
+  const addProofToHistory = (title: string) =>
+    setHistData((d) => d.map((g) => (g.label === "היום"
+      ? { ...g, items: [{ id: `p-${Date.now()}`, title, cases: [CURRENT_CASE], proof: true }, ...g.items] }
+      : g)));
+  const selectedDocCount = docs.filter((d) => d.checked).reduce((sum, d) => sum + d.items.length, 0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isExamplesOpen, setIsExamplesOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -2359,7 +2457,7 @@ export default function MishpatPage() {
           style={{ width: isPanelOpen && !narrow ? "300px" : "40px", overflow: "visible", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}
         >
           <div className="absolute inset-0 overflow-y-auto docs-scroll" style={{ overflowX: "visible" }}>
-            {isPanelOpen && !narrow ? <DocumentPanelOpen isDark={isDark} /> : <DocumentPanelClosed isDark={isDark} />}
+            {isPanelOpen && !narrow ? <DocumentPanelOpen isDark={isDark} docs={docs} setDocs={setDocs} /> : <DocumentPanelClosed isDark={isDark} />}
           </div>
 
           {/* Toggle button */}
@@ -2380,6 +2478,9 @@ export default function MishpatPage() {
           <ChatArea
             isDark={isDark}
             conversationKey={convKey}
+            selectedDocCount={selectedDocCount}
+            onOpenDocs={() => setIsPanelOpen(true)}
+            onProofDone={addProofToHistory}
             inUseName={inUse?.name ?? null}
             onClearInUse={() => setInUse(null)}
             insert={insert}
@@ -2399,7 +2500,7 @@ export default function MishpatPage() {
           {/* Documents drawer (narrow) — overlays from the left */}
           {narrow && isPanelOpen && (
             <div className="absolute top-0 bottom-0 left-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
-              <div className="absolute inset-0 overflow-y-auto docs-scroll"><DocumentPanelOpen isDark={isDark} /></div>
+              <div className="absolute inset-0 overflow-y-auto docs-scroll"><DocumentPanelOpen isDark={isDark} docs={docs} setDocs={setDocs} /></div>
               <button onClick={() => setIsPanelOpen(false)} className="absolute z-50 size-6 flex items-center justify-center rounded-full bg-white shadow" style={{ top: "8px", right: "8px", border: `1px solid ${c.border}` }} title="סגור">
                 <X size={14} style={{ color: c.iconGray }} />
               </button>
@@ -2410,7 +2511,7 @@ export default function MishpatPage() {
           {narrow && isHistoryOpen && (
             <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               {/* the panel's own header control closes it — no floating X on top of it */}
-              <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
+              <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} data={histData} setData={setHistData} />
             </div>
           )}
 
@@ -2473,7 +2574,7 @@ export default function MishpatPage() {
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
         {!narrow && isHistoryOpen && (
           <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
-            <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} />
+            <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} data={histData} setData={setHistData} />
           </div>
         )}
 
