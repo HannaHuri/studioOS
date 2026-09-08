@@ -108,6 +108,10 @@ const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; 
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
+// Lucide draws these two pointing left; in the RTL bar they'd both aim the same way,
+// so both get mirrored — the arrow to follow the text, the telescope to look outward.
+const MIRRORED_MODE_ICONS: ResponseMode[] = ["direct", "agents"];
+const mirrorModeIcon = (m: ResponseMode) => (MIRRORED_MODE_ICONS.includes(m) ? "scaleX(-1)" : undefined);
 
 type DocItem = { name: string; words: string; summary: string };
 const initialDocs: { name: string; count: string; checked: boolean; items: DocItem[] }[] = [
@@ -899,7 +903,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, transform: responseMode === "direct" ? "scaleX(-1)" : undefined }} />; })()}
+            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, transform: mirrorModeIcon(responseMode) }} />; })()}
             <span>{RESPONSE_MODE_CONFIG[responseMode].label}</span>
             <ChevronDown
               size={11}
@@ -1112,7 +1116,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                       fontFamily: "Noto Sans Hebrew, sans-serif",
                     }}
                   >
-                    <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0, transform: opt === "direct" ? "scaleX(-1)" : undefined }} />
+                    <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0, transform: mirrorModeIcon(opt) }} />
                     {label}
                   </span>
                   <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
