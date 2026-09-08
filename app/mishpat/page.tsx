@@ -103,9 +103,9 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
-  agents: { label: "סוכנים",    desc: "מענה לבקשות מורכבות על-ידי ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
-  direct: { label: "צ'ט ישיר",  desc: "מענה לבקשות על-ידי שליחת הבקשה ישירות",                   Icon: Send },
-  fast:   { label: "צ'ט מהיר",  desc: "מענה מהיר לבקשות ממוקדות",                              Icon: Zap },
+  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
+  direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
+  fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 
