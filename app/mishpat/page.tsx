@@ -1028,6 +1028,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               backgroundColor: draft ? c.primaryLight : "transparent",
               border: "none",
               color: draft ? c.primary : c.iconGray,
+              // pulled back over the row gap, so it sits against מעמיק rather than adrift
+              // between the mode button and the empty middle of the row
+              marginLeft: "-6px",
             }}
             title={draft ? "המשך להגהה" : "העלאת טיוטה להגהה"}
             onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
