@@ -96,7 +96,7 @@ function SourceChip({ label, isDark }: { label: string; isDark: boolean }) {
 // a task is something you do in a window: it is a task being set up, not an attachment
 // riding along with the next message.
 export function ProofModal({
-  isDark, fileName, fileSize, kinds, onKinds, docCount, onOpenDocs, onClose, onRun,
+  isDark, fileName, fileSize, kinds, onKinds, docCount, onOpenDocs, onClose, onConfirm,
 }: {
   isDark: boolean;
   fileName: string;
@@ -108,12 +108,14 @@ export function ProofModal({
   // selection is a real step here, and it happens in the panel that already owns it.
   onOpenDocs: () => void;
   onClose: () => void;
-  onRun: () => void;
+  // Confirming does not start the run — it hands the request back to the composer, so the
+  // user can add a sentence to it before sending.
+  onConfirm: () => void;
 }) {
   // הגהת תוכן has nothing to compare against with no documents selected, so the run
   // is blocked rather than quietly returning "לא נמצאו סתירות".
   const noDocs = kinds.content && docCount === 0;
-  const canRun = (kinds.lang || kinds.content) && !noDocs;
+  const canConfirm = (kinds.lang || kinds.content) && !noDocs;
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
@@ -166,11 +168,14 @@ export function ProofModal({
         {/* What the content check is measured against. No new scope control — this reports
             the selection already made in the documents panel, and sends you there to change it. */}
         {kinds.content && (
-          <button onClick={onOpenDocs} className="mx-6 mb-1 flex items-center gap-1.5 text-[12.5px] text-right" style={{ color: noDocs ? RED : subCol }}>
+          <div className="mx-6 mb-1 flex items-center gap-1.5 text-[12.5px] text-right" style={{ color: noDocs ? RED : subCol }}>
             {noDocs
-              ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק — לבחירת מסמכים</>
-              : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק — לשינוי הבחירה</>}
-          </button>
+              ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק</>
+              : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק</>}
+            <button onClick={onOpenDocs} className="hover:underline" style={{ color: c.primary }}>
+              {noDocs ? "לבחירת מסמכים" : "לשינוי הבחירה"}
+            </button>
+          </div>
         )}
 
         <div className="flex gap-3 justify-end px-6 py-5">
@@ -178,12 +183,12 @@ export function ProofModal({
             ביטול
           </button>
           <button
-            onClick={onRun}
-            disabled={!canRun}
+            onClick={onConfirm}
+            disabled={!canConfirm}
             className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity"
-            style={{ backgroundColor: canRun ? c.primary : (isDark ? dk.border : c.border), cursor: canRun ? "pointer" : "default", opacity: canRun ? 1 : 0.7 }}
+            style={{ backgroundColor: canConfirm ? c.primary : (isDark ? dk.border : c.border), cursor: canConfirm ? "pointer" : "default", opacity: canConfirm ? 1 : 0.7 }}
           >
-            בצע הגהה
+            אישור
           </button>
         </div>
       </div>

@@ -10,10 +10,15 @@ export function BrainIcon({ size = 24, strokeWidth = 1.7, style }: { size?: numb
       <path d="M8.4 9c1.5.3 2.6 1.6 2.6 3.1" />
     </>
   );
+  // The lobes only reach x≈4..20, y≈4..18 of the 24 box, so next to Send and Zap — which fill
+  // theirs — the brain read as the small one. Scaling about its own centre fills the box and
+  // thickens the stroke with it, instead of asking every call site for a different size.
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={style}>
-      {half}
-      <g transform="translate(24,0) scale(-1,1)">{half}</g>
+      <g transform="translate(12,11.2) scale(1.22) translate(-12,-11.2)">
+        {half}
+        <g transform="translate(24,0) scale(-1,1)">{half}</g>
+      </g>
     </svg>
   );
 }

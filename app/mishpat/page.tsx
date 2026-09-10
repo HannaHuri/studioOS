@@ -111,6 +111,7 @@ const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; 
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
+const PROOF_REQUEST = "בצע הגהה";
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 // Lucide draws the send arrow pointing left; in the RTL bar it should follow the text.
 // The brain is symmetric, so it needs nothing.
@@ -658,6 +659,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
   const [kinds, setKinds] = useState<ProofKinds>({ lang: true, content: true });
   const [proofOpen, setProofOpen] = useState(false); // the setup dialog
+  const [proofReady, setProofReady] = useState(false); // dialog confirmed — the next send runs it
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a proofread is the thing running
   const fileRef = useRef<HTMLInputElement>(null);
   // The tracker walks whichever list belongs to the run in progress.
@@ -760,6 +762,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
     setProofOpen(false);
+    setProofReady(false);
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -772,6 +775,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const textCol = isDark ? dk.text : c.text;
 
   function handleSend() {
+    // A confirmed draft turns the next send into the proofreading run, carrying whatever the
+    // user added to the pre-filled request.
+    if (draft && proofReady) { handleRunProof(inputText.trim() || PROOF_REQUEST); return; }
     if (!inputText.trim()) return;
     setMessages((prev) => [
       ...prev,
@@ -786,19 +792,26 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   // ── Proofreading a draft ────────────────────────────────────────────────
-  function handleRunProof() {
-    if (!draft) return;
-    const run: ProofRun = { fileName: draft.name, kinds: { ...kinds }, docCount: selectedDocCount };
-    // Asking here rather than on load: the click is the user gesture Chrome wants, and it's the
-    // first moment a notification is actually about to be useful.
+  // Confirming the dialog doesn't run anything — it attaches the draft to the composer and
+  // writes the request into the field, so the user can add to it before sending.
+  function handleConfirmProof() {
+    setProofOpen(false);
+    setProofReady(true);
+    setInputText(PROOF_REQUEST);
+    // Asking here rather than on load: the click is the user gesture Chrome wants, and it's
+    // the first moment a notification is actually about to be useful.
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-    setMessages((prev) => [
-      ...prev,
-      { q: `${proofKindLabel(run.kinds)} — ${run.fileName}`, isFirst: prev.length === 0, proof: run },
-    ]);
+  }
+
+  function handleRunProof(question: string) {
+    if (!draft) return;
+    const run: ProofRun = { fileName: draft.name, kinds: { ...kinds }, docCount: selectedDocCount };
+    setMessages((prev) => [...prev, { q: question, isFirst: prev.length === 0, proof: run }]);
+    setInputText("");
     setDraft(null);
+    setProofReady(false);
     setProofOpen(false);
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
@@ -890,6 +903,23 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               <X size={13} />
             </button>
             <span>דוגמה בשימוש: {inUseName}</span>
+          </div>
+        </div>
+      )}
+      {/* A confirmed draft riding on the next send — same chip as an example in use, because
+          it answers the same question: what is attached to what I am about to send. */}
+      {draft && proofReady && (
+        <div className="flex justify-center" dir="rtl">
+          <div
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] max-w-full"
+            style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            <button onClick={() => { setDraft(null); setProofReady(false); setInputText(""); }} className="opacity-60 hover:opacity-100 transition-opacity flex-shrink-0" title="הסרת הטיוטה">
+              <X size={13} />
+            </button>
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+              {proofKindLabel(kinds)}: {draft.name}
+            </span>
           </div>
         </div>
       )}
@@ -1138,8 +1168,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         onKinds={setKinds}
         docCount={selectedDocCount}
         onOpenDocs={() => { setProofOpen(false); onOpenDocs(); }}
-        onClose={() => { setProofOpen(false); setDraft(null); }}
-        onRun={handleRunProof}
+        onClose={() => { setProofOpen(false); setDraft(null); setProofReady(false); setInputText(""); }}
+        onConfirm={handleConfirmProof}
       />
     );
   }
@@ -2550,7 +2580,7 @@ export default function MishpatPage() {
             className="absolute bottom-0 left-0 right-0 flex justify-center px-6 z-40"
             style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
           >
-            <div className="w-full max-w-[768px] flex flex-col items-center justify-end gap-0.5" style={{ paddingBottom: "20px" }}>
+            <div className="w-full max-w-[768px] flex flex-col items-center justify-end" style={{ paddingBottom: "20px" }}>
               <p
                 className="text-[14px] text-center"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", lineHeight: 1.3 }}
