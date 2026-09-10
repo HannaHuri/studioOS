@@ -5,16 +5,16 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, Quote, RotateCw, Search, Shield,
+  FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Telescope, Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
-import { UseExampleIcon } from "./icons";
+import { BrainIcon, UseExampleIcon } from "./icons";
 import {
   DraftCard, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
-  type ProofKinds, type ProofRun, type RunStep,
+  type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
@@ -106,15 +106,15 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 // ── Response-mode selector (agents / direct chat / fast chat) ───────────────
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
-const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
-  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Telescope },
+const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: RunStepIcon }> = {
+  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: BrainIcon },
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
-// Lucide draws these two pointing left; in the RTL bar they'd both aim the same way,
-// so both get mirrored — the arrow to follow the text, the telescope to look outward.
-const MIRRORED_MODE_ICONS: ResponseMode[] = ["direct", "agents"];
+// Lucide draws the send arrow pointing left; in the RTL bar it should follow the text.
+// The brain is symmetric, so it needs nothing.
+const MIRRORED_MODE_ICONS: ResponseMode[] = ["direct"];
 const mirrorModeIcon = (m: ResponseMode) => (MIRRORED_MODE_ICONS.includes(m) ? "scaleX(-1)" : undefined);
 
 type DocItem = { name: string; words: string; summary: string };
@@ -625,7 +625,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   onOpenDocs: () => void;
   onProofDone: (title: string) => void;
 }) {
-  const [showCitations, setShowCitations] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
   const [inputText, setInputText] = useState("");
@@ -753,7 +752,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   useEffect(() => {
-    setShowCitations(true);
     setShowBadges(true);
     setCitCollapsed(true);
     setInputText("");
@@ -1000,25 +998,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Citations + case info — wrapped together and nudged right so the case-info icon lines up with the input text
-              above it, while both buttons keep their full, comfortable hover padding (not trimmed on one side). */}
+          {/* Case info — nudged right so its icon lines up with the input text above it, while the
+              button keeps its full, comfortable hover padding (not trimmed on one side). */}
           <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0" style={{ marginInlineEnd: "-8px" }}>
-            {/* Citations toggle — left of case info */}
-            <button
-              onClick={() => setShowCitations((v) => !v)}
-              className="size-6 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-              style={{
-                backgroundColor: showCitations ? c.primaryLight : "transparent",
-                border: `1px solid ${showCitations ? c.primary : c.border}`,
-                color: c.iconGray,
-              }}
-              title={showCitations ? "ציטוטים מופעלים" : "ציטוטים מכובים"}
-              onMouseEnter={e => { if (!showCitations) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = showCitations ? c.primaryLight : "transparent"; }}
-            >
-              <Quote size={16} strokeWidth={2} />
-            </button>
-
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
@@ -1043,7 +1025,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   function renderFirstAnswer() {
-    const showNum = showCitations && showBadges;
+    const showNum = showBadges;
     return (
       <>
         <p className="mb-3">
@@ -2557,13 +2539,13 @@ export default function MishpatPage() {
             <div className="w-full max-w-[768px] flex flex-col items-center justify-end gap-0.5" style={{ paddingBottom: "20px" }}>
               <p
                 className="text-[14px] text-center"
-                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", lineHeight: 1.3 }}
               >
                 תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
               </p>
               <p
                 className="text-[14px] text-center"
-                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}
+                style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", lineHeight: 1.3 }}
               >
                 הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.
               </p>
