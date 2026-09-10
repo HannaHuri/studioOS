@@ -151,20 +151,25 @@ export function ProofModal({
             () => onKinds({ ...kinds, lang: !kinds.lang }))}
           {check(kinds.content, "הגהת תוכן", "השוואת הטענות שבטיוטה למסמכי התיק. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
             () => onKinds({ ...kinds, content: !kinds.content }))}
-        </div>
 
-        {/* What the content check is measured against. No new scope control — this reports
-            the selection already made in the documents panel, and sends you there to change it. */}
-        {kinds.content && (
-          <div className="mx-6 mb-1 flex items-center gap-1.5 text-[12.5px] text-right" style={{ color: noDocs ? RED : subCol }}>
-            {noDocs
-              ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק</>
-              : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק</>}
-            <button onClick={onOpenDocs} className="hover:underline" style={{ color: c.primary }}>
-              {noDocs ? "לבחירת מסמכים" : "לשינוי הבחירה"}
-            </button>
-          </div>
-        )}
+          {/* What the content check is measured against. No new scope control — this reports
+              the selection already made in the documents panel, and sends you there to change it.
+              Indented to הגהת תוכן's own text column (the checkbox and its gap), so it reads as
+              belonging to that check and not to the dialog as a whole. */}
+          {kinds.content && (
+            <div
+              className="-mt-1 mb-1 flex items-center gap-1.5 text-[12.5px] text-right"
+              style={{ color: noDocs ? RED : subCol, paddingInlineStart: "34px" }}
+            >
+              {noDocs
+                ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק</>
+                : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק</>}
+              <button onClick={onOpenDocs} className="hover:underline" style={{ color: c.primary }}>
+                {noDocs ? "לבחירת מסמכים" : "לשינוי הבחירה"}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-3 justify-end px-6 py-5">
           <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
