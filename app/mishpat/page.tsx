@@ -7,11 +7,11 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Brain, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
-import { Badge, DeepModeIcon, UseExampleIcon } from "./icons";
+import { Badge, UseExampleIcon } from "./icons";
 import {
   ProofModal, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   proofFileUrl, proofDownloadName, proofFileNote,
@@ -96,7 +96,7 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: RunStepIcon }> = {
-  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: DeepModeIcon },
+  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
@@ -558,7 +558,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
               href={proofFileUrl(proof.kinds)}
               download={proofDownloadName(proof.fileName)}
               title={proofFileNote(proof.kinds)}
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-md transition-colors hover:underline"
+              className="flex items-center h-8 rounded-md transition-colors hover:underline"
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
               dir="rtl"
             >
