@@ -13,7 +13,7 @@ import {
 import { c, dk, RED } from "./theme";
 import { BrainIcon, UseExampleIcon } from "./icons";
 import {
-  DraftCard, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  ProofModal, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
@@ -657,6 +657,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── Draft proofreading ──
   const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
   const [kinds, setKinds] = useState<ProofKinds>({ lang: true, content: true });
+  const [proofOpen, setProofOpen] = useState(false); // the setup dialog
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a proofread is the thing running
   const fileRef = useRef<HTMLInputElement>(null);
   // The tracker walks whichever list belongs to the run in progress.
@@ -758,6 +759,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setMessages([]);          // start fresh — empty state
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
+    setProofOpen(false);
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -797,6 +799,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       { q: `${proofKindLabel(run.kinds)} — ${run.fileName}`, isFirst: prev.length === 0, proof: run },
     ]);
     setDraft(null);
+    setProofOpen(false);
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
   }
@@ -890,21 +893,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           </div>
         </div>
       )}
-      {/* An uploaded draft waiting to be proofread — the card carries the two checks and the run button */}
-      {draft && (
-        <DraftCard
-          isDark={isDark}
-          fileName={draft.name}
-          fileSize={draft.size}
-          kinds={kinds}
-          onKinds={setKinds}
-          docCount={selectedDocCount}
-          onOpenDocs={onOpenDocs}
-          onRemove={() => setDraft(null)}
-          onRun={handleRunProof}
-          running={agentRunning}
-        />
-      )}
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -978,17 +966,23 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) setDraft({ name: f.name, size: f.size });
+              if (f) { setDraft({ name: f.name, size: f.size }); setProofOpen(true); }
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
+          {/* With a draft already picked (the user stepped out to change the document selection),
+              this button goes back to the dialog instead of asking for the file again. */}
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => (draft ? setProofOpen(true) : fileRef.current?.click())}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{ backgroundColor: "transparent", border: "none", color: c.iconGray }}
-            title="העלאת טיוטה להגהה"
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            style={{
+              backgroundColor: draft ? c.primaryLight : "transparent",
+              border: "none",
+              color: draft ? c.primary : c.iconGray,
+            }}
+            title={draft ? "המשך להגהה" : "העלאת טיוטה להגהה"}
+            onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = draft ? c.primaryLight : "transparent"; }}
           >
             <FileUp size={15} />
           </button>
@@ -1132,6 +1126,24 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     );
   }
 
+  // ── The proofreading setup dialog ───────────────────────────────────────
+  function renderProofModal() {
+    if (!draft || !proofOpen) return null;
+    return (
+      <ProofModal
+        isDark={isDark}
+        fileName={draft.name}
+        fileSize={draft.size}
+        kinds={kinds}
+        onKinds={setKinds}
+        docCount={selectedDocCount}
+        onOpenDocs={() => { setProofOpen(false); onOpenDocs(); }}
+        onClose={() => { setProofOpen(false); setDraft(null); }}
+        onRun={handleRunProof}
+      />
+    );
+  }
+
   // ── Response-mode dropdown (portal-like, fixed position) ────────────────
   function renderModeDropdown() {
     if (!modeOpen || !modePos) return null;
@@ -1221,6 +1233,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         </div>
         {renderScopeDropdown()}
         {renderModeDropdown()}
+        {renderProofModal()}
       </>
     );
   }
@@ -1277,6 +1290,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       </div>
       {renderScopeDropdown()}
       {renderModeDropdown()}
+      {renderProofModal()}
     </>
   );
 }

@@ -91,10 +91,12 @@ function SourceChip({ label, isDark }: { label: string; isDark: boolean }) {
     </span>
   );
 }
-
-// ── The upload card, above the composer's text field ───────────────────────
-export function DraftCard({
-  isDark, fileName, fileSize, kinds, onKinds, docCount, onOpenDocs, onRemove, onRun, running,
+// ── The dialog that opens once a draft has been picked ─────────────────────
+// A dialog rather than a strip under the composer, because in this product configuring
+// a task is something you do in a window: it is a task being set up, not an attachment
+// riding along with the next message.
+export function ProofModal({
+  isDark, fileName, fileSize, kinds, onKinds, docCount, onOpenDocs, onClose, onRun,
 }: {
   isDark: boolean;
   fileName: string;
@@ -102,71 +104,89 @@ export function DraftCard({
   kinds: ProofKinds;
   onKinds: (k: ProofKinds) => void;
   docCount: number;
+  // Closes the dialog and opens the documents panel, keeping the draft — changing the
+  // selection is a real step here, and it happens in the panel that already owns it.
   onOpenDocs: () => void;
-  onRemove: () => void;
+  onClose: () => void;
   onRun: () => void;
-  running: boolean;
 }) {
   // הגהת תוכן has nothing to compare against with no documents selected, so the run
   // is blocked rather than quietly returning "לא נמצאו סתירות".
   const noDocs = kinds.content && docCount === 0;
-  const canRun = (kinds.lang || kinds.content) && !noDocs && !running;
-  const grayCol = isDark ? dk.textMuted : c.iconGray;
+  const canRun = (kinds.lang || kinds.content) && !noDocs;
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textGray;
+  const line = isDark ? dk.border : c.inputBorder;
+
+  const check = (on: boolean, title: string, desc: string, toggle: () => void) => (
+    <button onClick={toggle} className="w-full flex items-start gap-2.5 text-right rounded px-2 py-2 transition-colors" style={{ backgroundColor: "transparent" }}
+      onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
+      onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      <span className="mt-0.5"><Tick checked={on} /></span>
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-[14px]" style={{ color: textCol }}>{title}</span>
+        <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
+      </span>
+    </button>
+  );
 
   return (
-    <div
-      className="rounded-lg border flex flex-col gap-2 px-3 py-2.5"
-      style={{ borderColor: isDark ? dk.border : c.inputBorder, backgroundColor: isDark ? dk.surface : c.hoverBg, fontFamily: FONT }}
-      dir="rtl"
-    >
-      {/* the uploaded file — its presence is the "הועלה בהצלחה" indication */}
-      <div className="flex items-center gap-2 min-w-0">
-        <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
-        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text }}>
-          {fileName}
-        </span>
-        <span className="text-[12px] flex-shrink-0" style={{ color: grayCol }}>{formatSize(fileSize)}</span>
-        <button onClick={onRemove} className="size-6 flex items-center justify-center rounded flex-shrink-0 transition-opacity opacity-60 hover:opacity-100" style={{ color: grayCol }} title="הסרת המסמך">
-          <X size={14} />
-        </button>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col rounded-lg shadow-2xl"
+        style={{ width: "min(520px, 92vw)", backgroundColor: surface, fontFamily: FONT }}
+      >
+        {/* header */}
+        <div className="flex items-start px-6 pt-5 pb-3">
+          <div className="flex-1 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>הגהת טיוטה</div>
+          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* the uploaded file — its presence here is the "הועלה בהצלחה" indication */}
+        <div className="mx-6 mb-4 flex items-center gap-2 min-w-0 rounded px-3 py-2.5" style={{ border: `1px solid ${line}` }}>
+          <FileText size={16} style={{ color: c.primary, flexShrink: 0 }} />
+          <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[14px]" style={{ color: textCol }}>{fileName}</span>
+          <span className="text-[12.5px] flex-shrink-0" style={{ color: subCol }}>{formatSize(fileSize)}</span>
+        </div>
+
+        <div className="px-6 text-[13px]" style={{ color: subCol }}>בחרו את סוג ההגהה</div>
+        <div className="px-4 pt-1 pb-2 flex flex-col">
+          {check(kinds.lang, "הגהה לשונית", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
+            () => onKinds({ ...kinds, lang: !kinds.lang }))}
+          {check(kinds.content, "הגהת תוכן", "השוואת הטענות שבטיוטה למסמכי התיק. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
+            () => onKinds({ ...kinds, content: !kinds.content }))}
+        </div>
+
+        {/* What the content check is measured against. No new scope control — this reports
+            the selection already made in the documents panel, and sends you there to change it. */}
+        {kinds.content && (
+          <button onClick={onOpenDocs} className="mx-6 mb-1 flex items-center gap-1.5 text-[12.5px] text-right" style={{ color: noDocs ? RED : subCol }}>
+            {noDocs
+              ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק — לבחירת מסמכים</>
+              : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק — לשינוי הבחירה</>}
+          </button>
+        )}
+
+        <div className="flex gap-3 justify-end px-6 py-5">
+          <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
+            ביטול
+          </button>
+          <button
+            onClick={onRun}
+            disabled={!canRun}
+            className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity"
+            style={{ backgroundColor: canRun ? c.primary : (isDark ? dk.border : c.border), cursor: canRun ? "pointer" : "default", opacity: canRun ? 1 : 0.7 }}
+          >
+            בצע הגהה
+          </button>
+        </div>
       </div>
-
-      <div className="flex items-center gap-4 flex-wrap">
-        <button onClick={() => onKinds({ ...kinds, lang: !kinds.lang })} className="flex items-center gap-1.5 text-[13px]" style={{ color: isDark ? dk.text : c.text }}>
-          <Tick checked={kinds.lang} />
-          הגהה לשונית
-        </button>
-        <button onClick={() => onKinds({ ...kinds, content: !kinds.content })} className="flex items-center gap-1.5 text-[13px]" style={{ color: isDark ? dk.text : c.text }}>
-          <Tick checked={kinds.content} />
-          הגהת תוכן
-        </button>
-
-        <div className="flex-1" />
-
-        <button
-          onClick={onRun}
-          disabled={!canRun}
-          className="h-7 px-3 rounded text-[13px] flex-shrink-0 transition-opacity"
-          style={{
-            backgroundColor: canRun ? c.primary : (isDark ? dk.border : c.border),
-            color: "white",
-            cursor: canRun ? "pointer" : "default",
-            opacity: canRun ? 1 : 0.7,
-          }}
-        >
-          בצע הגהה
-        </button>
-      </div>
-
-      {/* What the content check is measured against. No new scope control — this only
-          reports the selection already made in the documents panel, and opens it. */}
-      {kinds.content && (
-        <button onClick={onOpenDocs} className="flex items-center gap-1.5 text-[12px] text-right" style={{ color: noDocs ? RED : grayCol }}>
-          {noDocs
-            ? <><CircleAlert size={12} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק — יש לבחור מסמכים כדי לבדוק את התוכן</>
-            : <><Folder size={12} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק</>}
-        </button>
-      )}
     </div>
   );
 }
