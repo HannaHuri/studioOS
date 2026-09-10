@@ -1000,7 +1000,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {(() => { const ModeIcon = RESPONSE_MODE_CONFIG[responseMode].Icon; return <ModeIcon size={14} style={{ flexShrink: 0, transform: mirrorModeIcon(responseMode) }} />; })()}
             <span>{RESPONSE_MODE_CONFIG[responseMode].label}</span>
             <ChevronDown
               size={11}
