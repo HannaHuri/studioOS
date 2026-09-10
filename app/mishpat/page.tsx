@@ -7,11 +7,11 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Download, Folder, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
-import { Badge, BrainIcon, UseExampleIcon } from "./icons";
+import { Badge, DeepModeIcon, UseExampleIcon } from "./icons";
 import {
   ProofModal, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   proofFileUrl, proofDownloadName, proofFileNote,
@@ -96,7 +96,7 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: RunStepIcon }> = {
-  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: BrainIcon },
+  agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: DeepModeIcon },
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
@@ -562,7 +562,6 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
               dir="rtl"
             >
-              <Download size={17} />
               הורדת קובץ ההגהה
             </a>
           </>

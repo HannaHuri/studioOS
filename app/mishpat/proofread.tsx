@@ -6,8 +6,8 @@
 // comments. The demo files in /public/proofread are real .docx — the tracked changes
 // and comments open in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { CircleAlert, FileCheck2, FileText, Folder, MessageSquareQuote, Send, SpellCheck, Terminal, X } from "lucide-react";
-import type { ComponentType, CSSProperties } from "react";
+import { ChevronDown, CircleAlert, FileCheck2, FileText, Folder, Send, SpellCheck, Terminal, X } from "lucide-react";
+import { useState, type ComponentType, type CSSProperties } from "react";
 import { Badge } from "./icons";
 import { c, dk, RED, FONT } from "./theme";
 
@@ -195,31 +195,32 @@ export const proofFileNote = (k: ProofKinds) =>
 // The download lives in the actions row under the answer, not here — it is one of the
 // things you can do with an answer, like copying it.
 export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run: ProofRun; showBadges: boolean }) {
+  const [langOpen, setLangOpen] = useState(false);
   const grayCol = isDark ? dk.textMuted : c.iconGray;
   const nLang = run.kinds.lang ? PROOF_LANG_FIXES.length : 0;
   const nContent = run.kinds.content ? PROOF_CONTENT_NOTES.length : 0;
   const counts = [nLang && `${nLang} תיקוני לשון`, nContent && `${nContent} הערות תוכן`].filter(Boolean).join(" ו־");
 
-  const heading = (Icon: RunStepIcon, text: string) => (
-    <div className="flex items-center gap-1.5 text-[14px]" style={{ fontWeight: 600 }}>
-      <Icon size={15} style={{ color: grayCol }} />
-      {text}
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-3" dir="rtl">
       <p>
         עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span> ומצאתי {counts}
-        {run.kinds.content ? `, בהשוואה ל־${run.docCount} המסמכים שנבחרו בתיק` : ""}. המסמך המקורי נשמר ללא שינוי.
+        {run.kinds.content ? `, בהשוואה ל־${run.docCount} המסמכים שנבחרו בתיק` : ""}.
       </p>
 
+      {/* The language fixes are folded away: they are mechanical, and the place to actually act
+          on them is the tracked changes in the file. The content notes, which need judgement,
+          stay open. */}
       {run.kinds.lang && (
         <div className="flex flex-col gap-1.5">
-          {heading(SpellCheck, "הגהה לשונית")}
+          <button onClick={() => setLangOpen((v) => !v)} className="flex items-center gap-1 text-[14px] text-right" style={{ fontWeight: 600 }}>
+            הגהה לשונית
+            <span style={{ fontWeight: 400, color: grayCol }}>· {PROOF_LANG_FIXES.length} תיקונים</span>
+            <ChevronDown size={14} style={{ color: grayCol, transition: "transform 0.15s", transform: langOpen ? "rotate(180deg)" : "none" }} />
+          </button>
           {/* The old wording sits in grey with an arrow to the new one. It used to be struck
               through, which put a line across a quarter of the answer. */}
-          {PROOF_LANG_FIXES.map((f, i) => (
+          {langOpen && PROOF_LANG_FIXES.map((f, i) => (
             <div key={i} className="text-[14px] flex items-baseline gap-1.5 flex-wrap">
               <span style={{ color: grayCol }}>{f.before}</span>
               <span style={{ color: grayCol }}>←</span>
@@ -232,7 +233,7 @@ export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run:
 
       {run.kinds.content && (
         <div className="flex flex-col gap-1.5">
-          {heading(MessageSquareQuote, "הגהת תוכן")}
+          <div className="text-[14px]" style={{ fontWeight: 600 }}>הגהת תוכן</div>
           {/* A content note IS a citation — same numbered badge every other answer uses, with
               the document it came from named on hover. */}
           {PROOF_CONTENT_NOTES.map((n, i) => (
