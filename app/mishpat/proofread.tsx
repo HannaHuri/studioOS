@@ -45,7 +45,7 @@ export const PROOF_CONTENT_NOTES: { text: string; source: string }[] = [
 export function proofSteps(k: ProofKinds): RunStep[] {
   return [
     { Icon: FileText, text: "קורא את הטיוטה" },
-    ...(k.lang ? [{ Icon: SpellCheck, text: "בודק לשון, ניסוח ופיסוק" }] : []),
+    ...(k.lang ? [{ Icon: SpellCheck, text: "בודק כתיב, ניסוח ופיסוק" }] : []),
     ...(k.content ? [{ Icon: Folder, text: "משווה את הטענות מול מסמכי התיק" }] : []),
     { Icon: Terminal, text: "מסמן את התיקונים וההערות במסמך" },
     { Icon: Send, text: "מכין את הקובץ להורדה" },
