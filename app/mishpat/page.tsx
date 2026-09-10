@@ -7,13 +7,14 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Download, Folder, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
-import { BrainIcon, UseExampleIcon } from "./icons";
+import { Badge, BrainIcon, UseExampleIcon } from "./icons";
 import {
   ProofModal, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  proofFileUrl, proofDownloadName, proofFileNote,
   type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
@@ -57,18 +58,6 @@ function CheckboxBlue({ checked, onToggle }: { checked: boolean; onToggle: () =>
         </svg>
       )}
     </div>
-  );
-}
-
-// ── Citation badge ─────────────────────────────────────────────────────────
-function Badge({ num }: { num: number }) {
-  return (
-    <span
-      className="inline-flex items-center justify-center rounded-full size-5 text-[12px] leading-none flex-shrink-0 mx-0.5 cursor-pointer hover:opacity-80 transition-opacity"
-      style={{ backgroundColor: c.badgeBg, color: c.text, fontFamily: "Figtree, sans-serif" }}
-    >
-      {num}
-    </span>
   );
 }
 
@@ -511,8 +500,13 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Message action bar ─────────────────────────────────────────────────────
-function MessageActions({ isDark, showBadges, onToggleBadges }: {
+function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, logOpen, onToggleLog }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
+  // Set on a proofreading answer — the finished file is one of the things you can do with
+  // this answer, so it sits with copy and retry rather than inside the answer.
+  proof?: ProofRun;
+  // Every run keeps its step list, so it can be reopened long after it finished.
+  hasLog?: boolean; logOpen?: boolean; onToggleLog?: () => void;
 }) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
@@ -550,6 +544,29 @@ function MessageActions({ isDark, showBadges, onToggleBadges }: {
           {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
         </VibeBtn>
         <SourcesBtn isDark={isDark} />
+        {hasLog && (
+          <VibeBtn title={logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה"} onClick={onToggleLog} active={logOpen}>
+            <ListSortDescendingIcon size={18} />
+          </VibeBtn>
+        )}
+
+        {/* the finished file, at the far end of the row — where the answer's text begins */}
+        {proof && (
+          <>
+            <div className="flex-1" />
+            <a
+              href={proofFileUrl(proof.kinds)}
+              download={proofDownloadName(proof.fileName)}
+              title={proofFileNote(proof.kinds)}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-md transition-colors hover:underline"
+              style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
+              dir="rtl"
+            >
+              <Download size={17} />
+              הורדת קובץ ההגהה
+            </a>
+          </>
+        )}
       </div>
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </>
@@ -598,7 +615,9 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 }
 
 // ── Chat area ──────────────────────────────────────────────────────────────
-type Message = { q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun };
+// logSteps is what the run walked through — kept on the message so the log can be
+// reopened after the run is long over.
+type Message = { q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[] };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
@@ -661,6 +680,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [proofOpen, setProofOpen] = useState(false); // the setup dialog
   const [proofReady, setProofReady] = useState(false); // dialog confirmed — the next send runs it
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a proofread is the thing running
+  const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
   // The tracker walks whichever list belongs to the run in progress.
   const activeSteps = proofRun ? proofSteps(proofRun.kinds) : AGENT_STEPS;
@@ -759,6 +779,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setCitCollapsed(true);
     setInputText("");
     setMessages([]);          // start fresh — empty state
+    setOpenLog(null);
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
     setProofOpen(false);
@@ -781,7 +802,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!inputText.trim()) return;
     setMessages((prev) => [
       ...prev,
-      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode },
+      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined },
     ]);
     setInputText("");
     if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
@@ -808,7 +829,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   function handleRunProof(question: string) {
     if (!draft) return;
     const run: ProofRun = { fileName: draft.name, kinds: { ...kinds }, docCount: selectedDocCount };
-    setMessages((prev) => [...prev, { q: question, isFirst: prev.length === 0, proof: run }]);
+    setMessages((prev) => [...prev, { q: question, isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds) }]);
     setInputText("");
     setDraft(null);
     setProofReady(false);
@@ -1156,6 +1177,23 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     );
   }
 
+  // The same rows the tracker showed while the run was going, all finished — reopened from
+  // the actions row so the record of what was done outlives the run itself.
+  function renderStepLog(steps: RunStep[]) {
+    return (
+      <div className="flex flex-col gap-2 mt-1 pt-3" dir="rtl" style={{ borderTop: `1px solid ${isDark ? dk.border : c.inputBorder}` }}>
+        {steps.map((step, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <Check size={13} strokeWidth={2.2} style={{ color: "#00854d", flexShrink: 0 }} />
+            <span className="text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+              {step.text}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   // ── The proofreading setup dialog ───────────────────────────────────────
   function renderProofModal() {
     if (!draft || !proofOpen) return null;
@@ -1299,12 +1337,24 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   <div>
                     <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
                       {showingAgentProgress ? renderAgentProgress()
-                        : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
+                        : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} showBadges={showBadges} />
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
                         : msg.isFirst ? renderFirstAnswer()
                         : <p>מעבד את שאלתך...</p>}
                     </div>
-                    {!showingAgentProgress && <MessageActions isDark={isDark} showBadges={showBadges} onToggleBadges={() => setShowBadges((v) => !v)} />}
+                    {!showingAgentProgress && (
+                      <MessageActions
+                        isDark={isDark}
+                        showBadges={showBadges}
+                        onToggleBadges={() => setShowBadges((v) => !v)}
+                        proof={msg.proof}
+                        hasLog={!!msg.logSteps}
+                        logOpen={openLog === i}
+                        onToggleLog={() => setOpenLog((n) => (n === i ? null : i))}
+                      />
+                    )}
+                    {/* The run's own log, reopened after the fact from the actions row above */}
+                    {!showingAgentProgress && openLog === i && msg.logSteps && renderStepLog(msg.logSteps)}
                   </div>
                 </div>
               );

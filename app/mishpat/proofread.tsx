@@ -6,8 +6,9 @@
 // comments. The demo files in /public/proofread are real .docx — the tracked changes
 // and comments open in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { CircleAlert, Download, FileCheck2, FileText, Folder, MessageSquareQuote, Send, SpellCheck, Terminal, X } from "lucide-react";
+import { CircleAlert, FileCheck2, FileText, Folder, MessageSquareQuote, Send, SpellCheck, Terminal, X } from "lucide-react";
 import type { ComponentType, CSSProperties } from "react";
+import { Badge } from "./icons";
 import { c, dk, RED, FONT } from "./theme";
 
 // One row of the progress tracker. Loose enough to hold the hand-drawn icons the agent run uses.
@@ -78,19 +79,6 @@ function Tick({ checked }: { checked: boolean }) {
   );
 }
 
-// Same look as the citation badge in the answer — a content note IS a citation,
-// it just points at the document the contradiction was found in.
-function SourceChip({ label, isDark }: { label: string; isDark: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 h-5 text-[12px] leading-none align-middle"
-      style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.text, fontFamily: FONT }}
-    >
-      <FileText size={11} style={{ flexShrink: 0 }} />
-      {label}
-    </span>
-  );
-}
 // ── The dialog that opens once a draft has been picked ─────────────────────
 // A dialog rather than a strip under the composer, because in this product configuring
 // a task is something you do in a window: it is a task being set up, not an attachment
@@ -196,29 +184,44 @@ export function ProofModal({
   );
 }
 
+// What the downloaded file contains — the tooltip on the download link, so the answer
+// doesn't spend a line on it.
+export const proofFileNote = (k: ProofKinds) =>
+  k.lang && k.content ? "תיקוני הלשון מסומנים בקובץ כעקוב אחר שינויים, והערות התוכן כהערות בצד המסמך. המסמך המקורי נשמר ללא שינוי."
+    : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
+    : "ההערות מופיעות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.";
+
 // ── The answer in the conversation ─────────────────────────────────────────
-export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun }) {
+// The download lives in the actions row under the answer, not here — it is one of the
+// things you can do with an answer, like copying it.
+export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run: ProofRun; showBadges: boolean }) {
   const grayCol = isDark ? dk.textMuted : c.iconGray;
   const nLang = run.kinds.lang ? PROOF_LANG_FIXES.length : 0;
   const nContent = run.kinds.content ? PROOF_CONTENT_NOTES.length : 0;
   const counts = [nLang && `${nLang} תיקוני לשון`, nContent && `${nContent} הערות תוכן`].filter(Boolean).join(" ו־");
 
+  const heading = (Icon: RunStepIcon, text: string) => (
+    <div className="flex items-center gap-1.5 text-[14px]" style={{ fontWeight: 600 }}>
+      <Icon size={15} style={{ color: grayCol }} />
+      {text}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-3" dir="rtl">
       <p>
         עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span> ומצאתי {counts}
-        {run.kinds.content ? `, בהשוואה ל-${run.docCount} המסמכים שנבחרו בתיק` : ""}. המסמך המקורי נשמר ללא שינוי.
+        {run.kinds.content ? `, בהשוואה ל־${run.docCount} המסמכים שנבחרו בתיק` : ""}. המסמך המקורי נשמר ללא שינוי.
       </p>
 
       {run.kinds.lang && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-[14px]" style={{ fontWeight: 600 }}>
-            <SpellCheck size={15} style={{ color: c.primary }} />
-            הגהה לשונית
-          </div>
+          {heading(SpellCheck, "הגהה לשונית")}
+          {/* The old wording sits in grey with an arrow to the new one. It used to be struck
+              through, which put a line across a quarter of the answer. */}
           {PROOF_LANG_FIXES.map((f, i) => (
             <div key={i} className="text-[14px] flex items-baseline gap-1.5 flex-wrap">
-              <span style={{ color: grayCol, textDecoration: "line-through" }}>{f.before}</span>
+              <span style={{ color: grayCol }}>{f.before}</span>
               <span style={{ color: grayCol }}>←</span>
               <span>{f.after}</span>
               <span className="text-[12.5px]" style={{ color: grayCol }}>({f.note})</span>
@@ -229,35 +232,16 @@ export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun })
 
       {run.kinds.content && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-[14px]" style={{ fontWeight: 600 }}>
-            <MessageSquareQuote size={15} style={{ color: c.primary }} />
-            הגהת תוכן
-          </div>
+          {heading(MessageSquareQuote, "הגהת תוכן")}
+          {/* A content note IS a citation — same numbered badge every other answer uses, with
+              the document it came from named on hover. */}
           {PROOF_CONTENT_NOTES.map((n, i) => (
             <div key={i} className="text-[14px] leading-relaxed">
-              {n.text} <SourceChip label={n.source} isDark={isDark} />
+              {n.text} {showBadges && <Badge num={i + 1} title={n.source} />}
             </div>
           ))}
         </div>
       )}
-
-      <p className="text-[13.5px]" style={{ color: grayCol }}>
-        {run.kinds.lang && run.kinds.content ? "בקובץ: תיקוני הלשון מסומנים כעקוב אחר שינויים, והערות התוכן כהערות בצד המסמך."
-          : run.kinds.lang ? "בקובץ: התיקונים מסומנים כעקוב אחר שינויים, כדי שניתן יהיה לאשר או לדחות כל אחד מהם."
-          : "בקובץ: ההערות מופיעות בצד המסמך, ללא שינוי בתוכן עצמו."}
-      </p>
-
-      <div>
-        <a
-          href={proofFileUrl(run.kinds)}
-          download={proofDownloadName(run.fileName)}
-          className="inline-flex items-center gap-2 h-8 px-3 rounded border text-[13px] transition-colors"
-          style={{ borderColor: c.primary, color: c.primary, fontFamily: FONT }}
-        >
-          <Download size={15} />
-          הורדת הקובץ המוגה
-        </a>
-      </div>
     </div>
   );
 }
