@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Brain, Folder, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Brain, Folder, ListChecks, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -546,7 +546,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
         <SourcesBtn isDark={isDark} />
         {hasLog && (
           <VibeBtn title={logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה"} onClick={onToggleLog} active={logOpen}>
-            <ListSortDescendingIcon size={18} />
+            <ListChecks size={18} />
           </VibeBtn>
         )}
 
