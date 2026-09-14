@@ -5,7 +5,7 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  FileUp, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
+  FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -1036,7 +1036,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = draft ? c.primaryLight : "transparent"; }}
           >
-            <FileUp size={15} />
+            <FilePlus size={15} />
           </button>
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
