@@ -704,31 +704,40 @@ function ProcessChips({ ids, isDark }: { ids: number[]; isDark: boolean }) {
 // transform sat at identity and never reached rotate(180deg) — on the svg AND on a wrapping span — while removing the
 // transition applied it instantly; something inside this row re-renders often enough to keep restarting the
 // interpolation. A caret that silently never turns is worse than one that turns without a tween.
-function CaretTrigger({ children, open, isDark, onClick, title }: { children: React.ReactNode; open: boolean; isDark: boolean; onClick: (e: ReactMouseEvent) => void; title: string }) {
+// `mark` swaps the caret for another 9px-wide glyph in the SAME slot — used by תהליך to show a "+" on the rows that
+// carry extra processes. Same width, so whatever the trigger holds stays at exactly the same x on every row.
+function CaretTrigger({ children, open, isDark, onClick, title, mark }: { children: React.ReactNode; open: boolean; isDark: boolean; onClick: (e: ReactMouseEvent) => void; title: string; mark?: React.ReactNode }) {
   return (
     <button onClick={onClick} title={title} className="flex items-center gap-[3px] flex-shrink-0 hover:opacity-70 transition-opacity">
       {children}
-      <svg width="9" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
-        <path d="M1 1.2 5 4.8 9 1.2" stroke={isDark ? dk.textMuted : c.textLight} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      {mark ?? (
+        <svg width="9" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : undefined }}>
+          <path d="M1 1.2 5 4.8 9 1.2" stroke={isDark ? dk.textMuted : c.textLight} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </button>
   );
 }
 
-// The extra processes beyond the first, as a blue "+N" that sits OUTSIDE the chip — bare text, no button styling.
-// Keeping it out of the chip is what makes it unmistakable: inside, "2 +1" reads as one crowded label and a
-// comma-joined "2,3" reads as the single number twenty-three. Outside, the chip is still one process and the +N is
-// plainly something else. It stays clickable (same panel — the panel lists every process by name and count), so the
-// blue is honest rather than decorative.
-function ProcessOverflowLink({ onClick, title, isDark }: { onClick: (e: ReactMouseEvent) => void; title: string; isDark: boolean }) {
-  // A bare "+", not "+2": beside a chip that already shows a process NUMBER, a second digit reads as another process
-  // number rather than as a count. Dropping it loses "how many", which now lives in the tooltip and in the folder rows
-  // the panel opens — and buys back 5px of a column that was struggling to centre.
-  // (Kept dir="ltr" as a guard: the moment anyone puts a digit back here, RTL reorders "+2" into "2+".)
+// The mark for "this document sits in more processes than the one shown" — a bare "+" that takes the CARET'S slot
+// inside the trigger rather than hanging outside it.
+// Why the slot and not beside the chip: the column is 32px and the cluster is caret(9) + gap(3) + digit(7). There is
+// no third place to stand. Hung outside, the "+" cleared the cell entirely (it landed at x=822 against a cell
+// starting at 826) and came to rest touching the document NAME two columns over, 14px from its own number with the
+// caret in between — so it read as a mark on the name, not on the process. Taking the caret's slot puts it 3px from
+// the digit, inside the cell, and costs nothing: the slot is a fixed 9px, so the number does not move by a pixel
+// between a row with extra processes and one without.
+// What it costs: those rows show no caret. Acceptable — the "+" is the better affordance of the two anyway (it says
+// "there is more here" in a way a pale triangle does not), it opens the very same panel on click, and the caret
+// language still runs down the 📎 נספחים column beside it.
+// A bare "+", not "+2": beside a PROCESS NUMBER a second digit reads as another process number rather than as a
+// count. How many lives in the tooltip and in the panel's folder rows.
+// (dir="ltr" is a guard: the moment anyone puts a digit back here, RTL reorders "+2" into "2+".)
+function ProcessOverflowMark({ isDark }: { isDark: boolean }) {
   return (
-    <button dir="ltr" onClick={onClick} title={title} className="text-[14px] font-semibold leading-none flex-shrink-0 hover:underline" style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Figtree, sans-serif" }}>
+    <span dir="ltr" aria-hidden="true" className="flex items-center justify-center flex-shrink-0 text-[14px] font-semibold leading-none" style={{ width: "9px", color: isDark ? dk.textMuted : c.iconGray, fontFamily: "Figtree, sans-serif" }}>
       +
-    </button>
+    </span>
   );
 }
 
@@ -1422,8 +1431,6 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
   const subCol = isDark ? dk.textMuted : c.textGray;
   const partyName = doc.submitterName ?? (doc.caseId ? PARTY_NAMES[doc.caseId]?.[doc.submitter] : undefined);
   const typeC = TYPE_COLORS[doc.type] ?? { bg: isDark ? dk.input : "#eef1f4", color: isDark ? dk.textMuted : c.textGray };
-  const attNames = doc.attachments ?? [];
-  const attPicked = attNames.some((name) => !!attachmentSel?.has(attKey(doc.id, name)));
   const lit = active || anyOpen || !!relatedOpen || !!flash;
   const restBg = lit ? activeBg : baseBg;
   // Fixed stacking order for the open panels (process → related → attachments) when several are open at once.
@@ -1457,30 +1464,28 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
           {procIds.length > 0 && (lockProcess
             ? <ProcessChips ids={procIds} isDark={isDark} />
             : (
-              // The "+" hangs OFF the chip instead of sitting in a reserved slot beside it. A fixed slot kept every
-              // chip on the same x, but it did that by pushing all of them off the column's centre — and it charged
-              // its width to every row, including the overwhelming majority with a single process. Positioned
-              // absolutely it costs no layout width at all, so the chip is simply centred, always, and rows with an
-              // extra process differ only by a mark hanging beside it. (inset-inline-end:100% puts it just outside
-              // the chip's leading edge — the right, in RTL.)
-              <span className="relative flex items-center justify-center flex-shrink-0">
-                <CaretTrigger open={openKinds.has("process")} isDark={isDark} onClick={toggle("process")} title={`תהליך: ${processLabel(doc.caseId, procIds[0])}`}>
-                  {/* Grey, and light: the number is a quiet label, not a headline. Blue shouted louder than the document names
-                      (and blue here already means "in the conversation"); c.text was still heavier than the summary text
-                      it sits beside. This is the summary's own grey — a step darker than the caret, so the caret stays
-                      subordinate to it. */}
-                  <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }}>{procIds[0]}</span>
-                </CaretTrigger>
-                {procIds.length > 1 && (
-                  <span className="absolute flex items-center" style={{ insetInlineEnd: "100%", marginInlineEnd: "2px", top: 0, bottom: 0 }}>
-                    <ProcessOverflowLink
-                      onClick={toggle("process")}
-                      title={`תהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`}
-                      isDark={isDark}
-                    />
-                  </span>
-                )}
-              </span>
+              // Extra processes replace the caret with a "+" IN THE CARET'S OWN SLOT (see ProcessOverflowMark) rather
+              // than hanging beside the chip: the slot is a fixed 9px either way, so the number sits at the same x on
+              // every row, and the mark lands 3px from its own digit instead of out in the neighbouring column.
+              // The mark is on the digit's TRAILING side — the left, in RTL. On the leading (right) side the RTL eye
+              // reaches the "+" before the digit and fuses the two into "+2", read as one signed number or as "two
+              // more processes". Trailing, the order is "2" then "+": the process first, then a mark saying there is
+              // more. Same reason the mark carries dir="ltr".
+              <CaretTrigger
+                open={openKinds.has("process")}
+                isDark={isDark}
+                onClick={toggle("process")}
+                title={procIds.length > 1
+                  ? `תהליך: ${processLabel(doc.caseId, procIds[0])}\nתהליכים נוספים: ${procIds.slice(1).map((pid) => processLabel(doc.caseId, pid)).join(" · ")}`
+                  : `תהליך: ${processLabel(doc.caseId, procIds[0])}`}
+                mark={procIds.length > 1 ? <ProcessOverflowMark isDark={isDark} /> : undefined}
+              >
+                {/* Grey, and light: the number is a quiet label, not a headline. Blue shouted louder than the document names
+                    (and blue here already means "in the conversation"); c.text was still heavier than the summary text
+                    it sits beside. This is the summary's own grey — a step darker than the caret, so the caret stays
+                    subordinate to it. */}
+                <span className="text-[12px] font-semibold leading-none" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textGray }}>{procIds[0]}</span>
+              </CaretTrigger>
             ))}
         </span>
       );
@@ -1529,11 +1534,13 @@ function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px",
       case "attachments": return (
         <span className="flex justify-center w-full" onClick={(e) => e.stopPropagation()}>
           {(doc.attachments?.length ?? 0) > 0 && (
-            // Same caret as תהליך, because it does the same thing: opens a panel under this row. The paperclip keeps
-            // its blue for `attPicked` — that is a selection state, not an affordance, and it is the only place a
-            // picked נספח shows in the collapsed row.
+            // Same caret as תהליך, because it does the same thing: opens a panel under this row. Always grey, like
+            // every other row icon: the blue it used to take for `attPicked` lit up on every checked document (an
+            // attachment is auto-picked with its doc), so the column read as a scattered blue rash across the table
+            // rather than as a state worth noticing — dev feedback, 2026-09. The picked נספחים are still spelled out
+            // in the panel the caret opens, and the count is in the tooltip.
             <CaretTrigger open={openKinds.has("attachments")} isDark={isDark} onClick={toggle("attachments")} title={`נספחים (${doc.attachments?.length})`}>
-              <Paperclip size={13} style={{ color: attPicked ? c.primary : (isDark ? dk.textMuted : c.iconGray) }} />
+              <Paperclip size={13} style={{ color: isDark ? dk.textMuted : c.iconGray }} />
             </CaretTrigger>
           )}
         </span>
