@@ -1953,9 +1953,19 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     return next;
   });
   const docNumbers = useMemo(() => buildDocNumbers(docs), [docs]);
-  const [openCaseId, setOpenCaseId] = useState<string | null>(null); // accordion — collapsed by default
-  const [openType, setOpenType]     = useState<string | null>(null); // folder accordion (type view)
-  const [openProcess, setOpenProcess] = useState<number | null>(null); // process sub-folder accordion, inside the "בקשות והוראות" type folder
+  // Several cases can be open at once (was a single-id accordion). All collapsed by default.
+  const [openCaseIds, setOpenCaseIds] = useState<Set<string>>(new Set());
+  const anyCaseOpen = openCaseIds.size > 0;
+  const toggleCaseOpen = (id: string) => setOpenCaseIds((prev) => {
+    const next = new Set(prev);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
+  // The folder and thread accordions are now PER CASE. They used to be one id each, which was right
+  // when only one case could be open; with two open, expanding "תצהירים" in one case would have
+  // expanded it in the other as well. Each case keeps its own accordion, one folder at a time.
+  const [openTypeByCase, setOpenTypeByCase] = useState<Record<string, string | null>>({});   // folder accordion (type view)
+  const [openProcByCase, setOpenProcByCase] = useState<Record<string, number | null>>({});   // process sub-folder accordion, inside the "בקשות והוראות" type folder
   const [lens, setLens]             = useState<"all" | "new" | "open">("all"); // status lens
 
   // On (re)open of the panel while a document is already open, reveal it: expand its case and scroll its row into
@@ -1965,7 +1975,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     if (didReveal.current || !openDocId) return;
     const d = docs.find((x) => x.id === openDocId);
     if (!d?.caseId) { didReveal.current = true; return; }
-    if (openCaseId !== d.caseId) { setOpenCaseId(d.caseId); return; } // open its case first, then the next run scrolls
+    const caseId = d.caseId;
+    if (!openCaseIds.has(caseId)) { setOpenCaseIds((prev) => new Set(prev).add(caseId)); return; } // open its case first, then the next run scrolls
     const el = rowRefs.current[openDocId];
     if (el) { el.scrollIntoView({ block: "center" }); didReveal.current = true; }
   });
@@ -2290,7 +2301,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Types with no documents behind them right now → grayed (not hidden) in the סוג filter. Hiding them would leave the
   // user unable to tell "this case has no judgments" from "that option doesn't exist here"; the grouped "לפי סוג" view
   // already lists only the types present, so graying also brings the filter in line with it.
-  const typesAvailable = new Set(docs.filter((d) => (!openCaseId || d.caseId === openCaseId) && matchesActive(d, { ignoreType: true })).map((d) => d.type));
+  const typesAvailable = new Set(docs.filter((d) => (!anyCaseOpen || openCaseIds.has(d.caseId ?? "")) && matchesActive(d, { ignoreType: true })).map((d) => d.type));
   const emptyTypes = new Set(TYPE_OPTIONS.filter((t) => t !== "הכל" && !typesAvailable.has(t)));
   // Is any filter currently narrowing the view? (drives the per-case "N matches" indicator)
   const filterActive =
@@ -2300,27 +2311,39 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   const refineActive = refineCount > 0;
   // Minimal on the case list; everything unfolds once a case is open (or when the user opens/uses a control). An active
   // filter always keeps its control visible, so the list is never narrowed by something the user can't see.
-  const searchExpanded  = !!openCaseId || searchOpen || search.trim() !== "";
-  const filtersExpanded = !!openCaseId || filtersOpen || refineActive;
+  const searchExpanded  = anyCaseOpen || searchOpen || search.trim() !== "";
+  const filtersExpanded = anyCaseOpen || filtersOpen || refineActive;
 
-  // Filtering — scoped to the currently open case
-  const filtered = docs.filter((d) => d.caseId === openCaseId && matchesFilters(d));
-
-  const filteredSorted = [...filtered].sort((a, b) => `${b.iso} ${b.time ?? "00:00"}`.localeCompare(`${a.iso} ${a.time ?? "00:00"}`)); // newest first, same-day ties broken by time
   // "New" = filed after the last visit → always the most-recent contiguous block (demo baseline)
   const LAST_VISIT = "2026-06-01";
   const isNewDoc = (d: CaseDoc) => d.iso > LAST_VISIT;
-  const lensed = filteredSorted.filter((d) => lens === "all" || (lens === "open" && inOpenProcess(d)));
-  const typesInData = Array.from(new Set(lensed.map((d) => d.type)));
-  // Process badge popovers show the whole thread regardless of active filters — grouped from all of this case's documents
-  const processDocsById: Record<number, CaseDoc[]> = {};
-  docs.filter((d) => d.caseId === openCaseId).forEach((d) => {
-    docProcessIds(d).forEach((pid) => { (processDocsById[pid] ??= []).push(d); });
-  });
-  // The thread(s) a row's process trigger opens — the union across all of the document's processes (dedup).
-  const docThread = (d: CaseDoc): CaseDoc[] | undefined => {
-    const ids = docProcessIds(d);
-    return ids.length ? Array.from(new Set(ids.flatMap((pid) => processDocsById[pid] ?? []))) : undefined;
+
+  // Everything the open-case block needs, scoped to ONE case. This used to be five module-level
+  // consts computed against `openCaseId`; with more than one case open at a time they have to be
+  // per-case, or every open case renders the first one's rows. Sorting stays inside the case on
+  // purpose — the case is the unit of organisation, so "newest first" means newest in this case.
+  // Not memoised, matching the rest of this component, and it is a filter over one case's documents.
+  interface CaseView {
+    lensed: CaseDoc[];
+    typesInData: string[];
+    processDocsById: Record<number, CaseDoc[]>;
+    docThread: (d: CaseDoc) => CaseDoc[] | undefined;
+  }
+  const buildCaseView = (caseId: string): CaseView => {
+    const filtered = docs.filter((d) => d.caseId === caseId && matchesFilters(d));
+    const sorted = [...filtered].sort((a, b) => `${b.iso} ${b.time ?? "00:00"}`.localeCompare(`${a.iso} ${a.time ?? "00:00"}`)); // newest first, same-day ties broken by time
+    const lensed = sorted.filter((d) => lens === "all" || (lens === "open" && inOpenProcess(d)));
+    // Process badge popovers show the whole thread regardless of active filters — grouped from all of this case's documents
+    const processDocsById: Record<number, CaseDoc[]> = {};
+    docs.filter((d) => d.caseId === caseId).forEach((d) => {
+      docProcessIds(d).forEach((pid) => { (processDocsById[pid] ??= []).push(d); });
+    });
+    // The thread(s) a row's process trigger opens — the union across all of the document's processes (dedup).
+    const docThread = (d: CaseDoc): CaseDoc[] | undefined => {
+      const ids = docProcessIds(d);
+      return ids.length ? Array.from(new Set(ids.flatMap((pid) => processDocsById[pid] ?? []))) : undefined;
+    };
+    return { lensed, typesInData: Array.from(new Set(lensed.map((d) => d.type))), processDocsById, docThread };
   };
 
   // Size control — binary only (default <-> full-screen). "Table" already has its own direct, independent toggle right next to this one,
@@ -2385,7 +2408,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         כרונולוגי
       </button>
       <button
-        onClick={() => { setGrouping("type"); setOpenType(null); }}
+        onClick={() => { setGrouping("type"); setOpenTypeByCase({}); }} // entering folder view starts every case's folders collapsed
         className="h-full px-2.5 flex items-center text-[13px] whitespace-nowrap transition-colors"
         style={{ backgroundColor: grouping === "type" ? (isDark ? "#22304a" : "#eaf2fd") : "transparent", color: grouping === "type" ? c.primary : (isDark ? dk.textMuted : c.textGray), borderInlineStart: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, fontFamily: "Noto Sans Hebrew, sans-serif" }}
         title="קיבוץ המסמכים לתיקיות לפי סוג"
@@ -2471,14 +2494,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <Search size={15} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ right: "10px", color: c.iconGray }} />
                 <input
                   value={search}
-                  autoFocus={searchOpen && !openCaseId}
+                  autoFocus={searchOpen && !anyCaseOpen}
                   onChange={(e) => setSearch(e.target.value)}
-                  onBlur={() => { if (!openCaseId && search.trim() === "") setSearchOpen(false); }}
+                  onBlur={() => { if (!anyCaseOpen && search.trim() === "") setSearchOpen(false); }}
                   placeholder="חיפוש שם מסמך או תקציר"
                   className="w-full h-8 rounded-md text-[13px] outline-none"
-                  style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: !openCaseId ? "30px" : "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                  style={{ border: `1px solid ${isDark ? dk.border : c.inputBorder}`, backgroundColor: isDark ? dk.input : "white", color: isDark ? dk.text : c.text, paddingRight: "32px", paddingLeft: !anyCaseOpen ? "30px" : "10px", fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 />
-                {!openCaseId && (
+                {!anyCaseOpen && (
                   <button onClick={() => { setSearch(""); setSearchOpen(false); }} title="סגירת החיפוש" className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center hover:opacity-70" style={{ left: "8px", color: c.iconGray }}>
                     <X size={14} />
                   </button>
@@ -2490,7 +2513,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               </button>
             )}
             {/* Case list: the filter toggle + ממתין sit up here on the top row, beside the search (not on a second row) */}
-            {!openCaseId && (
+            {!anyCaseOpen && (
               <>
                 <button
                   onClick={() => setFiltersOpen((v) => !v)}
@@ -2517,20 +2540,20 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           </div>
 
           {/* Row B — only when there are refine dropdowns to show (case list: user opened the filter / a filter is active) or a case is open */}
-          {(filtersExpanded || openCaseId) && (
+          {(filtersExpanded || anyCaseOpen) && (
             <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
               {filtersExpanded && (
                 <>
-                  <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} emptyOptions={emptyTypes} emptyTitle={openCaseId ? "אין מסמכים מסוג זה בתיק" : "אין מסמכים מסוג זה"} />
-                  <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseId ? PARTY_NAMES[openCaseId] : undefined} isDark={isDark} />
+                  <FilterDropdown label="סוג" value={activeType} options={TYPE_OPTIONS} onChange={setActiveType} searchable isDark={isDark} emptyOptions={emptyTypes} emptyTitle={anyCaseOpen ? "אין מסמכים מסוג זה בתיק" : "אין מסמכים מסוג זה"} />
+                  <FilterDropdown label="מגיש" value={activeSubmitter} options={SUBMITTER_OPTIONS} onChange={setActiveSubmitter} subLabels={openCaseIds.size === 1 ? PARTY_NAMES[[...openCaseIds][0]] : undefined} isDark={isDark} />
                   <DateRangeFilter from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} isDark={isDark} />
                 </>
               )}
 
               {/* Inside an open case ממתין joins the filter row (on the case list it lives up on Row A instead), with the
                   chrono / by-type toggle right beside it */}
-              {openCaseId && openProcBtn}
-              {openCaseId && viewToggle}
+              {anyCaseOpen && openProcBtn}
+              {anyCaseOpen && viewToggle}
 
               {filterActive && (
                 <button
@@ -2563,7 +2586,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
        <div ref={listContentRef} className="px-3 pt-1 flex flex-col gap-4" style={{ paddingBottom: "34px", ["--vw" as string]: viewportW ? `${viewportW}px` : "100%" } as React.CSSProperties} dir="rtl">
         {CASES_META.map((cf) => {
           const caseDocs = docs.filter((d) => d.caseId === cf.id);
-          const caseOpen = openCaseId === cf.id;
+          const caseOpen = openCaseIds.has(cf.id);
+          const view = caseOpen ? buildCaseView(cf.id) : null; // this case's own filtered/sorted rows and thread index
           const caseAllOn = caseDocs.length > 0 && caseDocs.every((d) => d.checked);
           const caseSomeOn = !caseAllOn && caseDocs.some((d) => d.checked); // partial selection → indeterminate dash
           const caseUsed = caseDocs.some((d) => d.used);
@@ -2590,7 +2614,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} mixed={caseSomeOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
-                <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => { const closing = caseOpen; setOpenCaseId(closing ? null : cf.id); if (closing) { setSearchOpen(false); setFiltersOpen(false); } }}>
+                <button className="flex flex-col flex-1 text-right min-w-0 gap-0.5" onClick={() => { const closingLast = caseOpen && openCaseIds.size === 1; toggleCaseOpen(cf.id); if (closingLast) { setSearchOpen(false); setFiltersOpen(false); } }}>
                   {/* Row A: title (right) + word count · chevron (left edge) */}
                   <span className="flex items-center justify-between gap-2 w-full min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
@@ -2625,9 +2649,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               </div>
               </div>
 
-              {caseOpen && (
+              {caseOpen && view && (
                 <div className="flex flex-col gap-1.5 pt-1.5">
-        {lensed.length === 0 && (
+        {view.lensed.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
             לא נמצאו מסמכים תואמים
           </div>
@@ -2637,8 +2661,8 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         {grouping === "chrono" && (
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(true)}px` }}>
             {tableHeader}
-            {sortDocs(lensed).map((doc) => (
-              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+            {sortDocs(view.lensed).map((doc) => (
+              <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={view.docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
         )}
@@ -2648,10 +2672,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             were dropped so the layout stays consistent with chrono. Type column is omitted (the folders already group by type). */}
         {grouping === "type" && (
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(false)}px` }}>
-            {lensed.length > 0 && tableHeaderNoType}
-            {typesInData.map((type, ti) => {
-              const typeDocs = lensed.filter((d) => d.type === type);
-              const open = openType === type;
+            {view.lensed.length > 0 && tableHeaderNoType}
+            {view.typesInData.map((type, ti) => {
+              const typeDocs = view.lensed.filter((d) => d.type === type);
+              const open = openTypeByCase[cf.id] === type;
               const allOn = typeDocs.length > 0 && typeDocs.every((d) => d.checked);
               const someOn = !allOn && typeDocs.some((d) => d.checked);
               const typeWords = formatWords(typeDocs.reduce((sum, d) => sum + parseWords(d.words), 0));
@@ -2660,7 +2684,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                 <div key={type} className="flex flex-col" style={ti > 0 ? { borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` } : undefined}>
                   <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
                     <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={allOn} mixed={someOn} onToggle={() => toggleTypeAll(type, !allOn)} /></span>
-                    <button onClick={() => setOpenType((o) => (o === type ? null : type))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
+                    <button onClick={() => setOpenTypeByCase((p) => ({ ...p, [cf.id]: p[cf.id] === type ? null : type }))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={open ? "כיווץ" : "פתיחה"}>
                       <span className="text-[14px] font-semibold truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{type} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({typeDocs.length})</span></span>
                       {typeUsed && <span className="size-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.primary }} title="כולל מסמך ששימש בתשובה" />}
                       <span className="flex-1" />
@@ -2682,24 +2706,24 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                       <>
                         {processIds.map((pid) => {
                           // Show the FULL thread inside the folder (all types — incl. the decision) so no extra click is needed
-                          const pDocs = [...(processDocsById[pid] ?? byProcess[pid])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
-                          const pOpen = openProcess === pid;
+                          const pDocs = [...(view.processDocsById[pid] ?? byProcess[pid])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+                          const pOpen = openProcByCase[cf.id] === pid;
                           const pAllOn = pDocs.every((d) => d.checked);
                           const pSomeOn = !pAllOn && pDocs.some((d) => d.checked);
                           return (
                             <div key={pid} className="flex flex-col" style={{ borderTop: `1px solid ${isDark ? dk.border : "#eef1f4"}` }}>
                               <div className="flex items-center gap-2 py-1.5" style={{ paddingInlineStart: "28px", paddingInlineEnd: "8px" }}>
                                 <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0"><CheckboxBlue checked={pAllOn} mixed={pSomeOn} onToggle={() => setDocs((p) => p.map((d) => (docProcessIds(d).includes(pid) ? { ...d, checked: !pAllOn } : d)))} /></span>
-                                <button onClick={() => setOpenProcess((o) => (o === pid ? null : pid))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={pOpen ? "כיווץ" : "פתיחה"}>
+                                <button onClick={() => setOpenProcByCase((p) => ({ ...p, [cf.id]: p[cf.id] === pid ? null : pid }))} className="flex items-center gap-1.5 flex-1 min-w-0 text-right" title={pOpen ? "כיווץ" : "פתיחה"}>
                                   <span className="text-[13px] font-medium truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                                    <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {processLabel(openCaseId, pid)} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
+                                    <span style={{ fontFamily: "Figtree, sans-serif" }}>{pid}</span> — {processLabel(cf.id, pid)} <span style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>({pDocs.length})</span>
                                   </span>
                                   <span className="flex-1" />
                                   <ChevronDown size={15} style={{ color: c.iconGray, flexShrink: 0, transition: "transform 0.15s", transform: pOpen ? "rotate(180deg)" : "none" }} />
                                 </button>
                               </div>
                               {pOpen && pDocs.map((doc) => (
-                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} lockProcess processDocs={processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id).filter((k) => k !== "process")} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                                <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} lockProcess processDocs={view.processDocsById[pid]} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id).filter((k) => k !== "process")} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                               ))}
                             </div>
                           );
@@ -2710,7 +2734,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                       </>
                     );
                   })() : open && sortDocs(typeDocs).map((doc) => (
-                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
+                    <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(false)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} showType={false} showSelfInThread={false} processDocs={view.docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
                   ))}
                 </div>
               );
