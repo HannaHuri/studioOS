@@ -2747,28 +2747,30 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               // inside the panel's 8px drag handle), so 2px is exactly "touching without covering".
               right: 0, left: "2px",
               height: "24px", direction: "rtl",
-              // The fill is the palette's own blue (c.badgeBg, the citation-badge blue) on c.darkBlue
-              // text, and the caret alone carries c.takhelet. A wash of takhelet itself was tried
-              // first and read green: takhelet is a cyan (hue ~199°), and diluted to a 24px band it
-              // loses the blue next to this table's blue-grey. Kept off c.primary as a FILL is fine —
-              // primary means "in the conversation" only as a mark on a row, not as a band.
-              backgroundColor: isDark ? "rgba(24,44,74,0.95)" : c.badgeBg,
-              borderTop: `1px solid ${isDark ? "#2c4468" : "#b9d4f5"}`,
+              // The same pale blue the active כרונולוגי / תיקיות chip wears, so the bar belongs to the
+              // panel's chrome rather than introducing a tint of its own. A wash of c.takhelet was
+              // tried first and read green: takhelet is a cyan (hue ~199°), and diluted across a 24px
+              // band beside this table's blue-grey it loses the blue. It stays as the caret, where it
+              // is saturated enough to be the colour it is.
+              backgroundColor: isDark ? "#22304a" : "#eaf2fd",
+              borderTop: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`,
               backdropFilter: "blur(6px)",
               color: isDark ? "#9fc4ea" : c.darkBlue,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title={`מעבר ל${meta.type} ${meta.number} — ${meta.parties}`}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "rgba(31,56,92,0.97)" : "#c3ddff"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? "rgba(24,44,74,0.95)" : c.badgeBg; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#2a3b58" : "#dfeafb"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isDark ? "#22304a" : "#eaf2fd"; }}
           >
-            <ChevronDown size={13} style={{ flexShrink: 0, color: c.takhelet }} />
+            {/* Caret last, pushed to the far edge: in RTL the last child is leftmost, and it lands on
+                the same left edge the case header's own chevron is aligned to. */}
             <span className="whitespace-nowrap">{meta.type}</span>
             <span className="whitespace-nowrap" style={{ fontFamily: "Figtree, sans-serif" }}>{meta.number}</span>
-            <span className="truncate" style={{ opacity: 0.75 }}>{meta.parties}</span>
+            <span className="truncate min-w-0" style={{ opacity: 0.75 }}>{meta.parties}</span>
             {caseBelow.more > 0 && (
               <span className="flex-shrink-0" style={{ marginInlineStart: "auto", fontFamily: "Figtree, sans-serif", opacity: 0.75 }}>+{caseBelow.more}</span>
             )}
+            <ChevronDown size={13} style={{ flexShrink: 0, color: c.takhelet, marginInlineStart: caseBelow.more > 0 ? undefined : "auto" }} />
           </button>
         );
       })()}
