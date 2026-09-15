@@ -1094,31 +1094,10 @@ const buildDocNumbers = (docs: CaseDoc[]): Record<string, number> => {
 
 // Horizontal scroller for the docs table (RTL): the pinned block starts visible on the right; the rest scrolls left.
 // A soft fade on the left edge signals there's more to see that way (paired with the partially-cut column beneath it).
-function HScroll({ children, bg, isDark }: { children: React.ReactNode; bg: string; isDark: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [fadeEnd, setFadeEnd] = useState(false);
-  const update = () => {
-    const el = ref.current; if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    // Chromium RTL: scrollLeft is 0 at the start (right) and goes negative toward the end (left).
-    setFadeEnd(max > 1 && el.scrollLeft > -max + 1);
-  };
-  useEffect(() => {
-    update();
-    const el = ref.current; if (!el) return;
-    const ro = new ResizeObserver(update); ro.observe(el);
-    return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return (
-    <div className="relative">
-      <div ref={ref} dir="rtl" className="overflow-x-auto docs-scroll" onScroll={update}>{children}</div>
-      {fadeEnd && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-30" style={{ width: "22px", background: `linear-gradient(to left, ${isDark ? "rgba(0,0,0,0)" : "rgba(255,255,255,0)"}, ${bg})` }} />
-      )}
-    </div>
-  );
-}
+// (HScroll lived here: a per-case horizontal scroller. It was the reason the column header's
+// `sticky top-0` never engaged — overflow-x:auto makes overflow-y compute to auto, so this box
+// became the scrollport for everything inside it while only ever scrolling sideways. Both axes
+// are now one scroller on the list itself; its fade-toward-the-end moved there with it.)
 
 // Expands UNDER a table row, and only ever for things that belong to that row's document: its process thread
 // (status + the documents in it) or its נספחים. מסמכים קשורים deliberately do NOT come through here — they are
@@ -1742,6 +1721,70 @@ function DocViewer({ doc, isDark, width, onWidthChange, onClose, fill, showHandl
 // ── Document panel (open) — table browser ────────────────────────────────────
 function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWidth, onOpenDoc, onClosePanel, openDocId, docs, setDocs }: { isDark: boolean; panelWidth: number; isFocus?: boolean; onToggleFocus?: () => void; onSetWidth?: (w: number) => void; onOpenDoc?: (doc: CaseDoc) => void; onClosePanel?: () => void; openDocId?: string; docs: CaseDoc[]; setDocs: React.Dispatch<React.SetStateAction<CaseDoc[]>> }) {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // The list's single scroll container (both axes — see the render, where the old outer/HScroll
+  // nesting was merged), plus what the merge makes possible: a case header that stays pinned to
+  // the right while the table scrolls sideways, and a hint bar for a case that is off the bottom.
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const listContentRef = useRef<HTMLDivElement>(null);
+  const caseHeadRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Width of the scrollport, published to CSS so the case header's pinned block can be exactly as
+  // wide as what the user can see — a sticky block sized to the full scroll width never moves.
+  const [viewportW, setViewportW] = useState(0);
+  // The first case whose header sits below the fold, and how many follow it.
+  const [caseBelow, setCaseBelow] = useState<{ id: string; more: number } | null>(null);
+  const [fadeEnd, setFadeEnd] = useState(false); // horizontal room left toward the end (was HScroll's job)
+  const syncList = () => {
+    const el = listScrollRef.current; if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setFadeEnd(max > 1 && el.scrollLeft > -max + 1); // Chromium RTL: scrollLeft is 0 at the start and goes negative
+    setViewportW(el.clientWidth);
+    const bottom = el.getBoundingClientRect().bottom;
+    const idx = CASES_META.findIndex((cf) => {
+      const h = caseHeadRefs.current[cf.id];
+      return !!h && h.getBoundingClientRect().top >= bottom - 4;
+    });
+    // Idempotent on purpose: this runs after EVERY render (see below), so a setter that always
+    // produced a fresh object would re-render forever.
+    setCaseBelow((prev) => {
+      if (idx === -1) return prev === null ? prev : null;
+      const id = CASES_META[idx].id, more = CASES_META.length - idx - 1;
+      return prev && prev.id === id && prev.more === more ? prev : { id, more };
+    });
+  };
+  // Explicit arithmetic rather than scrollIntoView: the target sits inside a scroller that is itself
+  // nested in the page, and scrollIntoView picks its own ancestor to move — measured here scrolling
+  // nothing at all. This always moves the list, and only the list.
+  // Instant, not `behavior: "smooth"`. Measured in the browser: on this container a smooth scrollTo
+  // landed at 0 while the identical call with "auto" landed correctly, with prefers-reduced-motion
+  // off and scrollBehavior supported. A jump control that silently does nothing is worse than one
+  // that arrives without a tween — the same lesson the caret flip in CaretTrigger already learned.
+  const scrollCaseIntoView = (id: string) => {
+    const sc = listScrollRef.current, head = caseHeadRefs.current[id];
+    if (!sc || !head) return;
+    const top = head.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+    sc.scrollTop = Math.max(0, top);
+    syncList(); // never wait on a scroll event we caused ourselves — the bar must re-evaluate now
+  };
+  useEffect(() => {
+    const el = listScrollRef.current; if (!el) return;
+    syncList();
+    // Observe the CONTENT as well as the scrollport. The scrollport's own box never changes when a
+    // case is expanded or a detail panel opens, so watching it alone left the hint bar reporting
+    // whatever was true at mount — measurably, never appearing at all.
+    const ro = new ResizeObserver(syncList);
+    ro.observe(el);
+    if (listContentRef.current) ro.observe(listContentRef.current);
+    return () => ro.disconnect();
+  }, []);
+  // …and again after every render. The observer alone was measurably not enough: opening a case grew
+  // the list without the bar ever appearing, and it only showed up once some unrelated scroll event
+  // happened to fire. The list's height depends on a dozen pieces of state (which case is open,
+  // grouping, lens, filters, every expanded row panel); a dependency array listing them is a list
+  // that will go stale. No rAF here, deliberately — the first attempt scheduled one and cancelled it
+  // on cleanup, and with renders arriving close together the frame was cancelled every time and the
+  // sync never ran at all. An effect body reads a committed DOM, which is all this needs.
+  // Safe against looping only because every setter above no-ops when nothing moved.
+  useEffect(() => { syncList(); });
   // Which detail panels are open — a Set of `${docId}::${kind}` so related / process / attachments can be open in
   // parallel (per user), across any rows. Each opens/closes independently from its own trigger or the card's × button.
   type PanelKind = "attachments" | "process"; // מסמכים קשורים are NOT an in-place panel — they open in RelatedPopover
@@ -2506,9 +2549,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         </div>
       </div>
 
-      {/* List — the docs table scrolls horizontally (RTL) inside HScroll when columns overflow; this outer box scrolls vertically */}
-      <div className="flex-1 overflow-y-auto docs-scroll" dir="ltr">
-       <div className="px-3 pt-1 pb-3 flex flex-col gap-4" dir="rtl">
+      {/* List — ONE scroller for BOTH axes, replacing an outer vertical box with a per-case
+          horizontal HScroll nested inside it. The nesting was the bug: a box with overflow-x:auto
+          computes overflow-y to auto too, so it became the scrollport for everything inside — and
+          the column header's `sticky top-0` measured itself against a box that never scrolls
+          vertically. The header therefore scrolled away with its rows, and each open case scrolled
+          sideways on its own. One scroller fixes both for free.
+          dir is now "rtl" (was "ltr"): the horizontal scroll ORIGIN follows the container's
+          direction, and in an ltr scrollport an RTL table opens showing its LAST columns. The
+          vertical scrollbar moves to the left edge as a result — the RTL convention anyway. */}
+      <div className="relative flex-1 min-h-0 flex flex-col">
+      <div ref={listScrollRef} onScroll={syncList} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="rtl">
+       <div ref={listContentRef} className="px-3 pt-1 flex flex-col gap-4" style={{ paddingBottom: "34px", ["--vw" as string]: viewportW ? `${viewportW}px` : "100%" } as React.CSSProperties} dir="rtl">
         {CASES_META.map((cf) => {
           const caseDocs = docs.filter((d) => d.caseId === cf.id);
           const caseOpen = openCaseId === cf.id;
@@ -2526,8 +2578,15 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           const caseWords = caseDocs.reduce((sum, d) => sum + parseWords(d.words), 0); // total words across the case's documents
           return (
             <div key={cf.id} className="flex flex-col">
-              {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width */}
-              <div className="flex items-start gap-2 px-2 py-3 transition-opacity" style={{ borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}`, opacity: caseMatch === 0 ? 0.5 : 1 }}>
+              {/* Case header — typography for emphasis + a neutral structural underline that ties the title to the edge-aligned chevron at any width.
+                  Now that the whole list shares one horizontal scroller, the header has to span the
+                  full scroll width (so its underline reaches the table's far edge) while its CONTENT
+                  stays pinned to the right — otherwise the case name slides out of view the moment
+                  you scroll sideways, and the chevron drifts away from the panel's edge it is aligned
+                  to. Hence the outer strip at table width and an inner block sized to --vw, the
+                  scrollport's own width, which is what makes `sticky` have anywhere to travel. */}
+              <div className="transition-opacity" style={{ minWidth: `${tableMinWidth(grouping !== "type")}px`, opacity: caseMatch === 0 ? 0.5 : 1 }} ref={(el) => { caseHeadRefs.current[cf.id] = el; }}>
+              <div className="flex items-start gap-2 px-2 py-3" style={{ position: "sticky", insetInlineStart: 0, width: "var(--vw, 100%)", maxWidth: "100%", borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}` }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} mixed={caseSomeOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -2564,6 +2623,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   <span className="text-[14px] leading-snug truncate" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", paddingInlineStart: "21px" }} title={cf.parties}>{cf.parties}</span>
                 </button>
               </div>
+              </div>
 
               {caseOpen && (
                 <div className="flex flex-col gap-1.5 pt-1.5">
@@ -2575,21 +2635,18 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
 
         {/* Chronological — flat column table; sort via column headers */}
         {grouping === "chrono" && (
-          <HScroll bg={bg} isDark={isDark}>
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(true)}px` }}>
             {tableHeader}
             {sortDocs(lensed).map((doc) => (
               <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
           </div>
-          </HScroll>
         )}
 
         {/* By type — column-table rows under type sub-headers. A single sticky column header sits directly under the
             case name (mirroring the chronological view) and acts as the global sort control; the per-folder headers
             were dropped so the layout stays consistent with chrono. Type column is omitted (the folders already group by type). */}
         {grouping === "type" && (
-          <HScroll bg={bg} isDark={isDark}>
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(false)}px` }}>
             {lensed.length > 0 && tableHeaderNoType}
             {typesInData.map((type, ti) => {
@@ -2659,7 +2716,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
               );
             })}
           </div>
-          </HScroll>
         )}
 
                 </div>
@@ -2668,6 +2724,46 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           );
         })}
        </div>
+      </div>
+
+      {/* Horizontal room left toward the end of the table (was HScroll's own fade). */}
+      {fadeEnd && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10" style={{ width: "22px", background: `linear-gradient(to left, ${isDark ? "rgba(0,0,0,0)" : "rgba(255,255,255,0)"}, ${bg})` }} />
+      )}
+
+      {/* A case that is off the bottom of the list. Floats over the last rows rather than taking a
+          row of its own (the list carries a constant 34px of bottom padding so nothing is ever
+          permanently covered), names the case rather than counting it, and shows itself only while
+          it has something to say — the moment that case scrolls into view it is gone. */}
+      {caseBelow && (() => {
+        const meta = CASES_META.find((x) => x.id === caseBelow.id);
+        if (!meta) return null;
+        return (
+          <button
+            onClick={() => scrollCaseIntoView(caseBelow.id)}
+            className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-1.5 px-3 text-[12px] transition-colors"
+            style={{
+              height: "24px", direction: "rtl",
+              backgroundColor: isDark ? "rgba(24,28,48,0.94)" : "rgba(250,251,253,0.94)",
+              borderTop: `1px solid ${isDark ? dk.border : "#e3e8f2"}`,
+              backdropFilter: "blur(6px)",
+              color: isDark ? dk.textMuted : c.textGray,
+              fontFamily: "Noto Sans Hebrew, sans-serif",
+            }}
+            title={`מעבר ל${meta.type} ${meta.number} — ${meta.parties}`}
+            onMouseEnter={(e) => { e.currentTarget.style.color = c.primary; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = isDark ? dk.textMuted : c.textGray; }}
+          >
+            <ChevronDown size={13} style={{ flexShrink: 0 }} />
+            <span className="whitespace-nowrap">{meta.type}</span>
+            <span className="whitespace-nowrap" style={{ fontFamily: "Figtree, sans-serif" }}>{meta.number}</span>
+            <span className="truncate" style={{ color: isDark ? dk.textMuted : c.textLight }}>{meta.parties}</span>
+            {caseBelow.more > 0 && (
+              <span className="flex-shrink-0 mr-auto" style={{ fontFamily: "Figtree, sans-serif", color: isDark ? dk.textMuted : c.textLight }}>+{caseBelow.more}</span>
+            )}
+          </button>
+        );
+      })()}
       </div>
     </div>
     </DocEditCtx.Provider>
