@@ -2583,7 +2583,14 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           vertical scrollbar moves to the left edge as a result — the RTL convention anyway. */}
       <div className="relative flex-1 min-h-0 flex flex-col">
       <div ref={listScrollRef} onScroll={syncList} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="rtl">
-       <div ref={listContentRef} className="px-3 pt-1 flex flex-col gap-4" style={{ paddingBottom: "34px", ["--vw" as string]: viewportW ? `${viewportW}px` : "100%" } as React.CSSProperties} dir="rtl">
+       <div ref={listContentRef} className="px-3 pt-1 flex flex-col" style={{ paddingBottom: "34px", ["--vw" as string]: viewportW ? `${viewportW}px` : "100%" } as React.CSSProperties} dir="rtl">
+        {/* ONE column header for every open case, above all of them, instead of one per case.
+            It has to be a DIRECT child of this container: `sticky` travels only within its own
+            containing block, so nesting it in a wrapper of its own height would pin it to nothing.
+            Which variant follows the grouping, since grouping is global — the type view drops the
+            סוג column and lays its rows out on the matching narrower template. */}
+        {anyCaseOpen && (grouping === "type" ? tableHeaderNoType : tableHeader)}
+        <div className="flex flex-col gap-4">
         {CASES_META.map((cf) => {
           const caseDocs = docs.filter((d) => d.caseId === cf.id);
           const caseOpen = openCaseIds.has(cf.id);
@@ -2660,7 +2667,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         {/* Chronological — flat column table; sort via column headers */}
         {grouping === "chrono" && (
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(true)}px` }}>
-            {tableHeader}
             {sortDocs(view.lensed).map((doc) => (
               <DocRowCompact key={doc.id} doc={doc} isDark={isDark} markNew={lens === "all" && isNewDoc(doc)} active={openDocId === doc.id} gridCols={tableTemplate(true)} colGap={isFocus ? "8px" : "4px"} colMeta={colMeta} processDocs={view.docThread(doc)} siblingDocs={caseDocs} openDocId={openDocId} expandedKinds={openKindsFor(doc.id)} onToggleExpand={(kind) => togglePanel(doc.id, kind)} onOpenDoc={() => onOpenDoc?.(doc)} onOpenAnyDoc={onOpenDoc} onToggleCheck={() => toggleDoc(doc.id)} onToggleDocById={toggleDoc} onSetChecked={setDocsChecked} attachmentSel={attachmentSel} onToggleAttachment={toggleAttachment} onSetAttachments={setAttachmentsSelected} relatedOpen={relPop?.doc.id === doc.id} onOpenRelated={(rect, el) => setRelPop((p) => (p?.doc.id === doc.id ? null : { doc, rect, el }))} flash={flashId === doc.id} onContextMenu={(x, y) => setCtxMenu({ doc, x, y })} rowRef={(el) => { rowRefs.current[doc.id] = el; }} />
             ))}
@@ -2672,7 +2678,6 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             were dropped so the layout stays consistent with chrono. Type column is omitted (the folders already group by type). */}
         {grouping === "type" && (
           <div className="flex flex-col" style={{ minWidth: `${tableMinWidth(false)}px` }}>
-            {view.lensed.length > 0 && tableHeaderNoType}
             {view.typesInData.map((type, ti) => {
               const typeDocs = view.lensed.filter((d) => d.type === type);
               const open = openTypeByCase[cf.id] === type;
@@ -2747,6 +2752,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             </div>
           );
         })}
+        </div>
        </div>
       </div>
 
