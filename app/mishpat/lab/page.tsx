@@ -1395,8 +1395,14 @@ const colShown = (key: string, cm: ColMeta, showType: boolean): boolean =>
   key === "checkbox" || key === "name" || key === "sp" ? true
   : key === "type" ? (cm.visible.type && showType)
   : !!cm.visible[key as DocColKey];
+// The offset shadow fills the columnGap BETWEEN pinned cells. A pinned cell is only as wide as its own
+// column, so the gaps stayed transparent and the scrolling columns showed through them — measured: the
+// name column sat at x=925 inside the 922–926 gap, leaking one letter down the whole table. Offset
+// rather than spread on purpose: a spread would also bleed vertically over the row's bottom border.
 const pinCellStyle = (key: string, cm: ColMeta): React.CSSProperties | undefined =>
-  cm.pin[key] !== undefined ? { position: "sticky", right: cm.pin[key], zIndex: 2, background: "var(--row-bg)" } : undefined;
+  cm.pin[key] !== undefined
+    ? { position: "sticky", right: cm.pin[key], zIndex: 2, background: "var(--row-bg)", boxShadow: `${cm.gapPx}px 0 0 0 var(--row-bg)` }
+    : undefined;
 
 // Dense table row — one line per document; columns come from `colMeta` (user-customizable, some pinned while scrolling).
 function DocRowCompact({ doc, isDark, markNew, active, gridCols, colGap = "4px", colMeta, showType = true, showSelfInThread, lockProcess, processDocs, siblingDocs, openDocId, expandedKinds, onToggleExpand, relatedOpen, onOpenRelated, flash, onContextMenu, onOpenDoc, onOpenAnyDoc, onToggleCheck, onToggleDocById, onSetChecked, attachmentSel, onToggleAttachment, onSetAttachments, rowRef }: { doc: CaseDoc; isDark: boolean; markNew?: boolean; active?: boolean; gridCols: string; colGap?: string; colMeta: ColMeta; showType?: boolean; showSelfInThread?: boolean; lockProcess?: boolean; processDocs?: CaseDoc[]; siblingDocs?: CaseDoc[]; openDocId?: string; expandedKinds?: ("attachments" | "process")[]; onToggleExpand?: (kind: "attachments" | "process") => void; relatedOpen?: boolean; onOpenRelated?: (rect: DOMRect, el: HTMLElement) => void; flash?: boolean; onContextMenu?: (x: number, y: number) => void; onOpenDoc?: () => void; onOpenAnyDoc?: (doc: CaseDoc) => void; onToggleCheck: () => void; onToggleDocById?: (id: string) => void; onSetChecked?: (ids: string[], next: boolean) => void; attachmentSel?: Set<string>; onToggleAttachment?: (key: string) => void; onSetAttachments?: (keys: string[], next: boolean) => void; rowRef?: (el: HTMLDivElement | null) => void }) {
@@ -1733,9 +1739,10 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // The first case whose header sits below the fold, and how many follow it.
   const [caseBelow, setCaseBelow] = useState<{ id: string; more: number } | null>(null);
   const [fadeEnd, setFadeEnd] = useState(false); // horizontal room left toward the end (was HScroll's job)
-  // Height of the horizontal scrollbar, when there is one. The hint bar floats over the bottom of the
-  // scroller, which is exactly where that scrollbar lives — at bottom:0 it hid it completely, so once
-  // a column was dragged wide enough to need sideways scrolling the control for it was invisible.
+  // Height of the horizontal scrollbar, when there is one. The hint bar sits at the very bottom of the
+  // panel, which is exactly where that scrollbar was drawn — it hid it completely, so once a column was
+  // dragged wide enough to need sideways scrolling, the control for it was invisible. The scroller now
+  // gives up this strip's height when a scrollbar exists, putting the scrollbar above the bar.
   const [hBarH, setHBarH] = useState(0);
   const syncList = () => {
     const el = listScrollRef.current; if (!el) return;
@@ -2045,8 +2052,13 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     attachments: { track: roomy ? "30px" : "28px", show: () => visibleCols.attachments, fixed: roomy ? 30 : 28 },   // ditto "נספחים" (the תקציר header carries a 6px inset so the two labels clear each other)
     words:       { track: roomy ? "minmax(58px,66px)" : "minmax(54px,62px)", show: () => visibleCols.words, fixed: 54 }, // fits the "מס׳ מילים" header
   };
-  // Flat table: the checkbox leads, then the user-ordered columns (name is just one of them). Nothing is pinned —
-  // what matters to the user is which columns show, in what order, at what width.
+  // The checkbox and תאריך stay put during horizontal scrolling; everything after them scrolls. The checkbox column
+  // carries the ⋮ in its header cell, so pinning those two keeps the row's identity anchor (its tick and its date) and
+  // the column menu reachable no matter how far sideways the table has been dragged. Nothing else is pinned: the block
+  // has to be a contiguous prefix (see pinMap), and every extra frozen column is width the scrollable part loses.
+  // Reordering that moves תאריך off second position simply narrows the block to the checkbox — pinMap stops at the
+  // first unpinned column, so it degrades rather than breaking.
+  const PINNED = new Set(["checkbox", "date"]);
   const fullOrder = ["checkbox", ...layout];
   const visCols = (showType: boolean) => {
     const cols = fullOrder.filter((k) => colDefs[k]?.show(showType)).map((k) => {
@@ -2054,7 +2066,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
       // During a resize drag ALL columns are pinned (dragFreeze); otherwise only explicitly-resized columns are fixed and
       // the rest keep their flexible default track → the table always fills the width (spreads on expand).
       const w = (dragFreeze && dragFreeze[k] != null) ? dragFreeze[k] : colWidths[k];
-      return { key: k, track: w != null ? `${w}px` : d.track, pinned: false, fixed: w ?? d.fixed };
+      return { key: k, track: w != null ? `${w}px` : d.track, pinned: PINNED.has(k), fixed: w ?? d.fixed };
     });
     // The table must ALWAYS fill its container. In the roomy/expanded layout תקציר is the only column with an `fr`
     // track, so hiding it — or resizing it to a fixed px width — used to leave every track fixed and the columns
@@ -2077,7 +2089,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // Sticky-right offset for each pinned column (RTL): cumulative fixed width + gap of the pinned columns to its right.
   // The type column is never pinned, so this is independent of showType.
   const pinMap: Record<string, number> = (() => {
-    const map: Record<string, number> = {}; let acc = 8; // start past the row's px-2 right padding so pinned cells hold their column
+    // 8 is the row's own px-2 right padding; 12 is the list container's px-3, which the sticky offset
+    // also has to clear now that the scrollport is OUTSIDE that padding rather than inside it (it used
+    // to be the per-case HScroll, which sat within it). Without the 12 the pinned block aligned to the
+    // scrollport edge while the table aligned to the padded edge, and every pinned cell slid 12px
+    // sideways the moment scrolling began — measured, exactly the padding, same as the case header.
+    const map: Record<string, number> = {}; let acc = 8 + 12;
     for (const col of visCols(true)) {
       if (!col.pinned) break; // the pinned block is a contiguous prefix
       map[col.key] = acc;
@@ -2150,7 +2167,7 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
     return (
     <div className="grid items-center px-2 h-8 pb-1 sticky top-0 z-20 text-[12.5px] font-medium" style={{ gridTemplateColumns: tableTemplate(showType), columnGap: `${gapPx}px`, minWidth: `${tableMinWidth(showType)}px`, backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : "#e3ebf5"}`, color: isDark ? dk.textMuted : c.textGray }} dir="rtl">
       {cols.map((col) => (
-        <div key={col.key} className="min-w-0 flex items-center h-full relative" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg } : undefined}>
+        <div key={col.key} className="min-w-0 flex items-center h-full relative" style={pinMap[col.key] !== undefined ? { position: "sticky", right: pinMap[col.key], zIndex: 21, backgroundColor: bg, boxShadow: `${gapPx}px 0 0 0 ${bg}` } : undefined}>
           {headerCellContent(col.key)}
           {col.key !== "checkbox" && (
             <div
@@ -2587,7 +2604,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
           direction, and in an ltr scrollport an RTL table opens showing its LAST columns. The
           vertical scrollbar moves to the left edge as a result — the RTL convention anyway. */}
       <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={listScrollRef} onScroll={syncList} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="rtl">
+      {/* The scroller stops short of the bottom exactly when a horizontal scrollbar is drawn, so that
+          scrollbar lands ABOVE the hint bar instead of underneath it. Reserved only in that case, so
+          a table that fits still pays nothing and the bar simply floats over the last rows.
+          Keyed off the scrollbar's own height, which depends on content WIDTH — never on whether the
+          bar is showing — so shrinking the scroller can't feed back into the bar's visibility. */}
+      <div ref={listScrollRef} onScroll={syncList} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="rtl" style={hBarH > 0 ? { marginBottom: "24px" } : undefined}>
        <div ref={listContentRef} className="px-3 pt-1 flex flex-col" style={{ paddingBottom: "34px", ["--vw" as string]: viewportW ? `${viewportW}px` : "100%" } as React.CSSProperties} dir="rtl">
         {/* ONE column header for every open case, above all of them, instead of one per case.
             It has to be a DIRECT child of this container: `sticky` travels only within its own
@@ -2784,8 +2806,9 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
             style={{
               // Flush against the table's divider, not short of it: that rule is 2px wide (it sits
               // inside the panel's 8px drag handle), so 2px is exactly "touching without covering".
-              // Lifted clear of the horizontal scrollbar whenever one is drawn — see hBarH.
-              right: 0, left: "2px", bottom: `${hBarH}px`,
+              // Always at the very bottom: when there is a horizontal scrollbar the scroller above
+              // has already made room for this strip, so the scrollbar sits above the bar.
+              right: 0, left: "2px", bottom: 0,
               height: "24px", direction: "rtl",
               // The same pale blue the active כרונולוגי / תיקיות chip wears, so the bar belongs to the
               // panel's chrome rather than introducing a tint of its own. A wash of c.takhelet was
