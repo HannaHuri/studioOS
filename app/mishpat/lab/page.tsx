@@ -1733,11 +1733,16 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
   // The first case whose header sits below the fold, and how many follow it.
   const [caseBelow, setCaseBelow] = useState<{ id: string; more: number } | null>(null);
   const [fadeEnd, setFadeEnd] = useState(false); // horizontal room left toward the end (was HScroll's job)
+  // Height of the horizontal scrollbar, when there is one. The hint bar floats over the bottom of the
+  // scroller, which is exactly where that scrollbar lives — at bottom:0 it hid it completely, so once
+  // a column was dragged wide enough to need sideways scrolling the control for it was invisible.
+  const [hBarH, setHBarH] = useState(0);
   const syncList = () => {
     const el = listScrollRef.current; if (!el) return;
     const max = el.scrollWidth - el.clientWidth;
     setFadeEnd(max > 1 && el.scrollLeft > -max + 1); // Chromium RTL: scrollLeft is 0 at the start and goes negative
     setViewportW(el.clientWidth);
+    setHBarH(el.offsetHeight - el.clientHeight); // 0 when the table fits and no horizontal scrollbar is drawn
     const bottom = el.getBoundingClientRect().bottom;
     const idx = CASES_META.findIndex((cf) => {
       const h = caseHeadRefs.current[cf.id];
@@ -2617,7 +2622,11 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
                   to. Hence the outer strip at table width and an inner block sized to --vw, the
                   scrollport's own width, which is what makes `sticky` have anywhere to travel. */}
               <div className="transition-opacity" style={{ minWidth: `${tableMinWidth(grouping !== "type")}px`, opacity: caseMatch === 0 ? 0.5 : 1 }} ref={(el) => { caseHeadRefs.current[cf.id] = el; }}>
-              <div className="flex items-start gap-2 px-2 py-3" style={{ position: "sticky", insetInlineStart: 0, width: "var(--vw, 100%)", maxWidth: "100%", borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}` }}>
+              {/* insetInlineStart is the list's own 12px side padding, not 0: the strip starts at the
+                  padded content edge, so pinning it to the raw scrollport edge slid the case name
+                  12px sideways the moment horizontal scrolling began — measured, and exactly the
+                  padding. Width follows for the same reason. */}
+              <div className="flex items-start gap-2 px-2 py-3" style={{ position: "sticky", insetInlineStart: "12px", width: "calc(var(--vw, 100%) - 24px)", maxWidth: "100%", borderBottom: `1px solid ${isDark ? dk.border : "#dde3ee"}` }}>
                 <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                   <CheckboxBlue checked={caseAllOn} mixed={caseSomeOn} onToggle={() => toggleCaseAll(cf.id, !caseAllOn)} />
                 </span>
@@ -2771,11 +2780,12 @@ function DocumentPanelOpen({ isDark, panelWidth, isFocus, onToggleFocus, onSetWi
         return (
           <button
             onClick={() => scrollCaseIntoView(caseBelow.id)}
-            className="absolute bottom-0 z-20 flex items-center gap-1.5 px-3 text-[12px] transition-colors"
+            className="absolute z-20 flex items-center gap-1.5 px-3 text-[12px] transition-colors"
             style={{
               // Flush against the table's divider, not short of it: that rule is 2px wide (it sits
               // inside the panel's 8px drag handle), so 2px is exactly "touching without covering".
-              right: 0, left: "2px",
+              // Lifted clear of the horizontal scrollbar whenever one is drawn — see hBarH.
+              right: 0, left: "2px", bottom: `${hBarH}px`,
               height: "24px", direction: "rtl",
               // The same pale blue the active כרונולוגי / תיקיות chip wears, so the bar belongs to the
               // panel's chrome rather than introducing a tint of its own. A wash of c.takhelet was
