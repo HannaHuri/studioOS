@@ -1,6 +1,6 @@
 // Builds the demo proofreading .docx files for the studioOS prototype.
-// Four variants of the same draft: the original, language-only (tracked changes),
-// content-only (comments), and both. No npm deps — the OOXML and the ZIP are written here.
+// Four variants of the same draft: the original, הגהה only (tracked changes),
+// בדיקת עקיבות only (comments), and both. No npm deps — the OOXML and the ZIP are written here.
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
@@ -74,9 +74,11 @@ function zip(entries) {
 }
 
 // ── the draft ──────────────────────────────────────────────────────────────
-// A token is a plain string, {ins}, {del}, or {anchor, comment}.
+// A token is a plain string, {ins} / {del} (a הגהה fix, shown as tracked changes), or
+// {anchor, comment} (a בדיקת עקיבות finding, shown as a Word comment). The comments point at
+// contradictions INSIDE the draft — the check does not compare against the case file.
 const AUTHOR = "נט המשפט";
-const DATE = "2026-09-08T09:00:00Z";
+const DATE = "2026-09-17T09:00:00Z";
 
 const DOC = [
   { style: "title", tokens: ["סיכומים מטעם התובע"] },
@@ -85,9 +87,7 @@ const DOC = [
   { style: "h", tokens: ["א. רקע עובדתי"] },
   {
     tokens: [
-      "1. התובע, יליד 1962, פנה למרכז הרפואי קדם ",
-      { anchor: "ביום 12.6.2023", comment: 'בתצהיר עדות ראשית של התובע (סעיף 4) מצוין כי הפנייה למיון הייתה ביום 5.7.2023. יש להתאים את התאריך או להסביר את הפער.' },
-      " בשל כאבים עזים בבטן התחתונה. לאחר בדיקה ",
+      "1. התובע, יליד 1962, פנה למרכז הרפואי קדם ביום 12.6.2023 בשל כאבים עזים בבטן התחתונה. לאחר בדיקה ",
       { del: "שיטחית" }, { ins: "שטחית" },
       " הופנה לניתוח, אשר בוצע למחרת היום.",
     ],
@@ -96,26 +96,24 @@ const DOC = [
     tokens: [
       "2. במהלך הניתוח ",
       { del: "ארעה" }, { ins: "אירעה" },
-      " ",
-      { anchor: "התרשלות אשר גרמה לנזק בלתי הפיך", comment: "ההתרשלות מנוסחת כאן כעובדה מוכחת, בעוד שזו טענה השנויה במחלוקת בין הצדדים. מומלץ לנסח ׳לטענת התובע׳ כדי שלא ייטען שהסיכומים חורגים מכתב התביעה." },
-      ", ועד היום ",
+      " התרשלות אשר גרמה לנזק בלתי הפיך, ועד היום ",
       { del: "התובע סובל" }, { ins: "סובל התובע" },
       " מכאבים כרוניים ואינו יכול לחזור לעבודתו הקודמת.",
     ],
   },
-  { style: "h", tokens: ["ב. הראיות"] },
+  { style: "h", tokens: ["ב. הנזק"] },
   {
     tokens: [
-      "3. ",
-      { anchor: "חוות הדעת של פרופ׳ רון שגב מטעם התובע לא נסתרה", comment: 'בתיק מצויה חוות דעת מומחה מטעם בית המשפט מיום 3.9.2023, הקובעת קשר סיבתי חלקי בלבד. הקביעה שחוות הדעת מטעם התובע לא נסתרה מתעלמת ממנה.' },
-      ", ולא הוצגה מטעם הנתבעת כל חוות דעת נוגדת.",
+      "3. בעקבות הניתוח שבוצע ",
+      { anchor: "ביום 20.6.2023", comment: "בסעיף 1 נכתב שהניתוח בוצע למחרת הפנייה, כלומר ביום 13.6.2023. יש ליישב בין שני המועדים." },
+      " אושפז התובע למשך שבועיים, ומאז הוא מצוי במעקב רפואי צמוד.",
     ],
   },
   {
     tokens: [
-      "4. הנזק הכספי שנגרם לתובע מסתכם בסך של ",
-      { anchor: ' 1,250,000 ש"ח', comment: 'בכתב התביעה המתוקן הסכום הנתבע הוא 1,450,000 ש"ח. יש ליישב את הפער בין הסכומים או להסביר את ההפחתה.' },
-      ", כמפורט בחוות הדעת האקטוארית שצורפה לכתב התביעה המתוקן.",
+      "4. התובע, ",
+      { anchor: "בן 48 במועד האירוע", comment: "בסעיף 1 נכתב שהתובע יליד 1962, כך שבמועד האירוע היה כבן 61. יש לתקן את הגיל או את שנת הלידה." },
+      ', נאלץ לפרוש מעבודתו, והנזק הכספי שנגרם לו מסתכם בסך של 1,250,000 ש"ח.',
     ],
   },
   { style: "h", tokens: ["ג. הסעד המבוקש"] },
@@ -123,7 +121,9 @@ const DOC = [
     tokens: [
       "5. לאור כל האמור לעיל, מתבקש בית המשפט הנכבד לקבל את ",
       { del: "את " },
-      "התביעה במלואה ולחייב את הנתבעת בהוצאות משפט ובשכר טרחת עורך דין.",
+      "התביעה במלואה, לחייב את הנתבעת ",
+      { anchor: 'בתשלום סך של 1,400,000 ש"ח', comment: 'בסעיף 4 הנזק הכספי הועמד על 1,250,000 ש"ח, ואילו כאן מתבקש סכום של 1,400,000 ש"ח. יש ליישב בין הסכומים או להסביר את ההפרש.' },
+      ", וכן בהוצאות משפט ובשכר טרחת עורך דין.",
     ],
   },
 ];
@@ -135,7 +135,7 @@ const run = (text, tag = "w:t") => `<w:r>${RPR}<${tag} xml:space="preserve">${es
 
 function paragraph(p, variant, state) {
   const withIns = variant === "lang" || variant === "both";
-  const withComments = variant === "content" || variant === "both";
+  const withComments = variant === "coherence" || variant === "both";
   let body = "";
   for (const tok of p.tokens) {
     if (typeof tok === "string") { body += run(tok); continue; }
@@ -234,7 +234,7 @@ function buildDocx(variant) {
 
 const outDir = process.argv[2] || ".";
 fs.mkdirSync(outDir, { recursive: true });
-for (const v of ["original", "lang", "content", "both"]) {
+for (const v of ["original", "lang", "coherence", "both"]) {
   const file = path.join(outDir, `draft-${v}.docx`);
   fs.writeFileSync(file, buildDocx(v));
   console.log("wrote", file, fs.statSync(file).size, "bytes");

@@ -1,30 +1,39 @@
 "use client";
 
-// ── הגהת טיוטה ─────────────────────────────────────────────────────────────
-// Upload a Word draft, pick which checks to run, get a marked-up Word file back.
-// Two independent checks: הגהה לשונית comes back as tracked changes, הגהת תוכן as
-// comments. The demo files in /public/proofread are real .docx — the tracked changes
-// and comments open in Word and can be accepted or rejected. Regenerate them with
+// ── טיוטה בשיחה ────────────────────────────────────────────────────────────
+// A conversation can take one Word draft. Picking it opens a dialog with three actions:
+//   הגהה            — כתיב, ניסוח ופיסוק; comes back as tracked changes
+//   בדיקת עקיבות    — contradictions INSIDE the draft; comes back as Word comments
+//   שיחה עם המסמך   — the draft joins the conversation's context
+// The two checks combine with each other but never with the chat (a, b, a+b, or c). They
+// run as soon as they are confirmed, and only once per conversation; the chat hands back
+// to the composer so the user can ask. Either way the draft stays in the conversation —
+// it can't be removed — and a checkbox beside the upload button says whether it is part of
+// what the next question is about.
+//
+// The demo files in /public/proofread are real .docx — the tracked changes and comments open
+// in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, CircleAlert, FileCheck2, FileText, Folder, Send, SpellCheck, Terminal, X } from "lucide-react";
+import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, X } from "lucide-react";
 import { useState, type ComponentType, type CSSProperties } from "react";
-import { Badge } from "./icons";
-import { c, dk, RED, FONT } from "./theme";
+import { c, dk, FONT } from "./theme";
 
 // One row of the progress tracker. Loose enough to hold the hand-drawn icons the agent run uses.
 export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; style?: CSSProperties }>;
 export type RunStep = { Icon: RunStepIcon; text: string; subText?: string; altIcon?: RunStepIcon; altText?: string };
 
-export type ProofKinds = { lang: boolean; content: boolean };
-// What a finished run carries into the message list and the history item.
-export type ProofRun = { fileName: string; kinds: ProofKinds; docCount: number };
+// What the dialog is set to. `chat` never sits alongside the other two — the toggles enforce it.
+export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean };
+export type ProofKinds = { lang: boolean; coherence: boolean };
+// What a finished check carries into the message list and the history item.
+export type ProofRun = { fileName: string; kinds: ProofKinds };
 
 export const proofKindLabel = (k: ProofKinds) =>
-  k.lang && k.content ? "הגהה לשונית והגהת תוכן" : k.lang ? "הגהה לשונית" : "הגהת תוכן";
+  k.lang && k.coherence ? "הגהה ובדיקת עקיבות" : k.lang ? "הגהה" : "בדיקת עקיבות";
 
 // ── The demo findings ──────────────────────────────────────────────────────
-// Fixed for the prototype; each one exists in the .docx as a real tracked change
-// or a real comment, so the summary here and the downloaded file agree.
+// Fixed for the prototype; each one exists in the .docx as a real tracked change or a real
+// comment, so the summary here and the downloaded file agree.
 export const PROOF_LANG_FIXES: { before: string; after: string; note: string }[] = [
   { before: "בדיקה שיטחית", after: "בדיקה שטחית", note: "שגיאת כתיב" },
   { before: "ארעה התרשלות", after: "אירעה התרשלות", note: "כתיב מלא" },
@@ -32,12 +41,17 @@ export const PROOF_LANG_FIXES: { before: string; after: string; note: string }[]
   { before: "לקבל את את התביעה", after: "לקבל את התביעה", note: "כפל מילה" },
 ];
 
-export const PROOF_CONTENT_NOTES: { text: string; source: string }[] = [
-  { text: "סעיף 1 — מועד הפנייה למיון מצוין כ־12.6.2023, ואילו בתצהיר עדות ראשית של התובע מצוין 5.7.2023.", source: "תצהיר עדות ראשית — התובע" },
-  { text: "סעיף 2 — ההתרשלות מנוסחת כעובדה מוכחת, בעוד שזו טענה השנויה במחלוקת בין הצדדים.", source: "כתב הגנה מתוקן" },
-  { text: "סעיף 3 — נטען שחוות הדעת מטעם התובע לא נסתרה, אך בתיק מצויה חוות דעת מטעם בית המשפט הקובעת קשר סיבתי חלקי בלבד.", source: "חוות דעת מומחה מטעם בית המשפט" },
-  { text: 'סעיף 4 — הנזק מסתכם ב־1,250,000 ש"ח, ואילו בכתב התביעה המתוקן הסכום הנתבע הוא 1,450,000 ש"ח.', source: "כתב תביעה מתוקן" },
+// Internal contradictions only. They point at sections of the draft in plain text — the
+// numbered citation badge belongs to sources from the case file, which this is not.
+export const PROOF_COHERENCE_NOTES: string[] = [
+  "מועד הניתוח — בסעיף 1 הניתוח בוצע למחרת הפנייה, כלומר ביום 13.6.2023, ובסעיף 3 נכתב שבוצע ביום 20.6.2023.",
+  "גיל התובע — בסעיף 1 הוא יליד 1962, ובסעיף 4 נכתב שהיה בן 48 במועד האירוע.",
+  'סכום התביעה — בסעיף 4 הנזק הועמד על 1,250,000 ש"ח, ובסעיף 5 מתבקש סכום של 1,400,000 ש"ח.',
 ];
+
+// The canned answer to a question asked with the draft in context.
+export const DRAFT_ANSWER =
+  'לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח. הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.';
 
 // ── The run's progress steps ───────────────────────────────────────────────
 // The list changes with the chosen checks, so the tracker never claims to be doing
@@ -46,7 +60,7 @@ export function proofSteps(k: ProofKinds): RunStep[] {
   return [
     { Icon: FileText, text: "קורא את הטיוטה" },
     ...(k.lang ? [{ Icon: SpellCheck, text: "בודק כתיב, ניסוח ופיסוק" }] : []),
-    ...(k.content ? [{ Icon: Folder, text: "משווה את הטענות מול מסמכי התיק" }] : []),
+    ...(k.coherence ? [{ Icon: TextSearch, text: "מאתר סתירות בתוך הטיוטה" }] : []),
     { Icon: Terminal, text: "מסמן את התיקונים וההערות במסמך" },
     { Icon: Send, text: "מכין את הקובץ להורדה" },
   ];
@@ -55,20 +69,30 @@ export function proofSteps(k: ProofKinds): RunStep[] {
 // The four demo files differ only in what is marked in them; `original` is what the
 // user uploaded, kept untouched so "המסמך המקורי נשמר ללא שינוי" is literally true.
 export const proofFileUrl = (k: ProofKinds) =>
-  `/studioOS/proofread/draft-${k.lang && k.content ? "both" : k.lang ? "lang" : "content"}.docx`;
+  `/studioOS/proofread/draft-${k.lang && k.coherence ? "both" : k.lang ? "lang" : "coherence"}.docx`;
 
 export const proofDownloadName = (fileName: string) =>
   `${fileName.replace(/\.docx?$/i, "")} — לאחר הגהה.docx`;
+
+// What the downloaded file contains — the tooltip on the download link, so the answer
+// doesn't spend a line on it.
+export const proofFileNote = (k: ProofKinds) =>
+  k.lang && k.coherence ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, והסתירות כהערות בצד המסמך. המסמך המקורי נשמר ללא שינוי."
+    : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
+    : "הסתירות מסומנות כהערות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.";
 
 export const formatSize = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
 
 // ── Shared bits ────────────────────────────────────────────────────────────
-function Tick({ checked }: { checked: boolean }) {
+function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
   return (
     <span
       className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center"
-      style={{ backgroundColor: checked ? c.primary : "transparent", border: checked ? "none" : `1px solid ${c.border}` }}
+      style={{
+        backgroundColor: checked ? (muted ? c.border : c.primary) : "transparent",
+        border: checked ? "none" : `1px solid ${c.border}`,
+      }}
     >
       {checked && (
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -79,42 +103,61 @@ function Tick({ checked }: { checked: boolean }) {
   );
 }
 
-// ── The dialog that opens once a draft has been picked ─────────────────────
-// A dialog rather than a strip under the composer, because in this product configuring
-// a task is something you do in a window: it is a task being set up, not an attachment
-// riding along with the next message.
-export function ProofModal({
-  isDark, fileName, fileSize, kinds, onKinds, docCount, onOpenDocs, onClose, onConfirm,
+// The embedded draft, as it sits inside the message that first used it. No remove button:
+// once a draft is in a conversation it stays there.
+export function DraftFileCard({ name, isDark }: { name: string; isDark: boolean }) {
+  return (
+    <div
+      className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5 mb-1.5"
+      style={{ backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "white", border: `1px solid ${isDark ? dk.border : c.inputBorder}` }}
+      dir="rtl"
+    >
+      <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
+        {name}
+      </span>
+    </div>
+  );
+}
+
+// ── The dialog ─────────────────────────────────────────────────────────────
+// Opens when a draft is picked, and again from the same button once the draft is in the
+// conversation. A dialog rather than a strip under the composer, because in this product
+// setting up a task is something you do in a window.
+export function DraftModal({
+  isDark, fileName, fileSize, choice, onChoice, checksUsed, onClose, onConfirm,
 }: {
   isDark: boolean;
   fileName: string;
   fileSize: number;
-  kinds: ProofKinds;
-  onKinds: (k: ProofKinds) => void;
-  docCount: number;
-  // Closes the dialog and opens the documents panel, keeping the draft — changing the
-  // selection is a real step here, and it happens in the panel that already owns it.
-  onOpenDocs: () => void;
+  choice: DraftChoice;
+  onChoice: (c: DraftChoice) => void;
+  // הגהה and בדיקת עקיבות run once per conversation; after that they stay visible but locked.
+  checksUsed: boolean;
   onClose: () => void;
-  // Confirming does not start the run — it hands the request back to the composer, so the
-  // user can add a sentence to it before sending.
   onConfirm: () => void;
 }) {
-  // הגהת תוכן has nothing to compare against with no documents selected, so the run
-  // is blocked rather than quietly returning "לא נמצאו סתירות".
-  const noDocs = kinds.content && docCount === 0;
-  const canConfirm = (kinds.lang || kinds.content) && !noDocs;
+  const canConfirm = choice.chat || ((choice.lang || choice.coherence) && !checksUsed);
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const line = isDark ? dk.border : c.inputBorder;
 
-  const check = (on: boolean, title: string, desc: string, toggle: () => void) => (
-    <button onClick={toggle} className="w-full flex items-start gap-2.5 text-right rounded px-2 py-2 transition-colors" style={{ backgroundColor: "transparent" }}
-      onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
+  // Picking a check clears the chat and vice versa — the dialog never holds a combination
+  // the service can't run.
+  const toggleCheck = (key: "lang" | "coherence") =>
+    onChoice({ ...choice, [key]: !choice[key], chat: false });
+  const toggleChat = () => onChoice({ lang: false, coherence: false, chat: !choice.chat });
+
+  const option = (on: boolean, title: string, desc: string, toggle: () => void, locked = false) => (
+    <button
+      onClick={locked ? undefined : toggle}
+      className="w-full flex items-start gap-2.5 text-right rounded px-2 py-2 transition-colors"
+      style={{ backgroundColor: "transparent", cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1 }}
+      onMouseEnter={e => { if (!locked) e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
       onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
     >
-      <span className="mt-0.5"><Tick checked={on} /></span>
+      <span className="mt-0.5"><Tick checked={on} muted={locked} /></span>
       <span className="flex flex-col gap-0.5 min-w-0">
         <span className="text-[14px]" style={{ color: textCol }}>{title}</span>
         <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
@@ -132,7 +175,7 @@ export function ProofModal({
       >
         {/* header */}
         <div className="flex items-start px-6 pt-5 pb-3">
-          <div className="flex-1 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>הגהת טיוטה</div>
+          <div className="flex-1 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>טיוטה</div>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
@@ -145,30 +188,25 @@ export function ProofModal({
           <span className="text-[12.5px] flex-shrink-0" style={{ color: subCol }}>{formatSize(fileSize)}</span>
         </div>
 
-        <div className="px-6 text-[13px]" style={{ color: subCol }}>בחרו את סוג ההגהה</div>
-        <div className="px-4 pt-1 pb-2 flex flex-col">
-          {check(kinds.lang, "הגהה לשונית", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
-            () => onKinds({ ...kinds, lang: !kinds.lang }))}
-          {check(kinds.content, "הגהת תוכן", "השוואת הטענות שבטיוטה למסמכי התיק. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
-            () => onKinds({ ...kinds, content: !kinds.content }))}
-
-          {/* What the content check is measured against. No new scope control — this reports
-              the selection already made in the documents panel, and sends you there to change it.
-              Indented to הגהת תוכן's own text column (the checkbox and its gap), so it reads as
-              belonging to that check and not to the dialog as a whole. */}
-          {kinds.content && (
-            <div
-              className="-mt-1 mb-1 flex items-center gap-1.5 text-[12.5px] text-right"
-              style={{ color: noDocs ? RED : subCol, paddingInlineStart: "34px" }}
-            >
-              {noDocs
-                ? <><CircleAlert size={13} style={{ flexShrink: 0 }} />לא נבחרו מסמכים בתיק</>
-                : <><Folder size={13} style={{ flexShrink: 0 }} />התוכן ייבדק מול {docCount} המסמכים שנבחרו בתיק</>}
-              <button onClick={onOpenDocs} className="hover:underline" style={{ color: c.primary }}>
-                {noDocs ? "לבחירת מסמכים" : "לשינוי הבחירה"}
-              </button>
+        <div className="px-6 text-[13px]" style={{ color: subCol }}>בחרו פעולה</div>
+        <div className="px-4 pt-1 flex flex-col">
+          {option(choice.lang, "הגהה", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
+            () => toggleCheck("lang"), checksUsed)}
+          {option(choice.coherence, "בדיקת עקיבות", "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
+            () => toggleCheck("coherence"), checksUsed)}
+          {checksUsed && (
+            <div className="text-[12.5px] pb-1" style={{ color: subCol, paddingInlineStart: "34px" }}>
+              ההגהה כבר בוצעה בשיחה זו
             </div>
           )}
+        </div>
+
+        {/* The line marks a different kind of action, not just another option: the checks above
+            run on אישור, the chat below hands back to the composer for a question. */}
+        <div className="mx-6 my-2" style={{ borderTop: `1px solid ${line}` }} />
+
+        <div className="px-4 pb-2 flex flex-col">
+          {option(choice.chat, "שיחה עם המסמך", "שאלות על תוכן הטיוטה, לבד או יחד עם מסמכי התיק.", toggleChat)}
         </div>
 
         <div className="flex gap-3 justify-end px-6 py-5">
@@ -189,42 +227,32 @@ export function ProofModal({
   );
 }
 
-// What the downloaded file contains — the tooltip on the download link, so the answer
-// doesn't spend a line on it.
-export const proofFileNote = (k: ProofKinds) =>
-  k.lang && k.content ? "תיקוני הלשון מסומנים בקובץ כעקוב אחר שינויים, והערות התוכן כהערות בצד המסמך. המסמך המקורי נשמר ללא שינוי."
-    : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
-    : "ההערות מופיעות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.";
-
-// ── The answer in the conversation ─────────────────────────────────────────
+// ── The answer to a check ──────────────────────────────────────────────────
 // The download lives in the actions row under the answer, not here — it is one of the
 // things you can do with an answer, like copying it.
-export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run: ProofRun; showBadges: boolean }) {
+export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun }) {
   const [langOpen, setLangOpen] = useState(false);
   const grayCol = isDark ? dk.textMuted : c.iconGray;
   const nLang = run.kinds.lang ? PROOF_LANG_FIXES.length : 0;
-  const nContent = run.kinds.content ? PROOF_CONTENT_NOTES.length : 0;
-  const counts = [nLang && `${nLang} תיקוני לשון`, nContent && `${nContent} הערות תוכן`].filter(Boolean).join(" ו־");
+  const nCoherence = run.kinds.coherence ? PROOF_COHERENCE_NOTES.length : 0;
+  const counts = [nLang && `${nLang} תיקונים`, nCoherence && `${nCoherence} סתירות`].filter(Boolean).join(" ו־");
 
   return (
     <div className="flex flex-col gap-3" dir="rtl">
       <p>
-        עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span> ומצאתי {counts}
-        {run.kinds.content ? `, בהשוואה ל־${run.docCount} המסמכים שנבחרו בתיק` : ""}.
+        עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span> ומצאתי {counts}.
       </p>
 
-      {/* The language fixes are folded away: they are mechanical, and the place to actually act
-          on them is the tracked changes in the file. The content notes, which need judgement,
-          stay open. */}
+      {/* The fixes are folded away: they are mechanical, and the place to actually act on them is
+          the tracked changes in the file. The contradictions, which need judgement, stay open. */}
       {run.kinds.lang && (
         <div className="flex flex-col gap-1.5">
           <button onClick={() => setLangOpen((v) => !v)} className="flex items-center gap-1 text-[14px] text-right" style={{ fontWeight: 600 }}>
-            הגהה לשונית
+            הגהה
             <span style={{ fontWeight: 400, color: grayCol }}>· {PROOF_LANG_FIXES.length} תיקונים</span>
             <ChevronDown size={14} style={{ color: grayCol, transition: "transform 0.15s", transform: langOpen ? "rotate(180deg)" : "none" }} />
           </button>
-          {/* The old wording sits in grey with an arrow to the new one. It used to be struck
-              through, which put a line across a quarter of the answer. */}
+          {/* The old wording sits in grey with an arrow to the new one — no strike-through line. */}
           {langOpen && PROOF_LANG_FIXES.map((f, i) => (
             <div key={i} className="text-[14px] flex items-baseline gap-1.5 flex-wrap">
               <span style={{ color: grayCol }}>{f.before}</span>
@@ -236,15 +264,11 @@ export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run:
         </div>
       )}
 
-      {run.kinds.content && (
+      {run.kinds.coherence && (
         <div className="flex flex-col gap-1.5">
-          <div className="text-[14px]" style={{ fontWeight: 600 }}>הגהת תוכן</div>
-          {/* A content note IS a citation — same numbered badge every other answer uses, with
-              the document it came from named on hover. */}
-          {PROOF_CONTENT_NOTES.map((n, i) => (
-            <div key={i} className="text-[14px] leading-relaxed">
-              {n.text} {showBadges && <Badge num={i + 1} title={n.source} />}
-            </div>
+          <div className="text-[14px]" style={{ fontWeight: 600 }}>בדיקת עקיבות</div>
+          {PROOF_COHERENCE_NOTES.map((n, i) => (
+            <div key={i} className="text-[14px] leading-relaxed">{n}</div>
           ))}
         </div>
       )}
@@ -252,7 +276,7 @@ export function ProofAnswer({ isDark, run, showBadges }: { isDark: boolean; run:
   );
 }
 
-// Marks a proofreading run in the history list, so it reads differently from a conversation.
+// Marks a check in the history list, so it reads differently from a conversation.
 export function ProofHistoryIcon({ color }: { color: string }) {
   return <FileCheck2 size={13} style={{ color, flexShrink: 0 }} />;
 }

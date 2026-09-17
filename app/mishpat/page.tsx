@@ -13,9 +13,9 @@ import {
 import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
-  ProofModal, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
-  proofFileUrl, proofDownloadName, proofFileNote,
-  type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
+  DraftModal, DraftFileCard, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER,
+  type DraftChoice, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
@@ -100,7 +100,6 @@ const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; 
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
-const PROOF_REQUEST = "בצע הגהה";
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
 // Lucide draws the send arrow pointing left; in the RTL bar it should follow the text.
 // The brain is symmetric, so it needs nothing.
@@ -616,7 +615,12 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 // ── Chat area ──────────────────────────────────────────────────────────────
 // logSteps is what the run walked through — kept on the message so the log can be
 // reopened after the run is long over.
-type Message = { q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[] };
+// draftCard shows the embedded draft inside the first message that used it; withDraft marks
+// a question asked while the draft was part of the context.
+type Message = {
+  q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[];
+  draftCard?: string; withDraft?: boolean;
+};
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
@@ -634,14 +638,11 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, selectedDocCount, onOpenDocs, onProofDone }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
-  // How many case documents are selected in the left panel — what a content proofread is measured against
-  selectedDocCount: number;
-  onOpenDocs: () => void;
   onProofDone: (title: string) => void;
 }) {
   const [showBadges, setShowBadges] = useState(true);
@@ -673,12 +674,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
-  // ── Draft proofreading ──
+  // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
   const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
-  const [kinds, setKinds] = useState<ProofKinds>({ lang: true, content: true });
-  const [proofOpen, setProofOpen] = useState(false); // the setup dialog
-  const [proofReady, setProofReady] = useState(false); // dialog confirmed — the next send runs it
-  const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a proofread is the thing running
+  const [draftEmbedded, setDraftEmbedded] = useState(false); // false while the first dialog is still open
+  const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false });
+  const [draftOpen, setDraftOpen] = useState(false); // the dialog
+  const [checksUsed, setChecksUsed] = useState(false); // הגהה / בדיקת עקיבות run once per conversation
+  const [draftIncluded, setDraftIncluded] = useState(false); // the checkbox beside the upload button
+  const [draftShown, setDraftShown] = useState(false); // has the file card appeared in the thread yet
+  const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
   // The tracker walks whichever list belongs to the run in progress.
@@ -781,8 +785,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setOpenLog(null);
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
-    setProofOpen(false);
-    setProofReady(false);
+    setDraftEmbedded(false);
+    setDraftChoice({ lang: true, coherence: true, chat: false });
+    setDraftOpen(false);
+    setChecksUsed(false);
+    setDraftIncluded(false);
+    setDraftShown(false);
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -794,14 +802,20 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const bg = isDark ? dk.bg : "white";
   const textCol = isDark ? dk.text : c.text;
 
+  // The file card rides on the first message that uses the draft, and only that one.
+  function takeDraftCard() {
+    if (!draft || draftShown) return undefined;
+    setDraftShown(true);
+    return draft.name;
+  }
+
   function handleSend() {
-    // A confirmed draft turns the next send into the proofreading run, carrying whatever the
-    // user added to the pre-filled request.
-    if (draft && proofReady) { handleRunProof(inputText.trim() || PROOF_REQUEST); return; }
     if (!inputText.trim()) return;
+    const withDraft = !!draft && draftEmbedded && draftIncluded;
+    const card = withDraft ? takeDraftCard() : undefined;
     setMessages((prev) => [
       ...prev,
-      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined },
+      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft, draftCard: card },
     ]);
     setInputText("");
     if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
@@ -811,30 +825,38 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentRunning(false);
   }
 
-  // ── Proofreading a draft ────────────────────────────────────────────────
-  // Confirming the dialog doesn't run anything — it attaches the draft to the composer and
-  // writes the request into the field, so the user can add to it before sending.
-  function handleConfirmProof() {
-    setProofOpen(false);
-    setProofReady(true);
-    setInputText(PROOF_REQUEST);
+  // ── The draft dialog ────────────────────────────────────────────────────
+  // הגהה / בדיקת עקיבות run the moment they are confirmed. שיחה עם המסמך runs nothing: it puts
+  // the draft into the context and hands back to the composer for a question.
+  function handleConfirmDraft() {
+    if (!draft) return;
+    setDraftOpen(false);
+    setDraftEmbedded(true);
+    if (draftChoice.chat) {
+      setDraftIncluded(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
     // Asking here rather than on load: the click is the user gesture Chrome wants, and it's
     // the first moment a notification is actually about to be useful.
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-  }
-
-  function handleRunProof(question: string) {
-    if (!draft) return;
-    const run: ProofRun = { fileName: draft.name, kinds: { ...kinds }, docCount: selectedDocCount };
-    setMessages((prev) => [...prev, { q: question, isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds) }]);
-    setInputText("");
-    setDraft(null);
-    setProofReady(false);
-    setProofOpen(false);
+    const run: ProofRun = { fileName: draft.name, kinds: { lang: draftChoice.lang, coherence: draftChoice.coherence } };
+    const card = takeDraftCard();
+    setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds), draftCard: card }]);
+    setChecksUsed(true);
+    // Once the checks are spent, reopening the dialog lands on the one action still open to it.
+    setDraftChoice({ lang: false, coherence: false, chat: true });
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
+  }
+
+  // Closing the first dialog throws the file away; closing it later just closes it — the draft
+  // is already part of the conversation.
+  function handleCloseDraft() {
+    setDraftOpen(false);
+    if (!draftEmbedded) setDraft(null);
   }
 
 
@@ -926,23 +948,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           </div>
         </div>
       )}
-      {/* A confirmed draft riding on the next send — same chip as an example in use, because
-          it answers the same question: what is attached to what I am about to send. */}
-      {draft && proofReady && (
-        <div className="flex justify-center" dir="rtl">
-          <div
-            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] max-w-full"
-            style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-          >
-            <button onClick={() => { setDraft(null); setProofReady(false); setInputText(""); }} className="opacity-60 hover:opacity-100 transition-opacity flex-shrink-0" title="הסרת הטיוטה">
-              <X size={13} />
-            </button>
-            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-              {proofKindLabel(kinds)}: {draft.name}
-            </span>
-          </div>
-        </div>
-      )}
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -962,7 +967,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          placeholder={draftIncluded ? "אפשר לשאול כאן כל שאלה על הטיוטה" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
@@ -1007,7 +1012,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             />
           </button>
 
-          {/* Attach a draft for proofreading. Word only — the file comes back marked up as Word. */}
+          {/* Upload a draft. Word only — a check hands the file back marked up as Word. */}
           <input
             ref={fileRef}
             type="file"
@@ -1015,29 +1020,61 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) { setDraft({ name: f.name, size: f.size }); setProofOpen(true); }
+              if (f) {
+                setDraft({ name: f.name, size: f.size });
+                setDraftChoice({ lang: true, coherence: true, chat: false });
+                setDraftOpen(true);
+              }
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
-          {/* With a draft already picked (the user stepped out to change the document selection),
-              this button goes back to the dialog instead of asking for the file again. */}
+          {/* One draft per conversation: once it is in, this button reopens its dialog rather
+              than asking for another file. */}
           <button
-            onClick={() => (draft ? setProofOpen(true) : fileRef.current?.click())}
+            onClick={() => (draftEmbedded ? setDraftOpen(true) : fileRef.current?.click())}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              backgroundColor: draft ? c.primaryLight : "transparent",
+              backgroundColor: "transparent",
               border: "none",
-              color: draft ? c.primary : c.iconGray,
+              color: c.iconGray,
               // pulled back over the row gap, so it sits against מעמיק rather than adrift
               // between the mode button and the empty middle of the row
               marginLeft: "-6px",
             }}
-            title={draft ? "המשך להגהה" : "העלאת טיוטה להגהה"}
-            onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = draft ? c.primaryLight : "transparent"; }}
+            title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
             <FilePlus size={15} />
           </button>
+
+          {/* Whether the next question is about the draft too. A checkbox, not a link: the box
+              shows the state, and the words only say what it is about. Case documents stay
+              governed by the documents panel — "the draft only" is this ticked with the case
+              documents cleared there. */}
+          {draftEmbedded && (
+            <button
+              onClick={() => setDraftIncluded((v) => !v)}
+              className="flex items-center gap-1.5 h-7 px-1.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
+              style={{ color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              dir="rtl"
+              title={draft?.name}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              <span
+                className="size-3.5 rounded-[2px] flex-shrink-0 flex items-center justify-center"
+                style={{ backgroundColor: draftIncluded ? c.primary : "transparent", border: draftIncluded ? "none" : `1px solid ${c.border}` }}
+              >
+                {draftIncluded && (
+                  <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </span>
+              כולל הטיוטה
+            </button>
+          )}
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
 
@@ -1195,20 +1232,19 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     );
   }
 
-  // ── The proofreading setup dialog ───────────────────────────────────────
-  function renderProofModal() {
-    if (!draft || !proofOpen) return null;
+  // ── The draft dialog ────────────────────────────────────────────────────
+  function renderDraftModal() {
+    if (!draft || !draftOpen) return null;
     return (
-      <ProofModal
+      <DraftModal
         isDark={isDark}
         fileName={draft.name}
         fileSize={draft.size}
-        kinds={kinds}
-        onKinds={setKinds}
-        docCount={selectedDocCount}
-        onOpenDocs={() => { setProofOpen(false); onOpenDocs(); }}
-        onClose={() => { setProofOpen(false); setDraft(null); setProofReady(false); setInputText(""); }}
-        onConfirm={handleConfirmProof}
+        choice={draftChoice}
+        onChoice={setDraftChoice}
+        checksUsed={checksUsed}
+        onClose={handleCloseDraft}
+        onConfirm={handleConfirmDraft}
       />
     );
   }
@@ -1302,7 +1338,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         </div>
         {renderScopeDropdown()}
         {renderModeDropdown()}
-        {renderProofModal()}
+        {renderDraftModal()}
       </>
     );
   }
@@ -1323,6 +1359,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                       left corner, so they cost the thread no height at all: a reserved strip under
                       every question pushed the answer down whether or not anyone was hovering. */}
                   <div className="group relative rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
+                    {msg.draftCard && <DraftFileCard name={msg.draftCard} isDark={isDark} />}
                     <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
                     <div
                       className="absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
@@ -1338,7 +1375,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   <div>
                     <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
                       {showingAgentProgress ? renderAgentProgress()
-                        : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} showBadges={showBadges} />
+                        : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
+                        : msg.withDraft ? <p>{DRAFT_ANSWER}</p>
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
                         : msg.isFirst ? renderFirstAnswer()
                         : <p>מעבד את שאלתך...</p>}
@@ -1371,7 +1409,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       </div>
       {renderScopeDropdown()}
       {renderModeDropdown()}
-      {renderProofModal()}
+      {renderDraftModal()}
     </>
   );
 }
@@ -2379,16 +2417,14 @@ function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boo
 
 export default function MishpatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);     // documents
-  // The case documents and their selection — held here so the composer can say what a
-  // content proofread will be measured against, and so the selection survives closing the panel.
+  // The case documents and their selection — held here so the selection survives closing the panel.
   const [docs, setDocs] = useState(initialDocs);
   const [histData, setHistData] = useState<HistGroup[]>(HISTORY_GROUPS);
-  // A finished proofread joins the conversations of היום, marked so it reads as a run, not a chat.
+  // A finished check joins the conversations of היום, marked so it reads as a run, not a chat.
   const addProofToHistory = (title: string) =>
     setHistData((d) => d.map((g) => (g.label === "היום"
       ? { ...g, items: [{ id: `p-${Date.now()}`, title, cases: [CURRENT_CASE], proof: true }, ...g.items] }
       : g)));
-  const selectedDocCount = docs.filter((d) => d.checked).reduce((sum, d) => sum + d.items.length, 0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isExamplesOpen, setIsExamplesOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -2555,8 +2591,6 @@ export default function MishpatPage() {
           <ChatArea
             isDark={isDark}
             conversationKey={convKey}
-            selectedDocCount={selectedDocCount}
-            onOpenDocs={() => setIsPanelOpen(true)}
             onProofDone={addProofToHistory}
             inUseName={inUse?.name ?? null}
             onClearInUse={() => setInUse(null)}
