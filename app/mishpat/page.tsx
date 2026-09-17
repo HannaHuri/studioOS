@@ -1038,7 +1038,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
               backgroundColor: "transparent",
-              border: "none",
+              // once the draft is in, a blue frame marks the button as holding something; the
+              // transparent border otherwise keeps the icon from shifting a pixel between states
+              border: draftEmbedded ? `1px solid ${c.primary}` : "1px solid transparent",
               color: c.iconGray,
               // pulled back over the row gap, so it sits against מעמיק rather than adrift
               // between the mode button and the empty middle of the row
@@ -1048,10 +1050,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {/* Two states, two glyphs. Grey FilePlus: upload. Blue FileText — the same mark the draft
-                carries in its file card and in the dialog — this conversation's draft. The plus
-                has to go once a draft is in: there is one per conversation, nothing more to add. */}
-            {draftEmbedded ? <FileText size={15} style={{ color: c.primary }} /> : <FilePlus size={15} />}
+            {/* Two states. FilePlus: upload. A plain document in a blue frame: this conversation's
+                draft. The plus has to go once a draft is in — there is one per conversation, so
+                there is nothing more to add. */}
+            {draftEmbedded ? <FileText size={15} /> : <FilePlus size={15} />}
           </button>
 
           {/* Whether the next question is about the draft too. A checkbox, not a link: the box
