@@ -107,7 +107,7 @@ function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
 // Once a draft is in, it is part of the conversation itself — so it is shown at the head of
 // the conversation, not in the composer (which is for writing the next question) and not inside
 // whichever message happened to use it first. The file card it always was — a small bordered
-// card — which the page sets inside a pinned conversation bubble.
+// card — pinned at the head of the thread by the page.
 export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
   return (
     <div
