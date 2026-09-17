@@ -106,12 +106,23 @@ function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
 // ── The draft at the top of the conversation ───────────────────────────────
 // Once a draft is in, it is part of the conversation itself — so it is shown at the head of
 // the conversation, not in the composer (which is for writing the next question) and not inside
-// whichever message happened to use it first. Stays in view while the thread scrolls.
+// whichever message happened to use it first. Drawn as the file card it always was — a small
+// bordered card — pinned so it stays in view while the thread scrolls under it.
 export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
   return (
-    <div className="w-full max-w-[768px] flex items-center gap-1.5 min-w-0 py-2" dir="rtl" title={name}>
+    <div
+      className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5 pointer-events-auto"
+      style={{
+        backgroundColor: isDark ? dk.surface : "white",
+        border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
+        // lifts it off whatever text is scrolling underneath
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+      }}
+      dir="rtl"
+      title={name}
+    >
       <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
-      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: FONT }}>
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
         {name}
       </span>
     </div>

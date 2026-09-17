@@ -1298,7 +1298,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
-            {draft && draftEmbedded && <DraftStrip name={draft.name} isDark={isDark} />}
+            {draft && draftEmbedded && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} /></div>}
             {renderInput()}
           </div>
         </div>
@@ -1314,12 +1314,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
         <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll">
+          {/* Pinned file card: the band around it is transparent and lets clicks through, so only
+              the card itself sits over the scrolling thread — no full-width bar. */}
           {draft && draftEmbedded && (
-            <div
-              className="sticky top-0 z-10 px-6 flex justify-center"
-              style={{ backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : c.inputBorder}` }}
-            >
-              <DraftStrip name={draft.name} isDark={isDark} />
+            <div className="sticky top-0 z-10 px-6 pt-3 flex justify-center pointer-events-none">
+              <div className="w-full max-w-[768px] flex" dir="rtl">
+                <DraftStrip name={draft.name} isDark={isDark} />
+              </div>
             </div>
           )}
           <div className="px-6 py-4 flex flex-col items-center gap-4">
