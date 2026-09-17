@@ -832,8 +832,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!draft) return;
     setDraftOpen(false);
     setDraftEmbedded(true);
+    // Every action on the draft ticks "כולל הטיוטה". An empty box beside it while a check was
+    // working on the draft read as a contradiction — and a follow-up right after a check is
+    // almost always about that draft. Unticking is the way out for a case-only question.
+    setDraftIncluded(true);
     if (draftChoice.chat) {
-      setDraftIncluded(true);
       requestAnimationFrame(() => inputRef.current?.focus());
       return;
     }
