@@ -23,7 +23,7 @@ export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; s
 export type RunStep = { Icon: RunStepIcon; text: string; subText?: string; altIcon?: RunStepIcon; altText?: string };
 
 // What the dialog is set to. `chat` never sits alongside the other two — the toggles enforce it.
-export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean };
+export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean; draftOnly: boolean };
 export type ProofKinds = { lang: boolean; coherence: boolean };
 // What a finished check carries into the message list and the history item.
 export type ProofRun = { fileName: string; kinds: ProofKinds };
@@ -121,11 +121,11 @@ export function DraftFileCard({ name, isDark }: { name: string; isDark: boolean 
 }
 
 // ── The dialog ─────────────────────────────────────────────────────────────
-// Opens when a draft is picked, and again from the same button once the draft is in the
-// conversation. A dialog rather than a strip under the composer, because in this product
-// setting up a task is something you do in a window.
+// Opens when a draft is picked, and again from the draft's icon in the case line once it is in
+// the conversation — so everything about the draft is managed in one place. A dialog rather
+// than a strip under the composer, because in this product setting up a task happens in a window.
 export function DraftModal({
-  isDark, fileName, fileSize, choice, onChoice, checksUsed, onClose, onConfirm,
+  isDark, fileName, fileSize, choice, onChoice, checksUsed, embedded, onClose, onConfirm,
 }: {
   isDark: boolean;
   fileName: string;
@@ -134,20 +134,23 @@ export function DraftModal({
   onChoice: (c: DraftChoice) => void;
   // הגהה and בדיקת עקיבות run once per conversation; after that they stay visible but locked.
   checksUsed: boolean;
+  // Once the draft is in the conversation it is always part of it, so "שיחה עם המסמך" is no
+  // longer an action to pick — what is left to choose is whether the case documents come too.
+  embedded: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const canConfirm = choice.chat || ((choice.lang || choice.coherence) && !checksUsed);
+  const wantsChecks = (choice.lang || choice.coherence) && !checksUsed;
+  const canConfirm = embedded || choice.chat || wantsChecks;
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const line = isDark ? dk.border : c.inputBorder;
 
-  // Picking a check clears the chat and vice versa — the dialog never holds a combination
-  // the service can't run.
+  // Before the draft is in, a check and the chat never combine — picking one clears the other.
   const toggleCheck = (key: "lang" | "coherence") =>
     onChoice({ ...choice, [key]: !choice[key], chat: false });
-  const toggleChat = () => onChoice({ lang: false, coherence: false, chat: !choice.chat });
+  const toggleChat = () => onChoice({ ...choice, lang: false, coherence: false, chat: !choice.chat });
 
   const option = (on: boolean, title: string, desc: string, toggle: () => void, locked = false) => (
     <button
@@ -163,6 +166,40 @@ export function DraftModal({
         <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
       </span>
     </button>
+  );
+
+  // What the conversation about the draft includes. A radio pair, not a checkbox: two named
+  // states, one of which is always in force.
+  const scopeOptions: [boolean, string, string][] = [
+    [false, "יחד עם מסמכי התיק", "הטיוטה והמסמכים שנבחרו בפאנל המסמכים"],
+    [true, "הטיוטה בלבד", "מסמכי התיק לא נכללים. הבחירה בפאנל נשמרת"],
+  ];
+  const scope = (indent: string) => (
+    <div className="flex flex-col gap-0.5 pb-1" style={{ paddingInlineStart: indent }}>
+      {scopeOptions.map(([only, title, desc]) => {
+        const on = choice.draftOnly === only;
+        return (
+          <button
+            key={title}
+            onClick={() => onChoice({ ...choice, draftOnly: only })}
+            className="w-full flex items-start gap-2 text-right rounded px-2 py-1.5 transition-colors"
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          >
+            <span
+              className="mt-0.5 size-4 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ border: `1px solid ${on ? c.primary : c.border}` }}
+            >
+              {on && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} />}
+            </span>
+            <span className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[13.5px]" style={{ color: textCol }}>{title}</span>
+              <span className="text-[12.5px] leading-snug" style={{ color: subCol }}>{desc}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 
   return (
@@ -188,7 +225,7 @@ export function DraftModal({
           <span className="text-[12.5px] flex-shrink-0" style={{ color: subCol }}>{formatSize(fileSize)}</span>
         </div>
 
-        <div className="px-6 text-[13px]" style={{ color: subCol }}>בחרו פעולה</div>
+        <div className="px-6 text-[13px]" style={{ color: subCol }}>{embedded ? "בדיקות" : "בחרו פעולה"}</div>
         <div className="px-4 pt-1 flex flex-col">
           {option(choice.lang, "הגהה", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
             () => toggleCheck("lang"), checksUsed)}
@@ -201,12 +238,22 @@ export function DraftModal({
           )}
         </div>
 
-        {/* The line marks a different kind of action, not just another option: the checks above
-            run on אישור, the chat below hands back to the composer for a question. */}
+        {/* The line marks a different kind of choice, not just another option: the checks above
+            run on אישור, the part below is about what questions get asked against. */}
         <div className="mx-6 my-2" style={{ borderTop: `1px solid ${line}` }} />
 
         <div className="px-4 pb-2 flex flex-col">
-          {option(choice.chat, "שיחה עם המסמך", "שאלות על תוכן הטיוטה, לבד או יחד עם מסמכי התיק.", toggleChat)}
+          {embedded ? (
+            <>
+              <div className="px-2 pt-1 pb-1 text-[14px]" style={{ color: textCol }}>שיחה עם המסמך</div>
+              {scope("0px")}
+            </>
+          ) : (
+            <>
+              {option(choice.chat, "שיחה עם המסמך", "שאלות על תוכן הטיוטה, לבד או יחד עם מסמכי התיק.", toggleChat)}
+              {choice.chat && scope("26px")}
+            </>
+          )}
         </div>
 
         <div className="flex gap-3 justify-end px-6 py-5">

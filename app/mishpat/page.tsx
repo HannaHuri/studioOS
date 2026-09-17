@@ -677,10 +677,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
   const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
   const [draftEmbedded, setDraftEmbedded] = useState(false); // false while the first dialog is still open
-  const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false });
+  const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false, draftOnly: false });
   const [draftOpen, setDraftOpen] = useState(false); // the dialog
   const [checksUsed, setChecksUsed] = useState(false); // הגהה / בדיקת עקיבות run once per conversation
-  const [draftIncluded, setDraftIncluded] = useState(false); // the checkbox beside the draft's name
+  // "הטיוטה בלבד": questions go to the draft without the case documents. The panel's selection is
+  // left untouched, only ignored, so switching back restores exactly what was picked.
+  const [draftOnly, setDraftOnly] = useState(false);
   const [draftShown, setDraftShown] = useState(false); // has the file card appeared in the thread yet
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
@@ -786,10 +788,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
     setDraftEmbedded(false);
-    setDraftChoice({ lang: true, coherence: true, chat: false });
+    setDraftChoice({ lang: true, coherence: true, chat: false, draftOnly: false });
     setDraftOpen(false);
     setChecksUsed(false);
-    setDraftIncluded(false);
+    setDraftOnly(false);
     setDraftShown(false);
     setProofRun(null);
     setAgentStep(0);
@@ -811,7 +813,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
 
   function handleSend() {
     if (!inputText.trim()) return;
-    const withDraft = !!draft && draftEmbedded && draftIncluded;
+    // once a draft is in the conversation it is part of every question's context
+    const withDraft = !!draft && draftEmbedded;
     const card = withDraft ? takeDraftCard() : undefined;
     setMessages((prev) => [
       ...prev,
@@ -830,13 +833,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // the draft into the context and hands back to the composer for a question.
   function handleConfirmDraft() {
     if (!draft) return;
+    const wasEmbedded = draftEmbedded;
     setDraftOpen(false);
     setDraftEmbedded(true);
-    // Every action on the draft ticks it: an empty box while a check runs on the draft read as a
-    // contradiction, and a follow-up right after is almost always about it.
-    setDraftIncluded(true);
-    if (draftChoice.chat) {
-      requestAnimationFrame(() => inputRef.current?.focus());
+    setDraftOnly(draftChoice.draftOnly);
+    const runChecks = (draftChoice.lang || draftChoice.coherence) && !checksUsed;
+    if (!runChecks) {
+      // שיחה עם המסמך, or a change of scope on a draft that is already in: back to the composer
+      if (draftChoice.chat || wasEmbedded) requestAnimationFrame(() => inputRef.current?.focus());
       return;
     }
     // Asking here rather than on load: the click is the user gesture Chrome wants, and it's
@@ -848,8 +852,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     const card = takeDraftCard();
     setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds), draftCard: card }]);
     setChecksUsed(true);
-    // Once the checks are spent, reopening the dialog lands on the one action still open to it.
-    setDraftChoice({ lang: false, coherence: false, chat: true });
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
   }
@@ -969,7 +971,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={draftEmbedded && draftIncluded ? "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          placeholder={draftEmbedded ? (draftOnly ? "אפשר לשאול כאן כל שאלה על הטיוטה" : "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק") : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
@@ -1024,35 +1026,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               const f = e.target.files?.[0];
               if (f) {
                 setDraft({ name: f.name, size: f.size });
-                setDraftChoice({ lang: true, coherence: true, chat: false });
+                setDraftChoice({ lang: true, coherence: true, chat: false, draftOnly: false });
                 setDraftOpen(true);
               }
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
-          {/* One draft per conversation: once it is in, the button stays where it is but greys out —
-              grey already says the action is no longer available. The draft itself lives in the
-              case line, and that is where its dialog opens from. */}
-          <button
-            onClick={() => { if (!draftEmbedded) fileRef.current?.click(); }}
-            aria-disabled={draftEmbedded}
-            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{
-              backgroundColor: "transparent",
-              border: "none",
-              color: c.iconGray,
-              opacity: draftEmbedded ? 0.4 : 1,
-              cursor: draftEmbedded ? "default" : "pointer",
-              // pulled back over the row gap, so it sits against מעמיק rather than adrift
-              // between the mode button and the empty middle of the row
-              marginLeft: "-6px",
-            }}
-            title={draftEmbedded ? undefined : "העלאת טיוטה"}
-            onMouseEnter={e => { if (!draftEmbedded) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
-          >
-            <FilePlus size={15} />
-          </button>
 
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
@@ -1064,54 +1043,40 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               button keeps its full, comfortable hover padding (not trimmed on one side). */}
           <div className="flex items-center gap-1.5 min-w-0" style={{ marginInlineEnd: "-8px" }}>
             {/* The conversation's draft, beside the case it belongs to — this line already says what
-                the conversation is about. One unit, one job per part: the checkbox and the name
-                decide whether the next question includes the draft (a checkbox label toggles, so
-                the name is plain text, not a link); ⋯ opens the draft's dialog, and goes once the
-                checks are spent and there is nothing left in it to run. (Before the case button in
-                the DOM so that, in this LTR row, it sits to the case's left — after it in RTL.) */}
-            {draft && draftEmbedded && (
-              <>
-                <div className="flex items-center min-w-0 max-w-[240px]" dir="rtl">
-                  <button
-                    onClick={() => setDraftIncluded((v) => !v)}
-                    role="checkbox"
-                    aria-checked={draftIncluded}
-                    className="flex items-center gap-1.5 min-w-0 h-8 px-1.5 rounded transition-colors"
-                    style={{ fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                  >
-                    <span
-                      className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center"
-                      style={{ backgroundColor: draftIncluded ? c.primary : "transparent", border: draftIncluded ? "none" : `1px solid ${c.border}` }}
-                    >
-                      {draftIncluded && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </span>
-                    {/* kept short whatever the width — the case is the line's main subject; the full
-                        name is on hover */}
-                    <span className="truncate text-[14px] max-w-[110px]" style={{ color: isDark ? dk.text : c.text }} title={draft.name}>{draft.name}</span>
-                  </button>
-                  {!checksUsed && (
-                    <button
-                      onClick={() => { setDraftChoice({ lang: true, coherence: true, chat: false }); setDraftOpen(true); }}
-                      className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-                      // tucked in over the name button's own padding, so the dots read as the name's
-                      style={{ color: c.iconGray, marginInlineStart: "-6px" }}
-                      title="פעולות על הטיוטה"
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <MoreHorizontal size={15} />
-                    </button>
-                  )}
-                </div>
-                <span className="text-[14px] flex-shrink-0" style={{ color: c.textLight }}>·</span>
-              </>
-            )}
+                the conversation is about. One slot, two states:
+                  - no draft: a grey FilePlus, which uploads one;
+                  - draft in: the same slot turns into a blue File (no plus — there is one draft per
+                    conversation, so it no longer promises adding) with the name beside it in plain
+                    text. The icon opens the draft's dialog, where the checks and the scope live.
+                (Before the case button in the DOM so that, in this LTR row, it sits to the case's left
+                — after it in RTL reading.) */}
+            <div className="flex items-center min-w-0" dir="rtl">
+              <button
+                onClick={() => {
+                  if (!draftEmbedded) { fileRef.current?.click(); return; }
+                  // reopening: nothing preselected to run, scope as it stands
+                  setDraftChoice({ lang: false, coherence: false, chat: false, draftOnly });
+                  setDraftOpen(true);
+                }}
+                className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+                style={{ color: draftEmbedded ? c.primary : c.iconGray }}
+                title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
+              </button>
+              {draft && draftEmbedded && (
+                // kept short whatever the width — the case is the line's main subject; full name on hover
+                <span
+                  className="truncate text-[14px] max-w-[110px]"
+                  style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", marginInlineStart: "-2px" }}
+                  title={draft.name}
+                >
+                  {draft.name}
+                </span>
+              )}
+            </div>
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
@@ -1120,13 +1085,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
-              <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-              <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+              <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, opacity: draftOnly ? 0.45 : 1 }} />
+              <span className="truncate text-[14px]" style={{ color: draftOnly ? c.textLight : isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
                 ת&quot;א • 12345-67-89
-                <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
+                <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: draftOnly ? c.textLight : isDark ? dk.text : c.text }} />
                 יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
               </span>
-              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
+              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5", opacity: draftOnly ? 0.45 : 1 }}>+1</span>
             </button>
           </div>
         </div>
@@ -1271,6 +1236,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         choice={draftChoice}
         onChoice={setDraftChoice}
         checksUsed={checksUsed}
+        embedded={draftEmbedded}
         onClose={handleCloseDraft}
         onConfirm={handleConfirmDraft}
       />
