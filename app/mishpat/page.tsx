@@ -1037,8 +1037,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onClick={() => (draftEmbedded ? setDraftOpen(true) : fileRef.current?.click())}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              // once the draft is in, the button takes the pale-blue on-state
-              backgroundColor: draftEmbedded ? c.primaryLight : "transparent",
+              // once the draft is in, the icon turns blue — no fill behind it
+              backgroundColor: "transparent",
               border: "none",
               color: draftEmbedded ? c.primary : c.iconGray,
               // pulled back over the row gap, so it sits against מעמיק rather than adrift
@@ -1046,10 +1046,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               marginLeft: "-6px",
             }}
             title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
-            onMouseEnter={e => { if (!draftEmbedded) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = draftEmbedded ? c.primaryLight : "transparent"; }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {/* Two states. FilePlus: upload. A bare document on pale blue: this conversation's
+            {/* Two states. FilePlus: upload. A bare blue document: this conversation's
                 draft. The plus has to go once a draft is in — there is one per conversation, so
                 there is nothing more to add. */}
             {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
