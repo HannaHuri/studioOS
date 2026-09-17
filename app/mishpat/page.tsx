@@ -5,7 +5,7 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  File as FileIcon, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
+  FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -1016,9 +1016,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
-          {/* Grey FilePlus: upload a draft. Once a draft is in, a blue File — no plus, since there is
-              one draft per conversation — which reopens the draft's dialog for the checks. The draft
-              itself is shown at the head of the conversation, so the blue has something to point to. */}
+          {/* The same FilePlus in both states; only the colour changes. Grey: upload a draft. Blue:
+              a draft is in, and the button reopens its dialog for the checks. Changing the glyph as
+              well (to a plain File) was one change too many — the blue already says the state moved,
+              and the draft itself is shown at the head of the conversation. */}
           <button
             onClick={() => {
               if (!draftEmbedded) { fileRef.current?.click(); return; }
@@ -1036,7 +1037,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
-            {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
+            <FilePlus size={15} />
           </button>
 
 
