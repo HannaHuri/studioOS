@@ -5,7 +5,7 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
+  File as FileIcon, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -1037,23 +1037,22 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onClick={() => (draftEmbedded ? setDraftOpen(true) : fileRef.current?.click())}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              backgroundColor: "transparent",
-              // once the draft is in, a blue frame marks the button as holding something; the
-              // transparent border otherwise keeps the icon from shifting a pixel between states
-              border: draftEmbedded ? `1px solid ${c.primary}` : "1px solid transparent",
-              color: c.iconGray,
+              // once the draft is in, the button takes the pale-blue on-state
+              backgroundColor: draftEmbedded ? c.primaryLight : "transparent",
+              border: "none",
+              color: draftEmbedded ? c.primary : c.iconGray,
               // pulled back over the row gap, so it sits against מעמיק rather than adrift
               // between the mode button and the empty middle of the row
               marginLeft: "-6px",
             }}
             title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            onMouseEnter={e => { if (!draftEmbedded) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = draftEmbedded ? c.primaryLight : "transparent"; }}
           >
-            {/* Two states. FilePlus: upload. A plain document in a blue frame: this conversation's
+            {/* Two states. FilePlus: upload. A bare document on pale blue: this conversation's
                 draft. The plus has to go once a draft is in — there is one per conversation, so
                 there is nothing more to add. */}
-            {draftEmbedded ? <FileText size={15} /> : <FilePlus size={15} />}
+            {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
           </button>
 
           {/* Whether the next question is about the draft too. A checkbox, not a link: the box
