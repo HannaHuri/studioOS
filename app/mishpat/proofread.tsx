@@ -106,17 +106,15 @@ function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
 // ── The draft at the top of the conversation ───────────────────────────────
 // Once a draft is in, it is part of the conversation itself — so it is shown at the head of
 // the conversation, not in the composer (which is for writing the next question) and not inside
-// whichever message happened to use it first. Drawn as the file card it always was — a small
-// bordered card — pinned so it stays in view while the thread scrolls under it.
+// whichever message happened to use it first. The file card it always was — a small bordered
+// card — which the page sets inside a pinned conversation bubble.
 export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
   return (
     <div
-      className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5 pointer-events-auto"
+      className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
       style={{
         backgroundColor: isDark ? dk.surface : "white",
         border: `1px solid ${isDark ? dk.border : c.inputBorder}`,
-        // lifts it off whatever text is scrolling underneath
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
       }}
       dir="rtl"
       title={name}

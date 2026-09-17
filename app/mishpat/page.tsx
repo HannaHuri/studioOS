@@ -615,6 +615,10 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 // ── Chat area ──────────────────────────────────────────────────────────────
 // logSteps is what the run walked through — kept on the message so the log can be
 // reopened after the run is long over.
+// The question bubble's translucent blue, made opaque over the page background — the pinned
+// draft bubble has to hide the thread scrolling underneath it.
+const DRAFT_BUBBLE = (isDark: boolean) => (isDark ? "rgb(17, 34, 66)" : "rgb(230, 242, 255)");
+
 // withDraft marks a question asked while the conversation had a draft.
 type Message = {
   q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[];
@@ -1298,7 +1302,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
-            {draft && draftEmbedded && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} /></div>}
+            {draft && draftEmbedded && (
+              <div className="rounded px-4 py-3 flex" dir="rtl" style={{ backgroundColor: DRAFT_BUBBLE(isDark) }}>
+                <DraftStrip name={draft.name} isDark={isDark} />
+              </div>
+            )}
             {renderInput()}
           </div>
         </div>
@@ -1314,11 +1322,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
         <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll">
-          {/* Pinned file card: the band around it is transparent and lets clicks through, so only
-              the card itself sits over the scrolling thread — no full-width bar. */}
+          {/* The draft as a pinned conversation bubble holding its file card — the same bubble a
+              question sits in. The band around it takes the page's own background, so the thread
+              scrolls cleanly underneath without any line across it. */}
           {draft && draftEmbedded && (
-            <div className="sticky top-0 z-10 px-6 pt-3 flex justify-center pointer-events-none">
-              <div className="w-full max-w-[768px] flex" dir="rtl">
+            <div className="sticky top-0 z-10 px-6 pt-4 flex justify-center" style={{ backgroundColor: bg }}>
+              <div className="w-full max-w-[768px] rounded px-4 py-3 flex" dir="rtl" style={{ backgroundColor: DRAFT_BUBBLE(isDark) }}>
                 <DraftStrip name={draft.name} isDark={isDark} />
               </div>
             </div>
