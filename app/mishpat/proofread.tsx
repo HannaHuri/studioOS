@@ -8,8 +8,8 @@
 // The two checks combine with each other but never with the chat (a, b, a+b, or c). They
 // run as soon as they are confirmed, and only once per conversation; the chat hands back
 // to the composer so the user can ask. Either way the draft stays in the conversation — it
-// can't be removed, and it is part of every question's context from then on. It is named in
-// the composer's case line, which is where its dialog opens from.
+// can't be removed, and it is part of every question's context from then on. It is shown at the
+// head of the conversation, and the upload button — blue once the draft is in — reopens its dialog.
 //
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
@@ -23,7 +23,7 @@ export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; s
 export type RunStep = { Icon: RunStepIcon; text: string; subText?: string; altIcon?: RunStepIcon; altText?: string };
 
 // What the dialog is set to. `chat` never sits alongside the other two — the toggles enforce it.
-export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean; draftOnly: boolean };
+export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean };
 export type ProofKinds = { lang: boolean; coherence: boolean };
 // What a finished check carries into the message list and the history item.
 export type ProofRun = { fileName: string; kinds: ProofKinds };
@@ -103,17 +103,15 @@ function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
   );
 }
 
-// The embedded draft, as it sits inside the message that first used it. No remove button:
-// once a draft is in a conversation it stays there.
-export function DraftFileCard({ name, isDark }: { name: string; isDark: boolean }) {
+// ── The draft at the top of the conversation ───────────────────────────────
+// Once a draft is in, it is part of the conversation itself — so it is shown at the head of
+// the conversation, not in the composer (which is for writing the next question) and not inside
+// whichever message happened to use it first. Stays in view while the thread scrolls.
+export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
   return (
-    <div
-      className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5 mb-1.5"
-      style={{ backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "white", border: `1px solid ${isDark ? dk.border : c.inputBorder}` }}
-      dir="rtl"
-    >
+    <div className="w-full max-w-[768px] flex items-center gap-1.5 min-w-0 py-2" dir="rtl" title={name}>
       <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
-      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: FONT }}>
         {name}
       </span>
     </div>
@@ -121,9 +119,9 @@ export function DraftFileCard({ name, isDark }: { name: string; isDark: boolean 
 }
 
 // ── The dialog ─────────────────────────────────────────────────────────────
-// Opens when a draft is picked, and again from the draft's icon in the case line once it is in
-// the conversation — so everything about the draft is managed in one place. A dialog rather
-// than a strip under the composer, because in this product setting up a task happens in a window.
+// Opens when a draft is picked, and again from the upload button once the draft is in. A dialog
+// rather than a strip under the composer, because in this product setting up a task happens in
+// a window.
 export function DraftModal({
   isDark, fileName, fileSize, choice, onChoice, checksUsed, embedded, onClose, onConfirm,
 }: {
@@ -135,13 +133,15 @@ export function DraftModal({
   // הגהה and בדיקת עקיבות run once per conversation; after that they stay visible but locked.
   checksUsed: boolean;
   // Once the draft is in the conversation it is always part of it, so "שיחה עם המסמך" is no
-  // longer an action to pick — what is left to choose is whether the case documents come too.
+  // longer an action to pick — only the checks are left.
   embedded: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
   const wantsChecks = (choice.lang || choice.coherence) && !checksUsed;
-  const canConfirm = embedded || choice.chat || wantsChecks;
+  const canConfirm = choice.chat || wantsChecks;
+  // Reopened with the checks already spent, there is nothing to confirm — only the note to read.
+  const nothingLeft = embedded && checksUsed;
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
@@ -150,7 +150,7 @@ export function DraftModal({
   // Before the draft is in, a check and the chat never combine — picking one clears the other.
   const toggleCheck = (key: "lang" | "coherence") =>
     onChoice({ ...choice, [key]: !choice[key], chat: false });
-  const toggleChat = () => onChoice({ ...choice, lang: false, coherence: false, chat: !choice.chat });
+  const toggleChat = () => onChoice({ lang: false, coherence: false, chat: !choice.chat });
 
   const option = (on: boolean, title: string, desc: string, toggle: () => void, locked = false) => (
     <button
@@ -166,40 +166,6 @@ export function DraftModal({
         <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
       </span>
     </button>
-  );
-
-  // What the conversation about the draft includes. A radio pair, not a checkbox: two named
-  // states, one of which is always in force.
-  const scopeOptions: [boolean, string, string][] = [
-    [false, "יחד עם מסמכי התיק", "הטיוטה והמסמכים שנבחרו בפאנל המסמכים"],
-    [true, "הטיוטה בלבד", "מסמכי התיק לא נכללים. הבחירה בפאנל נשמרת"],
-  ];
-  const scope = (indent: string) => (
-    <div className="flex flex-col gap-0.5 pb-1" style={{ paddingInlineStart: indent }}>
-      {scopeOptions.map(([only, title, desc]) => {
-        const on = choice.draftOnly === only;
-        return (
-          <button
-            key={title}
-            onClick={() => onChoice({ ...choice, draftOnly: only })}
-            className="w-full flex items-start gap-2 text-right rounded px-2 py-1.5 transition-colors"
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
-          >
-            <span
-              className="mt-0.5 size-4 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{ border: `1px solid ${on ? c.primary : c.border}` }}
-            >
-              {on && <span className="size-2 rounded-full" style={{ backgroundColor: c.primary }} />}
-            </span>
-            <span className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[13.5px]" style={{ color: textCol }}>{title}</span>
-              <span className="text-[12.5px] leading-snug" style={{ color: subCol }}>{desc}</span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
   );
 
   return (
@@ -226,7 +192,7 @@ export function DraftModal({
         </div>
 
         <div className="px-6 text-[13px]" style={{ color: subCol }}>{embedded ? "בדיקות" : "בחרו פעולה"}</div>
-        <div className="px-4 pt-1 flex flex-col">
+        <div className={`px-4 pt-1 flex flex-col ${embedded ? "pb-2" : ""}`}>
           {option(choice.lang, "הגהה", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
             () => toggleCheck("lang"), checksUsed)}
           {option(choice.coherence, "בדיקת עקיבות", "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
@@ -238,36 +204,36 @@ export function DraftModal({
           )}
         </div>
 
-        {/* The line marks a different kind of choice, not just another option: the checks above
-            run on אישור, the part below is about what questions get asked against. */}
-        <div className="mx-6 my-2" style={{ borderTop: `1px solid ${line}` }} />
-
-        <div className="px-4 pb-2 flex flex-col">
-          {embedded ? (
-            <>
-              <div className="px-2 pt-1 pb-1 text-[14px]" style={{ color: textCol }}>שיחה עם המסמך</div>
-              {scope("0px")}
-            </>
-          ) : (
-            <>
+        {/* Only at upload: the checks run on אישור, the chat below hands back to the composer. */}
+        {!embedded && (
+          <>
+            <div className="mx-6 my-2" style={{ borderTop: `1px solid ${line}` }} />
+            <div className="px-4 pb-2 flex flex-col">
               {option(choice.chat, "שיחה עם המסמך", "שאלות על תוכן הטיוטה, לבד או יחד עם מסמכי התיק.", toggleChat)}
-              {choice.chat && scope("26px")}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
 
         <div className="flex gap-3 justify-end px-6 py-5">
-          <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
-            ביטול
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={!canConfirm}
-            className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity"
-            style={{ backgroundColor: canConfirm ? c.primary : (isDark ? dk.border : c.border), cursor: canConfirm ? "pointer" : "default", opacity: canConfirm ? 1 : 0.7 }}
-          >
-            אישור
-          </button>
+          {nothingLeft ? (
+            <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
+              סגירה
+            </button>
+          ) : (
+            <>
+              <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
+                ביטול
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={!canConfirm}
+                className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity"
+                style={{ backgroundColor: canConfirm ? c.primary : (isDark ? dk.border : c.border), cursor: canConfirm ? "pointer" : "default", opacity: canConfirm ? 1 : 0.7 }}
+              >
+                אישור
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ import {
 import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
-  DraftModal, DraftFileCard, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  DraftModal, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER,
   type DraftChoice, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
@@ -615,11 +615,10 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 // ── Chat area ──────────────────────────────────────────────────────────────
 // logSteps is what the run walked through — kept on the message so the log can be
 // reopened after the run is long over.
-// draftCard shows the embedded draft inside the first message that used it; withDraft marks
-// a question asked while the draft was part of the context.
+// withDraft marks a question asked while the conversation had a draft.
 type Message = {
   q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[];
-  draftCard?: string; withDraft?: boolean;
+  withDraft?: boolean;
 };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
@@ -677,13 +676,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
   const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
   const [draftEmbedded, setDraftEmbedded] = useState(false); // false while the first dialog is still open
-  const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false, draftOnly: false });
+  const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false });
   const [draftOpen, setDraftOpen] = useState(false); // the dialog
   const [checksUsed, setChecksUsed] = useState(false); // הגהה / בדיקת עקיבות run once per conversation
-  // "הטיוטה בלבד": questions go to the draft without the case documents. The panel's selection is
-  // left untouched, only ignored, so switching back restores exactly what was picked.
-  const [draftOnly, setDraftOnly] = useState(false);
-  const [draftShown, setDraftShown] = useState(false); // has the file card appeared in the thread yet
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -788,11 +783,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
     setDraftEmbedded(false);
-    setDraftChoice({ lang: true, coherence: true, chat: false, draftOnly: false });
+    setDraftChoice({ lang: true, coherence: true, chat: false });
     setDraftOpen(false);
     setChecksUsed(false);
-    setDraftOnly(false);
-    setDraftShown(false);
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -804,21 +797,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const bg = isDark ? dk.bg : "white";
   const textCol = isDark ? dk.text : c.text;
 
-  // The file card rides on the first message that uses the draft, and only that one.
-  function takeDraftCard() {
-    if (!draft || draftShown) return undefined;
-    setDraftShown(true);
-    return draft.name;
-  }
 
   function handleSend() {
     if (!inputText.trim()) return;
     // once a draft is in the conversation it is part of every question's context
     const withDraft = !!draft && draftEmbedded;
-    const card = withDraft ? takeDraftCard() : undefined;
     setMessages((prev) => [
       ...prev,
-      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft, draftCard: card },
+      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft },
     ]);
     setInputText("");
     if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
@@ -836,10 +822,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     const wasEmbedded = draftEmbedded;
     setDraftOpen(false);
     setDraftEmbedded(true);
-    setDraftOnly(draftChoice.draftOnly);
     const runChecks = (draftChoice.lang || draftChoice.coherence) && !checksUsed;
     if (!runChecks) {
-      // שיחה עם המסמך, or a change of scope on a draft that is already in: back to the composer
+      // שיחה עם המסמך: back to the composer for a question
       if (draftChoice.chat || wasEmbedded) requestAnimationFrame(() => inputRef.current?.focus());
       return;
     }
@@ -849,8 +834,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       Notification.requestPermission().catch(() => {});
     }
     const run: ProofRun = { fileName: draft.name, kinds: { lang: draftChoice.lang, coherence: draftChoice.coherence } };
-    const card = takeDraftCard();
-    setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds), draftCard: card }]);
+    setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds) }]);
     setChecksUsed(true);
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
@@ -971,7 +955,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={draftEmbedded ? (draftOnly ? "אפשר לשאול כאן כל שאלה על הטיוטה" : "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק") : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          placeholder={draftEmbedded ? "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
@@ -1026,12 +1010,34 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               const f = e.target.files?.[0];
               if (f) {
                 setDraft({ name: f.name, size: f.size });
-                setDraftChoice({ lang: true, coherence: true, chat: false, draftOnly: false });
+                setDraftChoice({ lang: true, coherence: true, chat: false });
                 setDraftOpen(true);
               }
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
+          {/* Grey FilePlus: upload a draft. Once a draft is in, a blue File — no plus, since there is
+              one draft per conversation — which reopens the draft's dialog for the checks. The draft
+              itself is shown at the head of the conversation, so the blue has something to point to. */}
+          <button
+            onClick={() => {
+              if (!draftEmbedded) { fileRef.current?.click(); return; }
+              setDraftChoice({ lang: false, coherence: false, chat: false }); // nothing preselected to run
+              setDraftOpen(true);
+            }}
+            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+            style={{
+              color: draftEmbedded ? c.primary : c.iconGray,
+              // pulled back over the row gap, so it sits against מעמיק rather than adrift
+              // between the mode button and the empty middle of the row
+              marginLeft: "-6px",
+            }}
+            title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
+          </button>
 
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
@@ -1042,41 +1048,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {/* Case info — nudged right so its icon lines up with the input text above it, while the
               button keeps its full, comfortable hover padding (not trimmed on one side). */}
           <div className="flex items-center gap-1.5 min-w-0" style={{ marginInlineEnd: "-8px" }}>
-            {/* The conversation's draft, beside the case it belongs to — this line already says what
-                the conversation is about. One slot, two states:
-                  - no draft: a grey FilePlus, which uploads one;
-                  - draft in: the same slot turns into a blue File (no plus — there is one draft per
-                    conversation, so it no longer promises adding) with the name beside it in plain
-                    text. The icon opens the draft's dialog, where the checks and the scope live.
-                (Before the case button in the DOM so that, in this LTR row, it sits to the case's left
-                — after it in RTL reading.) */}
-            <div className="flex items-center min-w-0" dir="rtl">
-              <button
-                onClick={() => {
-                  if (!draftEmbedded) { fileRef.current?.click(); return; }
-                  // reopening: nothing preselected to run, scope as it stands
-                  setDraftChoice({ lang: false, coherence: false, chat: false, draftOnly });
-                  setDraftOpen(true);
-                }}
-                className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-                style={{ color: draftEmbedded ? c.primary : c.iconGray }}
-                title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
-              </button>
-              {draft && draftEmbedded && (
-                // kept short whatever the width — the case is the line's main subject; full name on hover
-                <span
-                  className="truncate text-[14px] max-w-[110px]"
-                  style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", marginInlineStart: "-2px" }}
-                  title={draft.name}
-                >
-                  {draft.name}
-                </span>
-              )}
-            </div>
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
@@ -1085,13 +1056,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
-              <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0, opacity: draftOnly ? 0.45 : 1 }} />
-              <span className="truncate text-[14px]" style={{ color: draftOnly ? c.textLight : isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+              <FolderOpen size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+              <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
                 ת&quot;א • 12345-67-89
-                <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: draftOnly ? c.textLight : isDark ? dk.text : c.text }} />
+                <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
                 יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
               </span>
-              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5", opacity: draftOnly ? 0.45 : 1 }}>+1</span>
+              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
             </button>
           </div>
         </div>
@@ -1327,6 +1298,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
+            {draft && draftEmbedded && <DraftStrip name={draft.name} isDark={isDark} />}
             {renderInput()}
           </div>
         </div>
@@ -1342,6 +1314,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ backgroundColor: bg }}>
         <div ref={scrollRef} className="flex-1 overflow-y-auto docs-scroll">
+          {draft && draftEmbedded && (
+            <div
+              className="sticky top-0 z-10 px-6 flex justify-center"
+              style={{ backgroundColor: bg, borderBottom: `1px solid ${isDark ? dk.border : c.inputBorder}` }}
+            >
+              <DraftStrip name={draft.name} isDark={isDark} />
+            </div>
+          )}
           <div className="px-6 py-4 flex flex-col items-center gap-4">
             {messages.map((msg, i) => {
               const isLast = i === messages.length - 1;
@@ -1353,7 +1333,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                       left corner, so they cost the thread no height at all: a reserved strip under
                       every question pushed the answer down whether or not anyone was hovering. */}
                   <div className="group relative rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                    {msg.draftCard && <DraftFileCard name={msg.draftCard} isDark={isDark} />}
                     <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
                     <div
                       className="absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
