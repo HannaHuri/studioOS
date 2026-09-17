@@ -1099,7 +1099,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     <button
                       onClick={() => { setDraftChoice({ lang: true, coherence: true, chat: false }); setDraftOpen(true); }}
                       className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-                      style={{ color: c.iconGray }}
+                      // tucked in over the name button's own padding, so the dots read as the name's
+                      style={{ color: c.iconGray, marginInlineStart: "-6px" }}
                       title="פעולות על הטיוטה"
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
