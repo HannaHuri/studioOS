@@ -1091,7 +1091,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                         </svg>
                       )}
                     </span>
-                    <span className="truncate text-[14px]" style={{ color: isDark ? dk.text : c.text }}>{draft.name}</span>
+                    {/* kept short whatever the width — the case is the line's main subject; the full
+                        name is on hover */}
+                    <span className="truncate text-[14px] max-w-[110px]" style={{ color: isDark ? dk.text : c.text }} title={draft.name}>{draft.name}</span>
                   </button>
                   {!checksUsed && (
                     <button
