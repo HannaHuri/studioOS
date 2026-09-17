@@ -1048,7 +1048,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <FilePlus size={15} />
+            {/* Two states, two glyphs. Grey FilePlus: upload. Blue FileText — the same mark the draft
+                carries in its file card and in the dialog — this conversation's draft. The plus
+                has to go once a draft is in: there is one per conversation, nothing more to add. */}
+            {draftEmbedded ? <FileText size={15} style={{ color: c.primary }} /> : <FilePlus size={15} />}
           </button>
 
           {/* Whether the next question is about the draft too. A checkbox, not a link: the box
