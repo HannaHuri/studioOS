@@ -1056,7 +1056,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             <button
               onClick={() => setDraftIncluded((v) => !v)}
               className="flex items-center gap-1.5 h-7 px-1.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
-              style={{ color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+              // tucked in against the upload icon, the same way the icon tucks in against מעמיק
+              style={{ color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif", marginLeft: "-6px" }}
               dir="rtl"
               title={draft?.name}
               onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}

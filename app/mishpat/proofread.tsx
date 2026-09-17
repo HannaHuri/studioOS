@@ -196,7 +196,7 @@ export function DraftModal({
             () => toggleCheck("coherence"), checksUsed)}
           {checksUsed && (
             <div className="text-[12.5px] pb-1" style={{ color: subCol, paddingInlineStart: "34px" }}>
-              ההגהה כבר בוצעה בשיחה זו
+              ההגהה כבר בוצעה בשיחה זו. לביצוע הגהה נוספת יש להתחיל שיחה חדשה.
             </div>
           )}
         </div>
