@@ -7,9 +7,9 @@
 //   שיחה עם המסמך   — the draft joins the conversation's context
 // The two checks combine with each other but never with the chat (a, b, a+b, or c). They
 // run as soon as they are confirmed, and only once per conversation; the chat hands back
-// to the composer so the user can ask. Either way the draft stays in the conversation —
-// it can't be removed — and a checkbox beside the upload button says whether it is part of
-// what the next question is about.
+// to the composer so the user can ask. Either way the draft stays in the conversation — it
+// can't be removed, and it is part of every question's context from then on. It is named in
+// the composer's case line, which is where its dialog opens from.
 //
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with

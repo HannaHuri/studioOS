@@ -680,7 +680,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false });
   const [draftOpen, setDraftOpen] = useState(false); // the dialog
   const [checksUsed, setChecksUsed] = useState(false); // הגהה / בדיקת עקיבות run once per conversation
-  const [draftIncluded, setDraftIncluded] = useState(false); // the checkbox beside the upload button
   const [draftShown, setDraftShown] = useState(false); // has the file card appeared in the thread yet
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
@@ -789,7 +788,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraftChoice({ lang: true, coherence: true, chat: false });
     setDraftOpen(false);
     setChecksUsed(false);
-    setDraftIncluded(false);
     setDraftShown(false);
     setProofRun(null);
     setAgentStep(0);
@@ -811,7 +809,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
 
   function handleSend() {
     if (!inputText.trim()) return;
-    const withDraft = !!draft && draftEmbedded && draftIncluded;
+    // once a draft is in the conversation it is part of every question's context
+    const withDraft = !!draft && draftEmbedded;
     const card = withDraft ? takeDraftCard() : undefined;
     setMessages((prev) => [
       ...prev,
@@ -832,10 +831,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!draft) return;
     setDraftOpen(false);
     setDraftEmbedded(true);
-    // Every action on the draft ticks "כולל הטיוטה". An empty box beside it while a check was
-    // working on the draft read as a contradiction — and a follow-up right after a check is
-    // almost always about that draft. Unticking is the way out for a case-only question.
-    setDraftIncluded(true);
     if (draftChoice.chat) {
       requestAnimationFrame(() => inputRef.current?.focus());
       return;
@@ -970,7 +965,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={draftIncluded ? "אפשר לשאול כאן כל שאלה על הטיוטה" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          placeholder={draftEmbedded ? "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
@@ -1031,58 +1026,31 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               e.target.value = ""; // so picking the same file twice still fires
             }}
           />
-          {/* One draft per conversation: once it is in, this button reopens its dialog rather
-              than asking for another file. */}
+          {/* One draft per conversation: once it is in, the button stays where it is but greys out.
+              The draft itself now lives in the case line, and that is where its dialog opens from.
+              Not the `disabled` attribute — a disabled button fires no mouse events, so its
+              tooltip, which is the only thing saying why, would never show. */}
           <button
-            onClick={() => (draftEmbedded ? setDraftOpen(true) : fileRef.current?.click())}
+            onClick={() => { if (!draftEmbedded) fileRef.current?.click(); }}
+            aria-disabled={draftEmbedded}
             className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
             style={{
-              // once the draft is in, the icon turns blue — no fill behind it
               backgroundColor: "transparent",
               border: "none",
-              color: draftEmbedded ? c.primary : c.iconGray,
+              color: c.iconGray,
+              opacity: draftEmbedded ? 0.4 : 1,
+              cursor: draftEmbedded ? "default" : "pointer",
               // pulled back over the row gap, so it sits against מעמיק rather than adrift
               // between the mode button and the empty middle of the row
               marginLeft: "-6px",
             }}
-            title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            title={draftEmbedded ? "לשיחה זו כבר הועלתה טיוטה. לטיוטה נוספת יש להתחיל שיחה חדשה." : "העלאת טיוטה"}
+            onMouseEnter={e => { if (!draftEmbedded) e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            {/* Two states. FilePlus: upload. A bare blue document: this conversation's
-                draft. The plus has to go once a draft is in — there is one per conversation, so
-                there is nothing more to add. */}
-            {draftEmbedded ? <FileIcon size={15} /> : <FilePlus size={15} />}
+            <FilePlus size={15} />
           </button>
 
-          {/* Whether the next question is about the draft too. A checkbox, not a link: the box
-              shows the state, and the words only say what it is about. Case documents stay
-              governed by the documents panel — "the draft only" is this ticked with the case
-              documents cleared there. */}
-          {draftEmbedded && (
-            <button
-              onClick={() => setDraftIncluded((v) => !v)}
-              className="flex items-center gap-1.5 h-7 px-1.5 rounded flex-shrink-0 text-[12.5px] transition-colors"
-              // tucked in against the upload icon, the same way the icon tucks in against מעמיק
-              style={{ color: c.iconGray, fontFamily: "Noto Sans Hebrew, sans-serif", marginLeft: "-6px" }}
-              dir="rtl"
-              title={draft?.name}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
-            >
-              <span
-                className="size-3.5 rounded-[2px] flex-shrink-0 flex items-center justify-center"
-                style={{ backgroundColor: draftIncluded ? c.primary : "transparent", border: draftIncluded ? "none" : `1px solid ${c.border}` }}
-              >
-                {draftIncluded && (
-                  <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </span>
-              כולל הטיוטה
-            </button>
-          )}
 
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
 
@@ -1092,6 +1060,27 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {/* Case info — nudged right so its icon lines up with the input text above it, while the
               button keeps its full, comfortable hover padding (not trimmed on one side). */}
           <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0" style={{ marginInlineEnd: "-8px" }}>
+            {/* The conversation's draft, beside the case it belongs to. This line already says what
+                the conversation is about, so the draft is named here rather than hinted at with a
+                colour elsewhere. It opens the draft's dialog. (Before the case button in the DOM so
+                that, in this LTR row, it sits to the case's left — after it in RTL reading.) */}
+            {draft && draftEmbedded && (
+              <>
+                <button
+                  onClick={() => setDraftOpen(true)}
+                  className="flex items-center gap-1 min-w-0 max-w-[200px] h-8 px-1.5 rounded transition-colors hover:underline"
+                  dir="rtl"
+                  style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}
+                  title="פעולות על הטיוטה"
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <FileIcon size={15} style={{ flexShrink: 0 }} />
+                  <span className="truncate text-[14px]">{draft.name}</span>
+                </button>
+                <span className="text-[14px] flex-shrink-0" style={{ color: c.textLight }}>·</span>
+              </>
+            )}
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 flex-shrink-0 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
