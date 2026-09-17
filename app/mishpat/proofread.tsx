@@ -132,25 +132,30 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
 // rather than a strip under the composer, because in this product setting up a task happens in
 // a window.
 export function DraftModal({
-  isDark, fileName, fileSize, choice, onChoice, checksUsed, embedded, onClose, onConfirm,
+  isDark, fileName, fileSize, choice, onChoice, usedChecks, embedded, onClose, onConfirm,
 }: {
   isDark: boolean;
   fileName: string;
   fileSize: number;
   choice: DraftChoice;
   onChoice: (c: DraftChoice) => void;
-  // הגהה and בדיקת עקיבות run once per conversation; after that they stay visible but locked.
-  checksUsed: boolean;
+  // Each check runs once per conversation; once it has, it stays visible but locked on its own.
+  usedChecks: ProofKinds;
   // Once the draft is in the conversation it is always part of it, so "שיחה עם המסמך" is no
   // longer an action to pick — only the checks are left.
   embedded: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const wantsChecks = (choice.lang || choice.coherence) && !checksUsed;
+  const wantsChecks = (choice.lang && !usedChecks.lang) || (choice.coherence && !usedChecks.coherence);
   const canConfirm = choice.chat || wantsChecks;
-  // Reopened with the checks already spent, there is nothing to confirm — only the note to read.
-  const nothingLeft = embedded && checksUsed;
+  // Reopened with both checks already spent, there is nothing to confirm — only the note to read.
+  const nothingLeft = embedded && usedChecks.lang && usedChecks.coherence;
+  const spentNote =
+    usedChecks.lang && usedChecks.coherence ? "ההגהה ובדיקת העקיבות כבר בוצעו בשיחה זו. לביצוע נוסף יש להתחיל שיחה חדשה."
+    : usedChecks.lang ? "ההגהה כבר בוצעה בשיחה זו. לביצוע הגהה נוספת יש להתחיל שיחה חדשה."
+    : usedChecks.coherence ? "בדיקת העקיבות כבר בוצעה בשיחה זו. לביצוע בדיקה נוספת יש להתחיל שיחה חדשה."
+    : "";
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
@@ -203,12 +208,12 @@ export function DraftModal({
         <div className="px-6 text-[13px]" style={{ color: subCol }}>{embedded ? "בדיקות" : "בחרו פעולה"}</div>
         <div className={`px-4 pt-1 flex flex-col ${embedded ? "pb-2" : ""}`}>
           {option(choice.lang, "הגהה", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
-            () => toggleCheck("lang"), checksUsed)}
+            () => toggleCheck("lang"), usedChecks.lang)}
           {option(choice.coherence, "בדיקת עקיבות", "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
-            () => toggleCheck("coherence"), checksUsed)}
-          {checksUsed && (
+            () => toggleCheck("coherence"), usedChecks.coherence)}
+          {spentNote && (
             <div className="text-[12.5px] pb-1" style={{ color: subCol, paddingInlineStart: "34px" }}>
-              ההגהה כבר בוצעה בשיחה זו. לביצוע הגהה נוספת יש להתחיל שיחה חדשה.
+              {spentNote}
             </div>
           )}
         </div>

@@ -15,7 +15,7 @@ import { Badge, UseExampleIcon } from "./icons";
 import {
   DraftModal, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER,
-  type DraftChoice, type ProofRun, type RunStep, type RunStepIcon,
+  type DraftChoice, type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
@@ -678,7 +678,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [draftEmbedded, setDraftEmbedded] = useState(false); // false while the first dialog is still open
   const [draftChoice, setDraftChoice] = useState<DraftChoice>({ lang: true, coherence: true, chat: false });
   const [draftOpen, setDraftOpen] = useState(false); // the dialog
-  const [checksUsed, setChecksUsed] = useState(false); // הגהה / בדיקת עקיבות run once per conversation
+  // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
+  const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -785,7 +786,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraftEmbedded(false);
     setDraftChoice({ lang: true, coherence: true, chat: false });
     setDraftOpen(false);
-    setChecksUsed(false);
+    setUsedChecks({ lang: false, coherence: false });
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -822,8 +823,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     const wasEmbedded = draftEmbedded;
     setDraftOpen(false);
     setDraftEmbedded(true);
-    const runChecks = (draftChoice.lang || draftChoice.coherence) && !checksUsed;
-    if (!runChecks) {
+    // only what was picked and hasn't run yet in this conversation
+    const kinds: ProofKinds = {
+      lang: draftChoice.lang && !usedChecks.lang,
+      coherence: draftChoice.coherence && !usedChecks.coherence,
+    };
+    if (!kinds.lang && !kinds.coherence) {
       // שיחה עם המסמך: back to the composer for a question
       if (draftChoice.chat || wasEmbedded) requestAnimationFrame(() => inputRef.current?.focus());
       return;
@@ -833,9 +838,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-    const run: ProofRun = { fileName: draft.name, kinds: { lang: draftChoice.lang, coherence: draftChoice.coherence } };
+    const run: ProofRun = { fileName: draft.name, kinds };
     setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds) }]);
-    setChecksUsed(true);
+    setUsedChecks((u) => ({ lang: u.lang || kinds.lang, coherence: u.coherence || kinds.coherence }));
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
   }
@@ -1207,7 +1212,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         fileSize={draft.size}
         choice={draftChoice}
         onChoice={setDraftChoice}
-        checksUsed={checksUsed}
+        usedChecks={usedChecks}
         embedded={draftEmbedded}
         onClose={handleCloseDraft}
         onConfirm={handleConfirmDraft}
