@@ -680,6 +680,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [draftOpen, setDraftOpen] = useState(false); // the dialog
   // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });
+  const draftSpent = draftEmbedded && usedChecks.lang && usedChecks.coherence;
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1005,47 +1006,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             />
           </button>
 
-          {/* Upload a draft. Word only — a check hands the file back marked up as Word. */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".docx,.doc"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) {
-                setDraft({ name: f.name, size: f.size });
-                setDraftChoice({ lang: true, coherence: true, chat: false });
-                setDraftOpen(true);
-              }
-              e.target.value = ""; // so picking the same file twice still fires
-            }}
-          />
-          {/* The same FilePlus in both states; only the colour changes. Grey: upload a draft. Blue:
-              a draft is in, and the button reopens its dialog for the checks. Changing the glyph as
-              well (to a plain File) was one change too many — the blue already says the state moved,
-              and the draft itself is shown at the head of the conversation. */}
-          <button
-            onClick={() => {
-              if (!draftEmbedded) { fileRef.current?.click(); return; }
-              setDraftChoice({ lang: false, coherence: false, chat: false }); // nothing preselected to run
-              setDraftOpen(true);
-            }}
-            className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-            style={{
-              color: draftEmbedded ? c.primary : c.iconGray,
-              // pulled back over the row gap, so it sits against מעמיק rather than adrift
-              // between the mode button and the empty middle of the row
-              marginLeft: "-6px",
-            }}
-            title={draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-          >
-            <FilePlus size={15} />
-          </button>
-
-
           {/* Scope selector — temporarily hidden: dev says it doesn't yet work together with agent mode. Kept here (and the lab page has a working copy) so it's easy to bring back once compatible. */}
 
           {/* Spacer */}
@@ -1054,6 +1014,47 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {/* Case info — nudged right so its icon lines up with the input text above it, while the
               button keeps its full, comfortable hover padding (not trimmed on one side). */}
           <div className="flex items-center gap-1.5 min-w-0" style={{ marginInlineEnd: "-8px" }}>
+            {/* Upload a draft. Word only — a check hands the file back marked up as Word. */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".docx,.doc"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setDraft({ name: f.name, size: f.size });
+                  setDraftChoice({ lang: true, coherence: true, chat: false });
+                  setDraftOpen(true);
+                }
+                e.target.value = ""; // so picking the same file twice still fires
+              }}
+            />
+            {/* The same FilePlus in both states; only the colour changes. Grey: upload a draft. Blue:
+                a draft is in, and the button reopens its dialog for the checks. Changing the glyph as
+                well (to a plain File) was one change too many — the blue already says the state moved,
+                and the draft itself is shown at the head of the conversation. */}
+            {/* Once both checks have run there is nothing left for it to do: grey and disabled. */}
+            <button
+              onClick={() => {
+                if (draftSpent) return;
+                if (!draftEmbedded) { fileRef.current?.click(); return; }
+                setDraftChoice({ lang: false, coherence: false, chat: false }); // nothing preselected to run
+                setDraftOpen(true);
+              }}
+              aria-disabled={draftSpent}
+              className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+              style={{
+                color: draftSpent ? c.iconGray : draftEmbedded ? c.primary : c.iconGray,
+                opacity: draftSpent ? 0.4 : 1,
+                cursor: draftSpent ? "default" : "pointer",
+              }}
+              title={draftSpent ? undefined : draftEmbedded ? "פעולות על הטיוטה" : "העלאת טיוטה"}
+              onMouseEnter={e => { if (!draftSpent) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+            >
+              <FilePlus size={15} />
+            </button>
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
