@@ -1069,7 +1069,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 <span className="inline-block align-middle" style={{ width: "14px", height: "1px", margin: "0 2px", backgroundColor: isDark ? dk.text : c.text }} />
                 יעקב אברמוב נ&apos; המרכז הרפואי קדם בע...
               </span>
-              <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+1</span>
+              {/* the same list the history scopes by, so the two can never disagree about how
+                  many cases this conversation is running on */}
+              {CURRENT_CASES.length > 1 && (
+                <span className="flex-shrink-0 text-[14px]" style={{ color: "#0068f5" }}>+{CURRENT_CASES.length - 1}</span>
+              )}
             </button>
           </div>
         </div>
@@ -1499,9 +1503,16 @@ type HistGroup = { label: string; items: HistConv[] };
 
 const hc = (name: string, num: string, kind = 'ת"א'): HistCase => ({ name, num, kind });
 
-// The case the chat is open on — the same one the composer shows. Users asked for the
-// history to open already narrowed to it, so this is what the default filter matches.
-const CURRENT_CASE = hc('יעקב אברמוב נ׳ המרכז הרפואי קדם בע"מ', "12345-67-89");
+// The cases the chat is open on. A conversation can run on more than one, which is what the
+// composer's "+N" means — so the composer, the history's scope control and its filter all read
+// from this one list and can't drift apart.
+const CURRENT_CASES: HistCase[] = [
+  hc('יעקב אברמוב נ׳ המרכז הרפואי קדם בע"מ', "12345-67-89"),
+  hc('עזבון אברמוב נ׳ מגדל חברה לביטוח בע"מ', "45210-03-24"),
+];
+const CURRENT_CASE = CURRENT_CASES[0];
+const CURRENT_NUMS = new Set(CURRENT_CASES.map((cs) => cs.num));
+const inScope = (cs: HistCase) => CURRENT_NUMS.has(cs.num);
 
 const CASE_POOL: HistCase[] = [
   hc('משה כהן ובניו בע"מ נ׳ משה לוי ובניו בע"מ', "59198-67-89"),
@@ -1524,7 +1535,8 @@ const HISTORY_GROUPS: HistGroup[] = [
     label: "היום",
     items: [
       { id: "h1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CURRENT_CASE] },
-      { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: manyCases(5, true) },
+      // two of its five are cases the chat is open on — this is the row the bold is for
+      { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: [...CURRENT_CASES, ...manyCases(3)] },
       { id: "h3", title: "סכם את החלטת הביניים מיום 12.6", cases: [CASE_POOL[0]] },
     ],
   },
@@ -1534,13 +1546,14 @@ const HISTORY_GROUPS: HistGroup[] = [
       { id: "y1", title: "הכן רשימת כל האזכורים בסיכומי התובע - חקיקה ופסיקה", cases: [CASE_POOL[0]] },
       { id: "y2", title: "אתר סתירות בין כתב התביעה לתצהיר", cases: manyCases(5) },
       { id: "y3", title: "טיוטת החלטה בבקשה לסעד זמני", cases: [CURRENT_CASE] },
-      { id: "y4", title: "רשימת מועדים דיוניים פתוחים", cases: [CASE_POOL[2]] },
+      { id: "y4", title: "רשימת מועדים דיוניים פתוחים", cases: [CURRENT_CASES[1]] },
     ],
   },
   {
     label: "ישן יותר",
     items: [
-      { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(20) },
+      // twenty cases, one of them the open one — the needle the bold has to find
+      { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(20, true) },
       { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CURRENT_CASE] },
       { id: "o3", title: "סכם את חוות דעת המומחה מטעם בית המשפט", cases: [CASE_POOL[4]] },
     ],
@@ -1549,10 +1562,12 @@ const HISTORY_GROUPS: HistGroup[] = [
 
 // The tag reads right-to-left: סוג • מספר — שם התיק. The name sits on the left and is the
 // part that gives way, so the identifying half (סוג + מספר) is never the thing that truncates.
-function CaseTag({ cs, bg, fg }: { cs: HistCase; bg: string; fg: string }) {
+// `strong` marks a case the open conversation is actually running on, so that in a row holding
+// several cases you can see at a glance which of them is the one you're in.
+function CaseTag({ cs, bg, fg, strong }: { cs: HistCase; bg: string; fg: string; strong?: boolean }) {
   return (
     <div className="w-full h-5 flex items-center rounded-[4px] pr-2 pl-1 overflow-hidden" style={{ backgroundColor: bg }}>
-      <div className="flex-1 min-w-0 flex items-center text-[12px] leading-[18px] whitespace-nowrap" style={{ color: fg }}>
+      <div className="flex-1 min-w-0 flex items-center text-[12px] leading-[18px] whitespace-nowrap" style={{ color: fg, fontWeight: strong ? 600 : undefined }}>
         <span className="flex-shrink-0">{cs.kind}</span>
         <span className="flex-shrink-0 px-[2px] font-light">•</span>
         <span className="flex-shrink-0">{cs.num}</span>
@@ -1649,7 +1664,8 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
   const font = "Noto Sans Hebrew, sans-serif";
 
   const term = q.trim();
-  const matchesCase = (it: HistConv) => it.cases.some((cs) => cs.num === CURRENT_CASE.num);
+  // a conversation belongs to the current scope if it touched ANY of the open cases
+  const matchesCase = (it: HistConv) => it.cases.some(inScope);
   const groups = data
     .map((g) => ({
       ...g,
@@ -1707,7 +1723,8 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
             className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden"
             style={{ border: `1px solid ${isDark ? dk.border : c.primaryLight}`, marginInlineEnd: "-8px" }}
           >
-            {([[true, "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
+            {/* the open scope may be more than one case, so the word follows the count */}
+            {([[true, CURRENT_CASES.length > 1 ? "תיקים אלו" : "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
               <button
                 key={label}
                 onClick={() => onCaseOnly(v)}
@@ -1716,7 +1733,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                   backgroundColor: caseOnly === v ? (isDark ? "#243354" : "#eaf2ff") : "transparent",
                   color: caseOnly === v ? c.primary : subCol,
                 }}
-                title={v ? `${CURRENT_CASE.kind} • ${CURRENT_CASE.num} — ${CURRENT_CASE.name}` : "כל השיחות, מכל התיקים"}
+                title={v ? CURRENT_CASES.map((cs) => `${cs.kind} • ${cs.num} — ${cs.name}`).join("\n") : "כל השיחות, מכל התיקים"}
               >
                 {label}
               </button>
@@ -1744,7 +1761,9 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
           {groups.length === 0 && (
             <div className="pt-6 flex flex-col items-center gap-2 text-center">
               <p className="text-[14px]" style={{ color: subCol }}>
-                {caseOnly && !term ? "אין שיחות קודמות בתיק הזה" : "לא נמצאו שיחות"}
+                {caseOnly && !term
+                  ? (CURRENT_CASES.length > 1 ? "אין שיחות קודמות בתיקים האלה" : "אין שיחות קודמות בתיק הזה")
+                  : "לא נמצאו שיחות"}
               </p>
               {caseOnly && (
                 <button onClick={() => onCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
@@ -1782,7 +1801,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                           <span className="text-[12.5px] leading-4">{it.cases.length} תיקים</span>
                           <ChevronDown size={12} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
                         </button>
-                        {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} />)}
+                        {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} strong={inScope(cs)} />)}
                       </div>
                     ) : caseOnly ? null : (
                       // scoped to one case, every row would carry the same tag — the header already
@@ -2405,7 +2424,7 @@ export default function MishpatPage() {
   // A finished check joins the conversations of היום, marked so it reads as a run, not a chat.
   const addProofToHistory = (title: string) =>
     setHistData((d) => d.map((g) => (g.label === "היום"
-      ? { ...g, items: [{ id: `p-${Date.now()}`, title, cases: [CURRENT_CASE], proof: true }, ...g.items] }
+      ? { ...g, items: [{ id: `p-${Date.now()}`, title, cases: CURRENT_CASES, proof: true }, ...g.items] }
       : g)));
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isExamplesOpen, setIsExamplesOpen] = useState(false);
