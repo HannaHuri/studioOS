@@ -1501,6 +1501,10 @@ type HistCase = { name: string; num: string; kind: string };
 type HistConv = { id: string; title: string; cases: HistCase[]; proof?: boolean };
 type HistGroup = { label: string; items: HistConv[] };
 
+// The width the panel actually ships at in production. The title had to shorten to fit the scope
+// control beside it on one line — see the header comment below.
+const HISTORY_WIDTH = 260;
+
 const hc = (name: string, num: string, kind = 'ת"א'): HistCase => ({ name, num, kind });
 
 // The cases the chat is open on. A conversation can run on more than one, which is what the
@@ -1724,7 +1728,10 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
         <div className="flex items-center gap-2 h-8">
           {/* both sized so the two never meet: the panel is 300px wide and the title and the
               control have to share one line without either giving way */}
-          <span className="text-[16px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>שיחות אחרונות</span>
+          {/* "היסטוריה" rather than "שיחות אחרונות": at 260 the two didn't share a line, and of the
+              short options this is the one that doesn't collide with the control beside it — "שיחות"
+              next to "תיקי השיחה" uses the same word for the list and for the open conversation. */}
+          <span className="text-[16px] leading-[1.25] flex-shrink-0" style={{ color: subCol }}>היסטוריה</span>
           <div className="flex-1" />
           {/* pulled out to the search field's edge, so the header has one left margin and not two */}
           <div
@@ -2643,7 +2650,7 @@ export default function MishpatPage() {
 
           {/* History drawer (narrow) — overlays from the right */}
           {narrow && isHistoryOpen && (
-            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: "300px", maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
+            <div className="absolute top-0 bottom-0 right-0 z-40" style={{ width: `${HISTORY_WIDTH}px`, maxWidth: "85%", backgroundColor: isDark ? dk.surface : "white" }}>
               {/* the panel's own header control closes it — no floating X on top of it */}
               <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} data={histData} setData={setHistData} />
             </div>
@@ -2707,7 +2714,7 @@ export default function MishpatPage() {
 
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
         {!narrow && isHistoryOpen && (
-          <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
+          <div className="flex-shrink-0 transition-all duration-300" style={{ width: `${HISTORY_WIDTH}px`, boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
             <HistoryPanel isDark={isDark} caseOnly={histCaseOnly} onCaseOnly={setHistCaseOnly} data={histData} setData={setHistData} />
           </div>
         )}
