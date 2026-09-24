@@ -1810,7 +1810,10 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                           {mine > 0 && (
                             <span className="text-[12.5px] leading-4">
                               <span className="font-light px-[3px]">·</span>
-                              <span style={{ fontWeight: 600 }}>{mine} משיחה זו</span>
+                              {/* not "משיחה זו": the chip sits inside a row that is itself a
+                                  conversation, so "זו" would point at the row rather than at the
+                                  one you're in */}
+                              <span style={{ fontWeight: 600 }}>{mine} בשיחה הנוכחית</span>
                             </span>
                           )}
                           <ChevronDown size={12} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
