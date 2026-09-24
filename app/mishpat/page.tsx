@@ -1522,10 +1522,13 @@ const CASE_POOL: HistCase[] = [
   hc("בת שבע אלמוג נ׳ עידו שחר", "59198-67-93"),
   hc('דניאל שמש בע"מ נ׳ אורלי בר', "59198-67-94"),
 ];
-// A multi-case conversation just cycles the pool — what the seed is really showing is the
-// count. `withCurrent` puts the open case in the list, so the filter has a multi-case hit too.
+// A conversation may run on at most five cases — the product's own ceiling, so no seed row
+// should ever exceed it. `withCurrent` puts an open case in the list, so the filter and the
+// bolding both have a multi-case row to land on.
+const MAX_CASES_PER_CONV = 5;
 const manyCases = (n: number, withCurrent = false): HistCase[] => {
-  const rest = Array.from({ length: withCurrent ? n - 1 : n }, (_, i) =>
+  const total = Math.min(n, MAX_CASES_PER_CONV);
+  const rest = Array.from({ length: withCurrent ? total - 1 : total }, (_, i) =>
     hc(CASE_POOL[i % CASE_POOL.length].name, `${59198 + i}-67-${89 + i}`));
   return withCurrent ? [CURRENT_CASE, ...rest] : rest;
 };
@@ -1552,8 +1555,8 @@ const HISTORY_GROUPS: HistGroup[] = [
   {
     label: "ישן יותר",
     items: [
-      // twenty cases, one of them the open one — the needle the bold has to find
-      { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(20, true) },
+      // five cases, one of them the open one — the needle the bold has to find
+      { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(5, true) },
       { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CURRENT_CASE] },
       { id: "o3", title: "סכם את חוות דעת המומחה מטעם בית המשפט", cases: [CASE_POOL[4]] },
     ],
@@ -1723,8 +1726,10 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
             className="flex items-center rounded-[4px] flex-shrink-0 overflow-hidden"
             style={{ border: `1px solid ${isDark ? dk.border : c.primaryLight}`, marginInlineEnd: "-8px" }}
           >
-            {/* the open scope may be more than one case, so the word follows the count */}
-            {([[true, CURRENT_CASES.length > 1 ? "תיקים אלו" : "תיק זה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
+            {/* Not "תיק זה" / "תיקים אלו": a pointer needs something nearby to point at, and the
+                cases are named at the far end of the screen, in the composer. "תיקי השיחה" names
+                itself, and singular/plural is then a one-letter difference rather than a decision. */}
+            {([[true, CURRENT_CASES.length > 1 ? "תיקי השיחה" : "תיק השיחה"], [false, "כל התיקים"]] as const).map(([v, label]) => (
               <button
                 key={label}
                 onClick={() => onCaseOnly(v)}
@@ -1783,6 +1788,9 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
+                // how many of this row's cases the open conversation is also running on — the
+                // same thing the bold says once the chip is open, said while it is still shut
+                const mine = it.cases.filter(inScope).length;
                 return (
                   <div
                     key={it.id}
@@ -1799,6 +1807,12 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                           style={{ backgroundColor: chipBg, color: titleCol }}
                         >
                           <span className="text-[12.5px] leading-4">{it.cases.length} תיקים</span>
+                          {mine > 0 && (
+                            <span className="text-[12.5px] leading-4">
+                              <span className="font-light px-[3px]">·</span>
+                              <span style={{ fontWeight: 600 }}>{mine} משיחה זו</span>
+                            </span>
+                          )}
                           <ChevronDown size={12} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
                         </button>
                         {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} strong={inScope(cs)} />)}
