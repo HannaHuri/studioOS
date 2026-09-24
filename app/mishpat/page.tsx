@@ -1563,6 +1563,11 @@ const HISTORY_GROUPS: HistGroup[] = [
   },
 ];
 
+// If the open cases have no history at all, opening the panel onto תיקי השיחה would land on an
+// empty list. The scope starts on כל התיקים instead — the control moves with it, so the list and
+// the button still agree; the panel just doesn't open onto nothing.
+const HAS_SCOPED_HISTORY = HISTORY_GROUPS.some((g) => g.items.some((it) => it.cases.some(inScope)));
+
 // The tag reads right-to-left: סוג • מספר — שם התיק. The name sits on the left and is the
 // part that gives way, so the identifying half (סוג + מספר) is never the thing that truncates.
 // `strong` marks a case the open conversation is actually running on, so that in a row holding
@@ -1766,9 +1771,9 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
           {groups.length === 0 && (
             <div className="pt-6 flex flex-col items-center gap-2 text-center">
               <p className="text-[14px]" style={{ color: subCol }}>
-                {caseOnly && !term
-                  ? (CURRENT_CASES.length > 1 ? "אין שיחות קודמות בתיקים האלה" : "אין שיחות קודמות בתיק הזה")
-                  : "לא נמצאו שיחות"}
+                {/* the panel never OPENS here — this is only reachable by choosing תיקי השיחה
+                    when there is nothing in it, and then saying so beats silently widening */}
+                {caseOnly && !term ? "אין שיחות קודמות" : "לא נמצאו שיחות"}
               </p>
               {caseOnly && (
                 <button onClick={() => onCaseOnly(false)} className="text-[13px] underline" style={{ color: c.primary }}>
@@ -2451,7 +2456,7 @@ export default function MishpatPage() {
   // History defaults to the open case. Turning it off is remembered while this conversation lasts —
   // it lives here rather than in the panel so closing and reopening the panel doesn't undo the
   // choice; a new conversation puts the default back.
-  const [histCaseOnly, setHistCaseOnly] = useState(true);
+  const [histCaseOnly, setHistCaseOnly] = useState(HAS_SCOPED_HISTORY);
 
   // Examples (דוגמאות) — the panel list, the open editor, the pending delete, and the save toast
   const [examples, setExamples] = useState<Example[]>(SEED_EXAMPLES);
@@ -2741,7 +2746,7 @@ export default function MishpatPage() {
         {/* ── Right icon bar ── */}
         <div className="w-[55px] flex-shrink-0 flex flex-col items-center pt-5 pb-4 border-l" style={{ borderColor: isDark ? dk.border : "#ebf3ff", backgroundColor: sidebarBg }}>
           <button
-            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(true); }}
+            onClick={() => { setConvKey((k) => k + 1); setIsPanelOpen(false); setIsHistoryOpen(false); setIsPromptsOpen(false); setHistCaseOnly(HAS_SCOPED_HISTORY); }}
             className="size-8 flex items-center justify-center rounded mb-4 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: c.primary, color: "white" }}
             title="שיחה חדשה"
