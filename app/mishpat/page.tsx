@@ -1429,7 +1429,9 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>טח</div>
+            {/* The product avatar (Figma 17698:15804): link-blue disc with a thin white ring, initials at 16px.
+                The design names Figtree, which has no Hebrew — the initials would fall back anyway. */}
+            <div className="size-8 rounded-full flex items-center justify-center text-white text-[16px] flex-shrink-0 select-none" style={{ backgroundColor: "#1F76C2", boxShadow: "inset 0 0 0 1px #FFFFFF", fontFamily: "Noto Sans Hebrew, sans-serif" }}>טח</div>
             <div className="flex flex-col leading-tight text-right">
               <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>טל חבקין</span>
             </div>
