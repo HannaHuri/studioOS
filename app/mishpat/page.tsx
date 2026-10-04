@@ -41,7 +41,7 @@ const FOOTER_HEIGHT = 90; // page-level disclaimer footer — 3 lines at 14px + 
 
 function Logo() {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[30px] w-auto" />;
+  return <img src="/studioOS/logo.png" alt="לוגו" className="h-[23px] w-auto" />;
 }
 
 // ── Checkbox ───────────────────────────────────────────────────────────────
