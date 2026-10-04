@@ -126,9 +126,10 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
 // Opens from the "פעולות" button beside the upload icon once a draft is in. Built like the
 // response-mode dropdown, but the rows tick rather than pick: one or more actions are marked and
 // run together on ביצוע. Each runs once per conversation — after it has, its row stays, locked.
-export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string }[] = [
-  { key: "lang", title: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון." },
-  { key: "coherence", title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
+// Their icons are the ones the progress tracker shows for the same work.
+export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string; Icon: RunStepIcon }[] = [
+  { key: "lang", Icon: SpellCheck, title: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון." },
+  { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
 ];
 
 export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
@@ -157,11 +158,11 @@ export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
         }}
         dir="rtl"
       >
-        <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}`, lineHeight: 1.3 }}>
+        <div className="px-4 pt-3.5 pb-1" style={{ lineHeight: 1.3 }}>
           <span className="text-[14px]" style={{ color: c.textGray }}>ניתן לבחור פעולה אחת או יותר</span>
         </div>
         <div className="py-1">
-          {DRAFT_ACTIONS.map(({ key, title, desc }) => {
+          {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
             const done = usedChecks[key];
             return (
               <button
@@ -174,7 +175,10 @@ export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
               >
                 <span className="mt-0.5"><Tick checked={done || picked[key]} muted={done} /></span>
                 <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[14px]" style={{ color: c.text }}>{title}</span>
+                  <span className="flex items-center gap-1.5 text-[14px]" style={{ color: c.text }}>
+                    <Icon size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                    {title}
+                  </span>
                   <span className="text-[13px] leading-snug" style={{ color: c.textGray }}>
                     {done ? "כבר בוצעה בשיחה זו" : desc}
                   </span>

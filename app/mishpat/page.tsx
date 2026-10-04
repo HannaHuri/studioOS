@@ -1032,7 +1032,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onClick={off ? undefined : handleActionsToggle}
                   aria-disabled={off}
                   dir="rtl"
-                  className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[14px] transition-colors"
+                  className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[13px] transition-colors"
                   style={{
                     backgroundColor: "transparent",
                     color: c.iconGray,
@@ -1247,7 +1247,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           dir="rtl"
         >
           {/* Header */}
-          <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}`, lineHeight: 1.3 }}>
+          <div className="px-4 pt-3.5 pb-1" style={{ lineHeight: 1.3 }}>
             <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {RESPONSE_MODE_TITLE}
             </span>
