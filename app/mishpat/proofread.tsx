@@ -1,20 +1,18 @@
 "use client";
 
 // ── טיוטה בשיחה ────────────────────────────────────────────────────────────
-// A conversation can take one Word draft. Picking it opens a dialog with three actions:
+// A conversation can take one Word draft. Uploading it puts it straight into the conversation —
+// shown at its head, part of every question's context from then on, and it can't be removed.
+// The upload icon and the response-mode selector go grey, and a "פעולות" menu appears beside them:
 //   הגהה            — כתיב, ניסוח ופיסוק; comes back as tracked changes
 //   בדיקת עקיבות    — contradictions INSIDE the draft; comes back as Word comments
-//   שיחה עם המסמך   — the draft joins the conversation's context
-// The two checks combine with each other but never with the chat (a, b, a+b, or c). They
-// run as soon as they are confirmed, and only once per conversation; the chat hands back
-// to the composer so the user can ask. Either way the draft stays in the conversation — it
-// can't be removed, and it is part of every question's context from then on. It is shown at the
-// head of the conversation, and the upload button — blue once the draft is in — reopens its dialog.
+// One or more can be ticked and run together, and each runs only once per conversation; once all
+// have run, the menu goes grey too. More actions will join the menu later.
 //
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, X } from "lucide-react";
+import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch } from "lucide-react";
 import { useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
@@ -23,7 +21,6 @@ export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; s
 export type RunStep = { Icon: RunStepIcon; text: string; subText?: string; altIcon?: RunStepIcon; altText?: string };
 
 // What the dialog is set to. `chat` never sits alongside the other two — the toggles enforce it.
-export type DraftChoice = { lang: boolean; coherence: boolean; chat: boolean };
 export type ProofKinds = { lang: boolean; coherence: boolean };
 // What a finished check carries into the message list and the history item.
 export type ProofRun = { fileName: string; kinds: ProofKinds };
@@ -81,9 +78,6 @@ export const proofFileNote = (k: ProofKinds) =>
     : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
     : "הסתירות מסומנות כהערות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.";
 
-export const formatSize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
-
 // ── Shared bits ────────────────────────────────────────────────────────────
 function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
   return (
@@ -128,129 +122,79 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
 }
 
 // ── The dialog ─────────────────────────────────────────────────────────────
-// Opens when a draft is picked, and again from the upload button once the draft is in. A dialog
-// rather than a strip under the composer, because in this product setting up a task happens in
-// a window.
-export function DraftModal({
-  isDark, fileName, fileSize, choice, onChoice, usedChecks, embedded, onClose, onConfirm,
-}: {
-  isDark: boolean;
-  fileName: string;
-  fileSize: number;
-  choice: DraftChoice;
-  onChoice: (c: DraftChoice) => void;
-  // Each check runs once per conversation; once it has, it stays visible but locked on its own.
+// ── The actions menu ───────────────────────────────────────────────────────
+// Opens from the "פעולות" button beside the upload icon once a draft is in. Built like the
+// response-mode dropdown, but the rows tick rather than pick: one or more actions are marked and
+// run together on ביצוע. Each runs once per conversation — after it has, its row stays, locked.
+export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string }[] = [
+  { key: "lang", title: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון." },
+  { key: "coherence", title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
+];
+
+export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
+  pos: { top?: number; bottom?: number; right: number };
   usedChecks: ProofKinds;
-  // Once the draft is in the conversation it is always part of it, so "שיחה עם המסמך" is no
-  // longer an action to pick — only the checks are left.
-  embedded: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onRun: (kinds: ProofKinds) => void;
 }) {
-  const wantsChecks = (choice.lang && !usedChecks.lang) || (choice.coherence && !usedChecks.coherence);
-  const canConfirm = choice.chat || wantsChecks;
-  // Reopened with both checks already spent, there is nothing to confirm — only the note to read.
-  const nothingLeft = embedded && usedChecks.lang && usedChecks.coherence;
-  const spentNote =
-    usedChecks.lang && usedChecks.coherence ? "ההגהה ובדיקת העקיבות כבר בוצעו בשיחה זו. לביצוע נוסף יש להתחיל שיחה חדשה."
-    : usedChecks.lang ? "ההגהה כבר בוצעה בשיחה זו. לביצוע הגהה נוספת יש להתחיל שיחה חדשה."
-    : usedChecks.coherence ? "בדיקת העקיבות כבר בוצעה בשיחה זו. לביצוע בדיקה נוספת יש להתחיל שיחה חדשה."
-    : "";
-  const surface = isDark ? dk.surface : "white";
-  const textCol = isDark ? dk.text : c.text;
-  const subCol = isDark ? dk.textMuted : c.textGray;
-  const line = isDark ? dk.border : c.inputBorder;
-
-  // Before the draft is in, a check and the chat never combine — picking one clears the other.
-  const toggleCheck = (key: "lang" | "coherence") =>
-    onChoice({ ...choice, [key]: !choice[key], chat: false });
-  const toggleChat = () => onChoice({ lang: false, coherence: false, chat: !choice.chat });
-
-  const option = (on: boolean, title: string, desc: string, toggle: () => void, locked = false) => (
-    <button
-      onClick={locked ? undefined : toggle}
-      className="w-full flex items-start gap-2.5 text-right rounded px-2 py-2 transition-colors"
-      style={{ backgroundColor: "transparent", cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1 }}
-      onMouseEnter={e => { if (!locked) e.currentTarget.style.backgroundColor = isDark ? "rgba(200,214,229,0.06)" : c.hoverBg; }}
-      onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
-    >
-      <span className="mt-0.5"><Tick checked={on} muted={locked} /></span>
-      <span className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-[14px]" style={{ color: textCol }}>{title}</span>
-        <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
-      </span>
-    </button>
-  );
-
+  const [picked, setPicked] = useState<ProofKinds>({ lang: false, coherence: false });
+  const canRun = DRAFT_ACTIONS.some((a) => picked[a.key] && !usedChecks[a.key]);
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+    <>
+      <div className="fixed inset-0 z-[190]" onClick={onClose} />
       <div
+        style={{
+          position: "fixed",
+          ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
+          right: pos.right,
+          zIndex: 200,
+          backgroundColor: "white",
+          borderRadius: "12px",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+          width: "300px",
+          overflow: "hidden",
+          fontFamily: FONT,
+        }}
         dir="rtl"
-        onClick={(e) => e.stopPropagation()}
-        className="flex flex-col rounded-lg shadow-2xl"
-        style={{ width: "min(520px, 92vw)", backgroundColor: surface, fontFamily: FONT }}
       >
-        {/* header */}
-        <div className="flex items-start px-6 pt-5 pb-3">
-          <div className="flex-1 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>טיוטה</div>
-          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
-            <X size={18} />
+        <div className="px-4 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${c.border}`, lineHeight: 1.3 }}>
+          <span className="text-[14px]" style={{ color: c.textGray }}>ניתן לבחור פעולה אחת או יותר</span>
+        </div>
+        <div className="py-1">
+          {DRAFT_ACTIONS.map(({ key, title, desc }) => {
+            const done = usedChecks[key];
+            return (
+              <button
+                key={key}
+                onClick={done ? undefined : () => setPicked((p) => ({ ...p, [key]: !p[key] }))}
+                className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right"
+                style={{ backgroundColor: "transparent", cursor: done ? "default" : "pointer", opacity: done ? 0.5 : 1 }}
+                onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <span className="mt-0.5"><Tick checked={done || picked[key]} muted={done} /></span>
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-[14px]" style={{ color: c.text }}>{title}</span>
+                  <span className="text-[13px] leading-snug" style={{ color: c.textGray }}>
+                    {done ? "כבר בוצעה בשיחה זו" : desc}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex justify-end px-4 pb-3 pt-1">
+          <button
+            onClick={() => canRun && onRun({ lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence })}
+            disabled={!canRun}
+            className="rounded-md px-6 py-1.5 text-[14px] text-white transition-opacity"
+            style={{ backgroundColor: canRun ? c.primary : c.border, cursor: canRun ? "pointer" : "default", opacity: canRun ? 1 : 0.7 }}
+          >
+            ביצוע
           </button>
         </div>
-
-        {/* the uploaded file — its presence here is the "הועלה בהצלחה" indication */}
-        <div className="mx-6 mb-4 flex items-center gap-2 min-w-0 rounded px-3 py-2.5" style={{ border: `1px solid ${line}` }}>
-          <FileText size={16} style={{ color: c.primary, flexShrink: 0 }} />
-          <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[14px]" style={{ color: textCol }}>{fileName}</span>
-          <span className="text-[12.5px] flex-shrink-0" style={{ color: subCol }}>{formatSize(fileSize)}</span>
-        </div>
-
-        <div className="px-6 text-[13px]" style={{ color: subCol }}>{embedded ? "בדיקות" : "בחרו פעולה"}</div>
-        <div className={`px-4 pt-1 flex flex-col ${embedded ? "pb-2" : ""}`}>
-          {option(choice.lang, "הגהה", "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון.",
-            () => toggleCheck("lang"), usedChecks.lang)}
-          {option(choice.coherence, "בדיקת עקיבות", "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן.",
-            () => toggleCheck("coherence"), usedChecks.coherence)}
-          {spentNote && (
-            <div className="text-[12.5px] pb-1" style={{ color: subCol, paddingInlineStart: "34px" }}>
-              {spentNote}
-            </div>
-          )}
-        </div>
-
-        {/* Only at upload: the checks run on אישור, the chat below hands back to the composer. */}
-        {!embedded && (
-          <>
-            <div className="mx-6 my-2" style={{ borderTop: `1px solid ${line}` }} />
-            <div className="px-4 pb-2 flex flex-col">
-              {option(choice.chat, "שיחה עם המסמך", "שאלות על תוכן הטיוטה, לבד או יחד עם מסמכי התיק.", toggleChat)}
-            </div>
-          </>
-        )}
-
-        <div className="flex gap-3 justify-end px-6 py-5">
-          {nothingLeft ? (
-            <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
-              סגירה
-            </button>
-          ) : (
-            <>
-              <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
-                ביטול
-              </button>
-              <button
-                onClick={onConfirm}
-                disabled={!canConfirm}
-                className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity"
-                style={{ backgroundColor: canConfirm ? c.primary : (isDark ? dk.border : c.border), cursor: canConfirm ? "pointer" : "default", opacity: canConfirm ? 1 : 0.7 }}
-              >
-                אישור
-              </button>
-            </>
-          )}
-        </div>
       </div>
-    </div>
+    </>
   );
 }
 
