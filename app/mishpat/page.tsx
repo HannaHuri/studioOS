@@ -1039,6 +1039,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     fontFamily: "Noto Sans Hebrew, sans-serif",
                     opacity: off ? 0.4 : 1,
                     cursor: off ? "default" : "pointer",
+                    marginRight: "-6px", paddingRight: "4px", // close up to the icon it belongs to
                   }}
                   title={off ? undefined : "פעולות על הטיוטה"}
                   onMouseEnter={e => { if (!off) e.currentTarget.style.backgroundColor = c.hoverBg; }}
