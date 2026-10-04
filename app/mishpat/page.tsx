@@ -1419,7 +1419,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
   }, []);
 
   return (
-    <header className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
+    <header className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
       <div className="flex items-center gap-3">
 
         {/* User avatar + name — clickable for admin */}
@@ -1429,7 +1429,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-8 rounded-full flex items-center justify-center text-white text-[14px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Figtree, sans-serif" }}>טח</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>טח</div>
             <div className="flex flex-col leading-tight text-right">
               <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>טל חבקין</span>
             </div>
@@ -1478,15 +1478,15 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
         </div>
 
         {/* Dark mode toggle */}
-        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-7 px-2 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
-          {isDark ? <Sun size={14} style={{ color: "#FCD34D" }} /> : <Moon size={14} style={{ color: "#4A5568" }} />}
-          <div className="size-[18px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
+        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-6 px-1.5 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
+          {isDark ? <Sun size={12} style={{ color: "#FCD34D" }} /> : <Moon size={12} style={{ color: "#4A5568" }} />}
+          <div className="size-[15px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
         </button>
       </div>
 
       <div className="flex items-center gap-2" dir="rtl">
         <Logo />
-        <span className="font-medium text-[20px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: "1" }}>נט המשפט</span>
+        <span className="font-medium text-[16px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", lineHeight: "1" }}>נט המשפט</span>
       </div>
     </header>
   );
@@ -2592,7 +2592,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-16 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* ── LEFT: Documents — column that PUSHES the chat (push mode); a 40px rail launcher in drawer mode ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"

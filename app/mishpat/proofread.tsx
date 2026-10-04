@@ -152,7 +152,7 @@ export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
           backgroundColor: "white",
           borderRadius: "12px",
           boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-          width: "300px",
+          width: "340px", // wider than the mode menu: more actions are coming, and a wider row keeps each one short
           overflow: "hidden",
           fontFamily: FONT,
         }}
