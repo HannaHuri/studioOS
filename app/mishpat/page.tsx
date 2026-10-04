@@ -555,7 +555,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
             <div className="flex-1" />
             <a
               href={proofFileUrl(proof.kinds)}
-              download={proofDownloadName(proof.fileName)}
+              download={proofDownloadName(proof.fileName, proof.kinds)}
               title={proofFileNote(proof.kinds)}
               className="flex items-center h-8 rounded-md transition-colors hover:underline"
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}

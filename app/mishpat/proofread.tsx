@@ -68,8 +68,10 @@ export function proofSteps(k: ProofKinds): RunStep[] {
 export const proofFileUrl = (k: ProofKinds) =>
   `/studioOS/proofread/draft-${k.lang && k.coherence ? "both" : k.lang ? "lang" : "coherence"}.docx`;
 
-export const proofDownloadName = (fileName: string) =>
-  `${fileName.replace(/\.docx?$/i, "")} — לאחר הגהה.docx`;
+// The original name, a plain hyphen, and the check(s) that ran. Hebrew, so a Hebrew file name
+// isn't reordered around an English suffix — agreed with dev, 2026-10-04.
+export const proofDownloadName = (fileName: string, k: ProofKinds) =>
+  `${fileName.replace(/\.docx?$/i, "")} - ${proofKindLabel(k)}.docx`;
 
 // What the downloaded file contains — the tooltip on the download link, so the answer
 // doesn't spend a line on it.
