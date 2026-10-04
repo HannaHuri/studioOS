@@ -556,6 +556,18 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
             <a
               href={proofFileUrl(proof.kinds)}
               download={proofDownloadName(proof.fileName, proof.kinds)}
+              // The host serves the file with its own name in Content-Disposition, which beats the
+              // download attribute — so fetch it and save it from a blob, which carries no header.
+              onClick={async (e) => {
+                e.preventDefault();
+                const blob = await (await fetch(proofFileUrl(proof.kinds))).blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = proofDownloadName(proof.fileName, proof.kinds);
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
               title={proofFileNote(proof.kinds)}
               className="flex items-center h-8 rounded-md transition-colors hover:underline"
               style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
@@ -678,7 +690,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // The "פעולות" menu that sits beside the upload icon once a draft is in
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsBtnRef = useRef<HTMLButtonElement>(null);
-  const [actionsPos, setActionsPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const composerRef = useRef<HTMLDivElement>(null); // the input box — the menu stretches to its left edge
+  const [actionsPos, setActionsPos] = useState<{ top?: number; bottom?: number; right: number; left: number } | null>(null);
   // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });
   const draftSpent = !!draft && usedChecks.lang && usedChecks.coherence;
@@ -836,7 +849,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!actionsOpen && actionsBtnRef.current) {
       const r = actionsBtnRef.current.getBoundingClientRect();
       const rightEdge = window.innerWidth - r.right;
-      setActionsPos(isEmpty ? { top: r.bottom + 4, right: rightEdge } : { bottom: window.innerHeight - r.top + 4, right: rightEdge });
+      // it opens from the button and reaches the input box's left edge, so there's room for more actions
+      const left = composerRef.current?.getBoundingClientRect().left ?? r.right - 340;
+      setActionsPos(isEmpty ? { top: r.bottom + 4, right: rightEdge, left } : { bottom: window.innerHeight - r.top + 4, right: rightEdge, left });
     }
     setActionsOpen((v) => !v);
   }
@@ -931,6 +946,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         </div>
       )}
       <div
+        ref={composerRef}
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,

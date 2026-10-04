@@ -135,7 +135,7 @@ export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string
 ];
 
 export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
-  pos: { top?: number; bottom?: number; right: number };
+  pos: { top?: number; bottom?: number; right: number; left: number };
   usedChecks: ProofKinds;
   onClose: () => void;
   onRun: (kinds: ProofKinds) => void;
@@ -150,11 +150,11 @@ export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
           position: "fixed",
           ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
           right: pos.right,
+          left: pos.left, // from the button to the input box's left edge — room for the actions still to come
           zIndex: 200,
           backgroundColor: "white",
           borderRadius: "12px",
           boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-          width: "340px", // wider than the mode menu: more actions are coming, and a wider row keeps each one short
           overflow: "hidden",
           fontFamily: FONT,
         }}
