@@ -5,7 +5,7 @@ import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
-  FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
+  FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2,
   type LucideIcon,
@@ -510,6 +510,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const [copied, setCopied] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = () => {
     setCopied(true);
@@ -525,7 +526,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
 
   return (
     <>
-      <div className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
+      <div ref={rowRef} className="flex items-center mt-3" style={{ gap: "2px" }} dir="ltr">
         <VibeBtn title={copied ? "הועתק" : "העתק"} onClick={handleCopy}>
           {copied ? <Check size={18} /> : <Copy size={18} />}
         </VibeBtn>
@@ -535,19 +536,28 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
         <VibeBtn title="תשובה לא טובה" onClick={handleDown}>
           <ThumbsDown size={18} fill={feedback === "down" ? c.iconGray : "none"} />
         </VibeBtn>
-        <VibeBtn title="המשך בשיחה חדשה">
-          <Split size={18} style={{ transform: "rotate(90deg)" }} />
-        </VibeBtn>
-        <VibeBtn title="נסה שוב"><RotateCw size={18} /></VibeBtn>
-        <VibeBtn title={showBadges ? "הסתר ציטוטים" : "הצג ציטוטים"} onClick={onToggleBadges}>
-          {showBadges ? <Eye size={18} /> : <EyeClosed size={18} />}
-        </VibeBtn>
+        {/* New, so it stays out in the row where people will notice it */}
+        <RowMenu
+          title="הורדה לוורד"
+          trigger={<FileDown size={18} />}
+          items={[
+            { label: "התשובה הזו", onClick: () => downloadWord("answer", rowRef.current) },
+            { label: "כל השיחה", onClick: () => downloadWord("conversation", rowRef.current) },
+          ]}
+          heading="הורדה לוורד"
+        />
         <SourcesBtn isDark={isDark} />
-        {hasLog && (
-          <VibeBtn title={logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה"} onClick={onToggleLog} active={logOpen}>
-            <ListCheck size={18} />
-          </VibeBtn>
-        )}
+        {/* Everything used less often */}
+        <RowMenu
+          title="עוד"
+          trigger={<MoreHorizontal size={18} />}
+          items={[
+            { label: "נסה שוב", Icon: RotateCw },
+            { label: "המשך בשיחה חדשה", Icon: Split, iconRotate: 90 },
+            { label: showBadges ? "הסתר ציטוטים" : "הצג ציטוטים", Icon: showBadges ? EyeClosed : Eye, onClick: onToggleBadges },
+            ...(hasLog ? [{ label: logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה", Icon: ListCheck, onClick: onToggleLog }] : []),
+          ]}
+        />
 
         {/* the finished file, at the far end of the row — where the answer's text begins */}
         {proof && (
@@ -580,6 +590,89 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
       </div>
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </>
+  );
+}
+
+// ── Word export ────────────────────────────────────────────────────────────
+// Word opens an HTML document saved as .doc, so the prototype needs no docx library.
+// It reads the thread straight from the page: questions carry data-chat-q, answers data-chat-a.
+function chatHtml(el: Element, tag: "h3" | "div") {
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("button, svg").forEach((n) => n.remove()); // citation badges, icons
+  clone.querySelectorAll("[style]").forEach((n) => n.removeAttribute("style"));
+  return `<${tag}>${clone.innerHTML}</${tag}>`;
+}
+
+function downloadWord(scope: "answer" | "conversation", row: HTMLElement | null) {
+  if (!row) return;
+  let parts: string[];
+  if (scope === "answer") {
+    const turn = row.closest("[data-chat-turn]");
+    const q = turn?.querySelector("[data-chat-q]");
+    const a = turn?.querySelector("[data-chat-a]");
+    parts = [q && chatHtml(q, "h3"), a && chatHtml(a, "div")].filter(Boolean) as string[];
+  } else {
+    parts = Array.from(document.querySelectorAll("[data-chat-q], [data-chat-a]")).map((n) =>
+      chatHtml(n, n.hasAttribute("data-chat-q") ? "h3" : "div"));
+  }
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{direction:rtl;font-family:Arial,sans-serif;font-size:12pt}h3{font-size:13pt;color:#1e3a8a;margin-top:18pt}</style></head><body dir="rtl">${parts.join("")}</body></html>`;
+  const url = URL.createObjectURL(new Blob(["﻿", html], { type: "application/msword" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = scope === "answer" ? "תשובה - נט המשפט.doc" : "שיחה - נט המשפט.doc";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Small menu off an icon in the answer's row ─────────────────────────────
+// Fixed-positioned so the scrolling thread can't clip it; opens upward when the
+// answer sits too close to the input box.
+type RowMenuItem = { label: string; Icon?: LucideIcon; iconRotate?: number; onClick?: () => void };
+function RowMenu({ title, trigger, items, heading }: {
+  title: string; trigger: React.ReactNode; items: RowMenuItem[]; heading?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
+  const btnRef = useRef<HTMLDivElement>(null);
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const roomBelow = window.innerHeight - r.bottom;
+      setPos(roomBelow > 220 ? { left: r.left, top: r.bottom + 4 } : { left: r.left, bottom: window.innerHeight - r.top + 4 });
+    }
+    setOpen((v) => !v);
+  };
+  return (
+    <div ref={btnRef}>
+      <VibeBtn title={open ? undefined : title} onClick={toggle} active={open}>{trigger}</VibeBtn>
+      {open && pos && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[200] py-1 rounded-lg"
+            style={{ left: pos.left, top: pos.top, bottom: pos.bottom, minWidth: 190, backgroundColor: "white", boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}
+            dir="rtl"
+          >
+            {heading && (
+              <div className="px-3 pt-1.5 pb-1 text-[12px]" style={{ color: c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif" }}>{heading}</div>
+            )}
+            {items.map(({ label, Icon, iconRotate, onClick }) => (
+              <button
+                key={label}
+                onClick={() => { onClick?.(); setOpen(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right transition-colors"
+                style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                {Icon && <Icon size={16} style={{ color: c.iconGray, flexShrink: 0, transform: iconRotate ? `rotate(${iconRotate}deg)` : undefined }} />}
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -1355,13 +1448,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               const isLast = i === messages.length - 1;
               const showingAgentProgress = (!!msg.agent || !!msg.proof) && isLast && agentRunning;
               return (
-                <div key={i} className="w-full max-w-[768px] flex flex-col gap-3">
+                <div key={i} data-chat-turn className="w-full max-w-[768px] flex flex-col gap-3">
                   {/* Saving and sharing sit on the question, not on the answer — the question is
                       the reusable part. They live INSIDE the bubble, absolutely placed at its free
                       left corner, so they cost the thread no height at all: a reserved strip under
                       every question pushed the answer down whether or not anyone was hovering. */}
                   <div className="group relative rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                    <p className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
+                    <p data-chat-q className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
                     <div
                       className="absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
                       style={{ left: "6px", bottom: "4px" }}
@@ -1374,7 +1467,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     </div>
                   </div>
                   <div>
-                    <div className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
+                    <div data-chat-a className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
                       {showingAgentProgress ? renderAgentProgress()
                         : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
                         : msg.withDraft ? <p>{DRAFT_ANSWER}</p>
@@ -1494,9 +1587,26 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
         </div>
 
         {/* Dark mode toggle */}
-        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-6 px-1.5 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
-          {isDark ? <Sun size={12} style={{ color: "#FCD34D" }} /> : <Moon size={12} style={{ color: "#4A5568" }} />}
-          <div className="size-[15px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
+        {/* The knob carries the current mode's icon and slides: right in light mode, left in dark —
+            the RTL reading of off → on. */}
+        <button
+          onClick={onToggleDark}
+          role="switch"
+          aria-checked={isDark}
+          className="relative rounded-full cursor-pointer flex-shrink-0 transition-colors duration-200"
+          style={{ width: 40, height: 22, backgroundColor: isDark ? "#334155" : c.border }}
+          title={isDark ? "מצב בהיר" : "מצב כהה"}
+        >
+          <span
+            className="absolute top-[2px] left-[2px] size-[18px] rounded-full flex items-center justify-center transition-transform duration-200 ease-out"
+            style={{
+              backgroundColor: isDark ? "#0f172a" : "white",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+              transform: isDark ? "translateX(0)" : "translateX(18px)",
+            }}
+          >
+            {isDark ? <Moon size={11} style={{ color: "#FCD34D" }} /> : <Sun size={11} style={{ color: "#D97706" }} />}
+          </span>
         </button>
       </div>
 
