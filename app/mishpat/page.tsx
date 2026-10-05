@@ -1314,7 +1314,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // the actions row so the record of what was done outlives the run itself.
   function renderStepLog(steps: RunStep[]) {
     return (
-      <div className="flex flex-col gap-2 mt-1 pt-3" dir="rtl" style={{ borderTop: `1px solid ${isDark ? dk.border : c.inputBorder}` }}>
+      <div className="flex flex-col gap-2 mt-3" dir="rtl">
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <Check size={13} strokeWidth={2.2} style={{ color: "#00854d", flexShrink: 0 }} />
@@ -1587,8 +1587,8 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
         </div>
 
         {/* Dark mode toggle */}
-        {/* The knob carries the current mode's icon and slides: right in light mode, left in dark —
-            the RTL reading of off → on. */}
+        {/* The knob slides — right in light mode, left in dark (the RTL reading of off → on) — and
+            shows the mode a click will switch to: a moon in light mode, a sun in dark. */}
         <button
           onClick={onToggleDark}
           role="switch"
@@ -1605,7 +1605,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
               transform: isDark ? "translateX(0)" : "translateX(18px)",
             }}
           >
-            {isDark ? <Moon size={11} style={{ color: "#FCD34D" }} /> : <Sun size={11} style={{ color: "#D97706" }} />}
+            {isDark ? <Sun size={11} style={{ color: "#FCD34D" }} /> : <Moon size={11} style={{ color: "#4A5568" }} />}
           </span>
         </button>
       </div>
