@@ -1596,18 +1596,18 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
           role="switch"
           aria-checked={isDark}
           className="relative rounded-full cursor-pointer flex-shrink-0 transition-colors duration-200"
-          style={{ width: 44, height: 24, backgroundColor: isDark ? "#334155" : c.border }}
+          style={{ width: 40, height: 22, backgroundColor: isDark ? "#334155" : c.border }}
           title={isDark ? "מצב בהיר" : "מצב כהה"}
         >
           <span
-            className="absolute top-[2px] left-[2px] size-[20px] rounded-full flex items-center justify-center transition-transform duration-200 ease-out"
+            className="absolute top-[2px] left-[2px] size-[18px] rounded-full flex items-center justify-center transition-transform duration-200 ease-out"
             style={{
               backgroundColor: isDark ? "#0f172a" : "white",
               boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-              transform: isDark ? "translateX(0)" : "translateX(20px)",
+              transform: isDark ? "translateX(0)" : "translateX(18px)",
             }}
           >
-            {isDark ? <Sun size={12} style={{ color: "#FCD34D" }} /> : <Moon size={12} style={{ color: "#4A5568" }} />}
+            {isDark ? <Sun size={11} style={{ color: "#FCD34D" }} /> : <Moon size={11} style={{ color: "#4A5568" }} />}
           </span>
         </button>
       </div>
