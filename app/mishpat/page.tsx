@@ -1930,9 +1930,11 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
               {g.items.map((it) => {
                 const multi = it.cases.length > 1;
                 const isOpen = expanded.has(it.id);
-                // how many of this row's cases the open conversation is also running on — the
-                // same thing the bold says once the chip is open, said while it is still shut
-                const mine = it.cases.filter(inScope).length;
+                // How many of this row's cases the open conversation is also running on — the same
+                // thing the bold says once the chip is open, said while it is still shut. It only
+                // belongs to the scoped view: under כל התיקים you are browsing everything, and the
+                // list should read as a plain list rather than keep pointing back at the open case.
+                const mine = caseOnly ? it.cases.filter(inScope).length : 0;
                 return (
                   <div
                     key={it.id}
@@ -1960,7 +1962,7 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                           )}
                           <ChevronDown size={12} style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
                         </button>
-                        {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} strong={inScope(cs)} />)}
+                        {isOpen && it.cases.map((cs, i) => <CaseTag key={i} cs={cs} bg={tagBg} fg={titleCol} strong={caseOnly && inScope(cs)} />)}
                       </div>
                     ) : caseOnly ? null : (
                       // scoped to one case, every row would carry the same tag — the header already
