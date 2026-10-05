@@ -619,7 +619,10 @@ function downloadWord(scope: "answer" | "conversation", row: HTMLElement | null)
   const url = URL.createObjectURL(new Blob(["﻿", html], { type: "application/msword" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = scope === "answer" ? "תשובה - נט המשפט.doc" : "שיחה - נט המשפט.doc";
+  // Slashes can't go in a file name, so the date is written with dots: 05.10.2026
+  const d = new Date();
+  const date = [d.getDate(), d.getMonth() + 1].map((n) => String(n).padStart(2, "0")).join(".") + "." + d.getFullYear();
+  a.download = `${scope === "answer" ? "תשובה" : "שיחה"} - ${date} - נט המשפט.doc`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1316,7 +1319,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return (
       // A short, light rule just as wide as the steps (plus a little) — a full-width line cut
       // the thread in two.
-      <div className="flex flex-col gap-2 -mt-1 pt-2 w-fit" dir="rtl" style={{ borderTop: `1px solid ${isDark ? dk.border : "#e8eaf1"}`, paddingInlineEnd: "24px", marginLeft: "auto" }}>
+      <div className="flex flex-col gap-2 w-fit" dir="rtl" style={{ marginTop: "-6px", paddingTop: "14px", borderTop: `1px solid ${isDark ? dk.border : "#e8eaf1"}`, paddingInlineEnd: "24px", marginLeft: "auto" }}>
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <Check size={13} strokeWidth={2.2} style={{ color: "#00854d", flexShrink: 0 }} />
