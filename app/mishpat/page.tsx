@@ -1316,7 +1316,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return (
       // A short, light rule just as wide as the steps (plus a little) — a full-width line cut
       // the thread in two.
-      <div className="flex flex-col gap-2 mt-1 pt-3 w-fit" dir="rtl" style={{ borderTop: `1px solid ${isDark ? dk.border : "#e8eaf1"}`, paddingInlineEnd: "24px", marginLeft: "auto" }}>
+      <div className="flex flex-col gap-2 -mt-1 pt-2 w-fit" dir="rtl" style={{ borderTop: `1px solid ${isDark ? dk.border : "#e8eaf1"}`, paddingInlineEnd: "24px", marginLeft: "auto" }}>
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <Check size={13} strokeWidth={2.2} style={{ color: "#00854d", flexShrink: 0 }} />
