@@ -3462,7 +3462,11 @@ function ChatArea({ isDark, conversationKey, barMode, overDoc, openDocName, scop
 // Mock: set isAdmin = true to simulate an admin user (dev team: wire to real auth)
 const IS_ADMIN = true;
 
-function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggleDark: () => void; onReset: () => void }) {
+// ── User menu (bottom of the right rail) ─────────────────────────────────
+// No header: the strip between the logo and the avatar was empty space taken from the chat.
+// The logo moved to the top of the rail, the avatar to its bottom, and the dark-mode switch
+// into the avatar's menu — where the big chat apps keep it.
+function UserMenu({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -3477,77 +3481,85 @@ function AppHeader({ isDark, onToggleDark, onReset }: { isDark: boolean; onToggl
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const rowStyle = { color: isDark ? dk.text : c.text, direction: "rtl" as const };
+  // Hover by class, not inline style: an inline colour set in light mode would stick after switching to dark
+  const hoverCls = isDark ? "hover:bg-white/5" : "hover:bg-black/5";
+
   return (
-    <header className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 z-30" style={{ backgroundColor: isDark ? dk.header : c.headerBg }}>
-      <div className="flex items-center gap-3">
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setMenuOpen(v => !v)}
+        className="size-8 flex items-center justify-center rounded-full"
+        style={{ boxShadow: menuOpen ? `0 0 0 2px ${isDark ? dk.border : c.primaryLight}` : "none" }}
+        title="כבוד השופט/ת"
+      >
+        <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>כש</div>
+      </button>
 
-        {/* User avatar + name — clickable for admin */}
-        <div className="relative" ref={menuRef}>
+      {/* Opens up and to the left of the rail */}
+      {menuOpen && (
+        <div
+          className="absolute bottom-0 right-full mr-2 rounded-[8px] py-1 z-50"
+          style={{
+            minWidth: "200px",
+            backgroundColor: isDark ? dk.surface : "white",
+            border: `1px solid ${isDark ? dk.border : c.border}`,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            fontFamily: "Noto Sans Hebrew, sans-serif",
+          }}
+        >
+          <div className="px-3 pt-1.5 pb-2 text-[13px]" style={{ color: isDark ? dk.blue : c.darkBlue, direction: "rtl" }}>כבוד השופט/ת</div>
+          <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "0 0 4px" }} />
+          {/* Personal settings — primary need for most users, shown first */}
           <button
-            onClick={() => setMenuOpen(v => !v)}
-            className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
-            style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
+            disabled
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right"
+            style={{ color: isDark ? dk.textMuted : c.textLight, cursor: "not-allowed", direction: "rtl" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>כש</div>
-            <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>כבוד השופט/ת</span>
-            </div>
+            הגדרות אישיות
+            <span className="text-[10px] mr-auto px-1.5 py-0.5 rounded" style={{ backgroundColor: c.hoverBg, color: c.textLight }}>בקרוב</span>
           </button>
-
-          {/* Dropdown menu */}
-          {menuOpen && (
-            <div
-              className="absolute top-full mt-1 left-0 rounded-[8px] py-1 z-50"
-              style={{
-                minWidth: "180px",
-                backgroundColor: isDark ? dk.surface : "white",
-                border: `1px solid ${isDark ? dk.border : c.border}`,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-              }}
+          {/* Dark mode — the row toggles; the menu stays open so the change is seen */}
+          <button onClick={onToggleDark} className={`w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right transition-colors ${hoverCls}`} style={rowStyle}>
+            מצב כהה
+            {/* Same switch as before: the knob slides right (light) / left (dark) and shows the mode a click switches to */}
+            <span
+              role="switch"
+              aria-checked={isDark}
+              className="relative rounded-full flex-shrink-0 mr-auto transition-colors duration-200"
+              style={{ width: 40, height: 22, backgroundColor: isDark ? "#334155" : c.border }}
             >
-              {/* Personal settings — primary need for most users, shown first */}
-              <button
-                disabled
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[14px] text-right"
-                style={{ color: isDark ? dk.textMuted : c.textLight, cursor: "not-allowed", direction: "rtl" }}
+              <span
+                className="absolute top-[2px] left-[2px] size-[18px] rounded-full flex items-center justify-center transition-transform duration-200 ease-out"
+                style={{
+                  backgroundColor: isDark ? "#0f172a" : "white",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                  transform: isDark ? "translateX(0)" : "translateX(18px)",
+                }}
               >
-                הגדרות אישיות
-                <span className="text-[10px] mr-auto px-1.5 py-0.5 rounded" style={{ backgroundColor: c.hoverBg, color: c.textLight }}>בקרוב</span>
-              </button>
-              {IS_ADMIN && (
-                <>
-                  <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "4px 0" }} />
-                  <a
-                    href="/studioOS/mishpat/admin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 text-[14px] transition-colors"
-                    style={{ color: isDark ? dk.text : c.text, direction: "rtl" }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = isDark ? dk.border : c.hoverBg)}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                  >
-                    <Shield size={14} style={{ color: c.primary }} />
-                    ניהול מערכת
-                  </a>
-                </>
-              )}
-            </div>
+                {isDark ? <Sun size={11} style={{ color: "#FCD34D" }} /> : <Moon size={11} style={{ color: "#4A5568" }} />}
+              </span>
+            </span>
+          </button>
+          {IS_ADMIN && (
+            <>
+              <div style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}`, margin: "4px 0" }} />
+              <a
+                href="/studioOS/mishpat/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2 text-[14px] transition-colors ${hoverCls}`}
+                style={rowStyle}
+              >
+                <Shield size={14} style={{ color: c.primary }} />
+                ניהול מערכת
+              </a>
+            </>
           )}
         </div>
-
-        {/* Dark mode toggle */}
-        <button onClick={onToggleDark} className="flex items-center gap-1.5 rounded-full h-6 px-1.5 cursor-pointer" style={{ backgroundColor: isDark ? "#334155" : c.border }} title={isDark ? "מצב בהיר" : "מצב כהה"}>
-          {isDark ? <Sun size={12} style={{ color: "#FCD34D" }} /> : <Moon size={12} style={{ color: "#4A5568" }} />}
-          <div className="size-[15px] rounded-full" style={{ backgroundColor: isDark ? "#94A3B8" : "white" }} />
-        </button>
-      </div>
-
-      <button onClick={onReset} className="flex items-center gap-2 cursor-pointer" dir="rtl" title="חזרה למסך הפתיחה">
-        <Logo />
-        <span className="font-medium text-[18px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Rubik, sans-serif", lineHeight: "1" }}>נט המשפט</span>
-      </button>
-    </header>
+      )}
+    </div>
   );
 }
 
@@ -3679,9 +3691,7 @@ export default function MishpatPage() {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
-      <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} onReset={resetAll} />
-
-      <div ref={layoutRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={layoutRef} className="absolute top-0 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* Chat — in-flow column normally; a draggable, resizable floating window over the document when there's no room for all three */}
         <div
           ref={chatContainerRef}
@@ -3817,7 +3827,11 @@ export default function MishpatPage() {
         )}
 
         {/* Right icon rail — new conversation, documents (elevated), then secondary nav; help + model + version at the bottom */}
-        <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-5 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
+        <div className="w-[60px] flex-shrink-0 flex flex-col items-center pt-4 pb-4" style={{ borderInlineStart: `1px solid ${isDark ? dk.border : "#ebf3ff"}`, backgroundColor: sidebarBg }}>
+          {/* Logo — took the header's place at the top of the rail; still goes back to the opening screen */}
+          <button onClick={resetAll} className="size-8 flex items-center justify-center rounded mb-4 hover:bg-black/5 transition-colors" title="נט המשפט — חזרה למסך הפתיחה">
+            <Logo />
+          </button>
           <button
             onClick={newChat}
             className="w-8 h-8 flex items-center justify-center rounded mb-3 hover:opacity-90 transition-opacity"
@@ -3846,6 +3860,9 @@ export default function MishpatPage() {
           <div className="mt-2 text-center leading-tight" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Figtree, sans-serif" }}>
             <div style={{ fontSize: "11px" }}>Opus 4.8</div>
             <div style={{ fontSize: "10px", opacity: 0.7 }}>v2.3</div>
+          </div>
+          <div className="mt-3">
+            <UserMenu isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
           </div>
         </div>
       </div>
