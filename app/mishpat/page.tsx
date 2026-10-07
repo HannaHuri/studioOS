@@ -1193,8 +1193,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 opacity: draft ? 0.4 : 1,
                 cursor: draft ? "default" : "pointer",
               }}
-              title={draft ? undefined : `העלאת מסמך
-Word, עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים (כ-${pagesOf(WORD_LIMIT)} עמודים)`}
+              // The browser lays a native tooltip out left-to-right: each line opens with a right-to-left
+              // mark and starts and ends on Hebrew, so "Word" and the numbers stay where they belong.
+              title={draft ? undefined : `‏העלאת מסמך\n‏קובץ Word עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים`}
               onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
