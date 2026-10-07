@@ -1209,7 +1209,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   className="absolute z-50 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap text-right pointer-events-none"
                   style={{
                     ...(isEmpty ? { top: "calc(100% + 6px)" } : { bottom: "calc(100% + 6px)" }),
-                    left: "50%", transform: "translateX(-50%)",
+                    right: 0, // its right edge on the icon's, like the text it reads with
                     backgroundColor: c.text, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif",
                   }}
                 >
