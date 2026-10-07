@@ -790,6 +790,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsBtnRef = useRef<HTMLButtonElement>(null);
   const composerRef = useRef<HTMLDivElement>(null); // the input box — the menu stretches to its left edge
+  // Its position is measured when it opens, so a resize would leave it hanging in the wrong place
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const close = () => setActionsOpen(false);
+    window.addEventListener("resize", close);
+    return () => window.removeEventListener("resize", close);
+  }, [actionsOpen]);
   const [actionsPos, setActionsPos] = useState<{ top?: number; bottom?: number; right: number; left: number } | null>(null);
   // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });

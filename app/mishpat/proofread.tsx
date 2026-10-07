@@ -235,8 +235,8 @@ export function DraftActionsMenu({ pos, usedChecks, pages, onClose, onRun }: {
                   </span>
                   {/* Past ~30 pages the coherence check misses more — said here, before it runs */}
                   {key === "coherence" && !done && pages !== null && pages > COHERENCE_PAGE_LIMIT && (
-                    <span className="flex items-start gap-1 text-[13px] leading-snug mt-1" style={{ color: c.text }}>
-                      <Info size={13} style={{ color: c.iconGray, flexShrink: 0, marginTop: "3px" }} />
+                    <span className="flex items-start gap-1.5 text-[13px] leading-snug mt-1.5 rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
+                      <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
                       <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
                     </span>
                   )}
