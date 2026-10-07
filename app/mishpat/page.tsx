@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2,
+  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -21,6 +21,7 @@ import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
+import { PromptWizard } from "./promptWizard";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -746,12 +747,13 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onBuildPrompt }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
+  onBuildPrompt?: () => void;
 }) {
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -1464,6 +1466,22 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             </p>
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} /></div>}
             {renderInput()}
+            {/* The way into the guided prompt builder, shown only on the empty screen: it is where
+                a new conversation starts, so people learn it exists, and it costs a conversation
+                in progress nothing. Mid-conversation the same builder is one step away in the
+                prompt library. A link, not a button — it must not compete with sending. */}
+            {onBuildPrompt && (
+              <div className="flex -mt-2" dir="rtl">
+                <button
+                  onClick={onBuildPrompt}
+                  className="flex items-center gap-1.5 text-[13.5px] px-1 rounded hover:underline"
+                  style={{ color: isDark ? dk.blue : c.primary, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+                >
+                  <WandSparkles size={15} />
+                  בניית פרומפט מורכב לשימוש חוזר
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {renderScopeDropdown()}
@@ -2652,6 +2670,11 @@ export default function MishpatPage() {
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
   const [promptFill, setPromptFill] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
+  // The guided builder hands its text to the ordinary editor for name / classification / sharing.
+  // While that editor is open the builder stays mounted (hidden), so cancelling the editor
+  // returns to the builder as it was; saving from it also puts the new prompt to use.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [fromWizard, setFromWizard] = useState(false);
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
   const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
@@ -2799,6 +2822,7 @@ export default function MishpatPage() {
             insert={insert}
             onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
             onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
+            onBuildPrompt={() => setWizardOpen(true)}
           />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
@@ -3003,14 +3027,25 @@ export default function MishpatPage() {
           onRate={ratePrompt}
         />
       )}
+      {wizardOpen && (
+        <PromptWizard
+          isDark={isDark}
+          hidden={fromWizard && !!promptEdit}
+          onDone={(body, task) => { setFromWizard(true); setPromptEdit({ initial: { name: autoName(task), body }, mode: "new" }); }}
+          onClose={() => setWizardOpen(false)}
+        />
+      )}
       {promptEdit && (
         <PromptEditor
           key={promptEdit.initial?.id ?? promptEdit.mode}
           isDark={isDark}
           initial={promptEdit.initial}
           mode={promptEdit.mode}
-          onSave={savePrompt}
-          onClose={() => setPromptEdit(null)}
+          onSave={(pr, share) => {
+            savePrompt(pr, share);
+            if (fromWizard) { setFromWizard(false); setWizardOpen(false); usePrompt(pr); }
+          }}
+          onClose={() => { setPromptEdit(null); setFromWizard(false); }}
         />
       )}
       {promptShare && (
