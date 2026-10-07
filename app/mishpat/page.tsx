@@ -1172,7 +1172,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 opacity: draft ? 0.4 : 1,
                 cursor: draft ? "default" : "pointer",
               }}
-              title={draft ? undefined : "העלאת טיוטה"}
+              title={draft ? undefined : "העלאת מסמך"}
               onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
