@@ -19,9 +19,9 @@ import {
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
-  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
+  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, GENERAL, type Prompt,
 } from "./prompts";
-import { PromptWizard } from "./promptWizard";
+import { ComplexPromptEditor, partsToText } from "./complexPrompt";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -747,13 +747,15 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onBuildPrompt }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onBuildPrompt, complexName, onClearComplex }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
   onBuildPrompt?: () => void;
+  complexName?: string | null;
+  onClearComplex?: () => void;
 }) {
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -923,12 +925,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
 
 
   function handleSend() {
-    if (!inputText.trim()) return;
+    // an armed פרומפט מורכב is a complete request on its own, so it can be sent with nothing typed
+    if (!inputText.trim() && !complexName) return;
+    const q = complexName ? (inputText.trim() ? `${complexName}: ${inputText.trim()}` : complexName) : inputText.trim();
+    if (complexName) onClearComplex?.();
     // once a draft is in the conversation it is part of every question's context
     const withDraft = !!draft;
     setMessages((prev) => [
       ...prev,
-      { q: inputText.trim(), isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft },
+      { q, isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft },
     ]);
     setInputText("");
     if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
@@ -1057,6 +1062,19 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               <X size={13} />
             </button>
             <span>דוגמה בשימוש: {inUseName}</span>
+          </div>
+        </div>
+      )}
+      {complexName && (
+        <div className="flex justify-center" dir="rtl">
+          <div
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px]"
+            style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המורכב">
+              <X size={13} />
+            </button>
+            <span>פרומפט מורכב: {complexName}</span>
           </div>
         </div>
       )}
@@ -2670,11 +2688,10 @@ export default function MishpatPage() {
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
   const [promptFill, setPromptFill] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
-  // The guided builder hands its text to the ordinary editor for name / classification / sharing.
-  // While that editor is open the builder stays mounted (hidden), so cancelling the editor
-  // returns to the builder as it was; saving from it also puts the new prompt to use.
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [fromWizard, setFromWizard] = useState(false);
+  // פרומפט מורכב: the editor, and the one that is armed for the next send. It is too long to
+  // go into the question line as text, so it rides above the input as a chip, like an example.
+  const [complexOpen, setComplexOpen] = useState(false);
+  const [complexInUse, setComplexInUse] = useState<string | null>(null);
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
   const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
@@ -2737,6 +2754,12 @@ export default function MishpatPage() {
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
   const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
   const usePrompt = (pr: Prompt) => {
+    if (pr.parts) {
+      setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
+      setComplexInUse(pr.name);
+      setLibraryOpen(false);
+      return;
+    }
     if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
     insertPrompt(pr.body);
@@ -2822,7 +2845,9 @@ export default function MishpatPage() {
             insert={insert}
             onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
             onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
-            onBuildPrompt={() => setWizardOpen(true)}
+            onBuildPrompt={() => setComplexOpen(true)}
+            complexName={complexInUse}
+            onClearComplex={() => setComplexInUse(null)}
           />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
@@ -3027,12 +3052,22 @@ export default function MishpatPage() {
           onRate={ratePrompt}
         />
       )}
-      {wizardOpen && (
-        <PromptWizard
+      {complexOpen && (
+        <ComplexPromptEditor
           isDark={isDark}
-          hidden={fromWizard && !!promptEdit}
-          onDone={(body, task) => { setFromWizard(true); setPromptEdit({ initial: { name: autoName(task), body }, mode: "new" }); }}
-          onClose={() => setWizardOpen(false)}
+          onSave={(name, parts) => {
+            setPrompts((prev) => [{
+              id: Math.random().toString(36).slice(2, 9), name, body: partsToText(parts), parts,
+              source: "mine", author: null, fav: false,
+              caseType: GENERAL, matter: GENERAL, stage: GENERAL, court: GENERAL, tags: [],
+              uses: 0, ratingSum: 0, ratingCount: 0, myRating: null,
+              edited: new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }),
+            }, ...prev]);
+            setComplexOpen(false);
+            setComplexInUse(name);
+            setToast("הפרומפט המורכב נשמר במאגר");
+          }}
+          onClose={() => setComplexOpen(false)}
         />
       )}
       {promptEdit && (
@@ -3041,11 +3076,8 @@ export default function MishpatPage() {
           isDark={isDark}
           initial={promptEdit.initial}
           mode={promptEdit.mode}
-          onSave={(pr, share) => {
-            savePrompt(pr, share);
-            if (fromWizard) { setFromWizard(false); setWizardOpen(false); usePrompt(pr); }
-          }}
-          onClose={() => { setPromptEdit(null); setFromWizard(false); }}
+          onSave={savePrompt}
+          onClose={() => setPromptEdit(null)}
         />
       )}
       {promptShare && (

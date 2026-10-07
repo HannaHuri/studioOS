@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
+import type { PromptPart } from "./complexPrompt";
 
 // ── Model ──────────────────────────────────────────────────────────────────
 export type PromptSource = "system" | "shared" | "mine";
@@ -44,6 +45,7 @@ export type Prompt = {
   ratingSum: number; ratingCount: number;
   myRating: number | null; // once set, final — the stars lock
   edited: string;
+  parts?: PromptPart[];    // set = a פרומפט מורכב; body then holds the parts as text
 };
 
 // The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
