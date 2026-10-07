@@ -1478,7 +1478,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
                   <WandSparkles size={15} />
-                  בניית פרומפט מורכב לשימוש חוזר
+                  בניית פרומפט מורכב
                 </button>
               </div>
             )}
