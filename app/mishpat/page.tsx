@@ -1471,7 +1471,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 in progress nothing. Mid-conversation the same builder is one step away in the
                 prompt library. A link, not a button — it must not compete with sending. */}
             {onBuildPrompt && (
-              <div className="flex mt-2" dir="rtl">
+              <div className="flex" dir="rtl">
                 <button
                   onClick={onBuildPrompt}
                   className={`flex items-center gap-1.5 text-[13.5px] px-1 rounded transition-colors ${isDark ? "text-[#6b7da3] hover:text-[#90b8e0]" : "text-[#676879] hover:text-[#0073ea]"}`}
