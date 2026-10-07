@@ -14,7 +14,7 @@ import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
   DraftActionsMenu, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
-  proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER,
+  proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
   type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
 import {
@@ -546,7 +546,8 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
           ]}
           heading="הורדה לוורד"
         />
-        <SourcesBtn isDark={isDark} />
+        {/* A check's answer cites nothing — no sources, no citation badges (for now) */}
+        {!proof && <SourcesBtn isDark={isDark} />}
         {/* Everything used less often */}
         <RowMenu
           title="עוד"
@@ -554,7 +555,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
           items={[
             { label: "נסה שוב", Icon: RotateCw },
             { label: "המשך בשיחה חדשה", Icon: Split, iconRotate: 90 },
-            { label: showBadges ? "הסתר ציטוטים" : "הצג ציטוטים", Icon: showBadges ? EyeClosed : Eye, onClick: onToggleBadges },
+            ...(proof ? [] : [{ label: showBadges ? "הסתר ציטוטים" : "הצג ציטוטים", Icon: showBadges ? EyeClosed : Eye, onClick: onToggleBadges }]),
             ...(hasLog ? [{ label: logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה", Icon: ListCheck, onClick: onToggleLog }] : []),
           ]}
         />
@@ -782,7 +783,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
-  const [draft, setDraft] = useState<{ name: string; size: number } | null>(null);
+  const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
+  // A file over the word limit isn't taken in; this says why, above the input, until the next try
+  const [uploadError, setUploadError] = useState<string | null>(null);
   // The "פעולות" menu that sits beside the upload icon once a draft is in
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsBtnRef = useRef<HTMLButtonElement>(null);
@@ -894,6 +897,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setOpenLog(null);
     setAgentRunning(false);   // a fresh conversation shouldn't inherit an in-progress run (send button stayed a stop button otherwise)
     setDraft(null);
+    setUploadError(null);
     setActionsOpen(false);
     setUsedChecks({ lang: false, coherence: false });
     setProofRun(null);
@@ -1028,6 +1032,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return (
       <div className="flex flex-col gap-2">
       {/* Example in use — set from the examples panel's ⋮ menu */}
+      {uploadError && (
+        <div className="text-[13px] px-1" style={{ color: "#d83a52", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
+          {uploadError}
+        </div>
+      )}
       {inUseName && (
         <div className="flex justify-center" dir="rtl">
           <div
@@ -1057,7 +1066,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
           style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={(e) => { setInputText(e.target.value); setUploadError(null); }}
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
@@ -1124,14 +1133,19 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               type="file"
               accept=".docx,.doc"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
-                if (f) {
-                  // straight into the conversation — the actions are in the menu beside the icon
-                  setDraft({ name: f.name, size: f.size });
-                  requestAnimationFrame(() => inputRef.current?.focus());
-                }
                 e.target.value = ""; // so picking the same file twice still fires
+                if (!f) return;
+                const words = await countDocxWords(f);
+                if (words !== null && words > WORD_LIMIT) {
+                  setUploadError(`המסמך ארוך מדי (כ-${pagesOf(words)} עמודים). אפשר להעלות מסמך של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים.`);
+                  return;
+                }
+                setUploadError(null);
+                // straight into the conversation — the actions are in the menu beside the icon
+                setDraft({ name: f.name, size: f.size, words });
+                requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
             {/* The draft's actions — appears once a draft is in, left of the upload icon. Greyed while
@@ -1172,7 +1186,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 opacity: draft ? 0.4 : 1,
                 cursor: draft ? "default" : "pointer",
               }}
-              title={draft ? undefined : "העלאת מסמך"}
+              title={draft ? undefined : `העלאת מסמך
+Word, עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים (כ-${pagesOf(WORD_LIMIT)} עמודים)`}
               onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
@@ -1335,7 +1350,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The draft's actions menu ──────────────────────────────────────────
   function renderActionsMenu() {
     if (!draft || !actionsOpen || !actionsPos) return null;
-    return <DraftActionsMenu pos={actionsPos} usedChecks={usedChecks} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
+    return <DraftActionsMenu pos={actionsPos} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
   }
 
   // ── Response-mode dropdown (portal-like, fixed position) ────────────────

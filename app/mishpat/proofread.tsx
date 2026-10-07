@@ -12,7 +12,7 @@
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch } from "lucide-react";
+import { ChevronDown, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch } from "lucide-react";
 import { useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
@@ -124,6 +124,54 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
 }
 
 // ── The dialog ─────────────────────────────────────────────────────────────
+// ── Length limits ──────────────────────────────────────────────────────────
+// Dev's numbers: a draft can be up to 80,000 words, and past ~30 pages בדיקת עקיבות gets less
+// reliable, so the user is told before running it. Users think in pages, so pages are what we show —
+// at ~265 words to a page of a Hebrew court filing (David 12, 1.5 spacing), 80,000 words ≈ 300 pages.
+export const WORD_LIMIT = 80_000;
+export const WORDS_PER_PAGE = 265;
+export const COHERENCE_PAGE_LIMIT = 30;
+// An estimate, so it is rounded like one: "כ-300 עמודים", not "כ-291".
+export const pagesOf = (words: number) => {
+  const p = words / WORDS_PER_PAGE;
+  const step = p >= 100 ? 10 : p >= 20 ? 5 : 1;
+  return Math.max(1, Math.round(p / step) * step);
+};
+
+// Counts the words of a .docx in the browser: it is a zip, and the text lives in word/document.xml.
+// Returns null when it can't tell (an old .doc, or a file it can't read) — then no limit is applied.
+export async function countDocxWords(file: File): Promise<number | null> {
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const dv = new DataView(buf.buffer);
+    // the central directory says where each entry starts and how it is stored
+    let eocd = buf.length - 22;
+    while (eocd >= 0 && dv.getUint32(eocd, true) !== 0x06054b50) eocd--;
+    if (eocd < 0) return null;
+    let at = dv.getUint32(eocd + 16, true);
+    const n = dv.getUint16(eocd + 10, true);
+    for (let i = 0; i < n; i++) {
+      const method = dv.getUint16(at + 10, true), size = dv.getUint32(at + 20, true);
+      const nameLen = dv.getUint16(at + 28, true), extra = dv.getUint16(at + 30, true), note = dv.getUint16(at + 32, true);
+      const local = dv.getUint32(at + 42, true);
+      const name = new TextDecoder().decode(buf.subarray(at + 46, at + 46 + nameLen));
+      if (name === "word/document.xml") {
+        const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+        let raw = buf.subarray(start, start + size);
+        if (method === 8) raw = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+        const xml = new TextDecoder().decode(raw);
+        // the text runs, with a space at each paragraph end so paragraphs don't run together
+        const text = Array.from(xml.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<\/w:p>/g), (m) => m[1] ?? " ").join("");
+        return text.split(/\s+/).filter(Boolean).length;
+      }
+      at += 46 + nameLen + extra + note;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // ── The actions menu ───────────────────────────────────────────────────────
 // Opens from the "פעולות" button beside the upload icon once a draft is in. Built like the
 // response-mode dropdown, but the rows tick rather than pick: one or more actions are marked and
@@ -134,9 +182,10 @@ export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string
   { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
 ];
 
-export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
+export function DraftActionsMenu({ pos, usedChecks, pages, onClose, onRun }: {
   pos: { top?: number; bottom?: number; right: number; left: number };
   usedChecks: ProofKinds;
+  pages: number | null; // the draft's length, when it could be read
   onClose: () => void;
   onRun: (kinds: ProofKinds) => void;
 }) {
@@ -184,6 +233,13 @@ export function DraftActionsMenu({ pos, usedChecks, onClose, onRun }: {
                   <span className="text-[13px] leading-snug" style={{ color: c.textGray }}>
                     {done ? "כבר בוצעה בשיחה זו" : desc}
                   </span>
+                  {/* Past ~30 pages the coherence check misses more — said here, before it runs */}
+                  {key === "coherence" && !done && pages !== null && pages > COHERENCE_PAGE_LIMIT && (
+                    <span className="flex items-start gap-1 text-[13px] leading-snug mt-1" style={{ color: c.text }}>
+                      <Info size={13} style={{ color: c.iconGray, flexShrink: 0, marginTop: "3px" }} />
+                      <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
+                    </span>
+                  )}
                 </span>
               </button>
             );
