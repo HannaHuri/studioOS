@@ -786,6 +786,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
   // A file over the word limit isn't taken in; this says why, above the input, until the next try
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
   // The "פעולות" menu that sits beside the upload icon once a draft is in
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsBtnRef = useRef<HTMLButtonElement>(null);
@@ -1183,24 +1184,40 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 </button>
               );
             })()}
-            {/* Upload a draft. One per conversation, so once it's in the icon goes grey and disabled. */}
-            <button
-              onClick={draft ? undefined : () => fileRef.current?.click()}
-              aria-disabled={!!draft}
-              className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-              style={{
-                color: c.iconGray,
-                opacity: draft ? 0.4 : 1,
-                cursor: draft ? "default" : "pointer",
-              }}
-              // The browser lays a native tooltip out left-to-right: each line opens with a right-to-left
-              // mark and starts and ends on Hebrew, so "Word" and the numbers stay where they belong.
-              title={draft ? undefined : `‏העלאת מסמך\n‏קובץ Word עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים`}
-              onMouseEnter={e => { if (!draft) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-            >
-              <FilePlus size={15} />
-            </button>
+            {/* Upload a draft. One per conversation, so once it's in the icon goes grey and disabled.
+                Its tooltip is drawn here rather than by the browser: Windows lays native tooltips out
+                left-to-right and wraps them on its own, which scrambled the Hebrew line with "Word" in it. */}
+            <span className="relative flex-shrink-0">
+              <button
+                onClick={draft ? undefined : () => { setUploadTip(false); fileRef.current?.click(); }}
+                aria-disabled={!!draft}
+                aria-label="העלאת מסמך"
+                className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+                style={{
+                  color: c.iconGray,
+                  opacity: draft ? 0.4 : 1,
+                  cursor: draft ? "default" : "pointer",
+                }}
+                onMouseEnter={e => { if (!draft) { e.currentTarget.style.backgroundColor = c.hoverBg; setUploadTip(true); } }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setUploadTip(false); }}
+              >
+                <FilePlus size={15} />
+              </button>
+              {uploadTip && !draft && (
+                <span
+                  dir="rtl"
+                  className="absolute z-50 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap text-right pointer-events-none"
+                  style={{
+                    ...(isEmpty ? { top: "calc(100% + 6px)" } : { bottom: "calc(100% + 6px)" }),
+                    left: "50%", transform: "translateX(-50%)",
+                    backgroundColor: c.text, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif",
+                  }}
+                >
+                  <span className="block">העלאת מסמך</span>
+                  <span className="block" style={{ opacity: 0.8 }}>קובץ Word עד {WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-{pagesOf(WORD_LIMIT)} עמודים</span>
+                </span>
+              )}
+            </span>
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
