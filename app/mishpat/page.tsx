@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, ListChecks,
+  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -1159,21 +1159,22 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onClick={off ? undefined : () => setActionsOpen(true)}
                   aria-disabled={off}
                   dir="rtl"
-                  className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[13px] transition-colors"
+                  // outlined like the send button, so it reads as a button that opens something
+                  // rather than a selector like מעמיק beside it
+                  className="flex items-center h-7 px-2.5 rounded flex-shrink-0 text-[13px] transition-colors"
                   style={{
                     backgroundColor: "transparent",
+                    border: `1px solid ${isDark ? dk.border : c.border}`,
                     color: c.iconGray,
                     fontFamily: "Noto Sans Hebrew, sans-serif",
                     opacity: off ? 0.4 : 1,
                     cursor: off ? "default" : "pointer",
-                    marginRight: "-6px", paddingRight: "4px", // close up to the icon it belongs to
                   }}
                   title={off ? undefined : "פעולות על הטיוטה"}
                   onMouseEnter={e => { if (!off) e.currentTarget.style.backgroundColor = c.hoverBg; }}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   <span>פעולות</span>
-                  <ListChecks size={14} />
                 </button>
               );
             })()}
