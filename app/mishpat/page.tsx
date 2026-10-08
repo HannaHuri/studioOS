@@ -1171,7 +1171,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   }}
                   title={off ? undefined : "פעולות על הטיוטה"}
                 >
-                  <span>פעולות</span>
+                  {/* nudged down a pixel: the letters' bodies sit high in the line, so centred by the box
+                      the word looked raised next to the upload icon */}
+                  <span style={{ transform: "translateY(1px)" }}>פעולות</span>
                 </button>
               );
             })()}
