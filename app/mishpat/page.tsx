@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles,
+  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -788,7 +788,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
   const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
-  // A file over the word limit isn't taken in; a popup says why, and stays until it's closed
+  // A file over the word limit isn't taken in; a toast above the disclaimer says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
   // The "פעולות" menu that sits beside the upload icon once a draft is in
@@ -1162,7 +1162,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 if (!f) return;
                 const words = await countDocxWords(f);
                 if (words !== null && words > WORD_LIMIT) {
-                  setUploadError(`המסמך שנבחר הוא כ-${pagesOf(words)} עמודים. אפשר להעלות מסמך של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים.`);
+                  setUploadError(`הקובץ כולל כ-${pagesOf(words)} עמודים. ניתן להעלות קבצים של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים (כ-${pagesOf(WORD_LIMIT)} עמודים).`);
                   return;
                 }
                 setUploadError(null);
@@ -1389,7 +1389,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
 
   // ── The draft's actions menu ──────────────────────────────────────────
   function renderUploadNotice() {
-    return uploadError && <UploadLimitNotice isDark={isDark} note={uploadError} onClose={() => setUploadError(null)} />;
+    return uploadError && <UploadLimitToast note={uploadError} onClose={() => setUploadError(null)} />;
   }
 
   function renderActionsMenu() {
@@ -2630,31 +2630,30 @@ function ExampleModal({
 }
 
 // A one-time notice, not field validation: it says why the file wasn't taken in and waits to be closed,
-// rather than sitting above the input and vanishing as soon as something is typed.
-function UploadLimitNotice({ isDark, note, onClose }: { isDark: boolean; note: string; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  const surface = isDark ? dk.surface : "white";
-  const textCol = isDark ? dk.text : c.text;
-  const subCol = isDark ? dk.textMuted : c.textLight;
+// rather than sitting above the input and vanishing as soon as something is typed. Drawn as the
+// design's attention toast, centred over the chat column just above the disclaimer footer.
+function UploadLimitToast({ note, onClose }: { note: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+    <div className="absolute left-0 right-0 flex justify-center px-4 pointer-events-none z-[45]" style={{ bottom: FOOTER_HEIGHT + 12 }}>
       <div
         dir="rtl"
-        onClick={(e) => e.stopPropagation()}
-        className="rounded-lg shadow-2xl px-6 py-5"
-        style={{ width: "min(460px, 92vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+        role="alert"
+        className="relative flex flex-col gap-2 rounded-lg p-4 pointer-events-auto"
+        style={{ width: "min(480px, 100%)", backgroundColor: "#f4c3cb", filter: "drop-shadow(0px 2px 7.5px rgba(0,0,0,0.15))", color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       >
-        <div className="text-[17px]" style={{ color: textCol }}>המסמך ארוך מדי</div>
-        <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
-        <div className="flex items-center justify-end mt-5">
-          <button onClick={onClose} autoFocus className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary }}>
-            הבנתי
-          </button>
+        <div className="flex items-center gap-2">
+          <TriangleAlert size={20} style={{ color: c.text, flexShrink: 0 }} />
+          <span className="text-[18px] font-bold leading-[22px]">הקובץ גדול מדי</span>
         </div>
+        <p className="text-[16px] leading-[20px]" style={{ paddingInlineStart: "16px" }}>{note}</p>
+        <button
+          onClick={onClose}
+          className="absolute size-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+          style={{ top: "6px", left: "6px", color: c.text }}
+          title="סגירה"
+        >
+          <X size={14} />
+        </button>
       </div>
     </div>
   );
