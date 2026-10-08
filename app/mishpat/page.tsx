@@ -22,6 +22,8 @@ import {
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, GENERAL, type Prompt,
 } from "./prompts";
 import { ComplexPromptEditor, partsToText } from "./complexPrompt";
+import { PromptTablePanel } from "./promptTable";
+import { GripVertical } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -2688,6 +2690,13 @@ export default function MishpatPage() {
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
   const [promptFill, setPromptFill] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
+  // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
+  // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
+  const [promptPane, setPromptPane] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" } | null>(null);
+  const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
+  const [promptsW, setPromptsW] = useState(640);
+  const [promptsResizing, setPromptsResizing] = useState(false);
+  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded over the whole chat
   // פרומפט מורכב: the editor, and the one that is armed for the next send. It is too long to
   // go into the question line as text, so it rides above the input as a chip, like an example.
   const [complexOpen, setComplexOpen] = useState(false);
@@ -2738,8 +2747,11 @@ export default function MishpatPage() {
     setIsHistoryOpen((v) => { const nv = !v; if (nv) { setIsExamplesOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   const toggleExamples = () =>
     setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
-  const togglePrompts = () =>
+  const togglePrompts = () => {
+    // the table always opens on its own, without an editor left over from last time
+    setPromptPane(null); setPromptsFocus(false); setPromptPaneWide(false);
     setIsPromptsOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
+  };
 
   const saveExample = (ex: Example) => {
     setExamples((prev) => (prev.some((p) => p.id === ex.id) ? prev.map((p) => (p.id === ex.id ? ex : p)) : [ex, ...prev]));
@@ -2786,6 +2798,19 @@ export default function MishpatPage() {
     setPromptEdit(null);
     setToast(share ? "הפרומפט נשמר ושותף למאגר" : pr.fav ? "הפרומפט נשמר במועדפים" : "הפרומפט נשמר");
   };
+  // Saving from the side editor keeps it open on what was saved — for a fork that's the new copy,
+  // so the row the reader lands on is theirs.
+  const savePanePrompt = (pr: Prompt, share?: { anon: boolean }) => {
+    // the editor holds a snapshot; a bookmark or a rating given while it was open still stands
+    const cur = prompts.find((x) => x.id === pr.id);
+    if (cur) pr = { ...pr, fav: cur.fav, uses: cur.uses, ratingSum: cur.ratingSum, ratingCount: cur.ratingCount, myRating: cur.myRating };
+    savePrompt(pr, share);
+    setPromptPane({ initial: pr, mode: "edit" });
+  };
+  const openPromptPane = (pr: Prompt) => {
+    setPromptsFocus(false);
+    setPromptPane({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" });
+  };
   const doShare = (pr: Prompt) => {
     setPrompts((prev) => [pr, ...prev]);
     setPromptShare(null);
@@ -2806,6 +2831,45 @@ export default function MishpatPage() {
   ];
   const iconCol = isDark ? dk.textMuted : c.iconGray;
   const sidebarBg = isDark ? dk.surface : "white";
+
+  // Prompts table + editor. The editor sits between the chat and the table while the chat keeps
+  // a usable width; past that it opens over the chat, as the documents screen floats its chat.
+  const PROMPT_PANE_W = 560;
+  const docsW = isPanelOpen && !narrow ? 300 : 40;
+  const promptPaneOver = vw - 55 - docsW - promptsW - PROMPT_PANE_W < 420;
+  const promptPaneLive = promptPane?.initial?.id ? prompts.find((x) => x.id === promptPane.initial!.id) : undefined;
+  const runPrompt = usePrompt; // not a hook, despite the name — an alias the hooks lint can tell apart
+  const promptPaneEl = promptPane && (
+    <PromptEditor
+      key={`${promptPane.initial?.id ?? "new"}-${promptPane.mode}`}
+      pane
+      isDark={isDark}
+      initial={promptPane.initial}
+      mode={promptPane.mode}
+      live={promptPaneLive}
+      onSave={savePanePrompt}
+      onClose={() => { setPromptPane(null); setPromptPaneWide(false); }}
+      onUse={(pr) => { runPrompt(pr); if (promptPaneOver || promptPaneWide) { setPromptPane(null); setPromptPaneWide(false); } }}
+      expanded={promptPaneWide}
+      onToggleExpand={() => setPromptPaneWide((v) => !v)}
+      onRate={promptPaneLive ? (n) => ratePrompt(promptPaneLive.id, n) : undefined}
+    />
+  );
+  const startPromptsResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setPromptsResizing(true);
+    // 520 keeps the narrow table's fixed columns from crushing the name; the chat keeps ~380px
+    const onMove = (ev: MouseEvent) => setPromptsW(Math.min(vw - 55 - docsW - 380, Math.max(520, window.innerWidth - 55 - ev.clientX)));
+    const onUp = () => {
+      setPromptsResizing(false);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
@@ -2849,6 +2913,13 @@ export default function MishpatPage() {
             complexName={complexInUse}
             onClearComplex={() => setComplexInUse(null)}
           />
+
+          {/* Prompt editor over the chat — when there isn't room for it beside the chat */}
+          {!narrow && isPromptsOpen && (promptPaneOver || promptPaneWide) && promptPaneEl && (
+            <div className="absolute top-0 bottom-0 right-0 z-[45]" style={{ width: promptPaneWide ? "100%" : `${PROMPT_PANE_W}px`, maxWidth: "100%", boxShadow: "-6px 0 24px rgba(0,0,0,0.14)" }}>
+              {promptPaneEl}
+            </div>
+          )}
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
           {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen || isPromptsOpen) && (
@@ -2954,20 +3025,49 @@ export default function MishpatPage() {
           </div>
         )}
 
-        {/* ── RIGHT: Prompts panel — same slot as history and examples (push mode only) ── */}
+        {/* ── Prompt editor beside the table — where the documents screen opens the PDF ── */}
+        {!narrow && isPromptsOpen && !promptPaneOver && !promptPaneWide && promptPaneEl && (
+          <div className="flex-shrink-0" style={{ width: `${PROMPT_PANE_W}px`, borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}>
+            {promptPaneEl}
+          </div>
+        )}
+
+        {/* ── RIGHT: Prompts table — the documents screen's table, beside the rail (push mode only).
+            Expanded, it covers everything up to the rail and shows every column. ── */}
         {!narrow && isPromptsOpen && (
-          <div className="flex-shrink-0 transition-all duration-300" style={{ width: "300px", boxShadow: "0px 1px 2px rgba(0,0,0,0.3),0px 1px 3px 1px rgba(0,0,0,0.15)" }}>
-            <PromptsPanel
+          <div
+            className={promptsFocus ? "absolute top-0 bottom-0 z-[46]" : "relative flex-shrink-0"}
+            style={promptsFocus
+              ? { left: 0, right: "55px", backgroundColor: isDark ? dk.surface : "white" }
+              : { width: `${promptsW}px`, borderInlineStart: `2px solid ${promptsResizing ? c.primary : isDark ? dk.border : "#dbe7f7"}` }}
+          >
+            <PromptTablePanel
               isDark={isDark}
               prompts={prompts}
+              width={promptsFocus ? vw - 55 : promptsW}
+              isFocus={promptsFocus}
+              onToggleFocus={() => setPromptsFocus((v) => !v)}
+              onClose={togglePrompts}
+              openId={promptPane?.initial?.id ?? null}
+              onOpen={openPromptPane}
+              onNew={() => { setPromptsFocus(false); setPromptPane({ initial: null, mode: "new" }); }}
               onUse={usePrompt}
               onFav={toggleFav}
-              onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
+              onEdit={openPromptPane}
               onShare={(pr) => setPromptShare(pr)}
               onDelete={(pr) => setPromptDelete(pr)}
-              onNew={() => setPromptEdit({ initial: null, mode: "new" })}
-              onOpenLibrary={() => setLibraryOpen(true)}
             />
+            {/* Resize handle on the left edge, the documents table's grip chip */}
+            {!promptsFocus && (
+              <div onMouseDown={startPromptsResize} className="absolute top-0 bottom-0 z-10 group" style={{ left: "-2px", width: "8px", cursor: "ew-resize" }} title="גרירה לשינוי רוחב">
+                <div
+                  className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-md border transition-colors group-hover:!bg-[#0073ea] group-hover:!border-[#0073ea] group-hover:!text-white"
+                  style={{ width: "15px", height: "30px", backgroundColor: promptsResizing ? c.primary : (isDark ? "#2a3350" : "#eef2f8"), borderColor: promptsResizing ? c.primary : (isDark ? dk.border : "#cfd8e6"), color: promptsResizing ? "white" : (isDark ? dk.textMuted : "#8a97ad") }}
+                >
+                  <GripVertical size={13} strokeWidth={2} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3116,6 +3216,7 @@ export default function MishpatPage() {
           confirmLabel={promptDelete.source === "shared" ? "הסרה משיתוף" : "מחיקה"}
           onConfirm={() => {
             setPrompts((prev) => prev.filter((x) => x.id !== promptDelete.id));
+            setPromptPane((p) => (p?.initial?.id === promptDelete.id ? null : p));
             setToast(promptDelete.source === "shared" ? "הפרומפט הוסר מהמאגר" : "הפרומפט נמחק");
             setPromptDelete(null);
           }}
