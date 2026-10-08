@@ -3,17 +3,17 @@
 // ── טיוטה בשיחה ────────────────────────────────────────────────────────────
 // A conversation can take one Word draft. Uploading it puts it straight into the conversation —
 // shown at its head, part of every question's context from then on, and it can't be removed.
-// The upload icon and the response-mode selector go grey, and a "פעולות" menu appears beside them:
+// The upload icon and the response-mode selector go grey, and a "פעולות" button appears beside them:
 //   הגהה            — כתיב, ניסוח ופיסוק; comes back as tracked changes
 //   בדיקת עקיבות    — contradictions INSIDE the draft; comes back as Word comments
 // One or more can be ticked and run together, and each runs only once per conversation; once all
-// have run, the menu goes grey too. More actions will join the menu later.
+// have run, the button goes grey too. More actions will join the dialog later.
 //
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch } from "lucide-react";
-import { useState, type ComponentType, type CSSProperties } from "react";
+import { ChevronDown, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch, X } from "lucide-react";
+import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
 // One row of the progress tracker. Loose enough to hold the hand-drawn icons the agent run uses.
@@ -172,91 +172,119 @@ export async function countDocxWords(file: File): Promise<number | null> {
   }
 }
 
-// ── The actions menu ───────────────────────────────────────────────────────
-// Opens from the "פעולות" button beside the upload icon once a draft is in. Built like the
-// response-mode dropdown, but the rows tick rather than pick: one or more actions are marked and
-// run together on ביצוע. Each runs once per conversation — after it has, its row stays, locked.
-// Their icons are the ones the progress tracker shows for the same work.
+// ── The actions dialog ─────────────────────────────────────────────────────
+// Opens over the page from the "פעולות" button beside the upload icon once a draft is in. A dialog
+// rather than a dropdown: it already ran taller than some screens, and more actions are coming, so
+// the list scrolls inside it while the header and ביצוע stay in view. The rows tick rather than
+// pick: one or more actions are marked and run together on ביצוע. Each runs once per conversation —
+// after it has, its row stays, locked. Their icons are the ones the progress tracker shows for the same work.
 export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string; Icon: RunStepIcon }[] = [
   { key: "lang", Icon: SpellCheck, title: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון." },
   { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
 ];
 
-export function DraftActionsMenu({ pos, usedChecks, pages, onClose, onRun }: {
-  pos: { top?: number; bottom?: number; right: number; left: number };
+export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }: {
+  isDark: boolean;
   usedChecks: ProofKinds;
   pages: number | null; // the draft's length, when it could be read
   onClose: () => void;
   onRun: (kinds: ProofKinds) => void;
 }) {
   const [picked, setPicked] = useState<ProofKinds>({ lang: false, coherence: false });
+  const [open, setOpen] = useState<ProofKinds>({ lang: false, coherence: false }); // which descriptions are showing
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const canRun = DRAFT_ACTIONS.some((a) => picked[a.key] && !usedChecks[a.key]);
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textGray;
+  const line = isDark ? dk.border : c.border;
+  const hover = isDark ? "rgba(255,255,255,0.05)" : c.hoverBg;
   return (
-    <>
-      <div className="fixed inset-0 z-[190]" onClick={onClose} />
+    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div
-        style={{
-          position: "fixed",
-          ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
-          right: pos.right,
-          left: pos.left, // from the button to the input box's left edge — room for the actions still to come
-          zIndex: 200,
-          backgroundColor: "white",
-          borderRadius: "12px",
-          boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-          overflow: "hidden",
-          fontFamily: FONT,
-        }}
         dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="relative rounded-lg shadow-2xl flex flex-col overflow-hidden"
+        style={{ width: "min(560px, 92vw)", maxHeight: "85vh", backgroundColor: surface, fontFamily: FONT }}
       >
-        <div className="px-4 pt-3.5 pb-1" style={{ lineHeight: 1.3 }}>
-          <span className="text-[14px]" style={{ color: c.textGray }}>ניתן לבחור פעולה אחת או יותר</span>
+        <div className="px-6 pt-5 pb-3 flex-none">
+          <div className="text-[17px]" style={{ color: textCol }}>פעולות על המסמך</div>
+          <button onClick={onClose} className="absolute size-8 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors" style={{ top: "12px", left: "12px", color: c.iconGray }} title="סגירה">
+            <X size={18} />
+          </button>
         </div>
-        <div className="py-1">
+        <div className="px-6 text-[14px] flex-none" style={{ color: subCol }}>ניתן לבחור פעולה אחת או יותר</div>
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-3 py-2">
           {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
             const done = usedChecks[key];
+            const isOpen = open[key];
+            // Past ~30 pages the coherence check misses more — said once it's ticked, when it matters
+            const longWarn = key === "coherence" && !done && picked[key] && pages !== null && pages > COHERENCE_PAGE_LIMIT;
             return (
-              <button
-                key={key}
-                onClick={done ? undefined : () => setPicked((p) => ({ ...p, [key]: !p[key] }))}
-                className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right"
-                style={{ backgroundColor: "transparent", cursor: done ? "default" : "pointer", opacity: done ? 0.5 : 1 }}
-                onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                <span className="mt-0.5"><Tick checked={done || picked[key]} muted={done} /></span>
-                <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[14px]" style={{ color: c.text }}>
-                    <Icon size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-                    {title}
-                  </span>
-                  <span className="text-[13px] leading-snug" style={{ color: c.textGray }}>
-                    {done ? "כבר בוצעה בשיחה זו" : desc}
-                  </span>
-                  {/* Past ~30 pages the coherence check misses more — said here, before it runs */}
-                  {key === "coherence" && !done && pages !== null && pages > COHERENCE_PAGE_LIMIT && (
-                    <span className="flex items-start gap-1.5 text-[13px] leading-snug mt-1.5 rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
-                      <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
-                      <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
+              <div key={key} className="rounded-md" style={{ opacity: done ? 0.5 : 1 }}>
+                {/* Only the title by default; the chevron opens what the check does. Ticking and
+                    opening are separate so reading a description never ticks a check by accident. */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={done ? undefined : () => setPicked((p) => ({ ...p, [key]: !p[key] }))}
+                    className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-md text-right"
+                    style={{ backgroundColor: "transparent", cursor: done ? "default" : "pointer" }}
+                    onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <Tick checked={done || picked[key]} muted={done} />
+                    <span className="flex items-center gap-1.5 text-[15px] min-w-0" style={{ color: textCol }}>
+                      <Icon size={16} style={{ color: c.iconGray, flexShrink: 0 }} />
+                      {title}
                     </span>
-                  )}
-                </span>
-              </button>
+                    {done && <span className="text-[13px]" style={{ color: subCol }}>· בוצעה בשיחה זו</span>}
+                  </button>
+                  <button
+                    onClick={() => setOpen((o) => ({ ...o, [key]: !o[key] }))}
+                    className="size-8 flex-none flex items-center justify-center rounded-md transition-colors"
+                    style={{ color: c.iconGray }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                    title={isOpen ? "הסתרת הפירוט" : "פירוט"}
+                    aria-expanded={isOpen}
+                  >
+                    <ChevronDown size={16} style={{ transition: "transform 0.15s", transform: isOpen ? "rotate(180deg)" : "none" }} />
+                  </button>
+                </div>
+                {(isOpen || longWarn) && (
+                  <div className="flex flex-col gap-1.5 pb-2" style={{ paddingInlineStart: "44px", paddingInlineEnd: "40px" }}>
+                    {isOpen && <span className="text-[13.5px] leading-snug" style={{ color: subCol }}>{desc}</span>}
+                    {longWarn && (
+                      <span className="flex items-start gap-1.5 text-[13px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
+                        <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
+                        <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
-        <div className="flex justify-end px-4 pb-3 pt-1">
+        <div className="flex items-center justify-end gap-2 px-6 pt-2 pb-5 flex-none">
+          <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${line}`, color: textCol }}>
+            ביטול
+          </button>
           <button
             onClick={() => canRun && onRun({ lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence })}
             disabled={!canRun}
-            className="rounded-md px-6 py-1.5 text-[14px] text-white transition-opacity"
+            className="h-9 px-6 rounded-[4px] text-[14px] text-white transition-opacity"
             style={{ backgroundColor: canRun ? c.primary : c.border, cursor: canRun ? "pointer" : "default", opacity: canRun ? 1 : 0.7 }}
           >
             ביצוע
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

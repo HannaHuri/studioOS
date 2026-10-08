@@ -3,9 +3,9 @@
 /* ──────────────────────────────────────────────────────────────────────────
    פרומפט מורכב — a named prompt made of parts that run in order as one unit.
 
-   Each part says three things: which document types it draws on (מקורות), what
-   to do with them (מה לעשות), and how (איך — usually a pasted example, e.g. a
-   passage from an earlier judgment). The parts are one prompt: a later part sees
+   Each part says three things, in this order: what to do (מה לעשות), which
+   document types it draws on (מקורות), and how (איך — usually a pasted example,
+   e.g. a passage from an earlier judgment). The parts are one prompt: a later part sees
    what the earlier ones produced, which is why their order can be changed.
 
    Deliberately left out (they were in the dev team's builder): date filters,
@@ -18,6 +18,7 @@
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
+import { PromptConfirm } from "./prompts";
 
 export type PromptPart = { sources: string[]; task: string; how: string };
 
@@ -117,7 +118,8 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
   const [name, setName] = useState("");
   const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
   const [attempted, setAttempted] = useState(false);
-  const listEnd = useRef<HTMLDivElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<number | null>(null); // the part waiting on its delete confirmation
+  const listEnd = useRef<HTMLButtonElement>(null); // the "הוספת חלק" button, last in the list
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -147,7 +149,10 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
       <div
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(760px, 92vw)", height: "88vh", backgroundColor: surface, fontFamily: FONT }}
+        // wide enough that every writing field is as wide as the chat's own input (768px):
+        // 768 + the part card's padding (34) + the dialog's own padding (48). It grows with its
+        // parts up to 88vh, then the parts scroll — no empty band under "הוספת חלק".
+        style={{ width: "min(850px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start px-6 pt-5 pb-4">
           <div className="flex-1 text-[18px]" style={{ color: textCol }}>פרומפט מורכב חדש</div>
@@ -166,29 +171,27 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
             autoFocus
           />
           {attempted && !name.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם.</div>}
-          <div className="text-[12.5px] mt-2" style={{ color: subCol }}>
-            החלקים רצים לפי הסדר כיחידה אחת, וכל חלק רואה את מה שהחלקים שלפניו הפיקו.
-          </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-4" dir="ltr">
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-1" dir="ltr">
           <div dir="rtl" className="flex flex-col gap-3">
             {parts.map((p, i) => {
               const taskMissing = attempted && !p.task.trim();
               return (
-                <div key={i} className="rounded-lg px-4 pt-2 pb-4" style={{ border: `1px solid ${line}` }}>
+                <div key={i} className="rounded-lg pt-2 pb-4" style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }}>
                   <div className="flex items-center gap-1 mb-2">
                     <span className="size-6 rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
                     <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
                     <button className={iconBtn} style={{ color: subCol }} disabled={i === 0} onClick={() => move(i, -1)} title="הזזה למעלה"><ArrowUp size={15} /></button>
                     <button className={iconBtn} style={{ color: subCol }} disabled={i === parts.length - 1} onClick={() => move(i, 1)} title="הזזה למטה"><ArrowDown size={15} /></button>
-                    <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => setParts((prev) => prev.filter((_, j) => j !== i))} title="מחיקת החלק"><Trash2 size={15} /></button>
+                    <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => {
+                      // an empty part goes straight away; one with anything written in it asks first
+                      if (p.task.trim() || p.how.trim() || p.sources.length) setPendingDelete(i);
+                      else setParts((prev) => prev.filter((_, j) => j !== i));
+                    }} title="מחיקת החלק"><Trash2 size={15} /></button>
                   </div>
 
-                  <div className="text-[13px] mb-1" style={{ color: textCol }}>מקורות</div>
-                  <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
-
-                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מה לעשות</div>
+                  <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
                   <textarea
                     value={p.task}
                     onChange={(e) => setPart(i, { task: e.target.value })}
@@ -198,6 +201,9 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
                     style={{ border: `1px solid ${taskMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
                   />
                   {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
+
+                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
+                  <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
 
                   <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
                   <textarea
@@ -213,17 +219,17 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
             })}
 
             <button
+              ref={listEnd}
               onClick={addPart}
               className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
               style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
             >
               <Plus size={16} /> הוספת חלק
             </button>
-            <div ref={listEnd} />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${line}` }}>
+        <div className="flex items-center justify-end gap-2 px-6 pt-2 pb-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${quietBorder}`, color: textCol }}>
             ביטול
           </button>
@@ -232,6 +238,18 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
           </button>
         </div>
       </div>
+      {pendingDelete !== null && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <PromptConfirm
+            isDark={isDark}
+            title={`למחוק את חלק ${pendingDelete + 1}?`}
+            note="מה שנכתב בחלק הזה יימחק, והחלקים שאחריו יעלו מקום אחד."
+            confirmLabel="מחיקה"
+            onConfirm={() => { setParts((prev) => prev.filter((_, j) => j !== pendingDelete)); setPendingDelete(null); }}
+            onClose={() => setPendingDelete(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -239,5 +257,5 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
 // The parts as plain text — what the library card shows until its own form for these exists
 export const partsToText = (parts: PromptPart[]) =>
   parts.map((p, i) =>
-    `חלק ${i + 1} — מקורות: ${p.sources.length ? p.sources.join(", ") : "כל מסמכי התיק"}. ${p.task}${p.how ? `\nאיך: ${p.how}` : ""}`,
+    `חלק ${i + 1} — ${p.task}\nמקורות: ${p.sources.length ? p.sources.join(", ") : "כל מסמכי התיק"}${p.how ? `\nאיך: ${p.how}` : ""}`,
   ).join("\n\n");
