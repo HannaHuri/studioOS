@@ -788,7 +788,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
   const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
-  // A file over the word limit isn't taken in; this says why, above the input, until the next try
+  // A file over the word limit isn't taken in; a popup says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
   // The "פעולות" menu that sits beside the upload icon once a draft is in
@@ -1047,11 +1047,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return (
       <div className="flex flex-col gap-2">
       {/* Example in use — set from the examples panel's ⋮ menu */}
-      {uploadError && (
-        <div className="text-[13px] px-1" style={{ color: "#d83a52", fontFamily: "Noto Sans Hebrew, sans-serif" }} dir="rtl">
-          {uploadError}
-        </div>
-      )}
       {inUseName && (
         <div className="flex justify-center" dir="rtl">
           <div
@@ -1094,7 +1089,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
           style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
           value={inputText}
-          onChange={(e) => { setInputText(e.target.value); setUploadError(null); }}
+          onChange={(e) => setInputText(e.target.value)}
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
@@ -1167,7 +1162,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 if (!f) return;
                 const words = await countDocxWords(f);
                 if (words !== null && words > WORD_LIMIT) {
-                  setUploadError(`המסמך ארוך מדי (כ-${pagesOf(words)} עמודים). אפשר להעלות מסמך של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים.`);
+                  setUploadError(`המסמך שנבחר הוא כ-${pagesOf(words)} עמודים. אפשר להעלות מסמך של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-${pagesOf(WORD_LIMIT)} עמודים.`);
                   return;
                 }
                 setUploadError(null);
@@ -1393,6 +1388,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   // ── The draft's actions menu ──────────────────────────────────────────
+  function renderUploadNotice() {
+    return uploadError && <UploadLimitNotice isDark={isDark} note={uploadError} onClose={() => setUploadError(null)} />;
+  }
+
   function renderActionsMenu() {
     if (!draft || !actionsOpen || !actionsPos) return null;
     return <DraftActionsMenu pos={actionsPos} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
@@ -1495,8 +1494,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   className={`flex items-center gap-1.5 text-[13.5px] px-1 rounded transition-colors ${isDark ? "text-[#6b7da3] hover:text-[#90b8e0]" : "text-[#676879] hover:text-[#0073ea]"}`}
                   style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
+                  פרומפט מורכב
                   <WandSparkles size={15} />
-                  בניית פרומפט מורכב
                 </button>
               </div>
             )}
@@ -1505,6 +1504,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         {renderScopeDropdown()}
         {renderModeDropdown()}
         {renderActionsMenu()}
+        {renderUploadNotice()}
       </>
     );
   }
@@ -1585,6 +1585,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       {renderScopeDropdown()}
       {renderModeDropdown()}
       {renderActionsMenu()}
+      {renderUploadNotice()}
     </>
   );
 }
@@ -2624,6 +2625,37 @@ function ExampleModal({
           onClose={() => setPendingText(null)}
         />
       )}
+    </div>
+  );
+}
+
+// A one-time notice, not field validation: it says why the file wasn't taken in and waits to be closed,
+// rather than sitting above the input and vanishing as soon as something is typed.
+function UploadLimitNotice({ isDark, note, onClose }: { isDark: boolean; note: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-lg shadow-2xl px-6 py-5"
+        style={{ width: "min(460px, 92vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+      >
+        <div className="text-[17px]" style={{ color: textCol }}>המסמך ארוך מדי</div>
+        <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
+        <div className="flex items-center justify-end mt-5">
+          <button onClick={onClose} autoFocus className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary }}>
+            הבנתי
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
