@@ -1494,8 +1494,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   className={`flex items-center gap-1.5 text-[13.5px] px-1 rounded transition-colors ${isDark ? "text-[#6b7da3] hover:text-[#90b8e0]" : "text-[#676879] hover:text-[#0073ea]"}`}
                   style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
+                  <WandSparkles size={15} style={{ transform: "scaleX(-1)" }} />
                   פרומפט מורכב
-                  <WandSparkles size={15} />
                 </button>
               </div>
             )}
