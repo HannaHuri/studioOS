@@ -191,6 +191,7 @@ export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }
   onRun: (kinds: ProofKinds) => void;
 }) {
   const [picked, setPicked] = useState<ProofKinds>({ lang: false, coherence: false });
+  const [open, setOpen] = useState<ProofKinds>({ lang: false, coherence: false }); // which descriptions are showing
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -201,6 +202,7 @@ export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textGray;
   const line = isDark ? dk.border : c.border;
+  const hover = isDark ? "rgba(255,255,255,0.05)" : c.hoverBg;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div
@@ -219,37 +221,56 @@ export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-3 py-2">
           {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
             const done = usedChecks[key];
+            const isOpen = open[key];
+            // Past ~30 pages the coherence check misses more — said once it's ticked, when it matters
+            const longWarn = key === "coherence" && !done && picked[key] && pages !== null && pages > COHERENCE_PAGE_LIMIT;
             return (
-              <button
-                key={key}
-                onClick={done ? undefined : () => setPicked((p) => ({ ...p, [key]: !p[key] }))}
-                className="w-full flex items-start gap-3 px-3 py-3 rounded-md text-right"
-                style={{ backgroundColor: "transparent", cursor: done ? "default" : "pointer", opacity: done ? 0.5 : 1 }}
-                onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : c.hoverBg; }}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                <span className="mt-0.5"><Tick checked={done || picked[key]} muted={done} /></span>
-                <span className="flex flex-col gap-1 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[15px]" style={{ color: textCol }}>
-                    <Icon size={16} style={{ color: c.iconGray, flexShrink: 0 }} />
-                    {title}
-                  </span>
-                  <span className="text-[13.5px] leading-snug" style={{ color: subCol }}>
-                    {done ? "כבר בוצעה בשיחה זו" : desc}
-                  </span>
-                  {/* Past ~30 pages the coherence check misses more — said here, before it runs */}
-                  {key === "coherence" && !done && pages !== null && pages > COHERENCE_PAGE_LIMIT && (
-                    <span className="flex items-start gap-1.5 text-[13px] leading-snug mt-1.5 rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
-                      <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
-                      <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
+              <div key={key} className="rounded-md" style={{ opacity: done ? 0.5 : 1 }}>
+                {/* Only the title by default; the chevron opens what the check does. Ticking and
+                    opening are separate so reading a description never ticks a check by accident. */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={done ? undefined : () => setPicked((p) => ({ ...p, [key]: !p[key] }))}
+                    className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-md text-right"
+                    style={{ backgroundColor: "transparent", cursor: done ? "default" : "pointer" }}
+                    onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <Tick checked={done || picked[key]} muted={done} />
+                    <span className="flex items-center gap-1.5 text-[15px] min-w-0" style={{ color: textCol }}>
+                      <Icon size={16} style={{ color: c.iconGray, flexShrink: 0 }} />
+                      {title}
                     </span>
-                  )}
-                </span>
-              </button>
+                    {done && <span className="text-[13px]" style={{ color: subCol }}>· בוצעה בשיחה זו</span>}
+                  </button>
+                  <button
+                    onClick={() => setOpen((o) => ({ ...o, [key]: !o[key] }))}
+                    className="size-8 flex-none flex items-center justify-center rounded-md transition-colors"
+                    style={{ color: c.iconGray }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                    title={isOpen ? "הסתרת הפירוט" : "פירוט"}
+                    aria-expanded={isOpen}
+                  >
+                    <ChevronDown size={16} style={{ transition: "transform 0.15s", transform: isOpen ? "rotate(180deg)" : "none" }} />
+                  </button>
+                </div>
+                {(isOpen || longWarn) && (
+                  <div className="flex flex-col gap-1.5 pb-2" style={{ paddingInlineStart: "44px", paddingInlineEnd: "40px" }}>
+                    {isOpen && <span className="text-[13.5px] leading-snug" style={{ color: subCol }}>{desc}</span>}
+                    {longWarn && (
+                      <span className="flex items-start gap-1.5 text-[13px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
+                        <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
+                        <span>המסמך ארוך (כ-{pages} עמודים). במסמכים מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת, וייתכן שחלק מהסתירות לא יאותרו.</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 flex-none" style={{ borderTop: `1px solid ${line}` }}>
+        <div className="flex items-center justify-end gap-2 px-6 pt-2 pb-5 flex-none">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${line}`, color: textCol }}>
             ביטול
           </button>

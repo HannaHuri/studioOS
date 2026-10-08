@@ -1167,6 +1167,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     fontFamily: "Noto Sans Hebrew, sans-serif",
                     opacity: off ? 0.4 : 1,
                     cursor: off ? "default" : "pointer",
+                    marginRight: "-4px", paddingRight: "0px", // close up to the upload icon it belongs to
                   }}
                   title={off ? undefined : "פעולות על הטיוטה"}
                 >
