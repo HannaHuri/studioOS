@@ -1372,7 +1372,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
 
   function renderActionsMenu() {
     if (!draft || !actionsOpen) return null;
-    return <DraftActionsDialog isDark={isDark} fileName={draft.name} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
+    return <DraftActionsDialog isDark={isDark} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
   }
 
   // ── Response-mode dropdown (portal-like, fixed position) ────────────────

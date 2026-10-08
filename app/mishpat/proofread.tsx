@@ -183,9 +183,8 @@ export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string
   { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
 ];
 
-export function DraftActionsDialog({ isDark, fileName, usedChecks, pages, onClose, onRun }: {
+export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }: {
   isDark: boolean;
-  fileName: string;
   usedChecks: ProofKinds;
   pages: number | null; // the draft's length, when it could be read
   onClose: () => void;
@@ -212,10 +211,6 @@ export function DraftActionsDialog({ isDark, fileName, usedChecks, pages, onClos
       >
         <div className="px-6 pt-5 pb-3 flex-none">
           <div className="text-[17px]" style={{ color: textCol }}>פעולות על המסמך</div>
-          <div className="flex items-center gap-1.5 text-[13.5px] mt-1 min-w-0" style={{ color: subCol }}>
-            <FileText size={14} style={{ flexShrink: 0 }} />
-            <span className="truncate">{fileName}</span>
-          </div>
           <button onClick={onClose} className="absolute size-8 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors" style={{ top: "12px", left: "12px", color: c.iconGray }} title="סגירה">
             <X size={18} />
           </button>
