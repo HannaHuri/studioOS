@@ -3,9 +3,9 @@
 /* ──────────────────────────────────────────────────────────────────────────
    פרומפט מורכב — a named prompt made of parts that run in order as one unit.
 
-   Each part says three things: which document types it draws on (מקורות), what
-   to do with them (מה לעשות), and how (איך — usually a pasted example, e.g. a
-   passage from an earlier judgment). The parts are one prompt: a later part sees
+   Each part says three things, in this order: what to do (מה לעשות), which
+   document types it draws on (מקורות), and how (איך — usually a pasted example,
+   e.g. a passage from an earlier judgment). The parts are one prompt: a later part sees
    what the earlier ones produced, which is why their order can be changed.
 
    Deliberately left out (they were in the dev team's builder): date filters,
@@ -147,7 +147,9 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
       <div
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(760px, 92vw)", height: "88vh", backgroundColor: surface, fontFamily: FONT }}
+        // wide enough that every writing field is as wide as the chat's own input (768px):
+        // 768 + the part card's padding and border (34) + the dialog's own padding (48)
+        style={{ width: "min(850px, 92vw)", height: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start px-6 pt-5 pb-4">
           <div className="flex-1 text-[18px]" style={{ color: textCol }}>פרומפט מורכב חדש</div>
@@ -156,7 +158,8 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
           </button>
         </div>
 
-        <div className="px-6 pb-3">
+        {/* inset like the fields inside the part cards, so the name lines up with them */}
+        <div className="pb-3" style={{ paddingInline: "41px" }}>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -166,9 +169,6 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
             autoFocus
           />
           {attempted && !name.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם.</div>}
-          <div className="text-[12.5px] mt-2" style={{ color: subCol }}>
-            החלקים רצים לפי הסדר כיחידה אחת, וכל חלק רואה את מה שהחלקים שלפניו הפיקו.
-          </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-4" dir="ltr">
@@ -185,10 +185,7 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
                     <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => setParts((prev) => prev.filter((_, j) => j !== i))} title="מחיקת החלק"><Trash2 size={15} /></button>
                   </div>
 
-                  <div className="text-[13px] mb-1" style={{ color: textCol }}>מקורות</div>
-                  <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
-
-                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מה לעשות</div>
+                  <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
                   <textarea
                     value={p.task}
                     onChange={(e) => setPart(i, { task: e.target.value })}
@@ -198,6 +195,9 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
                     style={{ border: `1px solid ${taskMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
                   />
                   {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
+
+                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
+                  <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
 
                   <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
                   <textarea
@@ -239,5 +239,5 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
 // The parts as plain text — what the library card shows until its own form for these exists
 export const partsToText = (parts: PromptPart[]) =>
   parts.map((p, i) =>
-    `חלק ${i + 1} — מקורות: ${p.sources.length ? p.sources.join(", ") : "כל מסמכי התיק"}. ${p.task}${p.how ? `\nאיך: ${p.how}` : ""}`,
+    `חלק ${i + 1} — ${p.task}\nמקורות: ${p.sources.length ? p.sources.join(", ") : "כל מסמכי התיק"}${p.how ? `\nאיך: ${p.how}` : ""}`,
   ).join("\n\n");
