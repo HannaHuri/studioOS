@@ -2696,6 +2696,7 @@ export default function MishpatPage() {
   const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
   const [promptsW, setPromptsW] = useState(640);
   const [promptsResizing, setPromptsResizing] = useState(false);
+  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded over the whole chat
   // פרומפט מורכב: the editor, and the one that is armed for the next send. It is too long to
   // go into the question line as text, so it rides above the input as a chip, like an example.
   const [complexOpen, setComplexOpen] = useState(false);
@@ -2748,7 +2749,7 @@ export default function MishpatPage() {
     setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   const togglePrompts = () => {
     // the table always opens on its own, without an editor left over from last time
-    setPromptPane(null); setPromptsFocus(false);
+    setPromptPane(null); setPromptsFocus(false); setPromptPaneWide(false);
     setIsPromptsOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   };
 
@@ -2847,8 +2848,10 @@ export default function MishpatPage() {
       mode={promptPane.mode}
       live={promptPaneLive}
       onSave={savePanePrompt}
-      onClose={() => setPromptPane(null)}
-      onUse={(pr) => { runPrompt(pr); if (promptPaneOver) setPromptPane(null); }}
+      onClose={() => { setPromptPane(null); setPromptPaneWide(false); }}
+      onUse={(pr) => { runPrompt(pr); if (promptPaneOver || promptPaneWide) { setPromptPane(null); setPromptPaneWide(false); } }}
+      expanded={promptPaneWide}
+      onToggleExpand={() => setPromptPaneWide((v) => !v)}
       onRate={promptPaneLive ? (n) => ratePrompt(promptPaneLive.id, n) : undefined}
     />
   );
@@ -2912,8 +2915,8 @@ export default function MishpatPage() {
           />
 
           {/* Prompt editor over the chat — when there isn't room for it beside the chat */}
-          {!narrow && isPromptsOpen && promptPaneOver && promptPaneEl && (
-            <div className="absolute top-0 bottom-0 right-0 z-[45]" style={{ width: `${PROMPT_PANE_W}px`, maxWidth: "100%", boxShadow: "-6px 0 24px rgba(0,0,0,0.14)" }}>
+          {!narrow && isPromptsOpen && (promptPaneOver || promptPaneWide) && promptPaneEl && (
+            <div className="absolute top-0 bottom-0 right-0 z-[45]" style={{ width: promptPaneWide ? "100%" : `${PROMPT_PANE_W}px`, maxWidth: "100%", boxShadow: "-6px 0 24px rgba(0,0,0,0.14)" }}>
               {promptPaneEl}
             </div>
           )}
@@ -3023,7 +3026,7 @@ export default function MishpatPage() {
         )}
 
         {/* ── Prompt editor beside the table — where the documents screen opens the PDF ── */}
-        {!narrow && isPromptsOpen && !promptPaneOver && promptPaneEl && (
+        {!narrow && isPromptsOpen && !promptPaneOver && !promptPaneWide && promptPaneEl && (
           <div className="flex-shrink-0" style={{ width: `${PROMPT_PANE_W}px`, borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}>
             {promptPaneEl}
           </div>

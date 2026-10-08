@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -953,7 +953,7 @@ export function PromptLibrary({
 
 // ── Editor — new prompt, editing mine, forking someone else's, saving a sent question ──
 export function PromptEditor({
-  isDark, initial, mode, onSave, onClose, pane, live, onUse, onRate,
+  isDark, initial, mode, onSave, onClose, pane, live, onUse, onRate, expanded, onToggleExpand,
 }: {
   isDark: boolean;
   initial: Partial<Prompt> | null;
@@ -967,6 +967,9 @@ export function PromptEditor({
   live?: Prompt;
   onUse?: (pr: Prompt) => void;
   onRate?: (n: number) => void;
+  // pane only: widen the editor over the chat — prompts can run long
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
@@ -1071,6 +1074,11 @@ export function PromptEditor({
     <>
         <div className="flex items-start px-6 pt-5 pb-4">
           <div className="flex-1 min-w-0 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>{title}</div>
+          {onToggleExpand && (
+            <button onClick={onToggleExpand} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title={expanded ? "חזרה לגודל הרגיל" : "הרחבת העורך"}>
+              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          )}
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
@@ -1138,7 +1146,7 @@ export function PromptEditor({
             onChange={(e) => setBody(e.target.value)}
             placeholder="נוסח הפרומפט. אפשר להשאיר שדות למילוי בסוגריים מרובעים, למשל [שם העד]"
             className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
-            style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: pane ? "260px" : "180px" }}
+            style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
           />
           )}
           {/* Both lines report what the text already produced, so neither appears until there is
