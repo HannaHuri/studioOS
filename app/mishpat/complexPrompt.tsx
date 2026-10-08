@@ -148,8 +148,9 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         // wide enough that every writing field is as wide as the chat's own input (768px):
-        // 768 + the part card's padding and border (34) + the dialog's own padding (48)
-        style={{ width: "min(850px, 92vw)", height: "88vh", backgroundColor: surface, fontFamily: FONT }}
+        // 768 + the part card's padding (34) + the dialog's own padding (48). It grows with its
+        // parts up to 88vh, then the parts scroll — no empty band under "הוספת חלק".
+        style={{ width: "min(850px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start px-6 pt-5 pb-4">
           <div className="flex-1 text-[18px]" style={{ color: textCol }}>פרומפט מורכב חדש</div>
@@ -158,8 +159,7 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
           </button>
         </div>
 
-        {/* inset like the fields inside the part cards, so the name lines up with them */}
-        <div className="pb-3" style={{ paddingInline: "41px" }}>
+        <div className="px-6 pb-3">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -176,7 +176,7 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
             {parts.map((p, i) => {
               const taskMissing = attempted && !p.task.trim();
               return (
-                <div key={i} className="rounded-lg px-4 pt-2 pb-4" style={{ border: `1px solid ${line}` }}>
+                <div key={i} className="rounded-lg pt-2 pb-4" style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(0,115,234,0.10)" : "#f0f6ff" }}>
                   <div className="flex items-center gap-1 mb-2">
                     <span className="size-6 rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
                     <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
@@ -223,7 +223,7 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${line}` }}>
+        <div className="flex items-center justify-end gap-2 px-6 pt-2 pb-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${quietBorder}`, color: textCol }}>
             ביטול
           </button>
