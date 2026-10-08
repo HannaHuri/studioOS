@@ -7,13 +7,13 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
+  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
-  DraftActionsMenu, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
+  DraftActionsDialog, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
   proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
   type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
 } from "./proofread";
@@ -791,18 +791,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // A file over the word limit isn't taken in; a toast above the disclaimer says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
-  // The "פעולות" menu that sits beside the upload icon once a draft is in
+  // The "פעולות" button beside the upload icon once a draft is in opens the actions dialog
   const [actionsOpen, setActionsOpen] = useState(false);
-  const actionsBtnRef = useRef<HTMLButtonElement>(null);
-  const composerRef = useRef<HTMLDivElement>(null); // the input box — the menu stretches to its left edge
-  // Its position is measured when it opens, so a resize would leave it hanging in the wrong place
-  useEffect(() => {
-    if (!actionsOpen) return;
-    const close = () => setActionsOpen(false);
-    window.addEventListener("resize", close);
-    return () => window.removeEventListener("resize", close);
-  }, [actionsOpen]);
-  const [actionsPos, setActionsPos] = useState<{ top?: number; bottom?: number; right: number; left: number } | null>(null);
   // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });
   const draftSpent = !!draft && usedChecks.lang && usedChecks.coherence;
@@ -960,16 +950,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
   }
 
-  function handleActionsToggle() {
-    if (!actionsOpen && actionsBtnRef.current) {
-      const r = actionsBtnRef.current.getBoundingClientRect();
-      const rightEdge = window.innerWidth - r.right;
-      // it opens from the button and reaches the input box's left edge, so there's room for more actions
-      const left = composerRef.current?.getBoundingClientRect().left ?? r.right - 340;
-      setActionsPos(isEmpty ? { top: r.bottom + 4, right: rightEdge, left } : { bottom: window.innerHeight - r.top + 4, right: rightEdge, left });
-    }
-    setActionsOpen((v) => !v);
-  }
 
 
   // Live step-tracker — all steps stay visible at once, each row's icon/color reflects its own status
@@ -1074,7 +1054,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         </div>
       )}
       <div
-        ref={composerRef}
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
@@ -1177,8 +1156,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               const off = draftSpent || agentRunning;
               return (
                 <button
-                  ref={actionsBtnRef}
-                  onClick={off ? undefined : handleActionsToggle}
+                  onClick={off ? undefined : () => setActionsOpen(true)}
                   aria-disabled={off}
                   dir="rtl"
                   className="flex items-center gap-1 h-7 px-2.5 rounded flex-shrink-0 text-[13px] transition-colors"
@@ -1195,7 +1173,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   <span>פעולות</span>
-                  <ChevronDown size={11} style={{ transition: "transform 0.15s", transform: actionsOpen ? "rotate(180deg)" : "none" }} />
+                  <ListChecks size={14} />
                 </button>
               );
             })()}
@@ -1393,8 +1371,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   function renderActionsMenu() {
-    if (!draft || !actionsOpen || !actionsPos) return null;
-    return <DraftActionsMenu pos={actionsPos} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
+    if (!draft || !actionsOpen) return null;
+    return <DraftActionsDialog isDark={isDark} fileName={draft.name} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
   }
 
   // ── Response-mode dropdown (portal-like, fixed position) ────────────────
@@ -2642,7 +2620,7 @@ function UploadLimitToast({ note, onClose }: { note: string; onClose: () => void
         style={{ width: "min(480px, 100%)", backgroundColor: "#f4c3cb", filter: "drop-shadow(0px 2px 7.5px rgba(0,0,0,0.15))", color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}
       >
         <div className="flex items-center gap-2">
-          <TriangleAlert size={20} style={{ color: c.text, flexShrink: 0 }} />
+          <TriangleAlert size={20} style={{ color: c.iconGray, flexShrink: 0 }} />
           <span className="text-[18px] font-bold leading-[22px]">הקובץ גדול מדי</span>
         </div>
         <p className="text-[16px] leading-[20px]" style={{ paddingInlineStart: "16px" }}>{note}</p>
