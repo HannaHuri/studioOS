@@ -1159,20 +1159,16 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onClick={off ? undefined : () => setActionsOpen(true)}
                   aria-disabled={off}
                   dir="rtl"
-                  // outlined like the send button, so it reads as a button that opens something
-                  // rather than a selector like מעמיק beside it
-                  className="flex items-center h-7 px-2.5 rounded flex-shrink-0 text-[13px] transition-colors"
+                  // a blue link, so it reads as something that opens rather than a selector like מעמיק beside it
+                  className={`flex items-center h-7 px-1.5 flex-shrink-0 text-[13px] ${off ? "" : "hover:underline"}`}
                   style={{
                     backgroundColor: "transparent",
-                    border: `1px solid ${isDark ? dk.border : c.border}`,
-                    color: c.iconGray,
+                    color: off ? c.iconGray : (isDark ? dk.blue : c.primary),
                     fontFamily: "Noto Sans Hebrew, sans-serif",
                     opacity: off ? 0.4 : 1,
                     cursor: off ? "default" : "pointer",
                   }}
                   title={off ? undefined : "פעולות על הטיוטה"}
-                  onMouseEnter={e => { if (!off) e.currentTarget.style.backgroundColor = c.hoverBg; }}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   <span>פעולות</span>
                 </button>
