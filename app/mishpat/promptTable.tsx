@@ -11,8 +11,8 @@
    adds the four classification columns.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useMemo, useState } from "react";
-import { Bookmark, ChevronDown, Maximize2, Minimize2, Plus, Search, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bookmark, ChevronDown, Maximize2, Minimize2, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import {
@@ -33,7 +33,7 @@ export function PromptTablePanel({
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
   openId: string | null;              // the prompt open in the editor — its row is marked
-  onOpen: (pr: Prompt) => void; onNew: () => void;
+  onOpen: (pr: Prompt) => void; onNew: (complex: boolean) => void;
   onUse: (pr: Prompt) => void; onFav: (id: string) => void; onEdit: (pr: Prompt) => void;
   onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
 }) {
@@ -42,6 +42,15 @@ export function PromptTablePanel({
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
   const [caseOnly, setCaseOnly] = useState(true);
   const wide = width >= WIDE;
+  // "חדש" offers both kinds; a plain one can still grow parts later in the editor
+  const [newOpen, setNewOpen] = useState(false);
+  const newRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!newOpen) return;
+    const close = (e: MouseEvent) => { if (!newRef.current?.contains(e.target as Node)) setNewOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [newOpen]);
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
   const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
@@ -134,15 +143,36 @@ export function PromptTablePanel({
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
           </div>
-          <button
-            onClick={onNew}
-            className="h-8 px-2.5 flex items-center gap-1 rounded-md flex-shrink-0 text-[13px] transition-opacity hover:opacity-90"
-            style={{ backgroundColor: c.primary, color: "white" }}
-            title="פרומפט חדש"
-          >
-            <Plus size={15} />
-            חדש
-          </button>
+          <div ref={newRef} className="relative flex-shrink-0">
+            <button
+              onClick={() => setNewOpen((v) => !v)}
+              className="h-8 px-2.5 flex items-center gap-1 rounded-md text-[13px] transition-opacity hover:opacity-90"
+              style={{ backgroundColor: c.primary, color: "white" }}
+              title="פרומפט חדש"
+            >
+              <Plus size={15} />
+              חדש
+              <ChevronDown size={12} style={{ transition: "transform .15s", transform: newOpen ? "rotate(180deg)" : "none" }} />
+            </button>
+            {newOpen && (
+              <div
+                className="absolute z-30 mt-1 rounded-md shadow-lg overflow-hidden"
+                style={{ right: 0, minWidth: "170px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}` }}
+              >
+                {[{ complex: false, label: "פרומפט", Icon: Plus }, { complex: true, label: "פרומפט מורכב", Icon: WandSparkles }].map(({ complex, label, Icon }) => (
+                  <button
+                    key={label}
+                    onClick={() => { setNewOpen(false); onNew(complex); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-right hover:bg-black/5 transition-colors"
+                    style={{ color: textCol }}
+                  >
+                    <Icon size={15} style={{ color: c.iconGray, transform: complex ? "scaleX(-1)" : undefined }} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={onToggleFocus} className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85" style={lightBlueBtn} title={isFocus ? "חזרה לתצוגה הרגילה" : "הרחבה למסך מלא"}>
             {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
@@ -233,8 +263,11 @@ export function PromptTablePanel({
                 </div>
 
                 <div className="min-w-0 text-right px-1.5 py-2">
-                  <div className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
-                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מורכב · ${pr.parts.length} חלקים` : pr.body}</div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {pr.parts && <span title="פרומפט מורכב" className="flex-none flex"><WandSparkles size={13} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
+                    <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
+                  </div>
+                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מורכב · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
                 </div>
 
                 <div className="flex items-center justify-center" title={srcName(pr)}>

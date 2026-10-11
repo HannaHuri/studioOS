@@ -30,7 +30,7 @@ export const DOC_TYPES = [
   "סיכומים", "סיכומי תשובה", "פסק דין", "הודעה", "מוצגים", "כתב ערעור",
 ];
 
-const emptyPart = (): PromptPart => ({ sources: [], task: "", how: "" });
+export const emptyPart = (): PromptPart => ({ sources: [], task: "", how: "" });
 
 // ── Sources: tags with autocomplete ─────────────────────────────────────────
 function SourcesInput({ value, onChange, isDark }: { value: string[]; onChange: (v: string[]) => void; isDark: boolean }) {
@@ -109,15 +109,15 @@ function SourcesInput({ value, onChange, isDark }: { value: string[]; onChange: 
   );
 }
 
-// ── The editor ──────────────────────────────────────────────────────────────
-export function ComplexPromptEditor({ isDark, onSave, onClose }: {
+// ── The parts ───────────────────────────────────────────────────────────────
+// The list of parts on its own, so the prompt library's side editor can hold the same form
+// as this window: one way of writing a part, wherever a part is written.
+export function PartsEditor({ parts, onChange, attempted, isDark }: {
+  parts: PromptPart[];
+  onChange: (parts: PromptPart[]) => void;
+  attempted: boolean; // a save was tried — empty מה לעשות fields say so
   isDark: boolean;
-  onSave: (name: string, parts: PromptPart[]) => void;
-  onClose: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
-  const [attempted, setAttempted] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<number | null>(null); // the part waiting on its delete confirmation
   const listEnd = useRef<HTMLButtonElement>(null); // the "הוספת חלק" button, last in the list
 
@@ -127,22 +127,108 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
   const line = isDark ? dk.border : c.inputBorder;
   const quietBorder = isDark ? dk.border : c.border;
 
-  const setPart = (i: number, p: Partial<PromptPart>) => setParts((prev) => prev.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const move = (i: number, d: -1 | 1) => setParts((prev) => {
-    const next = [...prev]; [next[i], next[i + d]] = [next[i + d], next[i]]; return next;
-  });
+  const setPart = (i: number, p: Partial<PromptPart>) => onChange(parts.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const move = (i: number, d: -1 | 1) => {
+    const next = [...parts]; [next[i], next[i + d]] = [next[i + d], next[i]]; onChange(next);
+  };
   const addPart = () => {
-    setParts((prev) => [...prev, emptyPart()]);
+    onChange([...parts, emptyPart()]);
     requestAnimationFrame(() => listEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" }));
   };
+
+  const area = "w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y";
+  const iconBtn = "size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent";
+
+  return (
+    <div className="flex flex-col gap-3">
+      {parts.map((p, i) => {
+        const taskMissing = attempted && !p.task.trim();
+        return (
+          <div key={i} className="rounded-lg pt-2 pb-4" style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }}>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="size-6 rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
+              <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
+              <button className={iconBtn} style={{ color: subCol }} disabled={i === 0} onClick={() => move(i, -1)} title="הזזה למעלה"><ArrowUp size={15} /></button>
+              <button className={iconBtn} style={{ color: subCol }} disabled={i === parts.length - 1} onClick={() => move(i, 1)} title="הזזה למטה"><ArrowDown size={15} /></button>
+              <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => {
+                // an empty part goes straight away; one with anything written in it asks first
+                if (p.task.trim() || p.how.trim() || p.sources.length) setPendingDelete(i);
+                else onChange(parts.filter((_, j) => j !== i));
+              }} title="מחיקת החלק"><Trash2 size={15} /></button>
+            </div>
+
+            <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
+            <textarea
+              value={p.task}
+              onChange={(e) => setPart(i, { task: e.target.value })}
+              rows={3}
+              placeholder="למשל: תאר את ההיסטוריה הדיונית של התיק לפי סדר כרונולוגי"
+              className={area}
+              style={{ border: `1px solid ${taskMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+            />
+            {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
+
+            <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
+            <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
+
+            <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
+            <textarea
+              value={p.how}
+              onChange={(e) => setPart(i, { how: e.target.value })}
+              rows={3}
+              placeholder="אפשר להדביק כאן דוגמה, למשל קטע מפסק דין קודם, או לתאר את אופן הכתיבה"
+              className={area}
+              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+            />
+          </div>
+        );
+      })}
+
+      <button
+        ref={listEnd}
+        onClick={addPart}
+        className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
+        style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
+      >
+        <Plus size={16} /> הוספת חלק
+      </button>
+
+      {pendingDelete !== null && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <PromptConfirm
+            isDark={isDark}
+            title={`למחוק את חלק ${pendingDelete + 1}?`}
+            note="מה שנכתב בחלק הזה יימחק, והחלקים שאחריו יעלו מקום אחד."
+            confirmLabel="מחיקה"
+            onConfirm={() => { onChange(parts.filter((_, j) => j !== pendingDelete)); setPendingDelete(null); }}
+            onClose={() => setPendingDelete(null)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── The editor ──────────────────────────────────────────────────────────────
+export function ComplexPromptEditor({ isDark, onSave, onClose }: {
+  isDark: boolean;
+  onSave: (name: string, parts: PromptPart[]) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
+  const [attempted, setAttempted] = useState(false);
+
+  const surface = isDark ? dk.surface : "white";
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  const line = isDark ? dk.border : c.inputBorder;
+  const quietBorder = isDark ? dk.border : c.border;
 
   const save = () => {
     if (!name.trim() || parts.some((p) => !p.task.trim())) { setAttempted(true); return; }
     onSave(name.trim(), parts.map((p) => ({ ...p, task: p.task.trim(), how: p.how.trim() })));
   };
-
-  const area = "w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y";
-  const iconBtn = "size-7 flex items-center justify-center rounded transition-colors hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent";
 
   return (
     <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
@@ -174,58 +260,8 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-1" dir="ltr">
-          <div dir="rtl" className="flex flex-col gap-3">
-            {parts.map((p, i) => {
-              const taskMissing = attempted && !p.task.trim();
-              return (
-                <div key={i} className="rounded-lg pt-2 pb-4" style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }}>
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="size-6 rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
-                    <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
-                    <button className={iconBtn} style={{ color: subCol }} disabled={i === 0} onClick={() => move(i, -1)} title="הזזה למעלה"><ArrowUp size={15} /></button>
-                    <button className={iconBtn} style={{ color: subCol }} disabled={i === parts.length - 1} onClick={() => move(i, 1)} title="הזזה למטה"><ArrowDown size={15} /></button>
-                    <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => {
-                      // an empty part goes straight away; one with anything written in it asks first
-                      if (p.task.trim() || p.how.trim() || p.sources.length) setPendingDelete(i);
-                      else setParts((prev) => prev.filter((_, j) => j !== i));
-                    }} title="מחיקת החלק"><Trash2 size={15} /></button>
-                  </div>
-
-                  <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
-                  <textarea
-                    value={p.task}
-                    onChange={(e) => setPart(i, { task: e.target.value })}
-                    rows={3}
-                    placeholder="למשל: תאר את ההיסטוריה הדיונית של התיק לפי סדר כרונולוגי"
-                    className={area}
-                    style={{ border: `1px solid ${taskMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
-                  />
-                  {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
-
-                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
-                  <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />
-
-                  <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
-                  <textarea
-                    value={p.how}
-                    onChange={(e) => setPart(i, { how: e.target.value })}
-                    rows={3}
-                    placeholder="אפשר להדביק כאן דוגמה, למשל קטע מפסק דין קודם, או לתאר את אופן הכתיבה"
-                    className={area}
-                    style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
-                  />
-                </div>
-              );
-            })}
-
-            <button
-              ref={listEnd}
-              onClick={addPart}
-              className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
-              style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
-            >
-              <Plus size={16} /> הוספת חלק
-            </button>
+          <div dir="rtl">
+            <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
           </div>
         </div>
 
@@ -238,18 +274,6 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
           </button>
         </div>
       </div>
-      {pendingDelete !== null && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <PromptConfirm
-            isDark={isDark}
-            title={`למחוק את חלק ${pendingDelete + 1}?`}
-            note="מה שנכתב בחלק הזה יימחק, והחלקים שאחריו יעלו מקום אחד."
-            confirmLabel="מחיקה"
-            onConfirm={() => { setParts((prev) => prev.filter((_, j) => j !== pendingDelete)); setPendingDelete(null); }}
-            onClose={() => setPendingDelete(null)}
-          />
-        </div>
-      )}
     </div>
   );
 }

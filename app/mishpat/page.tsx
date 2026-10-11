@@ -21,7 +21,7 @@ import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, GENERAL, type Prompt,
 } from "./prompts";
-import { ComplexPromptEditor, partsToText } from "./complexPrompt";
+import { ComplexPromptEditor, emptyPart, partsToText } from "./complexPrompt";
 import { PromptTablePanel } from "./promptTable";
 import { GripVertical } from "lucide-react";
 
@@ -2701,7 +2701,9 @@ export default function MishpatPage() {
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
   // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
   // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
-  const [promptPane, setPromptPane] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" } | null>(null);
+  // fromChat: opened from the "פרומפט מורכב" link under the input — saving it also arms it for
+  // the next send, as that link's own window used to.
+  const [promptPane, setPromptPane] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork"; fromChat?: boolean } | null>(null);
   const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
   const [promptsW, setPromptsW] = useState(640);
   const [promptsResizing, setPromptsResizing] = useState(false);
@@ -2814,6 +2816,7 @@ export default function MishpatPage() {
     const cur = prompts.find((x) => x.id === pr.id);
     if (cur) pr = { ...pr, fav: cur.fav, uses: cur.uses, ratingSum: cur.ratingSum, ratingCount: cur.ratingCount, myRating: cur.myRating };
     savePrompt(pr, share);
+    if (promptPane?.fromChat && pr.parts) setComplexInUse(pr.name);
     setPromptPane({ initial: pr, mode: "edit" });
   };
   const openPromptPane = (pr: Prompt) => {
@@ -2850,7 +2853,7 @@ export default function MishpatPage() {
   const runPrompt = usePrompt; // not a hook, despite the name — an alias the hooks lint can tell apart
   const promptPaneEl = promptPane && (
     <PromptEditor
-      key={`${promptPane.initial?.id ?? "new"}-${promptPane.mode}`}
+      key={`${promptPane.initial?.id ?? "new"}-${promptPane.mode}-${promptPane.initial?.parts ? "c" : "s"}`}
       pane
       isDark={isDark}
       initial={promptPane.initial}
@@ -2918,7 +2921,14 @@ export default function MishpatPage() {
             insert={insert}
             onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
             onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
-            onBuildPrompt={() => setComplexOpen(true)}
+            // the link opens the library with a new complex prompt in its editor — one place where
+            // prompts of both kinds are written; the narrow layout keeps the window
+            onBuildPrompt={() => {
+              if (narrow) { setComplexOpen(true); return; }
+              if (!isPromptsOpen) togglePrompts();
+              setPromptsFocus(false);
+              setPromptPane({ initial: { parts: [emptyPart()] }, mode: "new", fromChat: true });
+            }}
             complexName={complexInUse}
             onClearComplex={() => setComplexInUse(null)}
           />
@@ -3059,7 +3069,7 @@ export default function MishpatPage() {
               onClose={togglePrompts}
               openId={promptPane?.initial?.id ?? null}
               onOpen={openPromptPane}
-              onNew={() => { setPromptsFocus(false); setPromptPane({ initial: null, mode: "new" }); }}
+              onNew={(complex) => { setPromptsFocus(false); setPromptPane({ initial: complex ? { parts: [emptyPart()] } : null, mode: "new" }); }}
               onUse={usePrompt}
               onFav={toggleFav}
               onEdit={openPromptPane}

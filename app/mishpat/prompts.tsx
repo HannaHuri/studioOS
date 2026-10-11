@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
-import type { PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, partsToText, type PromptPart } from "./complexPrompt";
 
 // ── Model ──────────────────────────────────────────────────────────────────
 export type PromptSource = "system" | "shared" | "mine";
@@ -973,6 +973,11 @@ export function PromptEditor({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
+  // set = a פרומפט מורכב. Its text is generated from the parts, so the parts are what's edited;
+  // a plain prompt becomes one through "הוספת חלק", its text turning into the first part's מה.
+  const [parts, setParts] = useState<PromptPart[] | null>(initial?.parts ?? null);
+  const [preShareParts, setPreShareParts] = useState<PromptPart[] | null>(null);
+  const text = parts ? partsToText(parts) : body;
   // The classification isn't only for sharing: it's what decides whether a prompt shows up in
   // the panel for the case you have open, so it has to be settable on your own prompts too.
   // These four have two jobs: they decide what the panel offers ME, and how anyone else finds
@@ -997,6 +1002,17 @@ export function PromptEditor({
   const labels = hitLabels(hits, kept);
 
   const toggleShare = () => {
+    if (parts) {
+      // A complex prompt is scrubbed field by field, quietly: there's no single text to show the
+      // swaps in, and the parts themselves show what changed. Unticking puts them back.
+      if (share) { if (preShareParts) setParts(preShareParts); setPreShareParts(null); setShare(false); return; }
+      const clean = (t: string) => scrub(t, findIdentifiers(t), new Set());
+      setPreShareParts(parts);
+      setParts(parts.map((pt) => ({ ...pt, task: clean(pt.task), how: clean(pt.how) })));
+      setName((n) => clean(n));
+      setShare(true);
+      return;
+    }
     if (share) {
       // untick puts the original text back, unless it has been edited since
       if (preShare !== null && body === scrub(preShare, hits, kept)) setBody(preShare);
@@ -1024,7 +1040,8 @@ export function PromptEditor({
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
 
-  const title = mode === "edit" ? "עריכת פרומפט"
+  const title = parts ? (mode === "new" ? "פרומפט מורכב חדש" : mode === "fork" ? "עריכה ושמירה כפרומפט מורכב שלי" : "עריכת פרומפט מורכב")
+    : mode === "edit" ? "עריכת פרומפט"
     : mode === "fork" ? "עריכה ושמירה כפרומפט שלי"
     : mode === "fromMessage" ? "שמירת השאלה כפרומפט"
     : "פרומפט חדש";
@@ -1032,7 +1049,7 @@ export function PromptEditor({
   // Tags are assigned automatically from the wording, so the user is never asked to tag.
   const tags = useMemo(() => {
     const t = new Set<string>(initial?.tags ?? []);
-    const s = `${name} ${body}`;
+    const s = `${name} ${text}`;
     if (/הגה|כתיב|תחביר|לשונ/.test(s)) t.add("הגהה");
     if (/נסח|ניסוח|טיוט(?!ה)|מכתב|הודעה/.test(s)) t.add("ניסוח");
     if (/סכם|סיכום|תמצית/.test(s)) t.add("סיכום");
@@ -1041,14 +1058,15 @@ export function PromptEditor({
     if (/אתר|איתור|רשימה|מצא/.test(s)) t.add("איתור");
     if (/פסיק|חקיק|סעיף|חוק/.test(s)) t.add("חקיקה ופסיקה");
     return [...t];
-  }, [name, body, initial?.tags]);
+  }, [name, text, initial?.tags]);
 
-  const fields = fieldsOf(body);
+  const fields = fieldsOf(text);
   const nameMissing = attempted && !name.trim();
-  const bodyMissing = attempted && !body.trim();
+  const bodyMissing = attempted && !parts && !body.trim();
+  const cleanParts = parts?.map((pt) => ({ ...pt, task: pt.task.trim(), how: pt.how.trim() }));
 
   const save = () => {
-    if (!name.trim() || !body.trim()) { setAttempted(true); return; }
+    if (!name.trim() || (parts ? parts.some((pt) => !pt.task.trim()) : !body.trim())) { setAttempted(true); return; }
     const keep = mode === "edit" ? initial as Prompt : null;
     onSave({
       ...(keep ?? {
@@ -1057,7 +1075,9 @@ export function PromptEditor({
       } as Prompt),
       caseType, matter, stage, court,
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
-      name: name.trim(), body: body.trim(), tags, edited: today(),
+      name: name.trim(), tags, edited: today(),
+      body: cleanParts ? partsToText(cleanParts) : body.trim(),
+      parts: cleanParts,
       source: "mine",
       // Only the star gesture stars: saving a question that was sent came from pressing a star,
       // so it lands starred; writing one from scratch, or forking someone else's, does not. If
@@ -1065,10 +1085,6 @@ export function PromptEditor({
       fav: keep ? keep.fav : mode === "fromMessage",
     }, share ? { anon } : undefined);
   };
-
-  // A complex prompt's text is generated from its parts, so it isn't edited as text here —
-  // the parts are shown as they are, and the name and classification stay editable.
-  const parts = initial?.parts;
 
   const form = (
     <>
@@ -1130,24 +1146,27 @@ export function PromptEditor({
 
         <div className={`px-6 pb-2 flex flex-col ${pane ? "" : "flex-1 min-h-0"}`}>
           {parts ? (
-            <div className="flex flex-col gap-2">
-              {parts.map((pt, i) => (
-                <div key={i} className="rounded-[4px] px-3 py-2.5 text-[13.5px] leading-relaxed" style={{ border: `1px solid ${line}`, color: textCol }}>
-                  <div className="text-[12px] mb-1" style={{ color: subCol }}>חלק {i + 1}</div>
-                  {pt.task && <div><span style={{ color: subCol }}>מה: </span>{pt.task}</div>}
-                  {pt.sources.length > 0 && <div><span style={{ color: subCol }}>מקורות: </span>{pt.sources.join(", ")}</div>}
-                  {pt.how && <div className="whitespace-pre-wrap"><span style={{ color: subCol }}>דוגמה: </span>{pt.how}</div>}
-                </div>
-              ))}
-            </div>
+            <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
           ) : (
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="נוסח הפרומפט. אפשר להשאיר שדות למילוי בסוגריים מרובעים, למשל [שם העד]"
-            className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
-            style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
-          />
+            <>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="נוסח הפרומפט. אפשר להשאיר שדות למילוי בסוגריים מרובעים, למשל [שם העד]"
+                className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
+                style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
+              />
+              {/* No up-front choice between a plain prompt and a complex one: a prompt grows parts
+                  when it needs them. What's written so far becomes the first part's מה לעשות. */}
+              <button
+                onClick={() => setParts([{ ...emptyPart(), task: body }, emptyPart()])}
+                className="self-start flex items-center gap-1 mt-2 text-[13px] hover:underline"
+                style={{ color: isDark ? dk.blue : c.primary }}
+                title="הפיכה לפרומפט מורכב — כמה חלקים שרצים לפי הסדר"
+              >
+                <Plus size={14} /> הוספת חלק
+              </button>
+            </>
           )}
           {/* Both lines report what the text already produced, so neither appears until there is
               something to report — the placeholder inside the field is what explains the brackets,
