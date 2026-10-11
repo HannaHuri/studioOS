@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -58,8 +58,8 @@ const subtle = (isDark: boolean) => (isDark ? dk.textMuted : c.textLight);
 // The two keys both lists order by, in this order. Saved comes first because it is a choice the
 // reader made; whose it is comes second, and only then does popularity get a say. Read together
 // they say: my saved things, then anyone's that I saved, then what I wrote, then the rest.
-const saved = (pr: Prompt) => (pr.fav ? 0 : 1);
-const mine = (pr: Prompt) => (pr.source === "mine" ? 0 : pr.source === "system" ? 1 : 2);
+export const saved = (pr: Prompt) => (pr.fav ? 0 : 1);
+export const mine = (pr: Prompt) => (pr.source === "mine" ? 0 : pr.source === "system" ? 1 : 2);
 
 export const ANY = "הכל";
 export const GENERAL = "כללי";
@@ -251,19 +251,19 @@ const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
-function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDark: boolean; size?: number; plain?: boolean }) {
+export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDark: boolean; size?: number; plain?: boolean }) {
   const I = SOURCE_ICON[pr.source];
   return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
 // offers. The author rides along with it — "משותף" without a name says less than it could.
-const sourceLabel = (pr: Prompt) =>
+export const sourceLabel = (pr: Prompt) =>
   pr.source === "system" ? "מערכת"
   : pr.source === "mine" ? "שלי"
   : `משותף · ${authorFull(pr)}`;
 
-function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
+export function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
   const [hov, setHov] = useState(0);
   const locked = pr.myRating !== null;
   const avg = pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0;
@@ -296,7 +296,7 @@ function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void
   );
 }
 
-function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false, counts }: {
+export function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false, counts }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void; isDark: boolean; width?: number;
   // noAny: a form field always has a value (כללי is one), so it gets no "הכל" row —
   // that row only makes sense for a filter, where nothing chosen means everything.
@@ -361,7 +361,7 @@ function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny 
   );
 }
 
-function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean; onClick?: () => void; active?: boolean }) {
+export function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean; onClick?: () => void; active?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onClick?.(); }}
@@ -380,7 +380,7 @@ function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean; onCli
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean }) {
+export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -401,7 +401,7 @@ function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () =>
 }
 
 // ── Row menu (⋮) — fixed position so it isn't clipped by a scroll container ──
-function RowMenu({ items, isDark }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean }) {
+export function RowMenu({ items, isDark }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -567,22 +567,22 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
-type Filters = {
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
+export type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
-const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
+export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
-const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
-const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
+export const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
+export const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
 const FILTER_KEY = "mishpat.prompts.filters";
 // The table scrolls and its scrollbar (8px, see globals.css) eats into the row's right edge.
 // The rows above it don't scroll, so they reserve the same strip — otherwise the search field
 // hangs a few pixels past the table it belongs to.
 const GUTTER = "calc(1.5rem + 8px)";
 
-const matches = (pr: Prompt, ff: Filters) => {
+export const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
   // name or author: with no author filter left, typing a name is how you find one person's
   // prompts in a מאגר the whole court writes into.
@@ -605,27 +605,27 @@ const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 74px 36px"
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
-const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
+export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
 
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
 // מחבר is a person, so it holds a person: my own prompts are signed with my name, and a prompt
 // the system supplies has no author at all — מקור is the column that says where it came from.
-const authorName = (pr: Prompt) =>
+export const authorName = (pr: Prompt) =>
   pr.source === "system" ? "" : pr.source === "mine" ? ME : pr.author ?? "אנונימי";
 // My own prompts aren't stamped with my title in the data — it's mine, and it follows me.
-const roleOf = (pr: Prompt) => (pr.source === "mine" ? MY_ROLE : pr.authorRole);
+export const roleOf = (pr: Prompt) => (pr.source === "mine" ? MY_ROLE : pr.authorRole);
 // The title trails the name, so the column reads as people and sorts as names.
-const authorFull = (pr: Prompt) => {
+export const authorFull = (pr: Prompt) => {
   const n = authorName(pr);
   const r = roleOf(pr);
   return n && r ? `${n} (${r})` : n;
 };
 
-const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
+export const avgOf = (pr: Prompt) => (pr.ratingCount ? pr.ratingSum / pr.ratingCount : 0);
 
 // One menu, used by both the panel and the table, so the two never drift apart.
-const menuFor = (
+export const menuFor = (
   pr: Prompt,
   onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
   onFav: (id: string) => void,
@@ -953,13 +953,23 @@ export function PromptLibrary({
 
 // ── Editor — new prompt, editing mine, forking someone else's, saving a sent question ──
 export function PromptEditor({
-  isDark, initial, mode, onSave, onClose,
+  isDark, initial, mode, onSave, onClose, pane, live, onUse, onRate, expanded, onToggleExpand,
 }: {
   isDark: boolean;
   initial: Partial<Prompt> | null;
   mode: "new" | "edit" | "fork" | "fromMessage";
   onSave: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
+  // pane: drawn in the page beside the prompts table (where the documents screen opens a PDF)
+  // instead of as a window over it. `live` is the prompt as it is now in the library — the
+  // rating and the bookmark change while the editor is open, and `initial` is a snapshot.
+  pane?: boolean;
+  live?: Prompt;
+  onUse?: (pr: Prompt) => void;
+  onRate?: (n: number) => void;
+  // pane only: widen the editor over the chat — prompts can run long
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
@@ -1056,19 +1066,45 @@ export function PromptEditor({
     }, share ? { anon } : undefined);
   };
 
-  return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div
-        dir="rtl" onClick={(e) => e.stopPropagation()}
-        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(760px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
-      >
+  // A complex prompt's text is generated from its parts, so it isn't edited as text here —
+  // the parts are shown as they are, and the name and classification stay editable.
+  const parts = initial?.parts;
+
+  const form = (
+    <>
         <div className="flex items-start px-6 pt-5 pb-4">
-          <div className="flex-1 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>{title}</div>
+          <div className="flex-1 min-w-0 text-[18px]" style={{ color: textCol, fontWeight: 400 }}>{title}</div>
+          {onToggleExpand && (
+            <button onClick={onToggleExpand} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title={expanded ? "חזרה לגודל הרגיל" : "הרחבת העורך"}>
+              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          )}
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
         </div>
+
+        {/* In the pane the editor is also where a prompt is read before it's used, so what the
+            table row said about it — whose it is, how it's rated — comes along, with the way to use it. */}
+        {pane && live && (
+          <div className="mx-6 mb-3 flex items-center gap-3 flex-wrap text-[12.5px]" style={{ color: subCol }}>
+            <span className="flex items-center gap-1"><SourceMark pr={live} isDark={isDark} size={13} /> {sourceLabel(live)}</span>
+            {live.basedOn && <span>· מבוסס על &quot;{live.basedOn}&quot;</span>}
+            <span>· {live.uses} שימושים</span>
+            <div className="flex-1" />
+            {onRate && <Stars pr={live} isDark={isDark} onRate={onRate} />}
+            {onUse && (
+              <button
+                onClick={() => onUse(live)}
+                className="h-8 px-3 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+                style={{ backgroundColor: c.primary, color: "white" }}
+              >
+                <UseExampleIcon size={15} />
+                שימוש בפרומפט
+              </button>
+            )}
+          </div>
+        )}
 
         {mode === "fork" && (
           <div
@@ -1092,14 +1128,27 @@ export function PromptEditor({
           {nameMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם — החיפוש במאגר הוא לפי שם.</div>}
         </div>
 
-        <div className="px-6 pb-2 flex-1 min-h-0 flex flex-col">
+        <div className={`px-6 pb-2 flex flex-col ${pane ? "" : "flex-1 min-h-0"}`}>
+          {parts ? (
+            <div className="flex flex-col gap-2">
+              {parts.map((pt, i) => (
+                <div key={i} className="rounded-[4px] px-3 py-2.5 text-[13.5px] leading-relaxed" style={{ border: `1px solid ${line}`, color: textCol }}>
+                  <div className="text-[12px] mb-1" style={{ color: subCol }}>חלק {i + 1}</div>
+                  {pt.task && <div><span style={{ color: subCol }}>מה: </span>{pt.task}</div>}
+                  {pt.sources.length > 0 && <div><span style={{ color: subCol }}>מקורות: </span>{pt.sources.join(", ")}</div>}
+                  {pt.how && <div className="whitespace-pre-wrap"><span style={{ color: subCol }}>דוגמה: </span>{pt.how}</div>}
+                </div>
+              ))}
+            </div>
+          ) : (
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="נוסח הפרומפט. אפשר להשאיר שדות למילוי בסוגריים מרובעים, למשל [שם העד]"
             className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
-            style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: "180px" }}
+            style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
           />
+          )}
           {/* Both lines report what the text already produced, so neither appears until there is
               something to report — the placeholder inside the field is what explains the brackets,
               and saying it twice made an empty editor look like it had a problem. */}
@@ -1194,14 +1243,38 @@ export function PromptEditor({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-4">
+    </>
+  );
+  const footer = (
+        <div className="flex items-center justify-end gap-2 px-6 py-4" style={pane ? { borderTop: `1px solid ${isDark ? dk.border : "#eef2f7"}` } : undefined}>
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
           <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : "שמירה"}
+            {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
           </button>
         </div>
+  );
+
+  if (pane) {
+    // The fields scroll and the buttons stay put, so ביטול and שמירה are always in reach.
+    return (
+      <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll">{form}</div>
+        {footer}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div
+        dir="rtl" onClick={(e) => e.stopPropagation()}
+        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
+        style={{ width: "min(760px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
+      >
+        {form}
+        {footer}
       </div>
     </div>
   );
