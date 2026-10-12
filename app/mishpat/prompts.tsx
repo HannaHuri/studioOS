@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircleQuestion,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -978,6 +978,20 @@ export function PromptEditor({
   const [parts, setParts] = useState<PromptPart[] | null>(initial?.parts ?? null);
   const [preShareParts, setPreShareParts] = useState<PromptPart[] | null>(null);
   const text = parts ? partsToText(parts) : body;
+  // Switching between basic and detailed, from the switch at the top. What's written carries over
+  // where it can; when anything has been written, the switch asks first.
+  const [pendingKind, setPendingKind] = useState<"basic" | "detailed" | null>(null);
+  const partsWritten = !!parts?.some((pt) => pt.task.trim() || pt.how.trim() || pt.sources.length);
+  const partsLose = !!parts && (parts.length > 1 || parts.some((pt) => pt.how.trim() || pt.sources.length));
+  const toDetailed = () => { setParts([{ ...emptyPart(), task: body }]); setPendingKind(null); };
+  const toBasic = () => {
+    setBody((parts ?? []).map((pt) => pt.task.trim()).filter(Boolean).join("\n\n"));
+    setParts(null); setPendingKind(null);
+  };
+  const askKind = (k: "basic" | "detailed") => {
+    if (k === "detailed" && !parts) { if (body.trim()) setPendingKind(k); else toDetailed(); }
+    if (k === "basic" && parts) { if (partsWritten) setPendingKind(k); else toBasic(); }
+  };
   // The classification isn't only for sharing: it's what decides whether a prompt shows up in
   // the panel for the case you have open, so it has to be settable on your own prompts too.
   // These four have two jobs: they decide what the panel offers ME, and how anyone else finds
@@ -1100,6 +1114,37 @@ export function PromptEditor({
           </button>
         </div>
 
+        {/* Basic or detailed — a switch at the top, so which kind this is shows before anything else */}
+        <div className="px-6 pb-3">
+          <div className="inline-flex rounded-[5px] p-0.5" style={{ backgroundColor: isDark ? dk.input : "#e6e9ef" }} role="radiogroup" aria-label="סוג הפרומפט">
+            {([
+              { k: "basic" as const, label: "פרומפט בסיסי", Icon: MessageCircleQuestion, mirror: false },
+              { k: "detailed" as const, label: "פרומפט מפורט", Icon: WandSparkles, mirror: true },
+            ]).map(({ k, label, Icon, mirror }) => {
+              const on = (k === "detailed") === !!parts;
+              return (
+                <button
+                  key={k} role="radio" aria-checked={on} onClick={() => askKind(k)}
+                  className="h-8 px-3.5 flex items-center gap-1.5 rounded-[4px] text-[13.5px] transition-colors"
+                  style={{
+                    backgroundColor: on ? (isDark ? dk.surface : "white") : "transparent",
+                    color: on ? (isDark ? dk.text : c.text) : (isDark ? dk.textMuted : c.textGray),
+                    boxShadow: on ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+                  }}
+                >
+                  <Icon size={15} style={{ color: on ? c.primary : c.iconGray, transform: mirror ? "scaleX(-1)" : undefined }} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {!parts && (
+            <div className="text-[12.5px] mt-1.5" style={{ color: subCol }}>
+              מפורט: מה לעשות, על אילו מסמכים ואיך, ואפשר כמה חלקים שרצים לפי הסדר
+            </div>
+          )}
+        </div>
+
         {/* In the pane the editor is also where a prompt is read before it's used, so what the
             table row said about it — whose it is, how it's rated — comes along, with the way to use it. */}
         {pane && live && (
@@ -1148,16 +1193,6 @@ export function PromptEditor({
           {parts ? (
             <>
               <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
-              {/* the way back, while nothing a basic prompt can't hold has been added */}
-              {parts.length === 1 && !parts[0].sources.length && !parts[0].how.trim() && (
-                <button
-                  onClick={() => { setBody(parts[0].task); setParts(null); }}
-                  className="self-start mt-2 text-[13px] hover:underline"
-                  style={{ color: subCol }}
-                >
-                  חזרה לפרומפט בסיסי
-                </button>
-              )}
             </>
           ) : (
             <>
@@ -1168,16 +1203,6 @@ export function PromptEditor({
                 className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
                 style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
               />
-              {/* New is always basic: "detailed" is a step a prompt takes when it needs one, not a
-                  choice asked up front. What's written so far becomes the first part's מה לעשות. */}
-              <button
-                onClick={() => setParts([{ ...emptyPart(), task: body }])}
-                className="self-start flex items-center gap-1.5 mt-2 text-[13px] hover:underline"
-                style={{ color: isDark ? dk.blue : c.primary }}
-                title="פרומפט מפורט: מה לעשות, על אילו מסמכים, ודוגמה — ואפשר כמה חלקים שרצים לפי הסדר"
-              >
-                <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} /> מעבר לפרומפט מפורט
-              </button>
             </>
           )}
           {/* Both lines report what the text already produced, so neither appears until there is
@@ -1284,6 +1309,21 @@ export function PromptEditor({
           <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
             {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
           </button>
+          {pendingKind && (
+            <PromptConfirm
+              isDark={isDark}
+              title={pendingKind === "detailed" ? "לעבור לפרומפט מפורט?" : "לחזור לפרומפט בסיסי?"}
+              note={pendingKind === "detailed"
+                ? "מה שכתבת יעבור לשדה \"מה לעשות\" בחלק הראשון."
+                : partsLose
+                  ? "רק \"מה לעשות\" של כל חלק יישאר, כנוסח הפרומפט. המקורות, ה\"איך\" והחלוקה לחלקים יימחקו."
+                  : "מה שכתבת ב\"מה לעשות\" יהפוך לנוסח הפרומפט."}
+              confirmLabel="מעבר"
+              safe={pendingKind === "detailed" || !partsLose}
+              onConfirm={pendingKind === "detailed" ? toDetailed : toBasic}
+              onClose={() => setPendingKind(null)}
+            />
+          )}
         </div>
   );
 
@@ -1558,9 +1598,10 @@ export function PromptFill({
 
 // ── Confirm removing a prompt / withdrawing a share ────────────────────────
 export function PromptConfirm({
-  isDark, title, note, confirmLabel, onConfirm, onClose,
+  isDark, title, note, confirmLabel, onConfirm, onClose, safe,
 }: {
   isDark: boolean; title: string; note: string; confirmLabel: string; onConfirm: () => void; onClose: () => void;
+  safe?: boolean; // nothing is lost, so the button is the ordinary blue rather than red
 }) {
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1578,7 +1619,7 @@ export function PromptConfirm({
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
-          <button onClick={onConfirm} className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: RED }}>
+          <button onClick={onConfirm} className="h-9 px-5 rounded-[4px] text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: safe ? c.primary : RED }}>
             {confirmLabel}
           </button>
         </div>

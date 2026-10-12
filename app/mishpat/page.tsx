@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, TriangleAlert,
+  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2 } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2, MessageCircleQuestion } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -102,9 +102,10 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 // plain rows; below a line, "פעולות על מסמך" opens a side menu whose actions tick, any number
 // together. Ticking one puts the input in document mode and shows the upload icon.
 type QuestionType = "basic" | "detailed";
-const QUESTION_TYPES: { key: QuestionType; label: string; desc: string }[] = [
-  { key: "basic", label: "שאלה בסיסית", desc: "שאלה חופשית על התיק" },
-  { key: "detailed", label: "שאלה מפורטת", desc: "שאלה בשלבים, עם בחירת מסמכים ועמודים" },
+// The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
+const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
+  { key: "basic", label: "שאלה בסיסית", desc: "שאלה חופשית על התיק", Icon: MessageCircleQuestion },
+  { key: "detailed", label: "שאלה מפורטת", desc: "שאלה בשלבים, עם בחירת מסמכים ועמודים", Icon: WandSparkles, mirror: true },
 ];
 
 type DocItem = { name: string; words: string; summary: string };
@@ -1391,7 +1392,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
         <div dir="rtl" role="menu" style={panel(taskPos, W)}>
-          {QUESTION_TYPES.map(({ key, label, desc }) => {
+          {QUESTION_TYPES.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === "basic";
             return (
               <button
@@ -1402,7 +1403,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>{label}</span>
+                  <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
+                    <Icon size={15} style={{ color: on ? c.primary : c.iconGray, flexShrink: 0, transform: mirror ? "scaleX(-1)" : undefined }} />
+                    {label}
+                  </span>
                   <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
                 </span>
                 {on && <Check size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "3px" }} />}
@@ -1419,7 +1423,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             style={{ backgroundColor: actionsSub ? hover : "transparent" }}
           >
             <span className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[14px]" style={{ color: docMode ? c.primary : textCol2, fontWeight: docMode ? 600 : 400 }}>
+              <span className="flex items-center gap-1.5 text-[14px]" style={{ color: docMode ? c.primary : textCol2, fontWeight: docMode ? 600 : 400 }}>
+                <FileText size={15} style={{ color: docMode ? c.primary : c.iconGray, flexShrink: 0 }} />
                 פעולות על מסמך{nPicked > 0 && <span style={{ fontWeight: 400 }}> · {nPicked} נבחרו</span>}
               </span>
               <span className="text-[13px] leading-snug" style={{ color: subCol }}>הגהה, בדיקת עקיבות והתממה של מסמך Word</span>
