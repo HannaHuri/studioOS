@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2, MessageCircleQuestion } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2, MessageCircle } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -102,9 +102,11 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 // plain rows; below a line, "פעולות על מסמך" opens a side menu whose actions tick, any number
 // together. Ticking one puts the input in document mode and shows the upload icon.
 type QuestionType = "basic" | "detailed";
+const TASK_MENU_W = 340; // wide enough that each description fits on one line, so the menu stays short
+const TASK_MENU_H = 200; // about its height, to tell whether it fits below the button
 // The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
 const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
-  { key: "basic", label: "שאלה בסיסית", desc: "שאלה חופשית על התיק", Icon: MessageCircleQuestion },
+  { key: "basic", label: "שאלה בסיסית", desc: "שאלה חופשית על התיק", Icon: MessageCircle },
   { key: "detailed", label: "שאלה מפורטת", desc: "שאלה בשלבים, עם בחירת מסמכים ועמודים", Icon: WandSparkles, mirror: true },
 ];
 
@@ -896,8 +898,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   function handleTaskToggle() {
     if (!taskOpen && taskBtnRef.current) {
       const r = taskBtnRef.current.getBoundingClientRect();
-      const right = window.innerWidth - r.right;
-      setTaskPos(isEmpty ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
+      // kept inside the screen: in a narrow chat the button sits near the left edge, and a menu
+      // anchored to its right edge ran off the left; and downward only while there's room for it
+      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - TASK_MENU_W - 8));
+      const down = isEmpty && window.innerHeight - r.bottom >= TASK_MENU_H + 12;
+      setTaskPos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
     }
     setActionsSub(null);
     setTaskOpen((v) => !v);
@@ -953,9 +958,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   // A detailed question goes into the conversation as its parts, written out
-  function sendDetailed(parts: PromptPart[]) {
+  function sendDetailed(parts: PromptPart[], guidelines: string) {
     setDetailedOpen(false);
-    ask(partsToText(parts));
+    ask(partsToText(parts, guidelines));
   }
 
   function handleStop() {
@@ -1370,7 +1375,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     const textCol2 = isDark ? dk.text : c.text;
     const subCol = isDark ? dk.textMuted : c.textGray;
     const pages = draft?.words != null ? pagesOf(draft.words) : null;
-    const W = 340; // wide enough that each description fits on one line, so the menu stays short
+    const W = TASK_MENU_W;
     const close = () => { setTaskOpen(false); setActionsSub(null); };
     const panel = (pos: { top?: number; bottom?: number; right: number }, width: number): React.CSSProperties => ({
       position: "fixed", ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }), right: pos.right, zIndex: 200,
@@ -1427,7 +1432,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 <FileText size={15} style={{ color: docMode ? c.primary : c.iconGray, flexShrink: 0 }} />
                 פעולות על מסמך{nPicked > 0 && <span style={{ fontWeight: 400 }}> · {nPicked} נבחרו</span>}
               </span>
-              <span className="text-[13px] leading-snug" style={{ color: subCol }}>הגהה, בדיקת עקיבות והתממה של מסמך Word</span>
             </span>
             <ChevronLeft size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
           </button>

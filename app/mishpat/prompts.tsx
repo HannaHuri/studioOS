@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircleQuestion,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -46,6 +46,7 @@ export type Prompt = {
   myRating: number | null; // once set, final — the stars lock
   edited: string;
   parts?: PromptPart[];    // set = a פרומפט מורכב; body then holds the parts as text
+  guidelines?: string;     // a detailed prompt's general instructions, for all its parts
 };
 
 // The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
@@ -977,7 +978,8 @@ export function PromptEditor({
   // a basic prompt becomes one through "מעבר לפרומפט מפורט", its text turning into the first part's מה.
   const [parts, setParts] = useState<PromptPart[] | null>(initial?.parts ?? null);
   const [preShareParts, setPreShareParts] = useState<PromptPart[] | null>(null);
-  const text = parts ? partsToText(parts) : body;
+  const [guidelines, setGuidelines] = useState(initial?.guidelines ?? ""); // a detailed prompt's general instructions
+  const text = parts ? partsToText(parts, guidelines) : body;
   // Switching between basic and detailed, from the switch at the top. What's written carries over
   // where it can; when anything has been written, the switch asks first.
   const [pendingKind, setPendingKind] = useState<"basic" | "detailed" | null>(null);
@@ -1090,8 +1092,9 @@ export function PromptEditor({
       caseType, matter, stage, court,
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
       name: name.trim(), tags, edited: today(),
-      body: cleanParts ? partsToText(cleanParts) : body.trim(),
+      body: cleanParts ? partsToText(cleanParts, guidelines) : body.trim(),
       parts: cleanParts,
+      guidelines: cleanParts && guidelines.trim() ? guidelines.trim() : undefined,
       source: "mine",
       // Only the star gesture stars: saving a question that was sent came from pressing a star,
       // so it lands starred; writing one from scratch, or forking someone else's, does not. If
@@ -1118,13 +1121,14 @@ export function PromptEditor({
         <div className="px-6 pb-3">
           <div className="inline-flex rounded-[5px] p-0.5" style={{ backgroundColor: isDark ? dk.input : "#e6e9ef" }} role="radiogroup" aria-label="סוג הפרומפט">
             {([
-              { k: "basic" as const, label: "פרומפט בסיסי", Icon: MessageCircleQuestion, mirror: false },
+              { k: "basic" as const, label: "פרומפט בסיסי", Icon: MessageCircle, mirror: false },
               { k: "detailed" as const, label: "פרומפט מפורט", Icon: WandSparkles, mirror: true },
             ]).map(({ k, label, Icon, mirror }) => {
               const on = (k === "detailed") === !!parts;
               return (
+                <span key={k} className="relative group">
                 <button
-                  key={k} role="radio" aria-checked={on} onClick={() => askKind(k)}
+                  role="radio" aria-checked={on} onClick={() => askKind(k)}
                   className="h-8 px-3.5 flex items-center gap-1.5 rounded-[4px] text-[13.5px] transition-colors"
                   style={{
                     backgroundColor: on ? (isDark ? dk.surface : "white") : "transparent",
@@ -1135,14 +1139,20 @@ export function PromptEditor({
                   <Icon size={15} style={{ color: on ? c.primary : c.iconGray, transform: mirror ? "scaleX(-1)" : undefined }} />
                   {label}
                 </button>
+                {/* what "detailed" means, on hover — drawn here rather than by the browser, whose
+                    tooltips scramble a Hebrew line on Windows */}
+                {k === "detailed" && (
+                  <span
+                    className="absolute z-50 top-[calc(100%+6px)] right-0 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: c.text, color: "white" }}
+                  >
+                    מה לעשות, על אילו מסמכים ואיך, ואפשר כמה חלקים שרצים לפי הסדר
+                  </span>
+                )}
+                </span>
               );
             })}
           </div>
-          {!parts && (
-            <div className="text-[12.5px] mt-1.5" style={{ color: subCol }}>
-              מפורט: מה לעשות, על אילו מסמכים ואיך, ואפשר כמה חלקים שרצים לפי הסדר
-            </div>
-          )}
         </div>
 
         {/* In the pane the editor is also where a prompt is read before it's used, so what the
@@ -1192,6 +1202,13 @@ export function PromptEditor({
         <div className={`px-6 pb-2 flex flex-col ${pane ? "" : "flex-1 min-h-0"}`}>
           {parts ? (
             <>
+              <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות כלליות <span style={{ color: subCol }}>(לא חובה)</span></div>
+              <textarea
+                value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2}
+                placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
+                className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-3"
+                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+              />
               <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
             </>
           ) : (

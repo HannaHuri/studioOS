@@ -15,7 +15,7 @@
 import { useState } from "react";
 import { Check, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
-import { PartsEditor, emptyPart, partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
   CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, today, uid, type Prompt,
 } from "./prompts";
@@ -38,8 +38,9 @@ const clean = (parts: PromptPart[]) => parts.map((p) => ({ ...p, task: p.task.tr
 // specific documents keeps their document types instead.
 function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
   return parts.map((p) => {
+    if (scopeOf(p) !== "docs") return { ...p, docs: undefined };
     const types = (p.docs ?? []).map((d) => docs.find((x) => x.name === d.name)?.type).filter((t): t is string => !!t);
-    return { ...p, sources: Array.from(new Set([...p.sources, ...types])), docs: undefined };
+    return { ...p, scope: "types", sources: Array.from(new Set(types)), docs: undefined };
   });
 }
 
@@ -47,11 +48,12 @@ function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
 export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibrary, onClose }: {
   isDark: boolean;
   caseDocs: CaseDocOption[];
-  onSend: (parts: PromptPart[]) => void;
+  onSend: (parts: PromptPart[], guidelines: string) => void;
   onSaveToLibrary: (pr: Prompt) => void;
   onClose: () => void;
 }) {
   const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
+  const [guidelines, setGuidelines] = useState(""); // general instructions for all the parts
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה גם בספרייה
   const [name, setName] = useState("");
@@ -65,21 +67,23 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
   const quietBorder = isDark ? dk.border : c.border;
-  const hasPicked = parts.some((p) => p.docs?.length);
+  const hasPicked = parts.some((p) => scopeOf(p) === "docs");
 
   const send = () => {
-    const bad = parts.some((p) => !p.task.trim());
+    const bad = parts.some((p) => !p.task.trim()
+      || (scopeOf(p) === "types" && !p.sources.length) || (scopeOf(p) === "docs" && !p.docs?.length));
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
     if (keep) {
       const general = generalize(done, caseDocs);
       onSaveToLibrary({
-        id: uid(), name: name.trim(), body: partsToText(general), parts: general,
+        id: uid(), name: name.trim(), body: partsToText(general, guidelines), parts: general,
+        guidelines: guidelines.trim() || undefined,
         source: "mine", author: null, fav: false, court, caseType, matter, stage, tags: [],
         uses: 1, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       });
     }
-    onSend(done);
+    onSend(done, guidelines.trim());
   };
 
   return (
@@ -87,7 +91,7 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
       <div
         dir="rtl" onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(980px, 94vw)", height: "min(860px, 90vh)", backgroundColor: surface, fontFamily: FONT }}
+        style={{ width: "min(980px, 94vw)", maxHeight: "90vh", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start px-6 pt-5 pb-1">
           <WandSparkles size={18} style={{ color: c.primary, transform: "scaleX(-1)", marginTop: "4px", marginLeft: "8px" }} />
@@ -102,9 +106,19 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
 
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-4" dir="ltr">
           <div dir="rtl" className="flex flex-col gap-4">
+            <div>
+              <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות כלליות <span style={{ color: subCol }}>(לא חובה)</span></div>
+              <textarea
+                value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2}
+                placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
+                className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y"
+                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+              />
+            </div>
+
             <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} />
 
-            <div className="rounded-lg px-4 py-3" style={{ border: `1px solid ${quietBorder}` }}>
+            <div className="pt-1">
               <CheckRow on={keep} onToggle={() => setKeep((v) => !v)} label="שמירה גם בספרייה" isDark={isDark} />
               {keep && (
                 <div className="mt-3 flex flex-col gap-3">
@@ -146,7 +160,7 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 pt-3 pb-5" style={{ borderTop: `1px solid ${quietBorder}` }}>
+        <div className="flex items-center justify-end gap-2 px-6 pt-3 pb-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${quietBorder}`, color: textCol }}>
             ביטול
           </button>
@@ -184,7 +198,7 @@ export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
     if (parts ? parts.some((p) => !p.task.trim()) : !body.trim()) { setAttempted(true); return; }
     if (!changed) { onUse(prompt); return; }
     const done = parts ? clean(parts) : null;
-    const edited: Prompt = { ...prompt, body: done ? partsToText(done) : body.trim(), parts: done ?? undefined };
+    const edited: Prompt = { ...prompt, body: done ? partsToText(done, prompt.guidelines) : body.trim(), parts: done ?? undefined };
     if (keep) {
       const stored: Prompt = isMine ? { ...edited, edited: today() } : {
         ...edited, id: uid(), source: "mine", author: null, authorRole: undefined, basedOn: prompt.name,
@@ -231,7 +245,7 @@ export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 pt-3 pb-5" style={{ borderTop: `1px solid ${quietBorder}` }}>
+        <div className="flex items-center gap-2 px-6 pt-3 pb-5">
           {/* only once something was changed — until then there is nothing to keep */}
           <div className="flex-1" style={{ visibility: changed ? "visible" : "hidden" }}>
             <CheckRow on={keep} onToggle={() => setKeep((v) => !v)} label={isMine ? "שמירת השינויים בספרייה" : "שמירה בספרייה כפרומפט שלי"} isDark={isDark} />

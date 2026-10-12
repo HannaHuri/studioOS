@@ -20,11 +20,14 @@ import { ArrowDown, ArrowUp, FileText, Plus, Trash2, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
 
-// A part draws on document types (`sources`) and — only when the question is built from the
-// chat's input, inside a case — on specific documents of that case, each with an optional page
-// range (`docs`). Neither set means the whole case.
+// A part draws on the whole case, on document types (`sources`), or — only when the question is
+// built from the chat's input, inside a case — on specific documents of that case, each with an
+// optional page range (`docs`). `scope` is which of the three was chosen; left out, it follows
+// what's filled in.
 export type DocPick = { name: string; from?: number; to?: number };
-export type PromptPart = { sources: string[]; task: string; how: string; docs?: DocPick[] };
+export type SourceScope = "all" | "types" | "docs";
+export type PromptPart = { sources: string[]; task: string; how: string; docs?: DocPick[]; scope?: SourceScope };
+export const scopeOf = (p: PromptPart): SourceScope => p.scope ?? (p.docs?.length ? "docs" : p.sources.length ? "types" : "all");
 // A case document the sources field offers, under its document type.
 export type CaseDocOption = { type: string; name: string; pages: number };
 
@@ -39,11 +42,13 @@ export const DOC_TYPES = [
 export const emptyPart = (): PromptPart => ({ sources: [], task: "", how: "" });
 
 // ── Sources: tags with autocomplete ─────────────────────────────────────────
-// With `caseDocs`, the same field also completes from this case's own documents: a document picked
-// there goes in the list under the field, where its pages can be set.
-function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: {
+// With `caseDocs` the field works inside a case: `only="types"` completes from the document types
+// this case has, `only="docs"` from the case's own documents — a document picked there goes in the
+// list under the field, where its pages can be set.
+function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, only }: {
   value: string[]; onChange: (v: string[]) => void; isDark: boolean;
   caseDocs?: CaseDocOption[]; docs?: DocPick[]; onDocs?: (v: DocPick[]) => void;
+  only?: "types" | "docs";
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -58,9 +63,9 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: 
   type Opt = { kind: "type"; label: string } | { kind: "doc"; label: string; doc: CaseDocOption };
   const options: Opt[] = [
     // inside a case, the types are the ones this case has, so the list stays short
-    ...(caseDocs ? Array.from(new Set(caseDocs.map((d) => d.type))) : DOC_TYPES)
+    ...(only === "docs" ? [] : caseDocs ? Array.from(new Set(caseDocs.map((d) => d.type))) : DOC_TYPES)
       .filter((t) => !value.includes(t) && t.includes(q.trim())).map((t) => ({ kind: "type" as const, label: t })),
-    ...(caseDocs ?? []).filter((d) => !docs.some((x) => x.name === d.name) && (d.name.includes(q.trim()) || d.type.includes(q.trim())))
+    ...(only === "types" ? [] : caseDocs ?? []).filter((d) => !docs.some((x) => x.name === d.name) && (d.name.includes(q.trim()) || d.type.includes(q.trim())))
       .map((d) => ({ kind: "doc" as const, label: d.name, doc: d })),
   ];
   // the list closes after each pick so it never sits over the fields below; typing or a click reopens it
@@ -103,8 +108,9 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: 
             else if (e.key === "Backspace" && !q && value.length) onChange(value.slice(0, -1));
             else if (e.key === "Escape") setOpen(false);
           }}
-          placeholder={value.length ? "" : caseDocs
-            ? (docs.length ? "אפשר להוסיף סוגי מסמכים או מסמכים נוספים" : "כל מסמכי התיק. אפשר לבחור סוגי מסמכים או מסמכים מהתיק")
+          placeholder={value.length ? "" : only === "docs"
+            ? (docs.length ? "אפשר להוסיף מסמכים נוספים" : "התחילו להקליד שם מסמך מהתיק")
+            : only === "types" ? "התחילו להקליד סוג מסמך, למשל כתב תביעה"
             : "כל מסמכי התיק. אפשר לבחור סוגי מסמכים מסוימים"}
           className="flex-1 min-w-[120px] h-[24px] bg-transparent outline-none text-[13.5px]"
           style={{ color: textCol }}
@@ -117,7 +123,7 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: 
         >
           {options.map((o, i) => (
             <div key={o.kind + o.label}>
-              {caseDocs && (i === 0 || i === firstDoc) && (
+              {caseDocs && !only && (i === 0 || i === firstDoc) && (
                 <div className="px-3 pt-1.5 pb-0.5 text-[12px]" style={{ color: subCol, borderTop: i > 0 ? `1px solid ${line}` : "none", marginTop: i > 0 ? "4px" : 0 }}>
                   {o.kind === "type" ? "סוגי מסמכים" : "מסמכים מהתיק"}
                 </div>
@@ -139,7 +145,7 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: 
       {open && options.length === 0 && q.trim() && (
         <div className="absolute z-10 right-0 left-0 mt-1 px-3 py-2 rounded-[4px] shadow-lg text-[13px]"
           style={{ backgroundColor: surface, border: `1px solid ${line}`, color: subCol }}>
-          {caseDocs ? "אין סוג מסמך או מסמך בתיק בשם הזה" : "אין סוג מסמך בשם הזה"}
+          {only === "docs" ? "אין מסמך בתיק בשם הזה" : "אין סוג מסמך בשם הזה"}
         </div>
       )}
       {/* The specific documents picked, each with its own page range */}
@@ -171,6 +177,35 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs }: 
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Which kind of sources ───────────────────────────────────────────────────
+const SCOPES: { key: SourceScope; label: string }[] = [
+  { key: "all", label: "כל המסמכים" },
+  { key: "types", label: "סוגי מסמכים" },
+  { key: "docs", label: "מסמכים ספציפיים" },
+];
+function ScopeSwitch({ value, onChange, isDark }: { value: SourceScope; onChange: (v: SourceScope) => void; isDark: boolean }) {
+  return (
+    <div className="inline-flex rounded-[5px] p-0.5 mb-2" style={{ backgroundColor: isDark ? dk.input : "#e6e9ef" }} role="radiogroup" aria-label="מקורות">
+      {SCOPES.map(({ key, label }) => {
+        const on = key === value;
+        return (
+          <button
+            key={key} role="radio" aria-checked={on} onClick={() => onChange(key)}
+            className="h-7 px-3 rounded-[4px] text-[13px] transition-colors"
+            style={{
+              backgroundColor: on ? (isDark ? dk.surface : "white") : "transparent",
+              color: on ? (isDark ? dk.text : c.text) : (isDark ? dk.textMuted : c.textGray),
+              boxShadow: on ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -239,8 +274,19 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
             {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
 
             <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
-            <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark}
-              caseDocs={caseDocs} docs={p.docs} onDocs={(v) => setPart(i, { docs: v })} />
+            {caseDocs ? (() => {
+              // first which kind of sources, then the field that picks them
+              const scope = scopeOf(p);
+              const missing = attempted && ((scope === "types" && !p.sources.length) || (scope === "docs" && !p.docs?.length));
+              return (
+                <>
+                  <ScopeSwitch value={scope} onChange={(v) => setPart(i, { scope: v })} isDark={isDark} />
+                  {scope === "types" && <SourcesInput only="types" value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} caseDocs={caseDocs} />}
+                  {scope === "docs" && <SourcesInput only="docs" value={[]} onChange={() => {}} isDark={isDark} caseDocs={caseDocs} docs={p.docs} onDocs={(v) => setPart(i, { docs: v })} />}
+                  {missing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>{scope === "types" ? "יש לבחור לפחות סוג מסמך אחד." : "יש לבחור לפחות מסמך אחד."}</div>}
+                </>
+              );
+            })() : <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />}
 
             <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
             <textarea
@@ -354,10 +400,14 @@ const pagesText = (d: DocPick) =>
   // in words rather than "3–12": inside Hebrew text a numeric range is shown reversed
   d.from || d.to ? ` (עמודים ${d.from ?? 1} עד ${d.to ?? "הסוף"})` : "";
 export const sourcesText = (p: PromptPart) => {
-  const all = [...p.sources, ...(p.docs ?? []).map((d) => d.name + pagesText(d))];
-  return all.length ? all.join(", ") : "כל מסמכי התיק";
+  const scope = scopeOf(p);
+  if (scope === "docs" && p.docs?.length) return p.docs.map((d) => d.name + pagesText(d)).join(", ");
+  if (scope === "types" && p.sources.length) return p.sources.join(", ");
+  return "כל מסמכי התיק";
 };
-export const partsToText = (parts: PromptPart[]) =>
+// `guidelines`: general instructions that apply to every part, written once above them
+export const partsToText = (parts: PromptPart[], guidelines?: string) =>
+  (guidelines?.trim() ? `הנחיות כלליות: ${guidelines.trim()}\n\n` : "") +
   parts.map((p, i) =>
     `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nאיך: ${p.how}` : ""}`,
   ).join("\n\n");
