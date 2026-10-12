@@ -241,7 +241,7 @@ export function ComplexPromptEditor({ isDark, onSave, onClose }: {
         style={{ width: "min(850px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-start px-6 pt-5 pb-4">
-          <div className="flex-1 text-[18px]" style={{ color: textCol }}>פרומפט מורכב חדש</div>
+          <div className="flex-1 text-[18px]" style={{ color: textCol }}>פרומפט מפורט חדש</div>
           <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>

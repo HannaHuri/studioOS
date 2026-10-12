@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -973,8 +973,8 @@ export function PromptEditor({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
-  // set = a פרומפט מורכב. Its text is generated from the parts, so the parts are what's edited;
-  // a plain prompt becomes one through "הוספת חלק", its text turning into the first part's מה.
+  // set = a פרומפט מפורט (was "מורכב"). Its text is generated from the parts, so the parts are what's edited;
+  // a basic prompt becomes one through "מעבר לפרומפט מפורט", its text turning into the first part's מה.
   const [parts, setParts] = useState<PromptPart[] | null>(initial?.parts ?? null);
   const [preShareParts, setPreShareParts] = useState<PromptPart[] | null>(null);
   const text = parts ? partsToText(parts) : body;
@@ -1040,7 +1040,7 @@ export function PromptEditor({
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
 
-  const title = parts ? (mode === "new" ? "פרומפט מורכב חדש" : mode === "fork" ? "עריכה ושמירה כפרומפט מורכב שלי" : "עריכת פרומפט מורכב")
+  const title = parts ? (mode === "new" ? "פרומפט מפורט חדש" : mode === "fork" ? "עריכה ושמירה כפרומפט מפורט שלי" : "עריכת פרומפט מפורט")
     : mode === "edit" ? "עריכת פרומפט"
     : mode === "fork" ? "עריכה ושמירה כפרומפט שלי"
     : mode === "fromMessage" ? "שמירת השאלה כפרומפט"
@@ -1146,7 +1146,19 @@ export function PromptEditor({
 
         <div className={`px-6 pb-2 flex flex-col ${pane ? "" : "flex-1 min-h-0"}`}>
           {parts ? (
-            <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
+            <>
+              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
+              {/* the way back, while nothing a basic prompt can't hold has been added */}
+              {parts.length === 1 && !parts[0].sources.length && !parts[0].how.trim() && (
+                <button
+                  onClick={() => { setBody(parts[0].task); setParts(null); }}
+                  className="self-start mt-2 text-[13px] hover:underline"
+                  style={{ color: subCol }}
+                >
+                  חזרה לפרומפט בסיסי
+                </button>
+              )}
+            </>
           ) : (
             <>
               <textarea
@@ -1156,15 +1168,15 @@ export function PromptEditor({
                 className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
                 style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
               />
-              {/* No up-front choice between a plain prompt and a complex one: a prompt grows parts
-                  when it needs them. What's written so far becomes the first part's מה לעשות. */}
+              {/* New is always basic: "detailed" is a step a prompt takes when it needs one, not a
+                  choice asked up front. What's written so far becomes the first part's מה לעשות. */}
               <button
-                onClick={() => setParts([{ ...emptyPart(), task: body }, emptyPart()])}
-                className="self-start flex items-center gap-1 mt-2 text-[13px] hover:underline"
+                onClick={() => setParts([{ ...emptyPart(), task: body }])}
+                className="self-start flex items-center gap-1.5 mt-2 text-[13px] hover:underline"
                 style={{ color: isDark ? dk.blue : c.primary }}
-                title="הפיכה לפרומפט מורכב — כמה חלקים שרצים לפי הסדר"
+                title="פרומפט מפורט: מה לעשות, על אילו מסמכים, ודוגמה — ואפשר כמה חלקים שרצים לפי הסדר"
               >
-                <Plus size={14} /> הוספת חלק
+                <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} /> מעבר לפרומפט מפורט
               </button>
             </>
           )}

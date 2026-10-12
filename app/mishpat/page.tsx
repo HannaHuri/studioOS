@@ -23,7 +23,7 @@ import {
 } from "./prompts";
 import { ComplexPromptEditor, emptyPart, partsToText } from "./complexPrompt";
 import { PromptTablePanel } from "./promptTable";
-import { GripVertical } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2 } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -1048,10 +1048,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px]"
             style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
-            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המורכב">
+            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המפורט">
               <X size={13} />
             </button>
-            <span>פרומפט מורכב: {complexName}</span>
+            <span>פרומפט מפורט: {complexName}</span>
           </div>
         </div>
       )}
@@ -1475,7 +1475,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
                 >
                   <WandSparkles size={15} style={{ transform: "scaleX(-1)" }} />
-                  פרומפט מורכב
+                  פרומפט מפורט
                 </button>
               </div>
             )}
@@ -2707,7 +2707,15 @@ export default function MishpatPage() {
   const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
   const [promptsW, setPromptsW] = useState(640);
   const [promptsResizing, setPromptsResizing] = useState(false);
-  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded over the whole chat
+  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded; the chat floats over it
+  const [promptPaneW, setPromptPaneW] = useState(560);         // the editor's width, dragged from its left edge
+  // The chat floats over the editor when there isn't room for both — the documents screen's
+  // behaviour: a window that can be dragged, minimised to a bar, or docked back.
+  const [chatPos, setChatPos] = useState<{ x: number; y: number } | null>(null); // null = bottom-left
+  // a floating chat starts as a bar, so the editor it floats over (and its save buttons) stay in view
+  const [chatMin, setChatMin] = useState(true);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const chatBoxRef = useRef<HTMLDivElement>(null);
   // פרומפט מורכב: the editor, and the one that is armed for the next send. It is too long to
   // go into the question line as text, so it rides above the input as a chip, like an example.
   const [complexOpen, setComplexOpen] = useState(false);
@@ -2845,10 +2853,41 @@ export default function MishpatPage() {
   const sidebarBg = isDark ? dk.surface : "white";
 
   // Prompts table + editor. The editor sits between the chat and the table while the chat keeps
-  // a usable width; past that it opens over the chat, as the documents screen floats its chat.
-  const PROMPT_PANE_W = 560;
+  // a usable width; past that (or when the editor is expanded) the chat floats over the editor.
   const docsW = isPanelOpen && !narrow ? 300 : 40;
-  const promptPaneOver = vw - 55 - docsW - promptsW - PROMPT_PANE_W < 420;
+  const paneOpen = !narrow && isPromptsOpen && !!promptPane;
+  const chatRoom = vw - 55 - docsW - promptsW - promptPaneW;
+  const chatFloat = paneOpen && (promptPaneWide || chatRoom < 420);
+  const canDock = vw - 55 - docsW - promptsW - 430 >= 380;
+  const dockChat = () => {
+    setPromptPaneWide(false); setChatPos(null); setChatMin(true);
+    setPromptPaneW((w) => Math.min(w, vw - 55 - docsW - promptsW - 430));
+  };
+  const startChatDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const row = rowRef.current?.getBoundingClientRect();
+    const box = chatBoxRef.current?.getBoundingClientRect();
+    if (!row || !box) return;
+    const offX = e.clientX - box.left, offY = e.clientY - box.top;
+    const onMove = (ev: MouseEvent) => setChatPos({
+      x: Math.max(0, Math.min(row.width - box.width, ev.clientX - row.left - offX)),
+      y: Math.max(0, Math.min(row.height - 40, ev.clientY - row.top - offY)),
+    });
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
+  const startPaneResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const right = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().right;
+    setPromptPaneWide(false);
+    const onMove = (ev: MouseEvent) => setPromptPaneW(Math.max(380, Math.min(right - docsW, right - ev.clientX)));
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
   const promptPaneLive = promptPane?.initial?.id ? prompts.find((x) => x.id === promptPane.initial!.id) : undefined;
   const runPrompt = usePrompt; // not a hook, despite the name — an alias the hooks lint can tell apart
   const promptPaneEl = promptPane && (
@@ -2861,7 +2900,7 @@ export default function MishpatPage() {
       live={promptPaneLive}
       onSave={savePanePrompt}
       onClose={() => { setPromptPane(null); setPromptPaneWide(false); }}
-      onUse={(pr) => { runPrompt(pr); if (promptPaneOver || promptPaneWide) { setPromptPane(null); setPromptPaneWide(false); } }}
+      onUse={(pr) => { runPrompt(pr); setChatMin(false); }}
       expanded={promptPaneWide}
       onToggleExpand={() => setPromptPaneWide((v) => !v)}
       onRate={promptPaneLive ? (n) => ratePrompt(promptPaneLive.id, n) : undefined}
@@ -2887,7 +2926,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={rowRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* ── LEFT: Documents — column that PUSHES the chat (push mode); a 40px rail launcher in drawer mode ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
@@ -2910,8 +2949,34 @@ export default function MishpatPage() {
           </button>
         </div>
 
-        {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode ── */}
-        <div className="flex-1 flex min-w-0 relative" style={{ paddingBottom: FOOTER_HEIGHT }}>
+        {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode. With the prompt editor
+            open and no room beside it, the same element becomes a floating window over the editor
+            (same element, so the conversation survives the switch). ── */}
+        <div
+          ref={chatBoxRef}
+          className={chatFloat ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex flex-col min-w-0 relative"}
+          style={chatFloat ? {
+            ...(chatPos ? { left: chatPos.x, top: chatPos.y } : { left: docsW + 12, bottom: 76 }),
+            width: chatMin ? 260 : 420, height: chatMin ? "auto" : "min(560px, calc(100% - 32px))",
+            border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.bg : "white",
+            boxShadow: "0 10px 34px rgba(0,0,0,0.22)",
+          } : undefined}
+        >
+          {chatFloat && (
+            <div onMouseDown={startChatDrag} dir="rtl" className="flex items-center gap-1 px-2.5 flex-shrink-0 cursor-move select-none" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: chatMin ? "none" : `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
+              <GripHorizontal size={16} style={{ color: isDark ? dk.textMuted : c.textLight }} />
+              <span className="flex-1 text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
+              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "פתיחת הצ׳אט" : "מזעור לשורה"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: c.iconGray }}>
+                {chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              {canDock && (
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט למקומו (העורך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: c.iconGray }}>
+                  <Maximize2 size={15} />
+                </button>
+              )}
+            </div>
+          )}
+        <div className="flex-1 flex min-w-0 min-h-0 relative" style={{ paddingBottom: chatFloat ? 0 : FOOTER_HEIGHT, display: chatFloat && chatMin ? "none" : undefined }}>
           <ChatArea
             isDark={isDark}
             conversationKey={convKey}
@@ -2932,13 +2997,6 @@ export default function MishpatPage() {
             complexName={complexInUse}
             onClearComplex={() => setComplexInUse(null)}
           />
-
-          {/* Prompt editor over the chat — when there isn't room for it beside the chat */}
-          {!narrow && isPromptsOpen && (promptPaneOver || promptPaneWide) && promptPaneEl && (
-            <div className="absolute top-0 bottom-0 right-0 z-[45]" style={{ width: promptPaneWide ? "100%" : `${PROMPT_PANE_W}px`, maxWidth: "100%", boxShadow: "-6px 0 24px rgba(0,0,0,0.14)" }}>
-              {promptPaneEl}
-            </div>
-          )}
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
           {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen || isPromptsOpen) && (
@@ -3004,6 +3062,7 @@ export default function MishpatPage() {
           {/* ── Page footer — legal disclaimer, pinned once for the chat column (not repeated per chat state) ── */}
           <div
             className="absolute bottom-0 left-0 right-0 flex justify-center px-6 z-40"
+            hidden={chatFloat}
             style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
           >
             <div className="w-full max-w-[768px] flex flex-col items-center justify-end" style={{ paddingBottom: "20px" }}>
@@ -3021,6 +3080,7 @@ export default function MishpatPage() {
               </p>
             </div>
           </div>
+        </div>
         </div>
 
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
@@ -3045,9 +3105,23 @@ export default function MishpatPage() {
         )}
 
         {/* ── Prompt editor beside the table — where the documents screen opens the PDF ── */}
-        {!narrow && isPromptsOpen && !promptPaneOver && !promptPaneWide && promptPaneEl && (
-          <div className="flex-shrink-0" style={{ width: `${PROMPT_PANE_W}px`, borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}>
+        {paneOpen && (
+          <div
+            className={chatFloat ? "relative flex-1 min-w-0" : "relative flex-shrink-0"}
+            style={{ ...(chatFloat ? {} : { width: `${promptPaneW}px` }), borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}
+          >
             {promptPaneEl}
+            {/* Drag the left edge to resize — the documents viewer's grip. Narrow it enough and the
+                floating chat docks back beside it. */}
+            <div onMouseDown={startPaneResize} className="absolute top-0 bottom-0 left-0 z-20 group" style={{ width: "8px", cursor: "ew-resize" }} title="גרירה לשינוי רוחב העורך">
+              <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
+              <div
+                className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-md border transition-colors group-hover:!bg-[#0073ea] group-hover:!border-[#0073ea] group-hover:!text-white"
+                style={{ width: "15px", height: "30px", backgroundColor: isDark ? "#2a3350" : "#eef2f8", borderColor: isDark ? dk.border : "#cfd8e6", color: isDark ? dk.textMuted : "#8a97ad" }}
+              >
+                <GripVertical size={13} strokeWidth={2} />
+              </div>
+            </div>
           </div>
         )}
 
@@ -3055,7 +3129,8 @@ export default function MishpatPage() {
             Expanded, it covers everything up to the rail and shows every column. ── */}
         {!narrow && isPromptsOpen && (
           <div
-            className={promptsFocus ? "absolute top-0 bottom-0 z-[46]" : "relative flex-shrink-0"}
+            // above the editor (and the chat floating over it), so the table's own grip is never covered
+            className={promptsFocus ? "absolute top-0 bottom-0 z-[46]" : "relative flex-shrink-0 z-[41]"}
             style={promptsFocus
               ? { left: 0, right: "55px", backgroundColor: isDark ? dk.surface : "white" }
               : { width: `${promptsW}px`, borderInlineStart: `2px solid ${promptsResizing ? c.primary : isDark ? dk.border : "#dbe7f7"}` }}
@@ -3069,7 +3144,7 @@ export default function MishpatPage() {
               onClose={togglePrompts}
               openId={promptPane?.initial?.id ?? null}
               onOpen={openPromptPane}
-              onNew={(complex) => { setPromptsFocus(false); setPromptPane({ initial: complex ? { parts: [emptyPart()] } : null, mode: "new" }); }}
+              onNew={() => { setPromptsFocus(false); setPromptPane({ initial: null, mode: "new" }); }}
               onUse={usePrompt}
               onFav={toggleFav}
               onEdit={openPromptPane}
@@ -3184,7 +3259,7 @@ export default function MishpatPage() {
             }, ...prev]);
             setComplexOpen(false);
             setComplexInUse(name);
-            setToast("הפרומפט המורכב נשמר במאגר");
+            setToast("הפרומפט המפורט נשמר במאגר");
           }}
           onClose={() => setComplexOpen(false)}
         />
