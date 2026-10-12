@@ -15,7 +15,7 @@
 import { useState } from "react";
 import { Check, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
-import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
   CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, today, uid, type Prompt,
 } from "./prompts";
@@ -38,9 +38,8 @@ const clean = (parts: PromptPart[]) => parts.map((p) => ({ ...p, task: p.task.tr
 // specific documents keeps their document types instead.
 function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
   return parts.map((p) => {
-    if (scopeOf(p) !== "docs") return { ...p, docs: undefined };
-    const types = Array.from(new Set((p.docs ?? []).map((d) => docs.find((x) => x.name === d.name)?.type).filter((t): t is string => !!t)));
-    return { ...p, scope: "types", sources: types, docs: undefined };
+    const types = (p.docs ?? []).map((d) => docs.find((x) => x.name === d.name)?.type).filter((t): t is string => !!t);
+    return { ...p, sources: Array.from(new Set([...p.sources, ...types])), docs: undefined };
   });
 }
 
@@ -66,10 +65,10 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
   const quietBorder = isDark ? dk.border : c.border;
-  const hasPicked = parts.some((p) => scopeOf(p) === "docs");
+  const hasPicked = parts.some((p) => p.docs?.length);
 
   const send = () => {
-    const bad = parts.some((p) => !p.task.trim() || (scopeOf(p) === "docs" && !p.docs?.length));
+    const bad = parts.some((p) => !p.task.trim());
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
     if (keep) {
