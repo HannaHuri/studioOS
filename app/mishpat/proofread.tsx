@@ -248,6 +248,15 @@ export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun })
         </div>
       )}
 
+      {run.kinds.coherence && (
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[14px]" style={{ fontWeight: 600 }}>בדיקת עקיבות</div>
+          {PROOF_COHERENCE_NOTES.map((n, i) => (
+            <div key={i} className="text-[14px] leading-relaxed">{n}</div>
+          ))}
+        </div>
+      )}
+
       {run.kinds.anon && (
         <div className="flex flex-col gap-1.5">
           <div className="text-[14px]" style={{ fontWeight: 600 }}>התממה</div>
@@ -258,15 +267,6 @@ export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun })
               <span>{r.after}</span>
               <span className="text-[12.5px]" style={{ color: grayCol }}>({r.kind})</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {run.kinds.coherence && (
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[14px]" style={{ fontWeight: 600 }}>בדיקת עקיבות</div>
-          {PROOF_COHERENCE_NOTES.map((n, i) => (
-            <div key={i} className="text-[14px] leading-relaxed">{n}</div>
           ))}
         </div>
       )}
