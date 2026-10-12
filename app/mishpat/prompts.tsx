@@ -84,8 +84,8 @@ export const fitsCase = (pr: { caseType: string; matter: string; stage: string; 
 export const ME = "טל חבקין";
 export const MY_ROLE = "כב׳";
 
-const uid = () => Math.random().toString(36).slice(2, 9);
-const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
+export const uid = () => Math.random().toString(36).slice(2, 9);
+export const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 const p = (x: Partial<Prompt> & { name: string; body: string; source: PromptSource }): Prompt => ({
   id: uid(), author: null, fav: false, tags: [], uses: 0, ratingSum: 0, ratingCount: 0,

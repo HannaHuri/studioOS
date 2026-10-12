@@ -1,6 +1,6 @@
 // Builds the demo proofreading .docx files for the studioOS prototype.
-// Four variants of the same draft: the original, הגהה only (tracked changes),
-// בדיקת עקיבות only (comments), and both. No npm deps — the OOXML and the ZIP are written here.
+// Five variants of the same draft: the original, הגהה only (tracked changes),
+// בדיקת עקיבות only (comments), both, and התממה (a clean copy with identifiers replaced). No npm deps — the OOXML and the ZIP are written here.
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
@@ -128,12 +128,25 @@ const DOC = [
   },
 ];
 
+// התממה: the same pairs the answer lists (ANON_REPLACEMENTS in app/mishpat/proofread.tsx).
+// Longest first, so the full company name goes before its shorter form.
+const ANON = [
+  ["יעקב אברמוב", "י.א."],
+  ['המרכז הרפואי קדם בע"מ', "הנתבעת"],
+  ["הרפואי קדם", "הרפואי"], // also catches "למרכז הרפואי קדם"
+  ["12345-67-89", "XXXXX-XX-XX"],
+  ["1962", "[שנה]"],
+];
+const anonymize = (t) => ANON.reduce((s, [a, b]) => s.split(a).join(b), t);
+
 // ── XML helpers ────────────────────────────────────────────────────────────
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const RPR = '<w:rPr><w:rFonts w:ascii="David" w:hAnsi="David" w:cs="David"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rtl/></w:rPr>';
 const run = (text, tag = "w:t") => `<w:r>${RPR}<${tag} xml:space="preserve">${esc(text)}</${tag}></w:r>`;
 
 function paragraph(p, variant, state) {
+  // התממה reads the uploaded text as it is (no fixes), with the identifiers replaced
+  if (variant === "anon") p = { ...p, tokens: p.tokens.map((t) => anonymize(typeof t === "string" ? t : t.anchor || t.del || "")) };
   const withIns = variant === "lang" || variant === "both";
   const withComments = variant === "coherence" || variant === "both";
   let body = "";
@@ -234,7 +247,7 @@ function buildDocx(variant) {
 
 const outDir = process.argv[2] || ".";
 fs.mkdirSync(outDir, { recursive: true });
-for (const v of ["original", "lang", "coherence", "both"]) {
+for (const v of ["original", "lang", "coherence", "both", "anon"]) {
   const file = path.join(outDir, `draft-${v}.docx`);
   fs.writeFileSync(file, buildDocx(v));
   console.log("wrote", file, fs.statSync(file).size, "bytes");
