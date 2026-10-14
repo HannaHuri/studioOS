@@ -5,8 +5,9 @@
 
    שאלה מפורטת — picked in the input's task menu. The same parts as a detailed prompt in the
    library, but built inside the case, so a part can also draw on specific documents of this case
-   with a page range. It is sent once; "שמירה גם בספרייה" keeps a copy as a library prompt,
-   which is general, so its specific documents are kept as their document types.
+   with a page range. It is sent once; "שמירה בספרייה שלי" keeps a copy as a library prompt,
+   which is general, so its specific documents are kept as their document types. Sharing is a
+   second, separate choice under it, since not everything I keep is something I pass on.
 
    שימוש בפרומפט — choosing a prompt to use opens it here first: use it as it is, or change it
    for this use only, with "שמירת השינויים בספרייה" to keep the change.
@@ -17,7 +18,7 @@ import { Check, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
-  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, today, uid, type Prompt,
+  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
 
 function CheckRow({ on, onToggle, label, isDark }: { on: boolean; onToggle: () => void; label: string; isDark: boolean }) {
@@ -49,13 +50,15 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
   isDark: boolean;
   caseDocs: CaseDocOption[];
   onSend: (parts: PromptPart[], guidelines: string) => void;
-  onSaveToLibrary: (pr: Prompt) => void;
+  onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
   const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
   const [guidelines, setGuidelines] = useState(""); // general instructions for all the parts
   const [attempted, setAttempted] = useState(false);
-  const [keep, setKeep] = useState(false); // שמירה גם בספרייה
+  const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
+  const [share, setShare] = useState(false); // שיתוף עם כל המשתמשים, only on top of keeping
+  const [anon, setAnon] = useState(false);
   const [name, setName] = useState("");
   const [court, setCourt] = useState(CASE_CONTEXT.court);
   const [caseType, setCaseType] = useState(CASE_CONTEXT.caseType);
@@ -75,13 +78,17 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
     if (keep) {
-      const general = generalize(done, caseDocs);
+      // The shared copy goes out with identifying details swapped for fields, as the library
+      // editor does; my own copy and the question sent here keep them.
+      const scrubText = (t: string) => (share ? scrub(t, findIdentifiers(t), new Set()) : t);
+      const general = generalize(done, caseDocs).map((p) => ({ ...p, task: scrubText(p.task), how: scrubText(p.how) }));
+      const g = scrubText(guidelines.trim());
       onSaveToLibrary({
-        id: uid(), name: name.trim(), body: partsToText(general, guidelines), parts: general,
-        guidelines: guidelines.trim() || undefined,
+        id: uid(), name: scrubText(name.trim()), body: partsToText(general, g), parts: general,
+        guidelines: g || undefined,
         source: "mine", author: null, fav: false, court, caseType, matter, stage, tags: [],
         uses: 1, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
-      });
+      }, share ? { anon } : undefined);
     }
     onSend(done, guidelines.trim());
   };
@@ -119,7 +126,7 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
             <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} />
 
             <div className="pt-1">
-              <CheckRow on={keep} onToggle={() => setKeep((v) => !v)} label="שמירה גם בספרייה" isDark={isDark} />
+              <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
               {keep && (
                 <div className="mt-3 flex flex-col gap-3">
                   <div>
@@ -154,6 +161,30 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
                       בספרייה הפרומפט כללי ואינו קשור לתיק הזה, ולכן מסמכים ספציפיים יישמרו כסוגי המסמכים שלהם.
                     </div>
                   )}
+                  <CheckRow on={share} onToggle={() => setShare((v) => !v)} label="שיתוף עם כל המשתמשים" isDark={isDark} />
+                  {share && (
+                    <div className="px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+                      <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
+                        בעותק המשותף, פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי. העותק שלך נשאר כפי שהוא.
+                      </div>
+                      <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
+                      <div className="flex items-center gap-2">
+                        {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
+                          <button
+                            key={t} onClick={() => setAnon(k)}
+                            className="h-7 px-3 rounded-[4px] text-[12.5px] transition-colors"
+                            style={{
+                              border: `1px solid ${anon === k ? c.primary : quietBorder}`,
+                              color: anon === k ? c.primary : textCol,
+                              backgroundColor: surface,
+                            }}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -165,7 +196,7 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
             ביטול
           </button>
           <button onClick={send} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            {keep ? "שמירה ושליחה" : "שליחה"}
+            {share ? "שמירה, שיתוף ושליחה" : keep ? "שמירה ושליחה" : "שליחה"}
           </button>
         </div>
       </div>

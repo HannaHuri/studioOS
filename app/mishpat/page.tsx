@@ -770,7 +770,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
-  onSaveDetailed?: (pr: Prompt) => void; // a detailed question kept with "שמירה גם בספרייה"
+  onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
   complexName?: string | null;
   onClearComplex?: () => void;
 }) {
@@ -1493,7 +1493,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         isDark={isDark}
         caseDocs={CASE_DOC_OPTIONS}
         onSend={sendDetailed}
-        onSaveToLibrary={(pr) => onSaveDetailed?.(pr)}
+        onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
         onClose={() => setDetailedOpen(false)}
       />
     );
@@ -3017,7 +3017,16 @@ export default function MishpatPage() {
             insert={insert}
             onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
             onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
-            onSaveDetailed={(pr) => { setPrompts((prev) => [pr, ...prev]); setToast("השאלה נשמרה גם בספרייה"); }}
+            onSaveDetailed={(pr, share) => {
+              setPrompts((prev) => [
+                ...(share ? [{
+                  ...pr, id: Math.random().toString(36).slice(2, 9), source: "shared" as const,
+                  author: share.anon ? "אנונימי" : ME, authorRole: share.anon ? undefined : MY_ROLE, uses: 0,
+                }] : []),
+                pr, ...prev,
+              ]);
+              setToast(share ? "השאלה נשמרה בספרייה שלך ושותפה" : "השאלה נשמרה בספרייה שלך");
+            }}
             complexName={complexInUse}
             onClearComplex={() => setComplexInUse(null)}
           />

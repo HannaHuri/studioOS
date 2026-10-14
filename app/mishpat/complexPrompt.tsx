@@ -189,19 +189,21 @@ const SCOPES: { key: SourceScope; label: string }[] = [
 ];
 function ScopeSwitch({ value, onChange, isDark }: { value: SourceScope; onChange: (v: SourceScope) => void; isDark: boolean }) {
   return (
-    <div className="inline-flex rounded-[5px] p-0.5 mb-2" style={{ backgroundColor: isDark ? dk.input : "#e6e9ef" }} role="radiogroup" aria-label="מקורות">
+    <div className="flex items-center gap-5 mb-2" role="radiogroup" aria-label="מקורות">
       {SCOPES.map(({ key, label }) => {
         const on = key === value;
         return (
           <button
             key={key} role="radio" aria-checked={on} onClick={() => onChange(key)}
-            className="h-7 px-3 rounded-[4px] text-[13px] transition-colors"
-            style={{
-              backgroundColor: on ? (isDark ? dk.surface : "white") : "transparent",
-              color: on ? (isDark ? dk.text : c.text) : (isDark ? dk.textMuted : c.textGray),
-              boxShadow: on ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
-            }}
+            className="flex items-center gap-1.5 text-[13px]"
+            style={{ color: isDark ? dk.text : c.text }}
           >
+            <span
+              className="size-[16px] flex-none flex items-center justify-center rounded-full"
+              style={{ border: `1px solid ${on ? c.primary : isDark ? dk.border : "#b8c0cc"}` }}
+            >
+              {on && <span className="size-[8px] rounded-full" style={{ backgroundColor: c.primary }} />}
+            </span>
             {label}
           </button>
         );
