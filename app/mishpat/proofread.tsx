@@ -13,7 +13,7 @@
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, UserRoundX } from "lucide-react";
+import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
 import { useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
@@ -131,7 +131,9 @@ export function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) 
 // the conversation, not in the composer (which is for writing the next question) and not inside
 // whichever message happened to use it first. The file card it always was — a small bordered
 // card — pinned at the head of the thread by the page.
-export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
+// onRemove is given only until the draft is used: once checks ran on it or a question was asked
+// with it, the conversation refers to it, and another draft means a new conversation.
+export function DraftStrip({ name, isDark, onRemove }: { name: string; isDark: boolean; onRemove?: () => void }) {
   return (
     <div
       className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
@@ -146,6 +148,15 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
       <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
         {name}
       </span>
+      {onRemove && (
+        <button
+          onClick={onRemove} title="הסרת המסמך" aria-label="הסרת המסמך"
+          className="size-5 flex-none flex items-center justify-center rounded-[3px] transition-colors hover:bg-black/5"
+          style={{ color: isDark ? dk.textMuted : c.textGray, marginInlineStart: "2px" }}
+        >
+          <X size={14} />
+        </button>
+      )}
     </div>
   );
 }

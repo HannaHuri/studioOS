@@ -815,6 +815,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
   // Each action runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>(NO_KINDS);
+  // a wrong upload can be taken back until the draft is used — by a check, or by a question asked with it
+  const draftRemovable = !anyKind(usedChecks) && !messages.some((m) => m.withDraft);
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1427,7 +1429,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
           <button
             role="menuitem" aria-haspopup="menu" aria-expanded={!!actionsSub}
-            onClick={(e) => { const at = subAt(e.currentTarget); setActionsSub((v) => (v ? null : at)); }}
+            onClick={(e) => { const at = subAt(e.currentTarget); setActionsSub(at); }}
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = hover; setActionsSub(subAt(e.currentTarget)); }}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = actionsSub ? hover : "transparent")}
             className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-right"
@@ -1511,7 +1513,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
-            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} /></div>}
+            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} /></div>}
             {renderInput()}
           </div>
         </div>
@@ -1534,7 +1536,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {draft && (
             <div className="sticky top-0 z-10 px-6 pt-3 pb-2 flex justify-center" style={{ backgroundColor: bg }}>
               <div className="w-full max-w-[768px] flex" dir="rtl">
-                <DraftStrip name={draft.name} isDark={isDark} />
+                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} />
               </div>
             </div>
           )}
