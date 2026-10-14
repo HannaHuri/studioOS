@@ -101,7 +101,7 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
           </button>
         </div>
         <div className="px-6 pb-4 text-[13.5px]" style={{ color: subCol }}>
-          כל חלק הוא שלב בשאלה, והחלקים רצים לפי הסדר. השאלה תישלח לשיחה הזו פעם אחת.
+          מגדירים מה לבדוק, באילו מסמכים ואיך. אפשר כמה חלקים, והם רצים לפי הסדר. השאלה תישלח לשיחה הזו פעם אחת.
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-4" dir="ltr">

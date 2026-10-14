@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
+  Activity, Brain, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -98,16 +98,19 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 
 // ── The input's task menu ───────────────────────────────────────────────────
 // In place of the old response-mode selector (מעמיק / ישיר / מהיר, removed 2026-10-12) and the
-// separate "פעולות" dialog: one menu that says what this send is. The two question types are
+// separate "פעולות" dialog: one menu that says what this send is. The three question types read
+// as a ladder from light to heavy — a direct answer, a free question the agents work through, and
+// a structured one built in its own window. They describe the result, never the mechanism. They are
 // plain rows; below a line, "פעולות על מסמך" opens a side menu whose actions tick, any number
 // together. Ticking one puts the input in document mode and shows the upload icon.
-type QuestionType = "basic" | "detailed";
+type QuestionType = "basic" | "deep" | "detailed";
 const TASK_MENU_W = 340; // wide enough that each description fits on one line, so the menu stays short
-const TASK_MENU_H = 200; // about its height, to tell whether it fits below the button
+const TASK_MENU_H = 250; // about its height, to tell whether it fits below the button
 // The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
 const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
-  { key: "basic", label: "שאלה בסיסית", desc: "שאלה חופשית על התיק", Icon: MessageCircle },
-  { key: "detailed", label: "שאלה מפורטת", desc: "שאלה בשלבים, עם בחירת מסמכים ועמודים", Icon: WandSparkles, mirror: true },
+  { key: "basic", label: "שאלה בסיסית", desc: "תשובה מהירה", Icon: MessageCircle },
+  { key: "deep", label: "שאלה מעמיקה", desc: "ניתוח רחב של התיק, לוקח יותר זמן", Icon: Brain },
+  { key: "detailed", label: "שאלה מפורטת", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
 ];
 
 type DocItem = { name: string; words: string; summary: string };
@@ -798,6 +801,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [actionsSub, setActionsSub] = useState<{ top: number; right: number } | null>(null); // the side menu
   const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
   const [detailedOpen, setDetailedOpen] = useState(false);
+  const [qType, setQType] = useState<"basic" | "deep">("basic"); // the free question's depth; stays until changed
   const docMode = anyKind(picked);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
@@ -918,6 +922,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setPicked(NO_KINDS);
+    setQType("basic");
     setTaskOpen(false);
     setDetailedOpen(false);
     setUsedChecks(NO_KINDS);
@@ -933,11 +938,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const textCol = isDark ? dk.text : c.text;
 
 
-  function ask(q: string) {
+  // A basic question is answered straight away; a deep or detailed one goes through the agents' steps.
+  function ask(q: string, agent: boolean) {
     // once a draft is in the conversation it is part of every question's context
     const withDraft = !!draft;
-    setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent: true, logSteps: AGENT_STEPS, withDraft }]);
-    setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
+    setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent, logSteps: agent ? AGENT_STEPS : undefined, withDraft }]);
+    if (agent) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
 
   function handleSend() {
@@ -953,14 +959,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!inputText.trim() && !complexName) return;
     const q = complexName ? (inputText.trim() ? `${complexName}: ${inputText.trim()}` : complexName) : inputText.trim();
     if (complexName) onClearComplex?.();
-    ask(q);
+    ask(q, qType === "deep");
     setInputText("");
   }
 
   // A detailed question goes into the conversation as its parts, written out
   function sendDetailed(parts: PromptPart[], guidelines: string) {
     setDetailedOpen(false);
-    ask(partsToText(parts, guidelines));
+    ask(partsToText(parts, guidelines), true);
   }
 
   function handleStop() {
@@ -1141,7 +1147,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : detailedOpen ? "שאלה מפורטת" : "שאלה בסיסית"}</span>
+            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : detailedOpen ? "שאלה מפורטת" : qType === "deep" ? "שאלה מעמיקה" : "שאלה בסיסית"}</span>
             <ChevronDown size={11} style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }} />
           </button>
 
@@ -1398,11 +1404,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         <div className="fixed inset-0 z-[190]" onClick={close} />
         <div dir="rtl" role="menu" style={panel(taskPos, W)}>
           {QUESTION_TYPES.map(({ key, label, desc, Icon, mirror }) => {
-            const on = !docMode && key === "basic";
+            const on = !docMode && !detailedOpen && key === qType;
             return (
               <button
                 key={key} role="menuitem"
-                onClick={() => { setPicked(NO_KINDS); close(); if (key === "detailed") setDetailedOpen(true); }}
+                onClick={() => { setPicked(NO_KINDS); close(); if (key === "detailed") setDetailedOpen(true); else setQType(key); }}
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = hover; setActionsSub(null); }}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
@@ -1561,8 +1567,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                         : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
                         : msg.withDraft ? <p>{DRAFT_ANSWER}</p>
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
-                        : msg.isFirst ? renderFirstAnswer()
-                        : <p>מעבד את שאלתך...</p>}
+                        : renderFirstAnswer()}
                     </div>
                     {!showingAgentProgress && (
                       <MessageActions
