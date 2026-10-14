@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2, MessageSquareText } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -1475,11 +1475,11 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     <span className="mt-0.5"><Tick checked={done || on} muted={done} /></span>
                     <span className="flex flex-col gap-0.5 min-w-0">
                       <span className="flex items-center gap-1.5 text-[14px]" style={{ color: textCol2 }}>
-                        <MessageSquareText size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                        <MessageSquare size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
                         שיחה עם מסמך
                         {done && <span className="text-[12.5px]" style={{ color: subCol }}>· המסמך כבר בשיחה</span>}
                       </span>
-                      <span className="text-[13px] leading-snug" style={{ color: subCol }}>העלאת המסמך לשיחה כדי לשאול עליו, בלי בדיקות</span>
+                      <span className="text-[13px] leading-snug" style={{ color: subCol }}>העלאת מסמך לשיחה</span>
                     </span>
                   </button>
                 </div>
