@@ -809,7 +809,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
-  const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
+  const [draft, setDraft] = useState<{ name: string; size: number; words: number | null; url: string } | null>(null);
   // A file over the word limit isn't taken in; a toast above the disclaimer says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
@@ -1178,7 +1178,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 }
                 setUploadError(null);
                 // straight into the conversation — the actions are in the menu beside the icon
-                setDraft({ name: f.name, size: f.size, words });
+                setDraft({ name: f.name, size: f.size, words, url: URL.createObjectURL(f) });
                 requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
@@ -1513,7 +1513,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
-            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} /></div>}
+            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
           </div>
         </div>
@@ -1536,7 +1536,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {draft && (
             <div className="sticky top-0 z-10 px-6 pt-3 pb-2 flex justify-center" style={{ backgroundColor: bg }}>
               <div className="w-full max-w-[768px] flex" dir="rtl">
-                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} />
+                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
               </div>
             </div>
           )}

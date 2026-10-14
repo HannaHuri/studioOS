@@ -13,7 +13,7 @@
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
+import { ChevronDown, Download, FileCheck2, FileText, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
 import { useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
@@ -132,8 +132,9 @@ export function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) 
 // whichever message happened to use it first. The file card it always was — a small bordered
 // card — pinned at the head of the thread by the page.
 // onRemove is given only until the draft is used: once checks ran on it or a question was asked
-// with it, the conversation refers to it, and another draft means a new conversation.
-export function DraftStrip({ name, isDark, onRemove }: { name: string; isDark: boolean; onRemove?: () => void }) {
+// with it, the conversation refers to it, and another draft means a new conversation. From then
+// on the card offers the file back instead (downloadUrl).
+export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string }) {
   return (
     <div
       className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
@@ -156,6 +157,15 @@ export function DraftStrip({ name, isDark, onRemove }: { name: string; isDark: b
         >
           <X size={14} />
         </button>
+      )}
+      {!onRemove && downloadUrl && (
+        <a
+          href={downloadUrl} download={name} title="הורדת המסמך" aria-label="הורדת המסמך"
+          className="size-5 flex-none flex items-center justify-center rounded-[3px] transition-colors hover:bg-black/5"
+          style={{ color: isDark ? dk.textMuted : c.textGray, marginInlineStart: "2px" }}
+        >
+          <Download size={14} />
+        </a>
       )}
     </div>
   );
