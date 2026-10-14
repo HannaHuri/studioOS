@@ -160,7 +160,7 @@ export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: stri
       )}
       {!onRemove && downloadUrl && (
         <a
-          href={downloadUrl} download={name} title="הורדת המסמך" aria-label="הורדת המסמך"
+          href={downloadUrl} download={name} title="הורדת המסמך המקורי" aria-label="הורדת המסמך המקורי"
           className="size-5 flex-none flex items-center justify-center rounded-[3px] transition-colors hover:bg-black/5"
           style={{ color: isDark ? dk.textMuted : c.textGray, marginInlineStart: "2px" }}
         >
