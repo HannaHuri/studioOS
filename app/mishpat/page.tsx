@@ -108,8 +108,8 @@ const TASK_MENU_W = 340; // wide enough that each description fits on one line, 
 const TASK_MENU_H = 250; // about its height, to tell whether it fits below the button
 // The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
 const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
-  { key: "basic", label: "שאלה בסיסית", desc: "תשובה מהירה", Icon: MessageCircle },
-  { key: "deep", label: "שאלה מעמיקה", desc: "ניתוח רחב של התיק, לוקח יותר זמן", Icon: Brain },
+  { key: "deep", label: "שאלה מעמיקה", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
+  { key: "basic", label: "שאלה בסיסית", desc: "מענה על ידי שליחת הבקשה ישירות", Icon: MessageCircle },
   { key: "detailed", label: "שאלה מפורטת", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
 ];
 
@@ -801,7 +801,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [actionsSub, setActionsSub] = useState<{ top: number; right: number } | null>(null); // the side menu
   const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
   const [detailedOpen, setDetailedOpen] = useState(false);
-  const [qType, setQType] = useState<"basic" | "deep">("basic"); // the free question's depth; stays until changed
+  const [qType, setQType] = useState<"basic" | "deep">("deep"); // the free question's depth; stays until changed
   const docMode = anyKind(picked);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
@@ -922,7 +922,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setPicked(NO_KINDS);
-    setQType("basic");
+    setQType("deep");
     setTaskOpen(false);
     setDetailedOpen(false);
     setUsedChecks(NO_KINDS);
