@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2 } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2, MessageSquareText } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -802,7 +802,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
   const [detailedOpen, setDetailedOpen] = useState(false);
   const [qType, setQType] = useState<"basic" | "deep">("deep"); // the free question's depth; stays until changed
-  const docMode = anyKind(picked);
+  // שיחה עם מסמך: an action that only brings the document into the conversation, to ask about it
+  const [docChat, setDocChat] = useState(false);
+  const docMode = anyKind(picked) || docChat;
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -924,6 +926,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setPicked(NO_KINDS);
+    setDocChat(false);
     setQType("deep");
     setTaskOpen(false);
     setDetailedOpen(false);
@@ -954,6 +957,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       if (!draft) { fileRef.current?.click(); return; }
       const kinds: ProofKinds = { lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence, anon: picked.anon && !usedChecks.anon };
       setPicked(NO_KINDS);
+      setDocChat(false);
       if (anyKind(kinds)) handleRunActions(kinds);
       return;
     }
@@ -1113,7 +1117,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={docMode
+          placeholder={docChat && !anyKind(picked) && !draft
+            ? "יש להעלות מסמך Word, ואז אפשר לשאול עליו"
+            : docMode
             ? (draft ? "השליחה תריץ את הפעולות שנבחרו על הטיוטה" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
             : draft ? "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
@@ -1149,7 +1155,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : detailedOpen ? "מפורט" : qType === "deep" ? "מעמיק" : "ישיר"}</span>
+            <span>{docMode ? [...(docChat ? ["שיחה עם מסמך"] : []), ...DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short)].join(" + ") : detailedOpen ? "מפורט" : qType === "deep" ? "מעמיק" : "ישיר"}</span>
             <ChevronDown size={11} style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }} />
           </button>
 
@@ -1179,6 +1185,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 setUploadError(null);
                 // straight into the conversation — the actions are in the menu beside the icon
                 setDraft({ name: f.name, size: f.size, words, url: URL.createObjectURL(f) });
+                // שיחה עם מסמך alone ends with the upload: the input goes back to asking, now about the draft
+                if (!anyKind(picked)) setDocChat(false);
                 requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
@@ -1390,7 +1398,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       backgroundColor: isDark ? dk.surface : "white", borderRadius: "12px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
       width: `${width}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
     });
-    const nPicked = DRAFT_ACTIONS.filter((a) => picked[a.key]).length;
+    const nPicked = DRAFT_ACTIONS.filter((a) => picked[a.key]).length + (docChat ? 1 : 0);
     const SUB_W = 340, SUB_H = 300;
     // Beside the row, to its left as a side menu opens in RTL — or to its right when the menu sits
     // too close to the left edge; and lifted when it would run past the bottom of the screen.
@@ -1410,7 +1418,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             return (
               <button
                 key={key} role="menuitem"
-                onClick={() => { setPicked(NO_KINDS); close(); if (key === "detailed") setDetailedOpen(true); else setQType(key); }}
+                onClick={() => { setPicked(NO_KINDS); setDocChat(false); close(); if (key === "detailed") setDetailedOpen(true); else setQType(key); }}
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = hover; setActionsSub(null); }}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
@@ -1450,6 +1458,33 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         {actionsSub && (
           <div dir="rtl" role="menu" style={{ ...panel(actionsSub, SUB_W), maxHeight: `calc(100vh - ${actionsSub.top + 12}px)`, overflowY: "auto" }} className="docs-scroll">
             <div className="px-4 pt-1 pb-1 text-[12.5px]" style={{ color: subCol }}>אפשר לבחור כמה</div>
+            {/* First, the plainest thing to do with a document: bring it in and ask about it. Once a
+                draft is in the conversation, that has happened. */}
+            {(() => {
+              const done = !!draft, on = docChat;
+              return (
+                <div style={{ opacity: done ? 0.5 : 1 }}>
+                  <button
+                    role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
+                    onClick={done ? undefined : () => setDocChat((v) => !v)}
+                    className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right"
+                    style={{ cursor: done ? "default" : "pointer" }}
+                    onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <span className="mt-0.5"><Tick checked={done || on} muted={done} /></span>
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                      <span className="flex items-center gap-1.5 text-[14px]" style={{ color: textCol2 }}>
+                        <MessageSquareText size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                        שיחה עם מסמך
+                        {done && <span className="text-[12.5px]" style={{ color: subCol }}>· המסמך כבר בשיחה</span>}
+                      </span>
+                      <span className="text-[13px] leading-snug" style={{ color: subCol }}>העלאת המסמך לשיחה כדי לשאול עליו, בלי בדיקות</span>
+                    </span>
+                  </button>
+                </div>
+              );
+            })()}
             {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key];
