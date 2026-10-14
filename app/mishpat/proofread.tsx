@@ -3,16 +3,17 @@
 // ── טיוטה בשיחה ────────────────────────────────────────────────────────────
 // A conversation can take one Word draft. Uploading it puts it straight into the conversation —
 // shown at its head, part of every question's context from then on, and it can't be removed.
-// The upload icon and the response-mode selector go grey, and a "פעולות" button appears beside them:
+// Once a draft is in, the פעולות button beside the upload icon opens the actions dialog;
+// ticking one or more and ביצוע runs them together:
 //   הגהה            — כתיב, ניסוח ופיסוק; comes back as tracked changes
 //   בדיקת עקיבות    — contradictions INSIDE the draft; comes back as Word comments
-// One or more can be ticked and run together, and each runs only once per conversation; once all
-// have run, the button goes grey too. More actions will join the dialog later.
+//   התממה           — names and identifiers replaced; comes back as a clean copy (demo for now)
+// Each runs only once per conversation.
 //
 // The demo files in /public/proofread are real .docx — the tracked changes and comments open
 // in Word and can be accepted or rejected. Regenerate them with
 // `node scripts/make-proof-docx.js public/proofread` (the draft text lives there).
-import { ChevronDown, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch, X } from "lucide-react";
+import { ChevronDown, Download, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
 import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
 
@@ -20,13 +21,19 @@ import { c, dk, FONT } from "./theme";
 export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; style?: CSSProperties }>;
 export type RunStep = { Icon: RunStepIcon; text: string; subText?: string; altIcon?: RunStepIcon; altText?: string };
 
-// What the dialog is set to. `chat` never sits alongside the other two — the toggles enforce it.
-export type ProofKinds = { lang: boolean; coherence: boolean };
+// Which actions run together. Any mix of the three.
+export type ProofKinds = { lang: boolean; coherence: boolean; anon: boolean };
+export const NO_KINDS: ProofKinds = { lang: false, coherence: false, anon: false };
+export const anyKind = (k: ProofKinds) => k.lang || k.coherence || k.anon;
 // What a finished check carries into the message list and the history item.
 export type ProofRun = { fileName: string; kinds: ProofKinds };
 
-export const proofKindLabel = (k: ProofKinds) =>
-  k.lang && k.coherence ? "הגהה ובדיקת עקיבות" : k.lang ? "הגהה" : "בדיקת עקיבות";
+const KIND_NAMES: [keyof ProofKinds, string][] = [["lang", "הגהה"], ["coherence", "בדיקת עקיבות"], ["anon", "התממה"]];
+// "הגהה", "הגהה ובדיקת עקיבות", "הגהה, בדיקת עקיבות והתממה"
+export const proofKindLabel = (k: ProofKinds) => {
+  const n = KIND_NAMES.filter(([key]) => k[key]).map(([, t]) => t);
+  return n.length < 2 ? n.join("") : `${n.slice(0, -1).join(", ")} ו${n[n.length - 1]}`;
+};
 
 // ── The demo findings ──────────────────────────────────────────────────────
 // Fixed for the prototype; each one exists in the .docx as a real tracked change or a real
@@ -46,6 +53,15 @@ export const PROOF_COHERENCE_NOTES: string[] = [
   'סכום התביעה — בסעיף 4 הנזק הועמד על 1,250,000 ש"ח, ובסעיף 5 מתבקש סכום של 1,400,000 ש"ח.',
 ];
 
+// What התממה replaced — the same pairs the demo file has replaced, so the two agree.
+export const ANON_REPLACEMENTS: { before: string; after: string; kind: string }[] = [
+  { before: "יעקב אברמוב", after: "י.א.", kind: "שם התובע" },
+  { before: 'המרכז הרפואי קדם בע"מ', after: "הנתבעת", kind: "שם הנתבעת" },
+  { before: "המרכז הרפואי קדם", after: "המרכז הרפואי", kind: "שם הנתבעת" },
+  { before: "12345-67-89", after: "XXXXX-XX-XX", kind: "מספר תיק" },
+  { before: "1962", after: "[שנה]", kind: "שנת לידה" },
+];
+
 // The canned answer to a question asked with the draft in context.
 export const DRAFT_ANSWER =
   'לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח. הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.';
@@ -58,30 +74,41 @@ export function proofSteps(k: ProofKinds): RunStep[] {
     { Icon: FileText, text: "קורא את הטיוטה" },
     ...(k.lang ? [{ Icon: SpellCheck, text: "בודק כתיב, ניסוח ופיסוק" }] : []),
     ...(k.coherence ? [{ Icon: TextSearch, text: "מאתר סתירות בתוך הטיוטה" }] : []),
+    ...(k.anon ? [{ Icon: UserRoundX, text: "מאתר שמות ופרטים מזהים ומחליף אותם" }] : []),
     { Icon: Terminal, text: "מסמן את התיקונים וההערות במסמך" },
-    { Icon: Send, text: "מכין את הקובץ להורדה" },
+    { Icon: Send, text: k.anon && (k.lang || k.coherence) ? "מכין את הקבצים להורדה" : "מכין את הקובץ להורדה" },
   ];
 }
 
-// The four demo files differ only in what is marked in them; `original` is what the
-// user uploaded, kept untouched so "המסמך המקורי נשמר ללא שינוי" is literally true.
-export const proofFileUrl = (k: ProofKinds) =>
-  `/studioOS/proofread/draft-${k.lang && k.coherence ? "both" : k.lang ? "lang" : "coherence"}.docx`;
-
+// The demo files differ only in what is marked in them; `original` is what the user uploaded,
+// kept untouched so "המסמך המקורי נשמר ללא שינוי" is literally true. התממה comes back as its own
+// clean copy, so a run that includes it can hand back two files.
+export type ProofFile = { url: string; name: string; note: string; label: string };
+const marked = (k: ProofKinds) => ({ ...k, anon: false });
 // The original name, a plain hyphen, and the check(s) that ran. Hebrew, so a Hebrew file name
 // isn't reordered around an English suffix — agreed with dev, 2026-10-04.
-export const proofDownloadName = (fileName: string, k: ProofKinds) =>
-  `${fileName.replace(/\.docx?$/i, "")} - ${proofKindLabel(k)}.docx`;
-
-// What the downloaded file contains — the tooltip on the download link, so the answer
-// doesn't spend a line on it.
-export const proofFileNote = (k: ProofKinds) =>
-  k.lang && k.coherence ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, והסתירות כהערות בצד המסמך. המסמך המקורי נשמר ללא שינוי."
-    : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
-    : "הסתירות מסומנות כהערות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.";
+const fileName = (name: string, what: string) => `${name.replace(/\.docx?$/i, "")} - ${what}.docx`;
+export function proofFiles(run: ProofRun): ProofFile[] {
+  const k = run.kinds, files: ProofFile[] = [];
+  if (k.lang || k.coherence) files.push({
+    url: `/studioOS/proofread/draft-${k.lang && k.coherence ? "both" : k.lang ? "lang" : "coherence"}.docx`,
+    name: fileName(run.fileName, proofKindLabel(marked(k))),
+    label: k.lang ? "הורדת קובץ ההגהה" : "הורדת הקובץ עם ההערות",
+    note: k.lang && k.coherence ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, והסתירות כהערות בצד המסמך. המסמך המקורי נשמר ללא שינוי."
+      : k.lang ? "התיקונים מסומנים בקובץ כעקוב אחר שינויים, כדי לאשר או לדחות כל אחד מהם. המסמך המקורי נשמר ללא שינוי."
+      : "הסתירות מסומנות כהערות בצד המסמך, ללא שינוי בתוכן עצמו. המסמך המקורי נשמר ללא שינוי.",
+  });
+  if (k.anon) files.push({
+    url: "/studioOS/proofread/draft-anon.docx",
+    name: fileName(run.fileName, "מותמם"),
+    label: "הורדת הקובץ המותמם",
+    note: "עותק נקי של המסמך, שבו השמות והפרטים המזהים הוחלפו. המסמך המקורי נשמר ללא שינוי.",
+  });
+  return files;
+}
 
 // ── Shared bits ────────────────────────────────────────────────────────────
-function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
+export function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
   return (
     <span
       className="size-4 rounded-[2px] flex-shrink-0 flex items-center justify-center"
@@ -104,7 +131,10 @@ function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) {
 // the conversation, not in the composer (which is for writing the next question) and not inside
 // whichever message happened to use it first. The file card it always was — a small bordered
 // card — pinned at the head of the thread by the page.
-export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) {
+// onRemove is given only until the draft is used: once checks ran on it or a question was asked
+// with it, the conversation refers to it, and another draft means a new conversation. From then
+// on the card offers the file back instead (downloadUrl).
+export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string }) {
   return (
     <div
       className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
@@ -119,6 +149,24 @@ export function DraftStrip({ name, isDark }: { name: string; isDark: boolean }) 
       <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
         {name}
       </span>
+      {onRemove && (
+        <button
+          onClick={onRemove} title="הסרת המסמך" aria-label="הסרת המסמך"
+          className="size-5 flex-none flex items-center justify-center rounded-[3px] transition-colors hover:bg-black/5"
+          style={{ color: isDark ? dk.textMuted : c.textGray, marginInlineStart: "2px" }}
+        >
+          <X size={14} />
+        </button>
+      )}
+      {!onRemove && downloadUrl && (
+        <a
+          href={downloadUrl} download={name} title="הורדת המסמך המקורי" aria-label="הורדת המסמך המקורי"
+          className="size-5 flex-none flex items-center justify-center rounded-[3px] transition-colors hover:bg-black/5"
+          style={{ color: isDark ? dk.textMuted : c.textGray, marginInlineStart: "2px" }}
+        >
+          <Download size={14} />
+        </a>
+      )}
     </div>
   );
 }
@@ -172,17 +220,17 @@ export async function countDocxWords(file: File): Promise<number | null> {
   }
 }
 
-// ── The actions dialog ─────────────────────────────────────────────────────
-// Opens over the page from the "פעולות" button beside the upload icon once a draft is in. A dialog
-// rather than a dropdown: it already ran taller than some screens, and more actions are coming, so
-// the list scrolls inside it while the header and ביצוע stay in view. The rows tick rather than
-// pick: one or more actions are marked and run together on ביצוע. Each runs once per conversation —
-// after it has, its row stays, locked. Their icons are the ones the progress tracker shows for the same work.
-export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; desc: string; Icon: RunStepIcon }[] = [
-  { key: "lang", Icon: SpellCheck, title: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים, כדי לאשר או לדחות כל תיקון." },
-  { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך, ללא שינוי בתוכן." },
+// ── The actions ────────────────────────────────────────────────────────────
+// Listed in the actions dialog. Their icons are the ones the
+// progress tracker shows for the same work.
+export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; short: string; desc: string; Icon: RunStepIcon }[] = [
+  { key: "lang", Icon: SpellCheck, title: "הגהה", short: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים." },
+  { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", short: "עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך." },
+  { key: "anon", Icon: UserRoundX, title: "התממה", short: "התממה", desc: "החלפת שמות ופרטים מזהים. חוזרת כעותק נקי." },
 ];
 
+// The draft's actions as a dialog over the page — version A's way in, from the פעולות button
+// beside the upload icon (version B ticks them in the input's task menu instead).
 export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }: {
   isDark: boolean;
   usedChecks: ProofKinds;
@@ -190,8 +238,8 @@ export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }
   onClose: () => void;
   onRun: (kinds: ProofKinds) => void;
 }) {
-  const [picked, setPicked] = useState<ProofKinds>({ lang: false, coherence: false });
-  const [open, setOpen] = useState<ProofKinds>({ lang: false, coherence: false }); // which descriptions are showing
+  const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
+  const [open, setOpen] = useState<ProofKinds>(NO_KINDS); // which descriptions are showing
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -275,7 +323,7 @@ export function DraftActionsDialog({ isDark, usedChecks, pages, onClose, onRun }
             ביטול
           </button>
           <button
-            onClick={() => canRun && onRun({ lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence })}
+            onClick={() => canRun && onRun({ lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence, anon: picked.anon && !usedChecks.anon })}
             disabled={!canRun}
             className="h-9 px-6 rounded-[4px] text-[14px] text-white transition-opacity"
             style={{ backgroundColor: canRun ? c.primary : c.border, cursor: canRun ? "pointer" : "default", opacity: canRun ? 1 : 0.7 }}
@@ -296,12 +344,15 @@ export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun })
   const grayCol = isDark ? dk.textMuted : c.iconGray;
   const nLang = run.kinds.lang ? PROOF_LANG_FIXES.length : 0;
   const nCoherence = run.kinds.coherence ? PROOF_COHERENCE_NOTES.length : 0;
+  const nAnon = run.kinds.anon ? ANON_REPLACEMENTS.length : 0;
   const counts = [nLang && `${nLang} תיקונים`, nCoherence && `${nCoherence} סתירות`].filter(Boolean).join(" ו־");
 
   return (
     <div className="flex flex-col gap-3" dir="rtl">
       <p>
-        עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span> ומצאתי {counts}.
+        עברתי על <span style={{ fontWeight: 600 }}>{run.fileName}</span>
+        {counts && <> ומצאתי {counts}</>}
+        {nAnon > 0 && <>{counts ? ", ו" : " ו"}החלפתי {nAnon} פרטים מזהים בעותק נקי של המסמך</>}.
       </p>
 
       {/* The fixes are folded away: they are mechanical, and the place to actually act on them is
@@ -330,6 +381,20 @@ export function ProofAnswer({ isDark, run }: { isDark: boolean; run: ProofRun })
           <div className="text-[14px]" style={{ fontWeight: 600 }}>בדיקת עקיבות</div>
           {PROOF_COHERENCE_NOTES.map((n, i) => (
             <div key={i} className="text-[14px] leading-relaxed">{n}</div>
+          ))}
+        </div>
+      )}
+
+      {run.kinds.anon && (
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[14px]" style={{ fontWeight: 600 }}>התממה</div>
+          {ANON_REPLACEMENTS.map((r, i) => (
+            <div key={i} className="text-[14px] flex items-baseline gap-1.5 flex-wrap">
+              <span style={{ color: grayCol }}>{r.before}</span>
+              <span style={{ color: grayCol }}>←</span>
+              <span>{r.after}</span>
+              <span className="text-[12.5px]" style={{ color: grayCol }}>({r.kind})</span>
+            </div>
           ))}
         </div>
       )}
