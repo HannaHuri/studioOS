@@ -1102,7 +1102,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           dir="rtl"
-          placeholder={draft ? "אפשר לשאול כאן כל שאלה על הטיוטה ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
+          placeholder={draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
           autoFocus={isEmpty}
         />
         <div className="flex items-center gap-1.5" dir="ltr">
