@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2, MessageCircle } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2 } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -109,7 +109,7 @@ const TASK_MENU_H = 250; // about its height, to tell whether it fits below the 
 // The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
 const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
   { key: "deep", label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
-  { key: "basic", label: "ישיר", desc: "מענה על ידי שליחת הבקשה ישירות", Icon: MessageCircle },
+  { key: "basic", label: "ישיר", desc: "מענה על ידי שליחת הבקשה ישירות", Icon: Send },
   { key: "detailed", label: "מפורט", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
 ];
 
