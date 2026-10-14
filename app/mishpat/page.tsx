@@ -108,9 +108,9 @@ const TASK_MENU_W = 340; // wide enough that each description fits on one line, 
 const TASK_MENU_H = 250; // about its height, to tell whether it fits below the button
 // The detailed one carries the wand the prompt library marks detailed prompts with (mirrored, as there)
 const QUESTION_TYPES: { key: QuestionType; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
-  { key: "deep", label: "שאלה מעמיקה", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
-  { key: "basic", label: "שאלה בסיסית", desc: "מענה על ידי שליחת הבקשה ישירות", Icon: MessageCircle },
-  { key: "detailed", label: "שאלה מפורטת", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
+  { key: "deep", label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
+  { key: "basic", label: "ישיר", desc: "מענה על ידי שליחת הבקשה ישירות", Icon: MessageCircle },
+  { key: "detailed", label: "מפורט", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
 ];
 
 type DocItem = { name: string; words: string; summary: string };
@@ -1147,7 +1147,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : detailedOpen ? "שאלה מפורטת" : qType === "deep" ? "שאלה מעמיקה" : "שאלה בסיסית"}</span>
+            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : detailedOpen ? "מפורט" : qType === "deep" ? "מעמיק" : "ישיר"}</span>
             <ChevronDown size={11} style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }} />
           </button>
 
