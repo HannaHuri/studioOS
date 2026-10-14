@@ -98,8 +98,8 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 
 // ── Response mode ───────────────────────────────────────────────────────────
 // Version A's way of asking: a mode selector beside the input (version B has a task menu in its
-// place). מפורט sits under מעמיק: it is not a mode to stay on but a way to build one request, so it
-// opens the detailed question window rather than taking the check mark.
+// place). The detailed question is not a mode to stay on but a window to build one request in, so
+// it has its own icon in the input row rather than a row in this menu.
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
 const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
@@ -811,6 +811,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // A file over the word limit isn't taken in; a toast above the disclaimer says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
+  const [detailedTip, setDetailedTip] = useState(false); // and the detailed question's
   // Each action runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
   const [usedChecks, setUsedChecks] = useState<ProofKinds>(NO_KINDS);
   // a wrong upload can be taken back until the draft is used — by a check, or by a question asked with it
@@ -1179,6 +1180,34 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
+            {/* The detailed question — its own icon, like the upload beside it: it opens a window to
+                build one request in, which a row in the response-mode menu made look like a mode. */}
+            <span className="relative flex-shrink-0">
+              <button
+                onClick={() => { setDetailedTip(false); setDetailedOpen(true); }}
+                aria-label="שאלה מפורטת"
+                className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
+                style={{ color: c.iconGray }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; setDetailedTip(true); }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setDetailedTip(false); }}
+              >
+                <WandSparkles size={15} style={{ transform: "scaleX(-1)" }} />
+              </button>
+              {detailedTip && (
+                <span
+                  dir="rtl"
+                  className="absolute z-50 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap text-right pointer-events-none"
+                  style={{
+                    ...(isEmpty ? { top: "calc(100% + 6px)" } : { bottom: "calc(100% + 6px)" }),
+                    right: 0,
+                    backgroundColor: c.text, color: "white", fontFamily: "Noto Sans Hebrew, sans-serif",
+                  }}
+                >
+                  <span className="block">שאלה מפורטת</span>
+                  <span className="block" style={{ opacity: 0.8 }}>מגדירים מה לבדוק, באילו מסמכים ואיך</span>
+                </span>
+              )}
+            </span>
             {/* The draft's actions — appears once a draft is in, left of the upload icon. Greyed while
                 a check is running, and for good once every action in it has run. */}
             {draft && (() => {
@@ -1437,8 +1466,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             const isCurrent = opt === responseMode;
             const { label, desc, Icon } = RESPONSE_MODE_CONFIG[opt];
             return (
-              <Fragment key={opt}>
               <button
+                key={opt}
                 onClick={() => { setResponseMode(opt); setModeOpen(false); }}
                 className="w-full flex items-start justify-between px-4 py-2.5 text-right"
                 style={{ backgroundColor: "transparent", cursor: "pointer" }}
@@ -1469,26 +1498,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   </div>
                 )}
               </button>
-              {opt === "agents" && (
-                <button
-                  onClick={() => { setModeOpen(false); setDetailedOpen(true); }}
-                  className="w-full flex items-start px-4 py-2.5 text-right"
-                  style={{ backgroundColor: "transparent", cursor: "pointer" }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="flex items-center gap-1.5 text-[14px]" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                      <WandSparkles size={15} style={{ color: c.iconGray, flexShrink: 0, transform: "scaleX(-1)" }} />
-                      מפורט
-                    </span>
-                    <span className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
-                      מגדירים מה לבדוק, באילו מסמכים ואיך
-                    </span>
-                  </div>
-                </button>
-              )}
-              </Fragment>
             );
           })}
         </div>
