@@ -1181,19 +1181,21 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               }}
             />
             {/* The detailed question — its own icon, like the upload beside it: it opens a window to
-                build one request in, which a row in the response-mode menu made look like a mode. */}
+                build one request in, which a row in the response-mode menu made look like a mode.
+                Greyed once a draft is in, like the response-mode selector. */}
             <span className="relative flex-shrink-0">
               <button
-                onClick={() => { setDetailedTip(false); setDetailedOpen(true); }}
+                onClick={draft ? undefined : () => { setDetailedTip(false); setDetailedOpen(true); }}
+                aria-disabled={!!draft}
                 aria-label="שאלה מפורטת"
                 className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
-                style={{ color: c.iconGray }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; setDetailedTip(true); }}
+                style={{ color: c.iconGray, opacity: draft ? 0.4 : 1, cursor: draft ? "default" : "pointer" }}
+                onMouseEnter={e => { if (!draft) { e.currentTarget.style.backgroundColor = c.hoverBg; setDetailedTip(true); } }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setDetailedTip(false); }}
               >
                 <WandSparkles size={15} style={{ transform: "scaleX(-1)" }} />
               </button>
-              {detailedTip && (
+              {detailedTip && !draft && (
                 <span
                   dir="rtl"
                   className="absolute z-50 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap text-right pointer-events-none"
