@@ -13,17 +13,18 @@ import {
 import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
-  DraftActionsDialog, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps,
-  proofFileUrl, proofDownloadName, proofFileNote, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
-  type ProofKinds, type ProofRun, type RunStep, type RunStepIcon,
+  DraftActionsDialog, DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps, proofFiles,
+  NO_KINDS, anyKind, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
+  type ProofKinds, type ProofRun, type RunStep,
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
-  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, GENERAL, type Prompt,
+  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
-import { ComplexPromptEditor, partsToText } from "./complexPrompt";
+import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { DetailedQuestionBuilder, PromptUseWindow } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripVertical } from "lucide-react";
+import { GripHorizontal, GripVertical, Maximize2 } from "lucide-react";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -95,19 +96,21 @@ const SCOPE_CONFIG: Record<ScopeOption, { desc: string; Icon: LucideIcon }> = {
 };
 const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שישולב בתשובה. ככל שההיקף קטן יותר, התשובה מהירה יותר.";
 
-// ── Response-mode selector (agents / direct chat / fast chat) ───────────────
+// ── Response mode ───────────────────────────────────────────────────────────
+// Version A's way of asking: a mode selector beside the input (version B has a task menu in its
+// place). מפורט sits under מעמיק: it is not a mode to stay on but a way to build one request, so it
+// opens the detailed question window rather than taking the check mark.
 type ResponseMode = "agents" | "direct" | "fast";
 const RESPONSE_MODE_ORDER: ResponseMode[] = ["agents", "direct", "fast"];
-const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: RunStepIcon }> = {
+const RESPONSE_MODE_CONFIG: Record<ResponseMode, { label: string; desc: string; Icon: LucideIcon }> = {
   agents: { label: "מעמיק", desc: "ניתוח הבקשה ובניית דרך פעולה", Icon: Brain },
   direct: { label: "ישיר",  desc: "מענה ישיר לבקשה",             Icon: Send },
   fast:   { label: "מהיר",  desc: "לבקשות ממוקדות",              Icon: Zap },
 };
 const RESPONSE_MODE_TITLE = "בחרו את שיטת המענה המועדפת לשאלה זו";
+const MODE_MENU_W = 340;
 // Lucide draws the send arrow pointing left; in the RTL bar it should follow the text.
-// The brain is symmetric, so it needs nothing.
-const MIRRORED_MODE_ICONS: ResponseMode[] = ["direct"];
-const mirrorModeIcon = (m: ResponseMode) => (MIRRORED_MODE_ICONS.includes(m) ? "scaleX(-1)" : undefined);
+const mirrorModeIcon = (m: ResponseMode) => (m === "direct" ? "scaleX(-1)" : undefined);
 
 type DocItem = { name: string; words: string; summary: string };
 type CaseDocType = { name: string; count: string; checked: boolean; items: DocItem[] };
@@ -139,6 +142,11 @@ const initialDocs: CaseDocType[] = [
     { name: "חוות דעת אקטוארית", words: "3K", summary: "חישוב הפסדי ההשתכרות לעבר ולעתיד על בסיס הנכות הנטענת, בתוספת הפסדי פנסיה וזכויות סוציאליות." },
   ] },
 ];
+// The case's documents as the detailed question's picker offers them, with a page count
+// estimated from their length.
+const wordsOf = (w: string) => (w.endsWith("K") ? parseFloat(w) * 1000 : parseFloat(w));
+const CASE_DOC_OPTIONS: CaseDocOption[] = initialDocs.flatMap((t) =>
+  t.items.map((d) => ({ type: t.name, name: d.name, pages: pagesOf(wordsOf(d.words)) })));
 
 // Inner document row (inside an expanded type folder) — hover shows a summary bubble + open-in-new-tab
 function DocItemRow({ item, isDark }: { item: DocItem; isDark: boolean }) {
@@ -563,32 +571,38 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
           ]}
         />
 
-        {/* the finished file, at the far end of the row — where the answer's text begins */}
+        {/* the finished file(s), at the far end of the row — where the answer's text begins.
+            התממה comes back as its own clean copy, so a run with it can hand back two. */}
         {proof && (
           <>
             <div className="flex-1" />
-            <a
-              href={proofFileUrl(proof.kinds)}
-              download={proofDownloadName(proof.fileName, proof.kinds)}
-              // The host serves the file with its own name in Content-Disposition, which beats the
-              // download attribute — so fetch it and save it from a blob, which carries no header.
-              onClick={async (e) => {
-                e.preventDefault();
-                const blob = await (await fetch(proofFileUrl(proof.kinds))).blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = proofDownloadName(proof.fileName, proof.kinds);
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              title={proofFileNote(proof.kinds)}
-              className="flex items-center h-8 rounded-md transition-colors hover:underline"
-              style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
-              dir="rtl"
-            >
-              הורדת קובץ ההגהה
-            </a>
+            <div className="flex items-center gap-4">
+            {proofFiles(proof).map((f) => (
+              <a
+                key={f.url}
+                href={f.url}
+                download={f.name}
+                // The host serves the file with its own name in Content-Disposition, which beats the
+                // download attribute — so fetch it and save it from a blob, which carries no header.
+                onClick={async (e) => {
+                  e.preventDefault();
+                  const blob = await (await fetch(f.url)).blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = f.name;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                title={f.note}
+                className="flex items-center h-8 px-1 rounded-md transition-colors hover:underline"
+                style={{ color: c.primary, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: "13px" }}
+                dir="rtl"
+              >
+                {f.label}
+              </a>
+            ))}
+            </div>
           </>
         )}
       </div>
@@ -749,13 +763,13 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onBuildPrompt, complexName, onClearComplex }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, complexName, onClearComplex }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
-  onBuildPrompt?: () => void;
+  onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
   complexName?: string | null;
   onClearComplex?: () => void;
 }) {
@@ -778,26 +792,30 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // most of it behind a caret. It grows to a ceiling and scrolls past it, so the conversation
   // above never disappears behind the input.
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [responseMode, setResponseMode] = useState<ResponseMode>("agents"); // independent of scope — can run alongside any scope level
+  // is about a document, not a question. שאלה מפורטת opens its window and is sent from there.
+  const [responseMode, setResponseMode] = useState<ResponseMode>("agents");
   const [modeOpen, setModeOpen] = useState(false);
   const modeBtnRef = useRef<HTMLButtonElement>(null);
   const [modePos, setModePos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const agentMode = responseMode === "agents";
+  const [detailedOpen, setDetailedOpen] = useState(false);
+  // The "פעולות" button beside the upload icon once a draft is in opens the actions dialog
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
   const [agentIntro, setAgentIntro] = useState(false); // brief "thinking" beat (dots only) before anything else appears
   const [revealedSteps, setRevealedSteps] = useState(0); // step rows reveal one at a time before "thinking" starts again
   // ── The conversation's draft ── (one per conversation; once embedded it can't be removed)
-  const [draft, setDraft] = useState<{ name: string; size: number; words: number | null } | null>(null);
+  const [draft, setDraft] = useState<{ name: string; size: number; words: number | null; url: string } | null>(null);
   // A file over the word limit isn't taken in; a toast above the disclaimer says why, and stays until it's closed
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTip, setUploadTip] = useState(false); // the upload icon's own tooltip
-  // The "פעולות" button beside the upload icon once a draft is in opens the actions dialog
-  const [actionsOpen, setActionsOpen] = useState(false);
-  // Each check runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
-  const [usedChecks, setUsedChecks] = useState<ProofKinds>({ lang: false, coherence: false });
-  const draftSpent = !!draft && usedChecks.lang && usedChecks.coherence;
+  // Each action runs once per conversation — separately, so a הגהה now leaves בדיקת עקיבות for later
+  const [usedChecks, setUsedChecks] = useState<ProofKinds>(NO_KINDS);
+  // a wrong upload can be taken back until the draft is used — by a check, or by a question asked with it
+  const draftRemovable = !anyKind(usedChecks) && !messages.some((m) => m.withDraft);
+  const draftSpent = !!draft && usedChecks.lang && usedChecks.coherence && usedChecks.anon;
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -880,17 +898,16 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setScopeOpen(v => !v);
   }
 
+  // Opens downward from the empty screen, where the input sits mid-page with room below it;
+  // mid-conversation the input is at the bottom, so there it opens upward. Kept inside the screen.
   function handleModeToggle() {
     if (!modeOpen && modeBtnRef.current) {
       const r = modeBtnRef.current.getBoundingClientRect();
-      const rightEdge = window.innerWidth - r.right;
-      if (isEmpty) {
-        setModePos({ top: r.bottom + 4, right: rightEdge });
-      } else {
-        setModePos({ bottom: window.innerHeight - r.top + 4, right: rightEdge });
-      }
+      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - MODE_MENU_W - 8));
+      const down = isEmpty && window.innerHeight - r.bottom >= 320;
+      setModePos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
     }
-    setModeOpen(v => !v);
+    setModeOpen((v) => !v);
   }
 
   useEffect(() => {
@@ -903,7 +920,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setActionsOpen(false);
-    setUsedChecks({ lang: false, coherence: false });
+    setModeOpen(false);
+    setDetailedOpen(false);
+    setUsedChecks(NO_KINDS);
     setProofRun(null);
     setAgentStep(0);
     setAgentSub(false);
@@ -916,19 +935,27 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const textCol = isDark ? dk.text : c.text;
 
 
+  // A basic question is answered straight away; a deep or detailed one goes through the agents' steps.
+  function ask(q: string, agent: boolean) {
+    // once a draft is in the conversation it is part of every question's context
+    const withDraft = !!draft;
+    setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent, logSteps: agent ? AGENT_STEPS : undefined, withDraft }]);
+    if (agent) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
+  }
+
   function handleSend() {
-    // an armed פרומפט מורכב is a complete request on its own, so it can be sent with nothing typed
+    // an armed פרומפט מפורט is a complete request on its own, so it can be sent with nothing typed
     if (!inputText.trim() && !complexName) return;
     const q = complexName ? (inputText.trim() ? `${complexName}: ${inputText.trim()}` : complexName) : inputText.trim();
     if (complexName) onClearComplex?.();
-    // once a draft is in the conversation it is part of every question's context
-    const withDraft = !!draft;
-    setMessages((prev) => [
-      ...prev,
-      { q, isFirst: prev.length === 0, agent: agentMode, logSteps: agentMode ? AGENT_STEPS : undefined, withDraft },
-    ]);
+    ask(q, agentMode);
     setInputText("");
-    if (agentMode) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
+  }
+
+  // A detailed question goes into the conversation as its parts, written out
+  function sendDetailed(parts: PromptPart[], guidelines: string) {
+    setDetailedOpen(false);
+    ask(partsToText(parts, guidelines), true);
   }
 
   function handleStop() {
@@ -936,7 +963,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   }
 
   // ── The draft's actions ───────────────────────────────────────────────
-  // Whatever was ticked in the menu runs at once, together, as one answer in the conversation.
+  // Whatever was ticked in the dialog runs at once, together, as one answer in the conversation.
   function handleRunActions(kinds: ProofKinds) {
     if (!draft) return;
     setActionsOpen(false);
@@ -947,7 +974,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     }
     const run: ProofRun = { fileName: draft.name, kinds };
     setMessages((prev) => [...prev, { q: proofKindLabel(run.kinds), isFirst: prev.length === 0, proof: run, logSteps: proofSteps(run.kinds) }]);
-    setUsedChecks((u) => ({ lang: u.lang || kinds.lang, coherence: u.coherence || kinds.coherence }));
+    setUsedChecks((u) => ({ lang: u.lang || kinds.lang, coherence: u.coherence || kinds.coherence, anon: u.anon || kinds.anon }));
     setProofRun(run);
     setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true);
   }
@@ -1048,10 +1075,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px]"
             style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
           >
-            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המורכב">
+            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המפורט">
               <X size={13} />
             </button>
-            <span>פרומפט מורכב: {complexName}</span>
+            <span>פרומפט מפורט: {complexName}</span>
           </div>
         </div>
       )}
@@ -1148,7 +1175,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 }
                 setUploadError(null);
                 // straight into the conversation — the actions are in the menu beside the icon
-                setDraft({ name: f.name, size: f.size, words });
+                setDraft({ name: f.name, size: f.size, words, url: URL.createObjectURL(f) });
                 requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
@@ -1377,7 +1404,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return <DraftActionsDialog isDark={isDark} usedChecks={usedChecks} pages={draft.words === null ? null : pagesOf(draft.words)} onClose={() => setActionsOpen(false)} onRun={handleRunActions} />;
   }
 
-  // ── Response-mode dropdown (portal-like, fixed position) ────────────────
+  // ── Response-mode dropdown (fixed position) ────────────────────────────
   function renderModeDropdown() {
     if (!modeOpen || !modePos) return null;
     return (
@@ -1394,14 +1421,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             backgroundColor: "white",
             borderRadius: "12px",
             boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-            width: "300px",
+            width: `${MODE_MENU_W}px`,
             overflow: "hidden",
           }}
           dir="rtl"
         >
           {/* Header */}
           <div className="px-4 pt-3.5 pb-1" style={{ lineHeight: 1.3 }}>
-            <span className="text-[14px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+            <span className="text-[13px]" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
               {RESPONSE_MODE_TITLE}
             </span>
           </div>
@@ -1410,10 +1437,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             const isCurrent = opt === responseMode;
             const { label, desc, Icon } = RESPONSE_MODE_CONFIG[opt];
             return (
+              <Fragment key={opt}>
               <button
-                key={opt}
                 onClick={() => { setResponseMode(opt); setModeOpen(false); }}
-                className="w-full flex items-start justify-between px-4 py-3 text-right"
+                className="w-full flex items-start justify-between px-4 py-2.5 text-right"
                 style={{ backgroundColor: "transparent", cursor: "pointer" }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
@@ -1430,7 +1457,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                     <Icon size={15} style={{ color: isCurrent ? c.primary : c.iconGray, flexShrink: 0, transform: mirrorModeIcon(opt) }} />
                     {label}
                   </span>
-                  <span className="text-[14px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                  <span className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
                     {desc}
                   </span>
                 </div>
@@ -1442,10 +1469,42 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   </div>
                 )}
               </button>
+              {opt === "agents" && (
+                <button
+                  onClick={() => { setModeOpen(false); setDetailedOpen(true); }}
+                  className="w-full flex items-start px-4 py-2.5 text-right"
+                  style={{ backgroundColor: "transparent", cursor: "pointer" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = c.hoverBg)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5 text-[14px]" style={{ color: c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                      <WandSparkles size={15} style={{ color: c.iconGray, flexShrink: 0, transform: "scaleX(-1)" }} />
+                      מפורט
+                    </span>
+                    <span className="text-[13px] leading-snug" style={{ color: c.textGray, fontFamily: "Noto Sans Hebrew, sans-serif" }}>
+                      מגדירים מה לבדוק, באילו מסמכים ואיך
+                    </span>
+                  </div>
+                </button>
+              )}
+              </Fragment>
             );
           })}
         </div>
       </>
+    );
+  }
+
+  function renderDetailed() {
+    return detailedOpen && (
+      <DetailedQuestionBuilder
+        isDark={isDark}
+        caseDocs={CASE_DOC_OPTIONS}
+        onSend={sendDetailed}
+        onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
+        onClose={() => setDetailedOpen(false)}
+      />
     );
   }
 
@@ -1461,29 +1520,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             >
               שלום, טל. במה אוכל לעזור?
             </p>
-            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} /></div>}
+            {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
-            {/* The way into the guided prompt builder, shown only on the empty screen: it is where
-                a new conversation starts, so people learn it exists, and it costs a conversation
-                in progress nothing. Mid-conversation the same builder is one step away in the
-                prompt library. A link, not a button — it must not compete with sending. */}
-            {onBuildPrompt && (
-              <div className="flex" dir="rtl">
-                <button
-                  onClick={onBuildPrompt}
-                  className={`flex items-center gap-1.5 text-[13.5px] px-1 rounded transition-colors ${isDark ? "text-[#6b7da3] hover:text-[#90b8e0]" : "text-[#676879] hover:text-[#0073ea]"}`}
-                  style={{ fontFamily: "Noto Sans Hebrew, sans-serif" }}
-                >
-                  <WandSparkles size={15} style={{ transform: "scaleX(-1)" }} />
-                  פרומפט מורכב
-                </button>
-              </div>
-            )}
           </div>
         </div>
         {renderScopeDropdown()}
         {renderModeDropdown()}
         {renderActionsMenu()}
+        {renderDetailed()}
         {renderUploadNotice()}
       </>
     );
@@ -1500,7 +1544,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           {draft && (
             <div className="sticky top-0 z-10 px-6 pt-3 pb-2 flex justify-center" style={{ backgroundColor: bg }}>
               <div className="w-full max-w-[768px] flex" dir="rtl">
-                <DraftStrip name={draft.name} isDark={isDark} />
+                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
               </div>
             </div>
           )}
@@ -1515,7 +1559,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                       left corner, so they cost the thread no height at all: a reserved strip under
                       every question pushed the answer down whether or not anyone was hovering. */}
                   <div className="group relative rounded px-4 py-3" style={{ backgroundColor: isDark ? "rgba(0,115,234,0.12)" : "rgba(204,229,255,0.5)" }} dir="rtl">
-                    <p data-chat-q className="text-[15px] text-right" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
+                    <p data-chat-q className="text-[15px] text-right whitespace-pre-line" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>{msg.q}</p>
                     <div
                       className="absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
                       style={{ left: "6px", bottom: "4px" }}
@@ -1533,8 +1577,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                         : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
                         : msg.withDraft ? <p>{DRAFT_ANSWER}</p>
                         : msg.agent ? <p>{AGENT_ANSWER}</p>
-                        : msg.isFirst ? renderFirstAnswer()
-                        : <p>מעבד את שאלתך...</p>}
+                        : renderFirstAnswer()}
                     </div>
                     {!showingAgentProgress && (
                       <MessageActions
@@ -1565,6 +1608,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       {renderScopeDropdown()}
       {renderModeDropdown()}
       {renderActionsMenu()}
+      {renderDetailed()}
       {renderUploadNotice()}
     </>
   );
@@ -2698,6 +2742,8 @@ export default function MishpatPage() {
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
   const [promptFill, setPromptFill] = useState<Prompt | null>(null);
+  // Choosing a prompt to use opens it first: use it as it is, or change it for this use
+  const [promptUse, setPromptUse] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
   // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
   // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
@@ -2705,10 +2751,17 @@ export default function MishpatPage() {
   const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
   const [promptsW, setPromptsW] = useState(640);
   const [promptsResizing, setPromptsResizing] = useState(false);
-  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded over the whole chat
-  // פרומפט מורכב: the editor, and the one that is armed for the next send. It is too long to
-  // go into the question line as text, so it rides above the input as a chip, like an example.
-  const [complexOpen, setComplexOpen] = useState(false);
+  const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded; the chat floats over it
+  const [promptPaneW, setPromptPaneW] = useState(560);         // the editor's width, dragged from its left edge
+  // The chat floats over the editor when there isn't room for both — the documents screen's
+  // behaviour: a window that can be dragged, minimised to a bar, or docked back.
+  const [chatPos, setChatPos] = useState<{ x: number; y: number } | null>(null); // null = bottom-left
+  // a floating chat starts as a bar, so the editor it floats over (and its save buttons) stay in view
+  const [chatMin, setChatMin] = useState(true);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const chatBoxRef = useRef<HTMLDivElement>(null);
+  // A detailed prompt armed for the next send. It is too long to go into the question line as
+  // text, so it rides above the input as a chip, like an example.
   const [complexInUse, setComplexInUse] = useState<string | null>(null);
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
@@ -2774,7 +2827,7 @@ export default function MishpatPage() {
   // from the opening words rather than asking for it before anything is on screen.
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
   const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
-  const usePrompt = (pr: Prompt) => {
+  const applyPrompt = (pr: Prompt) => {
     if (pr.parts) {
       setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
       setComplexInUse(pr.name);
@@ -2786,6 +2839,7 @@ export default function MishpatPage() {
     insertPrompt(pr.body);
     setLibraryOpen(false);
   };
+  const openUse = (pr: Prompt) => setPromptUse(pr);
   const toggleFav = (id: string) => setPrompts((prev) => prev.map((x) => (x.id === id ? { ...x, fav: !x.fav } : x)));
   // A rating is cast once: there is no second click to change it, so the stars lock after the first.
   const ratePrompt = (id: string, n: number) =>
@@ -2842,15 +2896,45 @@ export default function MishpatPage() {
   const sidebarBg = isDark ? dk.surface : "white";
 
   // Prompts table + editor. The editor sits between the chat and the table while the chat keeps
-  // a usable width; past that it opens over the chat, as the documents screen floats its chat.
-  const PROMPT_PANE_W = 560;
+  // a usable width; past that (or when the editor is expanded) the chat floats over the editor.
   const docsW = isPanelOpen && !narrow ? 300 : 40;
-  const promptPaneOver = vw - 55 - docsW - promptsW - PROMPT_PANE_W < 420;
+  const paneOpen = !narrow && isPromptsOpen && !!promptPane;
+  const chatRoom = vw - 55 - docsW - promptsW - promptPaneW;
+  const chatFloat = paneOpen && (promptPaneWide || chatRoom < 420);
+  const canDock = vw - 55 - docsW - promptsW - 430 >= 380;
+  const dockChat = () => {
+    setPromptPaneWide(false); setChatPos(null); setChatMin(true);
+    setPromptPaneW((w) => Math.min(w, vw - 55 - docsW - promptsW - 430));
+  };
+  const startChatDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const row = rowRef.current?.getBoundingClientRect();
+    const box = chatBoxRef.current?.getBoundingClientRect();
+    if (!row || !box) return;
+    const offX = e.clientX - box.left, offY = e.clientY - box.top;
+    const onMove = (ev: MouseEvent) => setChatPos({
+      x: Math.max(0, Math.min(row.width - box.width, ev.clientX - row.left - offX)),
+      y: Math.max(0, Math.min(row.height - 40, ev.clientY - row.top - offY)),
+    });
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
+  const startPaneResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const right = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().right;
+    setPromptPaneWide(false);
+    const onMove = (ev: MouseEvent) => setPromptPaneW(Math.max(380, Math.min(right - docsW, right - ev.clientX)));
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+  };
   const promptPaneLive = promptPane?.initial?.id ? prompts.find((x) => x.id === promptPane.initial!.id) : undefined;
-  const runPrompt = usePrompt; // not a hook, despite the name — an alias the hooks lint can tell apart
   const promptPaneEl = promptPane && (
     <PromptEditor
-      key={`${promptPane.initial?.id ?? "new"}-${promptPane.mode}`}
+      key={`${promptPane.initial?.id ?? "new"}-${promptPane.mode}-${promptPane.initial?.parts ? "c" : "s"}`}
       pane
       isDark={isDark}
       initial={promptPane.initial}
@@ -2858,7 +2942,7 @@ export default function MishpatPage() {
       live={promptPaneLive}
       onSave={savePanePrompt}
       onClose={() => { setPromptPane(null); setPromptPaneWide(false); }}
-      onUse={(pr) => { runPrompt(pr); if (promptPaneOver || promptPaneWide) { setPromptPane(null); setPromptPaneWide(false); } }}
+      onUse={(pr) => { applyPrompt(pr); setChatMin(false); }}
       expanded={promptPaneWide}
       onToggleExpand={() => setPromptPaneWide((v) => !v)}
       onRate={promptPaneLive ? (n) => ratePrompt(promptPaneLive.id, n) : undefined}
@@ -2884,7 +2968,7 @@ export default function MishpatPage() {
     <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: isDark ? dk.bg : "white" }}>
       <AppHeader isDark={isDark} onToggleDark={() => setIsDark((v) => !v)} />
 
-      <div className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
+      <div ref={rowRef} className="absolute top-12 bottom-0 left-0 right-0 flex" dir="ltr">
         {/* ── LEFT: Documents — column that PUSHES the chat (push mode); a 40px rail launcher in drawer mode ── */}
         <div
           className="relative flex-shrink-0 transition-all duration-300"
@@ -2907,8 +2991,34 @@ export default function MishpatPage() {
           </button>
         </div>
 
-        {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode ── */}
-        <div className="flex-1 flex min-w-0 relative" style={{ paddingBottom: FOOTER_HEIGHT }}>
+        {/* ── CHAT: flex-1 + min-w-0; hosts the drawer overlays in narrow mode. With the prompt editor
+            open and no room beside it, the same element becomes a floating window over the editor
+            (same element, so the conversation survives the switch). ── */}
+        <div
+          ref={chatBoxRef}
+          className={chatFloat ? "absolute z-40 flex flex-col rounded-xl overflow-hidden" : "flex-1 flex flex-col min-w-0 relative"}
+          style={chatFloat ? {
+            ...(chatPos ? { left: chatPos.x, top: chatPos.y } : { left: docsW + 12, bottom: 76 }),
+            width: chatMin ? 260 : 420, height: chatMin ? "auto" : "min(560px, calc(100% - 32px))",
+            border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.bg : "white",
+            boxShadow: "0 10px 34px rgba(0,0,0,0.22)",
+          } : undefined}
+        >
+          {chatFloat && (
+            <div onMouseDown={startChatDrag} dir="rtl" className="flex items-center gap-1 px-2.5 flex-shrink-0 cursor-move select-none" style={{ height: "38px", backgroundColor: isDark ? dk.surface : "#f1f3f7", borderBottom: chatMin ? "none" : `1px solid ${isDark ? dk.border : "#e2e6ee"}` }}>
+              <GripHorizontal size={16} style={{ color: isDark ? dk.textMuted : c.textLight }} />
+              <span className="flex-1 text-[13px]" style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif" }}>צ׳אט</span>
+              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setChatMin((v) => !v)} title={chatMin ? "פתיחת הצ׳אט" : "מזעור לשורה"} className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: c.iconGray }}>
+                {chatMin ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              {canDock && (
+                <button onMouseDown={(e) => e.stopPropagation()} onClick={dockChat} title="עיגון הצ׳אט למקומו (העורך יישאר פתוח)" className="size-7 flex items-center justify-center rounded-md hover:bg-black/5" style={{ color: c.iconGray }}>
+                  <Maximize2 size={15} />
+                </button>
+              )}
+            </div>
+          )}
+        <div className="flex-1 flex min-w-0 min-h-0 relative" style={{ paddingBottom: chatFloat ? 0 : FOOTER_HEIGHT, display: chatFloat && chatMin ? "none" : undefined }}>
           <ChatArea
             isDark={isDark}
             conversationKey={convKey}
@@ -2918,17 +3028,19 @@ export default function MishpatPage() {
             insert={insert}
             onSaveQuestion={(q) => setPromptEdit({ initial: { name: autoName(q), body: q }, mode: "fromMessage" })}
             onShareQuestion={(q) => setPromptShare({ name: autoName(q), body: q })}
-            onBuildPrompt={() => setComplexOpen(true)}
+            onSaveDetailed={(pr, share) => {
+              setPrompts((prev) => [
+                ...(share ? [{
+                  ...pr, id: Math.random().toString(36).slice(2, 9), source: "shared" as const,
+                  author: share.anon ? "אנונימי" : ME, authorRole: share.anon ? undefined : MY_ROLE, uses: 0,
+                }] : []),
+                pr, ...prev,
+              ]);
+              setToast(share ? "השאלה נשמרה בספרייה שלך ושותפה" : "השאלה נשמרה בספרייה שלך");
+            }}
             complexName={complexInUse}
             onClearComplex={() => setComplexInUse(null)}
           />
-
-          {/* Prompt editor over the chat — when there isn't room for it beside the chat */}
-          {!narrow && isPromptsOpen && (promptPaneOver || promptPaneWide) && promptPaneEl && (
-            <div className="absolute top-0 bottom-0 right-0 z-[45]" style={{ width: promptPaneWide ? "100%" : `${PROMPT_PANE_W}px`, maxWidth: "100%", boxShadow: "-6px 0 24px rgba(0,0,0,0.14)" }}>
-              {promptPaneEl}
-            </div>
-          )}
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
           {narrow && (isPanelOpen || isHistoryOpen || isExamplesOpen || isPromptsOpen) && (
@@ -2963,7 +3075,7 @@ export default function MishpatPage() {
               <PromptsPanel
                 isDark={isDark}
               prompts={prompts}
-              onUse={usePrompt}
+              onUse={openUse}
               onFav={toggleFav}
               onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
               onShare={(pr) => setPromptShare(pr)}
@@ -2994,6 +3106,7 @@ export default function MishpatPage() {
           {/* ── Page footer — legal disclaimer, pinned once for the chat column (not repeated per chat state) ── */}
           <div
             className="absolute bottom-0 left-0 right-0 flex justify-center px-6 z-40"
+            hidden={chatFloat}
             style={{ height: FOOTER_HEIGHT, backgroundColor: isDark ? dk.bg : "white" }}
           >
             <div className="w-full max-w-[768px] flex flex-col items-center justify-end" style={{ paddingBottom: "20px" }}>
@@ -3011,6 +3124,7 @@ export default function MishpatPage() {
               </p>
             </div>
           </div>
+        </div>
         </div>
 
         {/* ── RIGHT: History panel — column that PUSHES the chat (push mode only) ── */}
@@ -3035,9 +3149,23 @@ export default function MishpatPage() {
         )}
 
         {/* ── Prompt editor beside the table — where the documents screen opens the PDF ── */}
-        {!narrow && isPromptsOpen && !promptPaneOver && !promptPaneWide && promptPaneEl && (
-          <div className="flex-shrink-0" style={{ width: `${PROMPT_PANE_W}px`, borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}>
+        {paneOpen && (
+          <div
+            className={chatFloat ? "relative flex-1 min-w-0" : "relative flex-shrink-0"}
+            style={{ ...(chatFloat ? {} : { width: `${promptPaneW}px` }), borderInlineStart: `1px solid ${isDark ? dk.border : "#e6ebf3"}` }}
+          >
             {promptPaneEl}
+            {/* Drag the left edge to resize — the documents viewer's grip. Narrow it enough and the
+                floating chat docks back beside it. */}
+            <div onMouseDown={startPaneResize} className="absolute top-0 bottom-0 left-0 z-20 group" style={{ width: "8px", cursor: "ew-resize" }} title="גרירה לשינוי רוחב העורך">
+              <div className="absolute top-0 bottom-0 left-0 transition-colors group-hover:bg-[#cdd3df]" style={{ width: "2px" }} />
+              <div
+                className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center rounded-md border transition-colors group-hover:!bg-[#0073ea] group-hover:!border-[#0073ea] group-hover:!text-white"
+                style={{ width: "15px", height: "30px", backgroundColor: isDark ? "#2a3350" : "#eef2f8", borderColor: isDark ? dk.border : "#cfd8e6", color: isDark ? dk.textMuted : "#8a97ad" }}
+              >
+                <GripVertical size={13} strokeWidth={2} />
+              </div>
+            </div>
           </div>
         )}
 
@@ -3045,7 +3173,8 @@ export default function MishpatPage() {
             Expanded, it covers everything up to the rail and shows every column. ── */}
         {!narrow && isPromptsOpen && (
           <div
-            className={promptsFocus ? "absolute top-0 bottom-0 z-[46]" : "relative flex-shrink-0"}
+            // above the editor (and the chat floating over it), so the table's own grip is never covered
+            className={promptsFocus ? "absolute top-0 bottom-0 z-[46]" : "relative flex-shrink-0 z-[41]"}
             style={promptsFocus
               ? { left: 0, right: "55px", backgroundColor: isDark ? dk.surface : "white" }
               : { width: `${promptsW}px`, borderInlineStart: `2px solid ${promptsResizing ? c.primary : isDark ? dk.border : "#dbe7f7"}` }}
@@ -3060,7 +3189,7 @@ export default function MishpatPage() {
               openId={promptPane?.initial?.id ?? null}
               onOpen={openPromptPane}
               onNew={() => { setPromptsFocus(false); setPromptPane({ initial: null, mode: "new" }); }}
-              onUse={usePrompt}
+              onUse={openUse}
               onFav={toggleFav}
               onEdit={openPromptPane}
               onShare={(pr) => setPromptShare(pr)}
@@ -3153,7 +3282,7 @@ export default function MishpatPage() {
           isDark={isDark}
           prompts={prompts}
           onClose={() => setLibraryOpen(false)}
-          onUse={usePrompt}
+          onUse={openUse}
           onFav={toggleFav}
           onEdit={(pr) => setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" })}
           onShare={(pr) => setPromptShare(pr)}
@@ -3161,22 +3290,16 @@ export default function MishpatPage() {
           onRate={ratePrompt}
         />
       )}
-      {complexOpen && (
-        <ComplexPromptEditor
+      {promptUse && (
+        <PromptUseWindow
           isDark={isDark}
-          onSave={(name, parts) => {
-            setPrompts((prev) => [{
-              id: Math.random().toString(36).slice(2, 9), name, body: partsToText(parts), parts,
-              source: "mine", author: null, fav: false,
-              caseType: GENERAL, matter: GENERAL, stage: GENERAL, court: GENERAL, tags: [],
-              uses: 0, ratingSum: 0, ratingCount: 0, myRating: null,
-              edited: new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }),
-            }, ...prev]);
-            setComplexOpen(false);
-            setComplexInUse(name);
-            setToast("הפרומפט המורכב נשמר במאגר");
+          prompt={promptUse}
+          onUse={(pr) => { setPromptUse(null); applyPrompt(pr); }}
+          onSave={(pr) => {
+            setPrompts((prev) => (prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev]));
+            setToast(promptUse.source === "mine" ? "השינויים נשמרו בספרייה" : "נשמר בספרייה כפרומפט שלך");
           }}
-          onClose={() => setComplexOpen(false)}
+          onClose={() => setPromptUse(null)}
         />
       )}
       {promptEdit && (

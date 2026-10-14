@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useMemo, useState } from "react";
-import { Bookmark, ChevronDown, Maximize2, Minimize2, Plus, Search, X } from "lucide-react";
+import { Bookmark, ChevronDown, Maximize2, Minimize2, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import {
@@ -134,6 +134,7 @@ export function PromptTablePanel({
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
           </div>
+          {/* New is always a basic prompt; the editor offers the way to a detailed one */}
           <button
             onClick={onNew}
             className="h-8 px-2.5 flex items-center gap-1 rounded-md flex-shrink-0 text-[13px] transition-opacity hover:opacity-90"
@@ -233,8 +234,11 @@ export function PromptTablePanel({
                 </div>
 
                 <div className="min-w-0 text-right px-1.5 py-2">
-                  <div className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
-                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מורכב · ${pr.parts.length} חלקים` : pr.body}</div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {pr.parts && <span title="פרומפט מפורט" className="flex-none flex"><WandSparkles size={13} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
+                    <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
+                  </div>
+                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
                 </div>
 
                 <div className="flex items-center justify-center" title={srcName(pr)}>
