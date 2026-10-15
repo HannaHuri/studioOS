@@ -264,7 +264,11 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
         const folded = isClosed(i);
         const toggle = () => setClosed(parts.map((_, j) => (j === i ? !folded : !!closed[j])));
         return (
-          <div key={i} className={`rounded-lg pt-2 ${folded ? "pb-2" : "pb-4"}`} style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }}>
+          <div key={i} className={`rounded-lg pt-2 ${folded ? "pb-2" : "pb-4"}`} style={{
+            paddingInline: "17px",
+            // inside the input a grey fill read as disabled, so there a part is outlined instead
+            ...(collapsible ? { border: `1px solid ${quietBorder}` } : { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }),
+          }}>
             <div className={`flex items-center gap-1 ${folded ? "" : "mb-2"}`}>
               <span className="size-6 flex-none rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
               {collapsible ? (

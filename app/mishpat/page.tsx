@@ -1103,7 +1103,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             isDark={isDark}
             caseDocs={CASE_DOC_OPTIONS}
             // mid-conversation the input sits at the bottom, so it leaves the latest answer some room
-            maxHeight={isEmpty ? "calc(100vh - 290px)" : "calc(100vh - 360px)"}
+            maxHeight={isEmpty ? "calc(100vh - 272px)" : "calc(100vh - 360px)"}
+            fill={isEmpty}
             onSend={sendDetailed}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
             onClose={() => setQKind("basic")}

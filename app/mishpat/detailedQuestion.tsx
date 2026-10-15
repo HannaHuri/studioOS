@@ -70,18 +70,19 @@ function Fold({ title, note, preview, open, onToggle, isDark, children }: {
   );
 }
 
-export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSaveToLibrary, onClose }: {
+export function DetailedInline({ ref, isDark, caseDocs, maxHeight, fill, onSend, onSaveToLibrary, onClose }: {
   ref?: React.Ref<DetailedHandle>;
   isDark: boolean;
   caseDocs: CaseDocOption[];
   maxHeight: string; // past it the sections scroll, so the input never pushes the page away
+  fill?: boolean;    // take that whole height from the start, leaving plenty of room to write
   onSend: (parts: PromptPart[], guidelines: string) => void;
   onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
   const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
   const [guidelines, setGuidelines] = useState(""); // general instructions for all the parts
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
   const [share, setShare] = useState(false); // שיתוף עם כל המשתמשים, only on top of keeping
@@ -126,17 +127,17 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
       <div className="flex items-center gap-2 pb-2">
         <WandSparkles size={16} style={{ color: c.primary, transform: "scaleX(-1)", flexShrink: 0 }} />
         <span className="flex-none text-[15px]" style={{ color: textCol }}>שאלה מפורטת</span>
-        <span className="flex-1 min-w-0 truncate text-[13px]" style={{ color: subCol }}>מגדירים מה לבדוק, באילו מסמכים ואיך. החלקים רצים לפי הסדר.</span>
+        <span className="flex-1" />
         <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="חזרה לשאלה בסיסית">
           <X size={16} />
         </button>
       </div>
 
-      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={{ maxHeight }} dir="ltr">
+      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={fill ? { height: maxHeight } : { maxHeight }} dir="ltr">
         <div dir="rtl" className="flex flex-col gap-3 pb-1">
           <Fold title="הנחיות כלליות" note="(לא חובה)" preview={guidelines.trim()} open={guideOpen} onToggle={() => setGuideOpen((v) => !v)} isDark={isDark}>
             <textarea
-              value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2} autoFocus
+              value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2}
               placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
               className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y"
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
@@ -159,9 +160,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
                   {attempted && !name.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם כדי לשמור בספרייה.</div>}
                 </div>
                 <div>
-                  <div className="text-[12.5px] mb-1.5" style={{ color: subCol }}>
-                    סיווג — קובע באילו תיקים הפרומפט יוצג לך, ולפי מה אחרים ימצאו אותו אם ישותף
-                  </div>
+                  <div className="text-[12.5px] mb-1.5" style={{ color: subCol }}>סיווג</div>
                   <div className="flex items-start gap-2 flex-wrap">
                     {([
                       { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
