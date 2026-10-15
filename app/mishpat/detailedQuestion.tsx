@@ -1,10 +1,10 @@
 "use client";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Two windows the chat opens over the page:
+   Two ways of writing a question in parts:
 
-   שאלה מפורטת — opened from מפורט in the input's response-mode menu. The same parts as a detailed prompt in the
-   library, but built inside the case, so a part can also draw on specific documents of this case
+   שאלה מפורטת — chosen in the input's task menu, and built inside the input itself. The same parts as
+   a detailed prompt in the library, but built inside the case, so a part can also draw on specific documents of this case
    with a page range. It is sent once; "שמירה בספרייה שלי" keeps a copy as a library prompt,
    which is general, so its specific documents are kept as their document types. Sharing is a
    second, separate choice under it, since not everything I keep is something I pass on.
@@ -13,8 +13,8 @@
    for this use only, with "שמירת השינויים בספרייה" to keep the change.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useState } from "react";
-import { Check, WandSparkles, X } from "lucide-react";
+import { useImperativeHandle, useState } from "react";
+import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
@@ -46,15 +46,42 @@ function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
 }
 
 // ── שאלה מפורטת ─────────────────────────────────────────────────────────────
-export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibrary, onClose }: {
+// Built inside the chat's input, in place of the question line, rather than in a window over the
+// page: the conversation stays in view, and the input's own send button sends it. Every section
+// folds to one line, so a long question can be read whole before it goes.
+export type DetailedHandle = { send: () => void };
+
+function Fold({ title, note, preview, open, onToggle, isDark, children }: {
+  title: string; note?: string; preview?: string; open: boolean; onToggle: () => void; isDark: boolean; children: React.ReactNode;
+}) {
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  return (
+    <div>
+      <button onClick={onToggle} className="w-full flex items-center gap-1.5 text-right" aria-expanded={open}>
+        <span className="flex-none text-[13px]" style={{ color: textCol }}>
+          {title}{note && <span style={{ color: subCol }}> {note}</span>}
+        </span>
+        {!open && preview && <span className="min-w-0 truncate text-[13px]" style={{ color: subCol }}>· {preview}</span>}
+        <ChevronDown size={14} className="flex-none" style={{ color: subCol, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+      </button>
+      {open && <div className="mt-1.5">{children}</div>}
+    </div>
+  );
+}
+
+export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSaveToLibrary, onClose }: {
+  ref?: React.Ref<DetailedHandle>;
   isDark: boolean;
   caseDocs: CaseDocOption[];
+  maxHeight: string; // past it the sections scroll, so the input never pushes the page away
   onSend: (parts: PromptPart[], guidelines: string) => void;
   onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
   const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
   const [guidelines, setGuidelines] = useState(""); // general instructions for all the parts
+  const [guideOpen, setGuideOpen] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
   const [share, setShare] = useState(false); // שיתוף עם כל המשתמשים, only on top of keeping
@@ -92,112 +119,95 @@ export function DetailedQuestionBuilder({ isDark, caseDocs, onSend, onSaveToLibr
     }
     onSend(done, guidelines.trim());
   };
+  useImperativeHandle(ref, () => ({ send }));
 
   return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div
-        dir="rtl" onClick={(e) => e.stopPropagation()}
-        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(980px, 94vw)", maxHeight: "90vh", backgroundColor: surface, fontFamily: FONT }}
-      >
-        <div className="flex items-start px-6 pt-5 pb-1">
-          <WandSparkles size={18} style={{ color: c.primary, transform: "scaleX(-1)", marginTop: "4px", marginLeft: "8px" }} />
-          <div className="flex-1 text-[18px]" style={{ color: textCol }}>שאלה מפורטת</div>
-          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="px-6 pb-4 text-[13.5px]" style={{ color: subCol }}>
-          מגדירים מה לבדוק, באילו מסמכים ואיך. אפשר כמה חלקים, והם רצים לפי הסדר. השאלה תישלח לשיחה הזו פעם אחת.
-        </div>
+    <div dir="rtl" className="flex flex-col" style={{ fontFamily: FONT }}>
+      <div className="flex items-center gap-2 pb-2">
+        <WandSparkles size={16} style={{ color: c.primary, transform: "scaleX(-1)", flexShrink: 0 }} />
+        <span className="flex-none text-[15px]" style={{ color: textCol }}>שאלה מפורטת</span>
+        <span className="flex-1 min-w-0 truncate text-[13px]" style={{ color: subCol }}>מגדירים מה לבדוק, באילו מסמכים ואיך. החלקים רצים לפי הסדר.</span>
+        <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="חזרה לשאלה בסיסית">
+          <X size={16} />
+        </button>
+      </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-4" dir="ltr">
-          <div dir="rtl" className="flex flex-col gap-4">
-            <div>
-              <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות כלליות <span style={{ color: subCol }}>(לא חובה)</span></div>
-              <textarea
-                value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2}
-                placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
-                className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y"
-                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
-              />
-            </div>
+      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={{ maxHeight }} dir="ltr">
+        <div dir="rtl" className="flex flex-col gap-3 pb-1">
+          <Fold title="הנחיות כלליות" note="(לא חובה)" preview={guidelines.trim()} open={guideOpen} onToggle={() => setGuideOpen((v) => !v)} isDark={isDark}>
+            <textarea
+              value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2} autoFocus
+              placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
+              className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y"
+              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+            />
+          </Fold>
 
-            <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} />
+          <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
 
-            <div className="pt-1">
-              <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
-              {keep && (
-                <div className="mt-3 flex flex-col gap-3">
-                  <div>
-                    <input
-                      value={name} onChange={(e) => setName(e.target.value)} autoFocus
-                      placeholder="שם הפרומפט, למשל: היסטוריה דיונית"
-                      className="w-full px-3 py-2 text-[15px] outline-none rounded-[4px]"
-                      style={{ border: `1px solid ${attempted && !name.trim() ? RED : line}`, backgroundColor: surface, color: textCol }}
-                    />
-                    {attempted && !name.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם כדי לשמור בספרייה.</div>}
+          <div>
+            <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
+            {keep && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div>
+                  <input
+                    value={name} onChange={(e) => setName(e.target.value)} autoFocus
+                    placeholder="שם הפרומפט, למשל: היסטוריה דיונית"
+                    className="w-full px-3 py-2 text-[15px] outline-none rounded-[4px]"
+                    style={{ border: `1px solid ${attempted && !name.trim() ? RED : line}`, backgroundColor: surface, color: textCol }}
+                  />
+                  {attempted && !name.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש להזין שם כדי לשמור בספרייה.</div>}
+                </div>
+                <div>
+                  <div className="text-[12.5px] mb-1.5" style={{ color: subCol }}>
+                    סיווג — קובע באילו תיקים הפרומפט יוצג לך, ולפי מה אחרים ימצאו אותו אם ישותף
                   </div>
-                  <div>
-                    <div className="text-[12.5px] mb-1.5" style={{ color: subCol }}>
-                      סיווג — קובע באילו תיקים הפרומפט יוצג לך, ולפי מה אחרים ימצאו אותו אם ישותף
+                  <div className="flex items-start gap-2 flex-wrap">
+                    {([
+                      { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
+                      { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
+                      { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
+                      { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+                    ] as const).map(({ t, v, o, set, w }) => (
+                      <div key={t}>
+                        <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
+                        <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {hasPicked && (
+                  <div className="text-[12.5px] leading-relaxed" style={{ color: subCol }}>
+                    בספרייה הפרומפט כללי ואינו קשור לתיק הזה, ולכן מסמכים ספציפיים יישמרו כסוגי המסמכים שלהם.
+                  </div>
+                )}
+                <CheckRow on={share} onToggle={() => setShare((v) => !v)} label="שיתוף עם כל המשתמשים" isDark={isDark} />
+                {share && (
+                  <div className="px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+                    <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
+                      בעותק המשותף, פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי. העותק שלך נשאר כפי שהוא.
                     </div>
-                    <div className="flex items-start gap-2 flex-wrap">
-                      {([
-                        { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-                        { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-                        { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
-                        { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
-                      ] as const).map(({ t, v, o, set, w }) => (
-                        <div key={t}>
-                          <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
-                          <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
-                        </div>
+                    <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
+                    <div className="flex items-center gap-2">
+                      {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
+                        <button
+                          key={t} onClick={() => setAnon(k)}
+                          className="h-7 px-3 rounded-[4px] text-[12.5px] transition-colors"
+                          style={{
+                            border: `1px solid ${anon === k ? c.primary : quietBorder}`,
+                            color: anon === k ? c.primary : textCol,
+                            backgroundColor: surface,
+                          }}
+                        >
+                          {t}
+                        </button>
                       ))}
                     </div>
                   </div>
-                  {hasPicked && (
-                    <div className="text-[12.5px] leading-relaxed" style={{ color: subCol }}>
-                      בספרייה הפרומפט כללי ואינו קשור לתיק הזה, ולכן מסמכים ספציפיים יישמרו כסוגי המסמכים שלהם.
-                    </div>
-                  )}
-                  <CheckRow on={share} onToggle={() => setShare((v) => !v)} label="שיתוף עם כל המשתמשים" isDark={isDark} />
-                  {share && (
-                    <div className="px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
-                      <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
-                        בעותק המשותף, פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי. העותק שלך נשאר כפי שהוא.
-                      </div>
-                      <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
-                      <div className="flex items-center gap-2">
-                        {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
-                          <button
-                            key={t} onClick={() => setAnon(k)}
-                            className="h-7 px-3 rounded-[4px] text-[12.5px] transition-colors"
-                            style={{
-                              border: `1px solid ${anon === k ? c.primary : quietBorder}`,
-                              color: anon === k ? c.primary : textCol,
-                              backgroundColor: surface,
-                            }}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-6 pt-3 pb-5">
-          <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${quietBorder}`, color: textCol }}>
-            ביטול
-          </button>
-          <button onClick={send} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            {share ? "שמירה, שיתוף ושליחה" : keep ? "שמירה ושליחה" : "שליחה"}
-          </button>
         </div>
       </div>
     </div>
