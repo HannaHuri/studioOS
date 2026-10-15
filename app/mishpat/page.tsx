@@ -98,11 +98,12 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 
 // ── The task menu ───────────────────────────────────────────────────────────
 // Beside the input: a basic question by default, a detailed one built in the input itself, and
-// below a line the checks that run on an uploaded document, any number of them together. The
+// below a line "בדיקות על מסמך", a side menu of checks that run on an uploaded document, any
+// number of them together. The
 // agents decide on their own how far a question needs to go, so there is no mode to pick for that.
 type QuestionKind = "basic" | "detailed";
-const QUESTION_KINDS: { key: QuestionKind; label: string; desc: string; Icon: LucideIcon; mirror?: boolean }[] = [
-  { key: "basic", label: "שאלה בסיסית", desc: "הסוכנים מתאימים את עומק הבדיקה לשאלה", Icon: MessageSquare },
+const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: LucideIcon; mirror?: boolean }[] = [
+  { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
 ];
 const TASK_MENU_W = 340;
@@ -797,6 +798,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [taskOpen, setTaskOpen] = useState(false);
   const taskBtnRef = useRef<HTMLButtonElement>(null);
   const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [checksSub, setChecksSub] = useState<{ top: number; right: number } | null>(null); // the checks' side menu
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -915,6 +917,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setTaskOpen(false);
+    setChecksSub(null);
     setQKind("basic");
     setPicked(NO_KINDS);
     setUsedChecks(NO_KINDS);
@@ -1100,7 +1103,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             isDark={isDark}
             caseDocs={CASE_DOC_OPTIONS}
             // mid-conversation the input sits at the bottom, so it leaves the latest answer some room
-            maxHeight={isEmpty ? "min(560px, calc(100vh - 330px))" : "calc(100vh - 360px)"}
+            maxHeight={isEmpty ? "calc(100vh - 290px)" : "calc(100vh - 360px)"}
             onSend={sendDetailed}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
             onClose={() => setQKind("basic")}
@@ -1158,7 +1161,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(" + ") : QUESTION_KINDS.find((k) => k.key === qKind)!.label}</span>
+            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : QUESTION_KINDS.find((k) => k.key === qKind)!.label}</span>
             <ChevronDown
               size={11}
               style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }}
@@ -1391,86 +1394,110 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The task menu (fixed position) ───────────────────────────────────
   function renderTaskMenu() {
     if (!taskOpen || !taskPos) return null;
-    const close = () => setTaskOpen(false);
+    const close = () => { setTaskOpen(false); setChecksSub(null); };
     const hover = isDark ? dk.input : c.hoverBg;
     const textCol2 = isDark ? dk.text : c.text;
     const subCol = isDark ? dk.textMuted : c.textGray;
     const pages = draft && draft.words !== null ? pagesOf(draft.words) : null;
+    const panel = (pos: { top?: number; bottom?: number; right: number }, width: number): React.CSSProperties => ({
+      position: "fixed", ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }), right: pos.right, zIndex: 200,
+      backgroundColor: isDark ? dk.surface : "white", borderRadius: "12px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+      width: `${width}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
+    });
+    const nPicked = DRAFT_ACTIONS.filter((a) => picked[a.key]).length;
+    const SUB_W = 340, SUB_H = 260;
+    // Beside the row, to its left as a side menu opens in RTL — or to its right when the menu sits
+    // too close to the left edge; and lifted when it would run past the bottom of the screen.
+    const subAt = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect(), menu = el.parentElement!.getBoundingClientRect();
+      const top = Math.max(8, Math.min(r.top - 6, window.innerHeight - SUB_H - 8));
+      return menu.left >= SUB_W + 8
+        ? { top, right: window.innerWidth - menu.left + 4 }
+        : { top, right: Math.max(8, window.innerWidth - menu.right - SUB_W - 4) };
+    };
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
-        <div
-          dir="rtl" role="menu"
-          style={{
-            position: "fixed",
-            ...(taskPos.top !== undefined ? { top: taskPos.top } : { bottom: taskPos.bottom }),
-            right: taskPos.right, zIndex: 200,
-            backgroundColor: isDark ? dk.surface : "white", borderRadius: "12px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-            width: `${TASK_MENU_W}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
-          }}
-        >
+        <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
           {QUESTION_KINDS.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === qKind;
-            // a detailed question is built over the whole case, so it waits for a conversation without a document
-            const off = key === "detailed" && !!draft;
             return (
               <button
-                key={key} role="menuitemradio" aria-checked={on} aria-disabled={off}
-                onClick={off ? undefined : () => { setPicked(NO_KINDS); setQKind(key); close(); }}
-                onMouseEnter={e => { if (!off) e.currentTarget.style.backgroundColor = hover; }}
+                key={key} role="menuitemradio" aria-checked={on}
+                onClick={() => { setPicked(NO_KINDS); setQKind(key); close(); }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = hover; setChecksSub(null); }}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
-                style={{ opacity: off ? 0.5 : 1, cursor: off ? "default" : "pointer" }}
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
                     <Icon size={15} style={{ color: on ? c.primary : c.iconGray, flexShrink: 0, transform: mirror ? "scaleX(-1)" : undefined }} />
                     {label}
-                    {off && <span className="text-[12.5px]" style={{ color: subCol, fontWeight: 400 }}>· לא זמינה כשיש מסמך בשיחה</span>}
                   </span>
-                  <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
+                  {desc && <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>}
                 </span>
                 {on && <Check size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "3px" }} />}
               </button>
             );
           })}
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
-          <div className="px-4 pt-1 pb-0.5 text-[12.5px]" style={{ color: subCol }}>בדיקות על מסמך · אפשר לבחור כמה</div>
-          {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
-            const done = usedChecks[key];
-            const on = picked[key];
-            const longWarn = key === "coherence" && on && pages !== null && pages > COHERENCE_PAGE_LIMIT;
-            return (
-              <div key={key} style={{ opacity: done ? 0.5 : 1 }}>
-                <button
-                  role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
-                  // ticking stays in the menu, so several can be picked; it leaves the detailed question
-                  onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
-                  className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right"
-                  style={{ cursor: done ? "default" : "pointer" }}
-                  onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <span className="mt-0.5"><Tick checked={done || on} muted={done} /></span>
-                  <span className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex items-center gap-1.5 text-[14px]" style={{ color: textCol2 }}>
-                      <Icon size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
-                      {title}
-                      {done && <span className="text-[12.5px]" style={{ color: subCol }}>· בוצעה בשיחה זו</span>}
-                    </span>
-                    <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
-                  </span>
-                </button>
-                {longWarn && (
-                  <div className="mx-4 mb-2 flex items-start gap-1.5 text-[12.5px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
-                    <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
-                    <span>המסמך ארוך (כ-{pages} עמודים). מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת.</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <button
+            role="menuitem" aria-haspopup="menu" aria-expanded={!!checksSub}
+            onClick={(e) => setChecksSub(subAt(e.currentTarget))}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = hover; setChecksSub(subAt(e.currentTarget)); }}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = checksSub ? hover : "transparent")}
+            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-right"
+            style={{ backgroundColor: checksSub ? hover : "transparent" }}
+          >
+            <span className="flex items-center gap-1.5 text-[14px]" style={{ color: docMode ? c.primary : textCol2, fontWeight: docMode ? 600 : 400 }}>
+              <FileText size={15} style={{ color: docMode ? c.primary : c.iconGray, flexShrink: 0 }} />
+              בדיקות על מסמך{nPicked > 0 && <span style={{ fontWeight: 400 }}> · {nPicked} נבחרו</span>}
+            </span>
+            <ChevronLeft size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+          </button>
         </div>
+
+        {/* The checks open beside the menu, so the menu itself stays three rows long. They tick
+            rather than pick: any number run together. */}
+        {checksSub && (
+          <div dir="rtl" role="menu" style={{ ...panel(checksSub, SUB_W), maxHeight: `calc(100vh - ${checksSub.top + 12}px)`, overflowY: "auto" }} className="docs-scroll">
+            <div className="px-4 pt-1 pb-1 text-[12.5px]" style={{ color: subCol }}>אפשר לבחור כמה</div>
+            {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => {
+              const done = usedChecks[key];
+              const on = picked[key];
+              const longWarn = key === "coherence" && on && pages !== null && pages > COHERENCE_PAGE_LIMIT;
+              return (
+                <div key={key} style={{ opacity: done ? 0.5 : 1 }}>
+                  <button
+                    role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
+                    // ticking leaves the detailed question; the menu stays open for more ticks
+                    onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
+                    className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right"
+                    style={{ cursor: done ? "default" : "pointer" }}
+                    onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <span className="mt-0.5"><Tick checked={done || on} muted={done} /></span>
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                      <span className="flex items-center gap-1.5 text-[14px]" style={{ color: textCol2 }}>
+                        <Icon size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                        {title}
+                        {done && <span className="text-[12.5px]" style={{ color: subCol }}>· בוצעה בשיחה זו</span>}
+                      </span>
+                      <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>
+                    </span>
+                  </button>
+                  {longWarn && (
+                    <div className="mx-4 mb-2 flex items-start gap-1.5 text-[12.5px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
+                      <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
+                      <span>המסמך ארוך (כ-{pages} עמודים). מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת.</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </>
     );
   }
@@ -1479,14 +1506,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   if (isEmpty) {
     return (
       <>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
+        {/* a detailed question takes the whole height: the greeting gives way and the input rises to the top */}
+        <div className={`flex-1 flex flex-col items-center ${detailedOpen ? "justify-start pt-6" : "justify-center"} px-6 pb-6 min-w-0`} style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
-            <p
+            {!detailedOpen && <p
               className="text-right text-[22px] font-medium mb-2"
               style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
             >
               שלום, טל. במה אוכל לעזור?
-            </p>
+            </p>}
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
           </div>
