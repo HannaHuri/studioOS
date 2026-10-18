@@ -15,8 +15,8 @@
    an ordinary prompt carrying its parts.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, FileText, Plus, Trash2, X } from "lucide-react";
+import { useImperativeHandle, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Plus, Trash2, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
 
@@ -215,7 +215,10 @@ function ScopeSwitch({ value, onChange, isDark }: { value: SourceScope; onChange
 // ── The parts ───────────────────────────────────────────────────────────────
 // The list of parts on its own, so the prompt library's side editor can hold the same form
 // as this window: one way of writing a part, wherever a part is written.
-export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
+export type PartsEditorHandle = { setAll: (fold: boolean) => void };
+
+export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs, collapsible }: {
+  ref?: React.Ref<PartsEditorHandle>; // lets the input's top bar open or fold every part
   parts: PromptPart[];
   onChange: (parts: PromptPart[]) => void;
   attempted: boolean; // a save was tried — empty מה לעשות fields say so
@@ -224,7 +227,13 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
   // then also offers this case's documents, with page ranges. The library's prompts are general,
   // so they keep document types alone.
   caseDocs?: CaseDocOption[];
+  // Inside the chat's input a part folds to its header line, so a long question can be read
+  // whole: a new part opens and the ones above it fold, and any can be reopened.
+  collapsible?: boolean;
 }) {
+  // folded from the start, so the first look shows the general instructions and that there are parts to define
+  const [closed, setClosed] = useState<boolean[]>(() => parts.map(() => true));
+  const isClosed = (i: number) => !!collapsible && !!closed[i] && !(attempted && !parts[i].task.trim());
   const [pendingDelete, setPendingDelete] = useState<number | null>(null); // the part waiting on its delete confirmation
   const listEnd = useRef<HTMLButtonElement>(null); // the "הוספת חלק" button, last in the list
 
@@ -237,9 +246,23 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
   const setPart = (i: number, p: Partial<PromptPart>) => onChange(parts.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const move = (i: number, d: -1 | 1) => {
     const next = [...parts]; [next[i], next[i + d]] = [next[i + d], next[i]]; onChange(next);
+    const c2 = parts.map((_, j) => !!closed[j]); [c2[i], c2[i + d]] = [c2[i + d], c2[i]]; setClosed(c2);
   };
+  const remove = (i: number) => {
+    onChange(parts.filter((_, j) => j !== i));
+    setClosed(parts.map((_, j) => !!closed[j]).filter((_, j) => j !== i));
+  };
+  // a copy goes right under its part, open, so picking many document types isn't done twice
+  const duplicate = (i: number) => {
+    onChange([...parts.slice(0, i + 1), { ...parts[i], sources: [...parts[i].sources], docs: parts[i].docs?.map((d) => ({ ...d })) }, ...parts.slice(i + 1)]);
+    const c2 = parts.map((_, j) => !!closed[j]);
+    setClosed([...c2.slice(0, i + 1), false, ...c2.slice(i + 1)]);
+  };
+  const setAll = (fold: boolean) => setClosed(parts.map(() => fold));
+  useImperativeHandle(ref, () => ({ setAll }));
   const addPart = () => {
     onChange([...parts, emptyPart()]);
+    setClosed([...parts.map((p) => !!p.task.trim()), false]);
     requestAnimationFrame(() => listEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" }));
   };
 
@@ -248,22 +271,52 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
 
   return (
     <div className="flex flex-col gap-3">
+      {collapsible && (
+        <div className="flex items-center gap-3">
+          <span className="text-[13px]" style={{ color: textCol }}>חלקים</span>
+        </div>
+      )}
       {parts.map((p, i) => {
         const taskMissing = attempted && !p.task.trim();
+        const folded = isClosed(i);
+        const toggle = () => setClosed(parts.map((_, j) => (j === i ? !folded : !!closed[j])));
         return (
-          <div key={i} className="rounded-lg pt-2 pb-4" style={{ paddingInline: "17px", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }}>
-            <div className="flex items-center gap-1 mb-2">
-              <span className="size-6 rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
-              <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
+          <div key={i} className={`rounded-lg pt-2 ${folded ? "pb-2" : "pb-4"}`} style={{
+            paddingInline: "17px",
+            // inside the input a grey fill read as disabled, so there a part is outlined instead
+            ...(collapsible ? { border: `1px solid ${folded ? quietBorder : (isDark ? dk.blue : c.primary)}` } : { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }),
+          }}>
+            <div className={`flex items-center gap-1 ${folded ? "" : "mb-2"}`}>
+              <span className="size-6 flex-none rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
+              {collapsible ? (
+                <button onClick={toggle} className="flex-1 min-w-0 flex items-center gap-1.5 text-right" aria-expanded={!folded} title={folded ? "פתיחת החלק" : "כיווץ החלק"}>
+                  <span className="flex-none text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
+                  {folded && (
+                    <span className="min-w-0 truncate text-[13.5px]" style={{ color: subCol }}>
+                      {p.task.trim() && `· ${p.task.trim()}`}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
+              )}
               <button className={iconBtn} style={{ color: subCol }} disabled={i === 0} onClick={() => move(i, -1)} title="הזזה למעלה"><ArrowUp size={15} /></button>
               <button className={iconBtn} style={{ color: subCol }} disabled={i === parts.length - 1} onClick={() => move(i, 1)} title="הזזה למטה"><ArrowDown size={15} /></button>
               <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => {
                 // an empty part goes straight away; one with anything written in it asks first
                 if (p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length) setPendingDelete(i);
-                else onChange(parts.filter((_, j) => j !== i));
+                else remove(i);
               }} title="מחיקת החלק"><Trash2 size={15} /></button>
+              <button className={iconBtn} style={{ color: subCol }} onClick={() => duplicate(i)} title="שכפול החלק"><Copy size={15} /></button>
+              {/* at the far end of the row, and larger than the actions beside it */}
+              {collapsible && (
+                <button onClick={toggle} className="size-8 flex-none flex items-center justify-center rounded transition-colors hover:bg-black/5 mr-1" style={{ color: textCol }} aria-expanded={!folded} title={folded ? "פתיחת החלק" : "כיווץ החלק"}>
+                  <ChevronDown size={20} style={{ transform: folded ? "none" : "rotate(180deg)", transition: "transform 0.15s" }} />
+                </button>
+              )}
             </div>
 
+            {!folded && <>
             <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
             <textarea
               value={p.task}
@@ -299,18 +352,33 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
               className={area}
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
             />
+            </>}
           </div>
         );
       })}
 
-      <button
-        ref={listEnd}
-        onClick={addPart}
-        className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
-        style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
-      >
-        <Plus size={16} /> הוספת חלק
-      </button>
+      {collapsible ? (
+        // inside the input: one filled button under the last part, at its end (left in RTL)
+        <div className="flex justify-end">
+          <button
+            ref={listEnd}
+            onClick={addPart}
+            className="ml-[2px] h-7 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+            style={{ backgroundColor: c.primary, color: "white" }}
+          >
+            <Plus size={14} /> הוספת חלק
+          </button>
+        </div>
+      ) : (
+        <button
+          ref={listEnd}
+          onClick={addPart}
+          className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
+          style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
+        >
+          <Plus size={16} /> הוספת חלק
+        </button>
+      )}
 
       {pendingDelete !== null && (
         <div onClick={(e) => e.stopPropagation()}>
@@ -319,7 +387,7 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs }: {
             title={`למחוק את חלק ${pendingDelete + 1}?`}
             note="מה שנכתב בחלק הזה יימחק, והחלקים שאחריו יעלו מקום אחד."
             confirmLabel="מחיקה"
-            onConfirm={() => { onChange(parts.filter((_, j) => j !== pendingDelete)); setPendingDelete(null); }}
+            onConfirm={() => { remove(pendingDelete); setPendingDelete(null); }}
             onClose={() => setPendingDelete(null)}
           />
         </div>

@@ -1205,7 +1205,7 @@ export function PromptEditor({
               <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות כלליות <span style={{ color: subCol }}>(לא חובה)</span></div>
               <textarea
                 value={guidelines} onChange={(e) => setGuidelines(e.target.value)} rows={2}
-                placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולציין מספרי עמודים"
+                placeholder="הנחיות שחלות על כל החלקים, למשל: לכתוב בלשון רשמית ולהתבסס רק על מסמכי התיק"
                 className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-3"
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
               />
