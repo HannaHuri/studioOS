@@ -228,7 +228,8 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
   // whole: a new part opens and the ones above it fold, and any can be reopened.
   collapsible?: boolean;
 }) {
-  const [closed, setClosed] = useState<boolean[]>(() => parts.map(() => false));
+  // folded from the start, so the first look shows the general instructions and that there are parts to define
+  const [closed, setClosed] = useState<boolean[]>(() => parts.map(() => true));
   const isClosed = (i: number) => !!collapsible && !!closed[i] && !(attempted && !parts[i].task.trim());
   const [pendingDelete, setPendingDelete] = useState<number | null>(null); // the part waiting on its delete confirmation
   const listEnd = useRef<HTMLButtonElement>(null); // the "הוספת חלק" button, last in the list
@@ -276,7 +277,7 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
                   <span className="flex-none text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
                   {folded && (
                     <span className="min-w-0 truncate text-[13.5px]" style={{ color: subCol }}>
-                      {p.task.trim() ? `· ${p.task.trim()}` : "· עדיין ריק"}
+                      {p.task.trim() && `· ${p.task.trim()}`}
                     </span>
                   )}
                   <ChevronDown size={15} className="flex-none" style={{ color: subCol, transform: folded ? "none" : "rotate(180deg)", transition: "transform 0.15s" }} />

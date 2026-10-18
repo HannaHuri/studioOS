@@ -98,13 +98,13 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 
 // ── The task menu ───────────────────────────────────────────────────────────
 // Beside the input: a basic question by default, a detailed one built in the input itself, and
-// below a line "בדיקות על מסמך", a side menu of checks that run on an uploaded document, any
+// below a line "פעולות על מסמך", a side menu of checks that run on an uploaded document, any
 // number of them together. The
 // agents decide on their own how far a question needs to go, so there is no mode to pick for that.
 type QuestionKind = "basic" | "detailed";
 const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: LucideIcon; mirror?: boolean }[] = [
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
-  { key: "detailed", label: "שאלה מפורטת", desc: "מגדירים מה לבדוק, באילו מסמכים ואיך", Icon: WandSparkles, mirror: true },
+  { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
 const TASK_MENU_W = 340;
 
@@ -1103,7 +1103,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             isDark={isDark}
             caseDocs={CASE_DOC_OPTIONS}
             // mid-conversation the input sits at the bottom, so it leaves the latest answer some room
-            maxHeight={isEmpty ? "calc(100vh - 272px)" : "calc(100vh - 360px)"}
+            maxHeight={isEmpty ? (draft ? "calc(100vh - 322px)" : "calc(100vh - 272px)") : "calc(100vh - 360px)"}
             fill={isEmpty}
             onSend={sendDetailed}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
@@ -1121,7 +1121,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             dir="rtl"
             placeholder={docMode
-              ? (draft ? "השליחה תריץ את הבדיקות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הבדיקות")
+              ? (draft ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
               : draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
             autoFocus={isEmpty}
           />
@@ -1452,7 +1452,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           >
             <span className="flex items-center gap-1.5 text-[14px]" style={{ color: docMode ? c.primary : textCol2, fontWeight: docMode ? 600 : 400 }}>
               <FileText size={15} style={{ color: docMode ? c.primary : c.iconGray, flexShrink: 0 }} />
-              בדיקות על מסמך{nPicked > 0 && <span style={{ fontWeight: 400 }}> · {nPicked} נבחרו</span>}
+              פעולות על מסמך{nPicked > 0 && <span style={{ fontWeight: 400 }}> · {nPicked} נבחרו</span>}
             </span>
             <ChevronLeft size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
           </button>
