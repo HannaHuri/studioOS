@@ -149,16 +149,15 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
       <div className="flex items-center gap-2 pb-2">
         <WandSparkles size={16} style={{ color: c.primary, transform: "scaleX(-1)", flexShrink: 0 }} />
         <span className="flex-none text-[15px]" style={{ color: textCol }}>שאלה מפורטת</span>
-        <span className="flex-1" />
         {/* in the top bar, so they never scroll out of view; with a single part there is nothing to do all at once */}
         {parts.length > 1 && (
-          <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
+          <span className="flex items-center gap-2 text-[12.5px] mr-3" style={{ color: subCol }}>
             <button onClick={() => partsRef.current?.setAll(false)} className="hover:underline">פתיחת הכל</button>
             <span className="h-3 w-px" style={{ backgroundColor: line }} />
             <button onClick={() => partsRef.current?.setAll(true)} className="hover:underline">כיווץ הכל</button>
           </span>
         )}
-        {parts.length > 1 && hasContent && <span className="h-3 w-px mx-1" style={{ backgroundColor: line }} />}
+        <span className="flex-1" />
         {hasContent && (
           <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
             נשמר כטיוטה
