@@ -271,11 +271,11 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
         <div className="flex items-center gap-3">
           <span className="text-[13px]" style={{ color: textCol }}>חלקים</span>
           <span className="flex-1" />
-          <button onClick={() => setAll(false)} className="text-[13px] hover:underline" style={{ color: subCol }}>פתיחת הכל</button>
-          <button onClick={() => setAll(true)} className="text-[13px] hover:underline" style={{ color: subCol }}>כיווץ הכל</button>
-          <button onClick={addPart} className="h-8 px-3 flex items-center gap-1 rounded-[4px] text-[13.5px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            <Plus size={15} /> הוספת חלק
-          </button>
+          {/* with a single part there is nothing to open or fold all at once */}
+          {parts.length > 1 && <>
+            <button onClick={() => setAll(false)} className="text-[13px] hover:underline" style={{ color: subCol }}>פתיחת הכל</button>
+            <button onClick={() => setAll(true)} className="text-[13px] hover:underline" style={{ color: subCol }}>כיווץ הכל</button>
+          </>}
         </div>
       )}
       {parts.map((p, i) => {
@@ -359,14 +359,28 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
         );
       })}
 
-      <button
-        ref={listEnd}
-        onClick={addPart}
-        className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
-        style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
-      >
-        <Plus size={16} /> הוספת חלק
-      </button>
+      {collapsible ? (
+        // inside the input: one filled button under the last part, at its end (left in RTL)
+        <div className="flex justify-end">
+          <button
+            ref={listEnd}
+            onClick={addPart}
+            className="h-7 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+            style={{ backgroundColor: c.primary, color: "white" }}
+          >
+            <Plus size={14} /> הוספת חלק
+          </button>
+        </div>
+      ) : (
+        <button
+          ref={listEnd}
+          onClick={addPart}
+          className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02]"
+          style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
+        >
+          <Plus size={16} /> הוספת חלק
+        </button>
+      )}
 
       {pendingDelete !== null && (
         <div onClick={(e) => e.stopPropagation()}>

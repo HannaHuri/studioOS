@@ -13,7 +13,7 @@
    for this use only, with "שמירת השינויים בספרייה" to keep the change.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useImperativeHandle, useState } from "react";
+import { useEffect, useImperativeHandle, useState } from "react";
 import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
@@ -51,6 +51,16 @@ function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
 // folds to one line, so a long question can be read whole before it goes.
 export type DetailedHandle = { send: () => void };
 
+// The draft of the detailed question being written, kept in this browser
+type DetailedDraft = { parts: PromptPart[]; guidelines: string };
+const DRAFT_KEY = "mishpat.detailedDraft";
+function loadDraft(): DetailedDraft | null {
+  try { const v = localStorage.getItem(DRAFT_KEY); return v ? JSON.parse(v) as DetailedDraft : null; } catch { return null; }
+}
+function saveDraft(d: DetailedDraft | null) {
+  try { if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage off */ }
+}
+
 function Fold({ title, note, preview, open, onToggle, isDark, children }: {
   title: string; note?: string; preview?: string; open: boolean; onToggle: () => void; isDark: boolean; children: React.ReactNode;
 }) {
@@ -79,8 +89,15 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
-  const [parts, setParts] = useState<PromptPart[]>([emptyPart()]);
-  const [guidelines, setGuidelines] = useState(""); // general instructions for all the parts
+  // What's written is kept as a draft while working: closing, switching to a basic question or
+  // reloading the page brings it back the next time a detailed question is opened.
+  const [draft0] = useState(loadDraft);
+  const [parts, setParts] = useState<PromptPart[]>(draft0?.parts ?? [emptyPart()]);
+  const [guidelines, setGuidelines] = useState(draft0?.guidelines ?? ""); // general instructions for all the parts
+  const [editorKey, setEditorKey] = useState(0); // a cleared draft starts the parts afresh, folded
+  const hasContent = !!guidelines.trim() || parts.some((p) => p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length);
+  useEffect(() => { saveDraft(hasContent ? { parts, guidelines } : null); }, [parts, guidelines, hasContent]);
+  const clearDraft = () => { setParts([emptyPart()]); setGuidelines(""); setAttempted(false); setEditorKey((k) => k + 1); };
   const [guideOpen, setGuideOpen] = useState(true);
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
@@ -117,6 +134,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
         uses: 1, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       }, share ? { anon } : undefined);
     }
+    saveDraft(null);
     onSend(done, guidelines.trim());
   };
   useImperativeHandle(ref, () => ({ send }));
@@ -127,6 +145,12 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
         <WandSparkles size={16} style={{ color: c.primary, transform: "scaleX(-1)", flexShrink: 0 }} />
         <span className="flex-none text-[15px]" style={{ color: textCol }}>שאלה מפורטת</span>
         <span className="flex-1" />
+        {hasContent && (
+          <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
+            נשמר כטיוטה
+            <button onClick={clearDraft} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>ניקוי</button>
+          </span>
+        )}
         <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="חזרה לשאלה בסיסית">
           <X size={16} />
         </button>
@@ -143,7 +167,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
             />
           </Fold>
 
-          <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
+          <PartsEditor key={editorKey} parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
 
           <div>
             <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
