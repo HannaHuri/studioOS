@@ -13,10 +13,10 @@
    for this use only, with "שמירת השינויים בספרייה" to keep the change.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useEffect, useImperativeHandle, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
-import { PartsEditor, emptyPart, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
   CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
@@ -68,12 +68,16 @@ function Fold({ title, note, preview, open, onToggle, isDark, children }: {
   const subCol = isDark ? dk.textMuted : c.textLight;
   return (
     <div>
-      <button onClick={onToggle} className="w-full flex items-center gap-1.5 text-right" aria-expanded={open}>
+      {/* the toggle matches a part's: large, at the far end, in line with the parts' toggles below */}
+      <button onClick={onToggle} className="w-full flex items-center gap-1.5 text-right" style={{ paddingInlineEnd: "18px" }} aria-expanded={open}>
         <span className="flex-none text-[13px]" style={{ color: textCol }}>
           {title}{note && <span style={{ color: subCol }}> {note}</span>}
         </span>
         {!open && preview && <span className="min-w-0 truncate text-[13px]" style={{ color: subCol }}>· {preview}</span>}
-        <ChevronDown size={14} className="flex-none" style={{ color: subCol, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+        <span className="flex-1" />
+        <span className="size-8 flex-none flex items-center justify-center rounded transition-colors hover:bg-black/5" style={{ color: textCol }}>
+          <ChevronDown size={20} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+        </span>
       </button>
       {open && <div className="mt-1.5">{children}</div>}
     </div>
@@ -99,6 +103,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   useEffect(() => { saveDraft(hasContent ? { parts, guidelines } : null); }, [parts, guidelines, hasContent]);
   const clearDraft = () => { setParts([emptyPart()]); setGuidelines(""); setAttempted(false); setEditorKey((k) => k + 1); };
   const [guideOpen, setGuideOpen] = useState(true);
+  const partsRef = useRef<PartsEditorHandle>(null);
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
   const [share, setShare] = useState(false); // שיתוף עם כל המשתמשים, only on top of keeping
@@ -145,6 +150,15 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
         <WandSparkles size={16} style={{ color: c.primary, transform: "scaleX(-1)", flexShrink: 0 }} />
         <span className="flex-none text-[15px]" style={{ color: textCol }}>שאלה מפורטת</span>
         <span className="flex-1" />
+        {/* in the top bar, so they never scroll out of view; with a single part there is nothing to do all at once */}
+        {parts.length > 1 && (
+          <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
+            <button onClick={() => partsRef.current?.setAll(false)} className="hover:underline">פתיחת הכל</button>
+            <span className="h-3 w-px" style={{ backgroundColor: line }} />
+            <button onClick={() => partsRef.current?.setAll(true)} className="hover:underline">כיווץ הכל</button>
+          </span>
+        )}
+        {parts.length > 1 && hasContent && <span className="h-3 w-px mx-1" style={{ backgroundColor: line }} />}
         {hasContent && (
           <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
             נשמר כטיוטה
@@ -156,7 +170,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
         </button>
       </div>
 
-      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={{ maxHeight }} dir="ltr">
+      <div className="overflow-y-auto docs-scroll -ml-1 pl-1 -mr-[10px] pr-[10px]" style={{ maxHeight }} dir="ltr">
         <div dir="rtl" className="flex flex-col gap-3 pb-1">
           <Fold title="הנחיות כלליות" note="(לא חובה)" preview={guidelines.trim()} open={guideOpen} onToggle={() => setGuideOpen((v) => !v)} isDark={isDark}>
             <textarea
@@ -167,7 +181,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
             />
           </Fold>
 
-          <PartsEditor key={editorKey} parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
+          <PartsEditor ref={partsRef} key={editorKey} parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
 
           <div>
             <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />

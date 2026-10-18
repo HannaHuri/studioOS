@@ -15,7 +15,7 @@
    an ordinary prompt carrying its parts.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useRef, useState } from "react";
+import { useImperativeHandle, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Plus, Trash2, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
@@ -215,7 +215,10 @@ function ScopeSwitch({ value, onChange, isDark }: { value: SourceScope; onChange
 // ── The parts ───────────────────────────────────────────────────────────────
 // The list of parts on its own, so the prompt library's side editor can hold the same form
 // as this window: one way of writing a part, wherever a part is written.
-export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, collapsible }: {
+export type PartsEditorHandle = { setAll: (fold: boolean) => void };
+
+export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs, collapsible }: {
+  ref?: React.Ref<PartsEditorHandle>; // lets the input's top bar open or fold every part
   parts: PromptPart[];
   onChange: (parts: PromptPart[]) => void;
   attempted: boolean; // a save was tried — empty מה לעשות fields say so
@@ -256,6 +259,7 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
     setClosed([...c2.slice(0, i + 1), false, ...c2.slice(i + 1)]);
   };
   const setAll = (fold: boolean) => setClosed(parts.map(() => fold));
+  useImperativeHandle(ref, () => ({ setAll }));
   const addPart = () => {
     onChange([...parts, emptyPart()]);
     setClosed([...parts.map((p) => !!p.task.trim()), false]);
@@ -270,12 +274,6 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
       {collapsible && (
         <div className="flex items-center gap-3">
           <span className="text-[13px]" style={{ color: textCol }}>חלקים</span>
-          <span className="flex-1" />
-          {/* with a single part there is nothing to open or fold all at once */}
-          {parts.length > 1 && <>
-            <button onClick={() => setAll(false)} className="text-[13px] hover:underline" style={{ color: subCol }}>פתיחת הכל</button>
-            <button onClick={() => setAll(true)} className="text-[13px] hover:underline" style={{ color: subCol }}>כיווץ הכל</button>
-          </>}
         </div>
       )}
       {parts.map((p, i) => {
@@ -286,7 +284,7 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
           <div key={i} className={`rounded-lg pt-2 ${folded ? "pb-2" : "pb-4"}`} style={{
             paddingInline: "17px",
             // inside the input a grey fill read as disabled, so there a part is outlined instead
-            ...(collapsible ? { border: `1px solid ${quietBorder}` } : { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }),
+            ...(collapsible ? { border: `1px solid ${folded ? quietBorder : (isDark ? dk.blue : c.primary)}` } : { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f4f6f9" }),
           }}>
             <div className={`flex items-center gap-1 ${folded ? "" : "mb-2"}`}>
               <span className="size-6 flex-none rounded-full flex items-center justify-center text-[12.5px] ml-1.5" style={{ backgroundColor: c.primary, color: "white" }}>{i + 1}</span>
@@ -365,7 +363,7 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
           <button
             ref={listEnd}
             onClick={addPart}
-            className="h-7 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
+            className="ml-[2px] h-7 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-opacity hover:opacity-90"
             style={{ backgroundColor: c.primary, color: "white" }}
           >
             <Plus size={14} /> הוספת חלק
