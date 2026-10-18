@@ -796,6 +796,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
   const docMode = anyKind(picked);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [checksHelp, setChecksHelp] = useState<{ top: number; right: number } | null>(null); // what the document actions do
   const taskBtnRef = useRef<HTMLButtonElement>(null);
   const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [agentRunning, setAgentRunning] = useState(false);
@@ -916,6 +917,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setTaskOpen(false);
+    setChecksHelp(null);
     setQKind("basic");
     setPicked(NO_KINDS);
     setUsedChecks(NO_KINDS);
@@ -1392,7 +1394,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The task menu (fixed position) ───────────────────────────────────
   function renderTaskMenu() {
     if (!taskOpen || !taskPos) return null;
-    const close = () => setTaskOpen(false);
+    const close = () => { setTaskOpen(false); setChecksHelp(null); };
     const hover = isDark ? dk.input : c.hoverBg;
     const textCol2 = isDark ? dk.text : c.text;
     const subCol = isDark ? dk.textMuted : c.textGray;
@@ -1402,6 +1404,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       backgroundColor: isDark ? dk.surface : "white", borderRadius: "12px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
       width: `${width}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
     });
+    const HELP_W = 320;
+    // beside the menu, to its left as RTL reads, or to its right when the menu is near the left edge
+    const helpAt = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect(), menu = el.closest("[role=menu]")!.getBoundingClientRect();
+      const top = Math.max(8, Math.min(r.top - 8, window.innerHeight - 240));
+      return menu.left >= HELP_W + 8
+        ? { top, right: window.innerWidth - menu.left + 6 }
+        : { top, right: Math.max(8, window.innerWidth - menu.right - HELP_W - 6) };
+    };
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
@@ -1428,6 +1439,17 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             );
           })}
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
+          <div className="flex items-center gap-1 px-4 pt-1 pb-0.5 text-[12.5px]" style={{ color: subCol }}>
+            פעולות על מסמך
+            <button
+              onClick={(e) => { const at = helpAt(e.currentTarget); setChecksHelp((v) => (v ? null : at)); }}
+              className="size-5 flex items-center justify-center rounded-full hover:bg-black/5"
+              style={{ color: checksHelp ? c.primary : c.iconGray }}
+              title="מה הפעולות עושות" aria-expanded={!!checksHelp}
+            >
+              <HelpCircle size={14} />
+            </button>
+          </div>
           {/* the checks sit right in the menu; they tick rather than pick: any number run together */}
           {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
             const done = usedChecks[key];
@@ -1463,6 +1485,23 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             );
           })}
         </div>
+
+        {checksHelp && (
+          <div dir="rtl" role="dialog" aria-label="פעולות על מסמך" style={{ ...panel(checksHelp, HELP_W), padding: "12px 16px" }}>
+            <div className="text-[13px] mb-2" style={{ color: textCol2, fontWeight: 600 }}>פעולות על מסמך</div>
+            <div className="text-[12.5px] leading-snug mb-2.5" style={{ color: subCol }}>מעלים מסמך Word ובוחרים פעולה אחת או כמה.</div>
+            <div className="flex flex-col gap-2.5">
+              {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => (
+                <div key={key} className="flex items-start gap-1.5">
+                  <Icon size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
+                  <span className="text-[13px] leading-snug" style={{ color: textCol2 }}>
+                    {title}<span style={{ color: subCol }}> · {desc}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </>
     );
   }
