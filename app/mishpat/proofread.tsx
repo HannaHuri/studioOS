@@ -225,7 +225,7 @@ export async function countDocxWords(file: File): Promise<number | null> {
 // progress tracker shows for the same work.
 export const DRAFT_ACTIONS: { key: keyof ProofKinds; title: string; short: string; desc: string; Icon: RunStepIcon }[] = [
   { key: "lang", Icon: SpellCheck, title: "הגהה", short: "הגהה", desc: "כתיב, ניסוח ופיסוק. חוזרת כעקוב אחר שינויים." },
-  { key: "coherence", Icon: TextSearch, title: "בדיקת עקיבות", short: "עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך." },
+  { key: "coherence", Icon: TextSearch, title: "עקיבות", short: "עקיבות", desc: "סתירות בתוך המסמך. חוזרת כהערות בצד המסמך." },
   { key: "anon", Icon: UserRoundX, title: "התממה", short: "התממה", desc: "החלפת שמות ופרטים מזהים. חוזרת כעותק נקי." },
 ];
 
