@@ -1104,7 +1104,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             caseDocs={CASE_DOC_OPTIONS}
             // mid-conversation the input sits at the bottom, so it leaves the latest answer some room
             maxHeight={isEmpty ? (draft ? "calc(100vh - 322px)" : "calc(100vh - 272px)") : "calc(100vh - 360px)"}
-            fill={isEmpty}
             onSend={sendDetailed}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
             onClose={() => setQKind("basic")}
@@ -1507,8 +1506,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   if (isEmpty) {
     return (
       <>
-        {/* a detailed question takes the whole height: the greeting gives way and the input rises to the top */}
-        <div className={`flex-1 flex flex-col items-center ${detailedOpen ? "justify-start pt-6" : "justify-center"} px-6 pb-6 min-w-0`} style={{ backgroundColor: bg }}>
+        {/* a detailed question grows from the middle: the greeting gives way, and past the screen's height the parts scroll */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
             {!detailedOpen && <p
               className="text-right text-[22px] font-medium mb-2"

@@ -70,12 +70,11 @@ function Fold({ title, note, preview, open, onToggle, isDark, children }: {
   );
 }
 
-export function DetailedInline({ ref, isDark, caseDocs, maxHeight, fill, onSend, onSaveToLibrary, onClose }: {
+export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSaveToLibrary, onClose }: {
   ref?: React.Ref<DetailedHandle>;
   isDark: boolean;
   caseDocs: CaseDocOption[];
   maxHeight: string; // past it the sections scroll, so the input never pushes the page away
-  fill?: boolean;    // take that whole height from the start, leaving plenty of room to write
   onSend: (parts: PromptPart[], guidelines: string) => void;
   onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
@@ -133,7 +132,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, fill, onSend,
         </button>
       </div>
 
-      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={fill ? { height: maxHeight } : { maxHeight }} dir="ltr">
+      <div className="overflow-y-auto docs-scroll -mx-1 px-1" style={{ maxHeight }} dir="ltr">
         <div dir="rtl" className="flex flex-col gap-3 pb-1">
           <Fold title="הנחיות כלליות" note="(לא חובה)" preview={guidelines.trim()} open={guideOpen} onToggle={() => setGuideOpen((v) => !v)} isDark={isDark}>
             <textarea

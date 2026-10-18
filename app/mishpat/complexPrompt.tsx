@@ -16,7 +16,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Plus, Trash2, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
 
@@ -249,6 +249,13 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
     onChange(parts.filter((_, j) => j !== i));
     setClosed(parts.map((_, j) => !!closed[j]).filter((_, j) => j !== i));
   };
+  // a copy goes right under its part, open, so picking many document types isn't done twice
+  const duplicate = (i: number) => {
+    onChange([...parts.slice(0, i + 1), { ...parts[i], sources: [...parts[i].sources], docs: parts[i].docs?.map((d) => ({ ...d })) }, ...parts.slice(i + 1)]);
+    const c2 = parts.map((_, j) => !!closed[j]);
+    setClosed([...c2.slice(0, i + 1), false, ...c2.slice(i + 1)]);
+  };
+  const setAll = (fold: boolean) => setClosed(parts.map(() => fold));
   const addPart = () => {
     onChange([...parts, emptyPart()]);
     setClosed([...parts.map((p) => !!p.task.trim()), false]);
@@ -260,6 +267,17 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
 
   return (
     <div className="flex flex-col gap-3">
+      {collapsible && (
+        <div className="flex items-center gap-3">
+          <span className="text-[13px]" style={{ color: textCol }}>חלקים</span>
+          <span className="flex-1" />
+          <button onClick={() => setAll(false)} className="text-[13px] hover:underline" style={{ color: subCol }}>פתיחת הכל</button>
+          <button onClick={() => setAll(true)} className="text-[13px] hover:underline" style={{ color: subCol }}>כיווץ הכל</button>
+          <button onClick={addPart} className="h-8 px-3 flex items-center gap-1 rounded-[4px] text-[13.5px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
+            <Plus size={15} /> הוספת חלק
+          </button>
+        </div>
+      )}
       {parts.map((p, i) => {
         const taskMissing = attempted && !p.task.trim();
         const folded = isClosed(i);
@@ -280,7 +298,6 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
                       {p.task.trim() && `· ${p.task.trim()}`}
                     </span>
                   )}
-                  <ChevronDown size={15} className="flex-none" style={{ color: subCol, transform: folded ? "none" : "rotate(180deg)", transition: "transform 0.15s" }} />
                 </button>
               ) : (
                 <span className="flex-1 text-[14.5px]" style={{ color: textCol }}>חלק {i + 1}</span>
@@ -292,6 +309,13 @@ export function PartsEditor({ parts, onChange, attempted, isDark, caseDocs, coll
                 if (p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length) setPendingDelete(i);
                 else remove(i);
               }} title="מחיקת החלק"><Trash2 size={15} /></button>
+              <button className={iconBtn} style={{ color: subCol }} onClick={() => duplicate(i)} title="שכפול החלק"><Copy size={15} /></button>
+              {/* at the far end of the row, and larger than the actions beside it */}
+              {collapsible && (
+                <button onClick={toggle} className="size-8 flex-none flex items-center justify-center rounded transition-colors hover:bg-black/5 mr-1" style={{ color: textCol }} aria-expanded={!folded} title={folded ? "פתיחת החלק" : "כיווץ החלק"}>
+                  <ChevronDown size={20} style={{ transform: folded ? "none" : "rotate(180deg)", transition: "transform 0.15s" }} />
+                </button>
+              )}
             </div>
 
             {!folded && <>
