@@ -1405,13 +1405,13 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       width: `${width}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
     });
     const HELP_W = 320;
-    // beside the menu, to its left as RTL reads, or to its right when the menu is near the left edge
+    // beside the menu on its right, or on its left when the menu is near the right edge
     const helpAt = (el: HTMLElement) => {
       const r = el.getBoundingClientRect(), menu = el.closest("[role=menu]")!.getBoundingClientRect();
-      const top = Math.max(8, Math.min(r.top - 8, window.innerHeight - 240));
-      return menu.left >= HELP_W + 8
-        ? { top, right: window.innerWidth - menu.left + 6 }
-        : { top, right: Math.max(8, window.innerWidth - menu.right - HELP_W - 6) };
+      const top = Math.max(8, Math.min(r.top - 8, window.innerHeight - 280));
+      return window.innerWidth - menu.right >= HELP_W + 8
+        ? { top, right: window.innerWidth - menu.right - HELP_W - 6 }
+        : { top, right: window.innerWidth - menu.left + 6 };
     };
     return (
       <>
@@ -1494,8 +1494,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => (
                 <div key={key} className="flex items-start gap-1.5">
                   <Icon size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
-                  <span className="text-[13px] leading-snug" style={{ color: textCol2 }}>
-                    {title}<span style={{ color: subCol }}> · {desc}</span>
+                  <span className="flex flex-col gap-0.5 text-[13px] leading-snug">
+                    <span style={{ color: textCol2 }}>{title}</span>
+                    <span className="text-[12.5px]" style={{ color: subCol }}>{desc}</span>
                   </span>
                 </div>
               ))}
