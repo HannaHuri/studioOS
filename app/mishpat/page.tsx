@@ -106,7 +106,7 @@ const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: L
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
-const TASK_MENU_W = 188; // exactly three action tiles wide; more tiles wrap to a new row
+const TASK_MENU_W = 176; // exactly three action tiles wide; more tiles wrap to a new row
 
 // What each document action does, said in the input once it is picked (the menu shows only names)
 const CHECK_HINT: Record<keyof ProofKinds, { one: string; short: string }> = {
@@ -1418,7 +1418,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
         <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
-          {QUESTION_KINDS.map(({ key, label, desc, Icon, mirror }) => {
+          {QUESTION_KINDS.map(({ key, label, desc }) => {
             const on = !docMode && key === qKind;
             return (
               <button
@@ -1430,7 +1430,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
-                    <Icon size={15} style={{ color: on ? c.primary : c.iconGray, flexShrink: 0, transform: mirror ? "scaleX(-1)" : undefined }} />
                     {label}
                   </span>
                   {desc && <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>}
@@ -1443,7 +1442,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           <div className="px-4 pt-1 pb-2 text-[12.5px]" style={{ color: subCol }}>פעולות על מסמך</div>
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(3,48px)] gap-1.5 px-4 pb-2">
+          <div className="grid grid-cols-[repeat(3,44px)] gap-1.5 px-4 pb-2">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
@@ -1453,7 +1452,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   // ticking leaves the detailed question; the menu stays open for more
                   onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
                   title={done ? "בוצעה בשיחה זו" : undefined}
-                  className="size-[48px] flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors"
+                  className="size-[44px] flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors"
                   style={{
                     border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`,
                     backgroundColor: on ? (isDark ? "rgba(0,115,234,0.18)" : "#e6f1fd") : "transparent",
@@ -1462,8 +1461,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onMouseEnter={e => { if (!done && !on) e.currentTarget.style.backgroundColor = hover; }}
                   onMouseLeave={e => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
-                  <Icon size={17} style={{ color: on ? c.primary : c.iconGray }} />
-                  <span className="text-[11.5px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
+                  <Icon size={16} style={{ color: on ? c.primary : c.iconGray }} />
+                  <span className="text-[11px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
                 </button>
               );
             })}
