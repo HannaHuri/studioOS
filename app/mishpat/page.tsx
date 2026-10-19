@@ -13,7 +13,7 @@ import {
 import { c, dk, RED } from "./theme";
 import { Badge, UseExampleIcon } from "./icons";
 import {
-  DraftStrip, ProofAnswer, ProofHistoryIcon, proofKindLabel, proofSteps, proofFiles,
+  DraftStrip, ProofAnswer, ProofHistoryIcon, Tick, proofKindLabel, proofSteps, proofFiles,
   DRAFT_ACTIONS, COHERENCE_PAGE_LIMIT, NO_KINDS, anyKind, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
   type ProofKinds, type ProofRun, type RunStep,
 } from "./proofread";
@@ -106,19 +106,7 @@ const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: L
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
-const TASK_MENU_W = 216; // four action tiles to a row: three today, room for a fourth; more wrap to a new row
-
-// What each document action does, said in the input once it is picked (the menu shows only names)
-const CHECK_HINT: Record<keyof ProofKinds, { one: string; short: string }> = {
-  lang: { one: "הגהה: נבדוק כתיב, ניסוח ופיסוק, והתיקונים יחזרו כעקוב אחר שינויים.", short: "כתיב וניסוח" },
-  coherence: { one: "עקיבות: נחפש סתירות בתוך המסמך, והן יחזרו כהערות בצד המסמך.", short: "סתירות" },
-  anon: { one: "התממה: נחליף שמות ופרטים מזהים, ויחזור עותק נקי.", short: "פרטים מזהים" },
-};
-function checksPlaceholder(picked: ProofKinds, hasDraft: boolean) {
-  const keys = (Object.keys(CHECK_HINT) as (keyof ProofKinds)[]).filter((k) => picked[k]);
-  const what = keys.length === 1 ? CHECK_HINT[keys[0]].one : `נבדוק במסמך: ${keys.map((k) => CHECK_HINT[k].short).join(", ")}.`;
-  return `${what} ${hasDraft ? "השליחה תריץ על המסמך שהועלה." : "יש להעלות מסמך Word ולשלוח."}`;
-}
+const TASK_MENU_W = 240;
 
 type DocItem = { name: string; words: string; summary: string };
 type CaseDocType = { name: string; count: string; checked: boolean; items: DocItem[] };
@@ -808,8 +796,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const [picked, setPicked] = useState<ProofKinds>(NO_KINDS);
   const docMode = anyKind(picked);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [checksHelp, setChecksHelp] = useState<{ top: number; right: number } | null>(null); // what the document actions do
   const taskBtnRef = useRef<HTMLButtonElement>(null);
-  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number; width: number } | null>(null);
+  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -911,10 +900,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   function handleTaskToggle() {
     if (!taskOpen && taskBtnRef.current) {
       const r = taskBtnRef.current.getBoundingClientRect();
-      const width = TASK_MENU_W;
-      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - width - 8));
+      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - TASK_MENU_W - 8));
       const down = isEmpty && window.innerHeight - r.bottom >= 400;
-      setTaskPos(down ? { top: r.bottom + 4, right, width } : { bottom: window.innerHeight - r.top + 4, right, width });
+      setTaskPos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
     }
     setTaskOpen((v) => !v);
   }
@@ -929,6 +917,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setDraft(null);
     setUploadError(null);
     setTaskOpen(false);
+    setChecksHelp(null);
     setQKind("basic");
     setPicked(NO_KINDS);
     setUsedChecks(NO_KINDS);
@@ -1131,7 +1120,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             dir="rtl"
             placeholder={docMode
-              ? checksPlaceholder(picked, !!draft)
+              ? (draft ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
               : draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
             autoFocus={isEmpty}
           />
@@ -1405,7 +1394,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // ── The task menu (fixed position) ───────────────────────────────────
   function renderTaskMenu() {
     if (!taskOpen || !taskPos) return null;
-    const close = () => setTaskOpen(false);
+    const close = () => { setTaskOpen(false); setChecksHelp(null); };
     const hover = isDark ? dk.input : c.hoverBg;
     const textCol2 = isDark ? dk.text : c.text;
     const subCol = isDark ? dk.textMuted : c.textGray;
@@ -1415,11 +1404,20 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       backgroundColor: isDark ? dk.surface : "white", borderRadius: "12px", boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
       width: `${width}px`, padding: "6px 0", fontFamily: "Noto Sans Hebrew, sans-serif",
     });
+    const HELP_W = 320;
+    // beside the menu on its right, or on its left when the menu is near the right edge
+    const helpAt = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect(), menu = el.closest("[role=menu]")!.getBoundingClientRect();
+      const top = Math.max(8, Math.min(r.top - 8, window.innerHeight - 280));
+      return window.innerWidth - menu.right >= HELP_W + 8
+        ? { top, right: window.innerWidth - menu.right - HELP_W - 6 }
+        : { top, right: window.innerWidth - menu.left + 6 };
+    };
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
-        <div dir="rtl" role="menu" style={panel(taskPos, taskPos.width)}>
-          {QUESTION_KINDS.map(({ key, label, desc }) => {
+        <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
+          {QUESTION_KINDS.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === qKind;
             return (
               <button
@@ -1427,53 +1425,84 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 onClick={() => { setPicked(NO_KINDS); setQKind(key); close(); }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-right"
+                className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
+                    <Icon size={15} style={{ color: on ? c.primary : c.iconGray, flexShrink: 0, transform: mirror ? "scaleX(-1)" : undefined }} />
                     {label}
                   </span>
                   {desc && <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>}
                 </span>
-                {on && <Check size={14} style={{ color: c.primary, flexShrink: 0 }} />}
+                {on && <Check size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "3px" }} />}
               </button>
             );
           })}
-          {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
-              length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(4,40px)] gap-2 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
-            {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
-              const done = usedChecks[key];
-              const on = picked[key] && !done;
-              return (
-                <button
-                  key={key} role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
-                  // ticking leaves the detailed question; the menu stays open for more
-                  onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
-                  title={done ? "בוצעה בשיחה זו" : undefined}
-                  className="size-[40px] flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors"
-                  style={{
-                    border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`,
-                    backgroundColor: on ? (isDark ? "rgba(0,115,234,0.18)" : "#e6f1fd") : "transparent",
-                    opacity: done ? 0.45 : 1, cursor: done ? "default" : "pointer",
-                  }}
-                  onMouseEnter={e => { if (!done && !on) e.currentTarget.style.backgroundColor = hover; }}
-                  onMouseLeave={e => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  <Icon size={14} style={{ color: on ? c.primary : c.iconGray }} />
-                  <span className="text-[10px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
-                </button>
-              );
-            })}
+          <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
+          <div className="flex items-center gap-1 px-4 pt-1 pb-0.5 text-[12.5px]" style={{ color: subCol }}>
+            פעולות על מסמך
+            <button
+              onClick={(e) => { const at = helpAt(e.currentTarget); setChecksHelp((v) => (v ? null : at)); }}
+              className="size-5 flex items-center justify-center rounded-full hover:bg-black/5"
+              style={{ color: checksHelp ? c.primary : c.iconGray }}
+              title="מה הפעולות עושות" aria-expanded={!!checksHelp}
+            >
+              <HelpCircle size={14} />
+            </button>
           </div>
-          {picked.coherence && pages !== null && pages > COHERENCE_PAGE_LIMIT && (
-            <div className="mx-4 mb-2 flex items-start gap-1.5 text-[12.5px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
-              <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
-              <span>המסמך ארוך (כ-{pages} עמודים). מעל {COHERENCE_PAGE_LIMIT} עמודים עקיבות פחות מדויקת.</span>
-            </div>
-          )}
+          {/* the checks sit right in the menu; they tick rather than pick: any number run together */}
+          {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
+            const done = usedChecks[key];
+            const on = picked[key];
+            const longWarn = key === "coherence" && on && pages !== null && pages > COHERENCE_PAGE_LIMIT;
+            return (
+              <div key={key} style={{ opacity: done ? 0.5 : 1 }}>
+                <button
+                  role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
+                  // ticking leaves the detailed question; the menu stays open for more ticks
+                  onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-right"
+                  style={{ cursor: done ? "default" : "pointer" }}
+                  onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <span className="flex"><Tick checked={done || on} muted={done} /></span>
+                  <span className="flex flex-col gap-0.5 min-w-0">
+                    <span className="flex items-center gap-1.5 text-[14px]" style={{ color: textCol2 }}>
+                      <Icon size={15} style={{ color: c.iconGray, flexShrink: 0 }} />
+                      {title}
+                      {done && <span className="text-[12.5px]" style={{ color: subCol }}>· בוצעה בשיחה זו</span>}
+                    </span>
+                  </span>
+                </button>
+                {longWarn && (
+                  <div className="mx-4 mb-2 flex items-start gap-1.5 text-[12.5px] leading-snug rounded px-2 py-1.5" style={{ color: "#7a4a00", backgroundColor: "#fff3d6" }}>
+                    <Info size={14} style={{ color: "#d18a00", flexShrink: 0, marginTop: "2px" }} />
+                    <span>המסמך ארוך (כ-{pages} עמודים). מעל {COHERENCE_PAGE_LIMIT} עמודים הבדיקה פחות מדויקת.</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
+        {checksHelp && (
+          <div dir="rtl" role="dialog" aria-label="פעולות על מסמך" style={{ ...panel(checksHelp, HELP_W), padding: "12px 16px" }}>
+            <div className="text-[13px] mb-2" style={{ color: textCol2, fontWeight: 600 }}>פעולות על מסמך</div>
+            <div className="text-[12.5px] leading-snug mb-2.5" style={{ color: subCol }}>מעלים מסמך Word ובוחרים פעולה אחת או כמה.</div>
+            <div className="flex flex-col gap-2.5">
+              {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => (
+                <div key={key} className="flex items-start gap-1.5">
+                  <Icon size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
+                  <span className="flex flex-col gap-0.5 text-[13px] leading-snug">
+                    <span style={{ color: textCol2 }}>{title}</span>
+                    <span className="text-[12.5px]" style={{ color: subCol }}>{desc}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </>
     );
   }
