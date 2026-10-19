@@ -106,7 +106,7 @@ const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: L
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
-const TASK_MENU_W = 240;
+const TASK_MENU_W = 188; // exactly three action tiles wide; more tiles wrap to a new row
 
 // What each document action does, said in the input once it is picked (the menu shows only names)
 const CHECK_HINT: Record<keyof ProofKinds, { one: string; short: string }> = {
@@ -1439,7 +1439,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               </button>
             );
           })}
-          <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
+          <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#eceef2"}` }} />
           <div className="px-4 pt-1 pb-2 text-[12.5px]" style={{ color: subCol }}>פעולות על מסמך</div>
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
