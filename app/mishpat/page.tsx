@@ -1439,10 +1439,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             );
           })}
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#eceef2"}` }} />
-          <div className="px-4 pt-1 pb-2 text-[12.5px]" style={{ color: subCol }}>פעולות על מסמך</div>
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(3,40px)] gap-2 px-4 pb-2">
+          <div className="grid grid-cols-[repeat(3,40px)] gap-2 px-4 pt-1 pb-2" aria-label="פעולות על מסמך">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
@@ -1461,8 +1460,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onMouseEnter={e => { if (!done && !on) e.currentTarget.style.backgroundColor = hover; }}
                   onMouseLeave={e => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
-                  <Icon size={15} style={{ color: on ? c.primary : c.iconGray }} />
-                  <span className="text-[11px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
+                  <Icon size={14} style={{ color: on ? c.primary : c.iconGray }} />
+                  <span className="text-[10px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
                 </button>
               );
             })}
