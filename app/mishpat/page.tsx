@@ -1438,10 +1438,9 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
               </button>
             );
           })}
-          <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#eceef2"}` }} />
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(3,40px)] gap-2 px-4 pt-1 pb-2" aria-label="פעולות על מסמך">
+          <div className="grid grid-cols-[repeat(3,40px)] gap-2 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
