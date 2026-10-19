@@ -1443,7 +1443,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           <div className="px-4 pt-1 pb-2 text-[12.5px]" style={{ color: subCol }}>פעולות על מסמך</div>
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-3 gap-2 px-4 pb-2">
+          <div className="grid grid-cols-[repeat(3,52px)] gap-1.5 px-4 pb-2">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
@@ -1453,7 +1453,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   // ticking leaves the detailed question; the menu stays open for more
                   onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
                   title={done ? "בוצעה בשיחה זו" : undefined}
-                  className="h-16 flex flex-col items-center justify-center gap-1 rounded-md transition-colors"
+                  className="size-[52px] flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors"
                   style={{
                     border: `1px solid ${on ? c.primary : (isDark ? dk.border : c.border)}`,
                     backgroundColor: on ? (isDark ? "rgba(0,115,234,0.18)" : "#e6f1fd") : "transparent",
@@ -1462,8 +1462,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                   onMouseEnter={e => { if (!done && !on) e.currentTarget.style.backgroundColor = hover; }}
                   onMouseLeave={e => { if (!on) e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
-                  <Icon size={20} style={{ color: on ? c.primary : c.iconGray }} />
-                  <span className="text-[12.5px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
+                  <Icon size={17} style={{ color: on ? c.primary : c.iconGray }} />
+                  <span className="text-[11.5px]" style={{ color: on ? c.primary : textCol2 }}>{title}</span>
                 </button>
               );
             })}
