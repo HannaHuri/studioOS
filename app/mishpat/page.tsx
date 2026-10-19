@@ -106,7 +106,7 @@ const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: L
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
-const TASK_MENU_W = 176; // exactly three action tiles wide; more tiles wrap to a new row
+const TASK_MENU_W = 152; // the narrowest the menu gets: three action tiles; it normally reaches the input's left edge
 
 // What each document action does, said in the input once it is picked (the menu shows only names)
 const CHECK_HINT: Record<keyof ProofKinds, { one: string; short: string }> = {
@@ -809,7 +809,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   const docMode = anyKind(picked);
   const [taskOpen, setTaskOpen] = useState(false);
   const taskBtnRef = useRef<HTMLButtonElement>(null);
-  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number; width: number } | null>(null);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -911,9 +911,12 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   function handleTaskToggle() {
     if (!taskOpen && taskBtnRef.current) {
       const r = taskBtnRef.current.getBoundingClientRect();
-      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - TASK_MENU_W - 8));
+      // from the button's right edge to the input's left edge, so the menu ends where the input does
+      const box = taskBtnRef.current.closest("[data-input-box]")?.getBoundingClientRect();
+      const width = box ? Math.max(TASK_MENU_W, r.right - box.left) : TASK_MENU_W;
+      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - width - 8));
       const down = isEmpty && window.innerHeight - r.bottom >= 400;
-      setTaskPos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
+      setTaskPos(down ? { top: r.bottom + 4, right, width } : { bottom: window.innerHeight - r.top + 4, right, width });
     }
     setTaskOpen((v) => !v);
   }
@@ -1099,6 +1102,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
         </div>
       )}
       <div
+        data-input-box
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
@@ -1417,7 +1421,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
-        <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
+        <div dir="rtl" role="menu" style={panel(taskPos, taskPos.width)}>
           {QUESTION_KINDS.map(({ key, label, desc }) => {
             const on = !docMode && key === qKind;
             return (
@@ -1440,7 +1444,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           })}
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(3,40px)] gap-3 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
+          <div className="grid grid-cols-[repeat(3,40px)] justify-between gap-y-2 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
