@@ -1426,15 +1426,15 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 onClick={() => { setPicked(NO_KINDS); setQKind(key); close(); }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
+                className="w-full flex items-center justify-between gap-2 px-4 py-1.5 text-right"
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
+                  <span className="flex items-center gap-1.5 text-[13px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
                     {label}
                   </span>
                   {desc && <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>}
                 </span>
-                {on && <Check size={15} style={{ color: c.primary, flexShrink: 0, marginTop: "3px" }} />}
+                {on && <Check size={14} style={{ color: c.primary, flexShrink: 0 }} />}
               </button>
             );
           })}
