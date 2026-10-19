@@ -311,7 +311,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
                 if (p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length) setPendingDelete(i);
                 else remove(i);
               }} title="מחיקת החלק"><Trash2 size={15} /></button>
-              <button className={iconBtn} style={{ color: subCol }} disabled={full} onClick={() => duplicate(i)} title={full ? `אפשר עד ${MAX_PARTS} חלקים` : "שכפול החלק"}><Copy size={15} /></button>
+              <button className={iconBtn} style={{ color: subCol }} disabled={full} onClick={() => duplicate(i)} title={full ? `אפשר להוסיף עד ${MAX_PARTS} חלקים` : "שכפול החלק"}><Copy size={15} /></button>
               {/* at the far end of the row, and larger than the actions beside it */}
               {collapsible && (
                 <button onClick={toggle} className="size-8 flex-none flex items-center justify-center rounded transition-colors hover:bg-black/5 mr-1" style={{ color: textCol }} aria-expanded={!folded} title={folded ? "פתיחת החלק" : "כיווץ החלק"}>
@@ -364,7 +364,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
       {collapsible ? (
         // inside the input: one filled button under the last part, at its end (left in RTL)
         <div className="flex items-center justify-end gap-2">
-          {full && <span className="text-[12.5px]" style={{ color: subCol }}>אפשר עד {MAX_PARTS} חלקים</span>}
+          {full && <span className="text-[12.5px]" style={{ color: subCol }}>אפשר להוסיף עד {MAX_PARTS} חלקים</span>}
           <button
             ref={listEnd}
             onClick={addPart}
@@ -383,7 +383,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
           className="h-11 flex items-center justify-center gap-1.5 rounded-lg text-[14px] transition-colors hover:bg-black/[0.02] disabled:opacity-50 disabled:cursor-default disabled:hover:bg-transparent"
           style={{ border: `1px dashed ${quietBorder}`, color: isDark ? dk.blue : c.primary }}
         >
-          {full ? `אפשר עד ${MAX_PARTS} חלקים` : <><Plus size={16} /> הוספת חלק</>}
+          {full ? `אפשר להוסיף עד ${MAX_PARTS} חלקים` : <><Plus size={16} /> הוספת חלק</>}
         </button>
       )}
 
