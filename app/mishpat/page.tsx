@@ -106,7 +106,7 @@ const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: L
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
 ];
-const TASK_MENU_W = 168; // exactly three action tiles wide; more tiles wrap to a new row
+const TASK_MENU_W = 176; // exactly three action tiles wide; more tiles wrap to a new row
 
 // What each document action does, said in the input once it is picked (the menu shows only names)
 const CHECK_HINT: Record<keyof ProofKinds, { one: string; short: string }> = {
@@ -1426,10 +1426,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 onClick={() => { setPicked(NO_KINDS); setQKind(key); close(); }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                className="w-full flex items-center justify-between gap-2 px-4 py-2 text-right"
+                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-right"
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[13px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
+                  <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
                     {label}
                   </span>
                   {desc && <span className="text-[13px] leading-snug" style={{ color: subCol }}>{desc}</span>}
@@ -1440,7 +1440,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           })}
           {/* A small keypad: one tile per action, three to a row, so more actions add tiles rather than
               length. Tiles toggle, so any number run together; what they do is said in the input. */}
-          <div className="grid grid-cols-[repeat(3,40px)] gap-2 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
+          <div className="grid grid-cols-[repeat(3,40px)] gap-3 px-4 pt-2 pb-2" aria-label="פעולות על מסמך">
             {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
               const done = usedChecks[key];
               const on = picked[key] && !done;
