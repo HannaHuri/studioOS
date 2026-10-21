@@ -219,7 +219,7 @@ export const MAX_PARTS = 10;
 
 export type PartsEditorHandle = { setAll: (fold: boolean) => void };
 
-export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs, collapsible }: {
+export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs, collapsible, foldAll }: {
   ref?: React.Ref<PartsEditorHandle>; // lets the input's top bar open or fold every part
   parts: PromptPart[];
   onChange: (parts: PromptPart[]) => void;
@@ -232,6 +232,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
   // Inside the chat's input a part folds to its header line, so a long question can be read
   // whole: a new part opens and the ones above it fold, and any can be reopened.
   collapsible?: boolean;
+  foldAll?: boolean; // open/fold-all beside the parts heading, where no top bar carries them
 }) {
   // folded from the start, so the first look shows the general instructions and that there are parts to define
   const [closed, setClosed] = useState<boolean[]>(() => parts.map(() => true));
@@ -278,6 +279,13 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
       {collapsible && (
         <div className="flex items-center gap-3">
           <span className="text-[13px]" style={{ color: textCol }}>חלקים</span>
+          {foldAll && parts.length > 1 && (
+            <span className="flex items-center gap-2 text-[12.5px]" style={{ color: subCol }}>
+              <button onClick={() => setAll(false)} className="hover:underline">פתיחת הכל</button>
+              <span className="h-3 w-px" style={{ backgroundColor: line }} />
+              <button onClick={() => setAll(true)} className="hover:underline">כיווץ הכל</button>
+            </span>
+          )}
         </div>
       )}
       {parts.map((p, i) => {
