@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useMemo, useState } from "react";
-import { Bookmark, ChevronDown, Maximize2, Minimize2, Plus, Search, WandSparkles, X } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import {
@@ -138,7 +138,7 @@ export function PromptTablePanel({
           <button
             onClick={onNew}
             className="h-8 px-2.5 flex items-center gap-1 rounded-md flex-shrink-0 text-[13px] transition-opacity hover:opacity-90"
-            style={{ backgroundColor: c.primary, color: "white" }}
+            style={{ border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }}
             title="פרומפט חדש"
           >
             <Plus size={15} />
@@ -175,8 +175,6 @@ export function PromptTablePanel({
               ניקוי
             </button>
           )}
-          <div className="flex-1" />
-          <span className="text-[12.5px]" style={{ color: subCol }}>{list.length} פרומפטים</span>
         </div>
       </div>
 
@@ -187,13 +185,7 @@ export function PromptTablePanel({
             className="sticky top-0 z-10 grid items-stretch h-8"
             style={{ gridTemplateColumns: cols, backgroundColor: surface, borderBottom: `1px solid ${rowLine}` }}
           >
-            <button
-              onClick={() => set("favOnly", !f.favOnly)}
-              className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
-              title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים שלי בלבד"}
-            >
-              <Bookmark size={14} fill={f.favOnly ? subCol : "none"} style={{ color: subCol }} />
-            </button>
+            <div />
             {th("name", "שם הפרומפט")}
             {th("source", "מקור", "center")}
             {th("author", "מחבר")}
@@ -289,6 +281,10 @@ export function PromptTablePanel({
               </div>
             );
           })}
+
+          {list.length > 0 && (
+            <div className="pt-3 px-2 text-[12px]" style={{ color: subCol }}>{list.length} פרומפטים</div>
+          )}
         </div>
       </div>
     </div>
