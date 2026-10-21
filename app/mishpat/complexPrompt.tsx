@@ -378,7 +378,10 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
             onClick={addPart}
             disabled={full}
             className="ml-[2px] h-7 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-default"
-            style={{ backgroundColor: c.primary, color: "white" }}
+            // in the library the window's filled button is saving, so adding a part steps back
+            style={foldAll
+              ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }
+              : { backgroundColor: c.primary, color: "white" }}
           >
             <Plus size={14} /> הוספת חלק
           </button>
