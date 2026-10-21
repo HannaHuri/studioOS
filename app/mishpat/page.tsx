@@ -2519,8 +2519,9 @@ function ExampleModal({
                     onKeyDown={(e) => { if (e.key === "Enter") endRename(true); if (e.key === "Escape") endRename(false); }}
                     onClick={(e) => e.stopPropagation()}
                     className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
-                    // the blue underline is what says "you are editing the name"
-                    style={{ color: textCol, borderBottom: `1px solid ${c.primary}` }}
+                    // the whole name starts selected, as when renaming a file — that is the editing cue
+                    onFocus={(e) => e.currentTarget.select()}
+                    style={{ color: textCol }}
                   />
                 ) : (
                   <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
