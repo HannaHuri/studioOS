@@ -2412,14 +2412,14 @@ function ExampleModal({
     setActive((a) => (a >= i && a > 0 ? a - 1 : a));
   };
 
-  // There is no ✓/✕ on the rename: Enter or leaving the field keeps the new title, as when
-  // renaming a file. The modal's own Save is what commits it.
-  // Esc unmounts the field, and a blur can still fire on the way out — this stops it keeping the text
-  const renameDone = useRef(false);
-  const startRename = (i: number) => { renameDone.current = false; setRenameFrom(texts[i].title); setRenaming(i); };
+  // The rename keeps its ✓/✕, as renaming a conversation in the history does in the product —
+  // users already know it. Leaving the field leaves it open; Save then says what is missing.
+  const renameRef = useRef<HTMLInputElement>(null);
+  const [renameUnconfirmed, setRenameUnconfirmed] = useState(false);
+  const startRename = (i: number) => { setRenameFrom(texts[i].title); setRenaming(i); setRenameUnconfirmed(false); };
   const endRename = (keep: boolean) => {
-    if (renaming === null || renameDone.current) return;
-    renameDone.current = true;
+    if (renaming === null) return;
+    setRenameUnconfirmed(false);
     if (!keep || !texts[renaming].title.trim()) setTitle(renaming, renameFrom);
     else setTitle(renaming, texts[renaming].title.trim());
     setRenaming(null);
@@ -2432,6 +2432,7 @@ function ExampleModal({
   const requestClose = () => { if (dirty) setConfirmLeave(true); else onClose(); };
 
   const save = () => {
+    if (renaming !== null) { setRenameUnconfirmed(true); renameRef.current?.focus(); return; }
     if (saveBlocked) { setAttempted(true); return; }
     onSave({
       id: initial?.id ?? uid(),
@@ -2511,23 +2512,37 @@ function ExampleModal({
                 onMouseLeave={() => setHoveredTab((h) => (h === i ? null : h))}
               >
                 {renaming === i ? (
-                  <input
-                    autoFocus
-                    value={t.title}
-                    onChange={(e) => setTitle(i, e.target.value)}
-                    onBlur={() => endRename(true)}
-                    onKeyDown={(e) => { if (e.key === "Enter") endRename(true); if (e.key === "Escape") endRename(false); }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
-                    // the whole name starts selected, as when renaming a file — that is the editing cue
-                    onFocus={(e) => e.currentTarget.select()}
-                    style={{ color: textCol }}
-                  />
+                  <>
+                    <input
+                      ref={renameRef}
+                      autoFocus
+                      value={t.title}
+                      onChange={(e) => setTitle(i, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") endRename(true); if (e.key === "Escape") endRename(false); }}
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
+                      // turns red once Save was tried with the name still open
+                      style={{ color: textCol, borderBottom: `1px solid ${renameUnconfirmed ? RED : subCol}` }}
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); endRename(true); }}
+                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                      style={{ color: subCol }}
+                      title="אישור"
+                    ><Check size={13} /></button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); endRename(false); }}
+                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
+                      style={{ color: subCol }}
+                      title="ביטול"
+                    ><X size={13} /></button>
+                  </>
                 ) : (
                   <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
                 )}
                 {/* the two actions belong to the text you are editing — hidden on the rest */}
-                {on && (
+                {on && renaming !== i && (
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); startRename(i); }}
@@ -2585,7 +2600,10 @@ function ExampleModal({
             (12px inheriting the body's 1.72 line-height ≈ 20.6px), which nudged the field */}
         <div className="px-6 pt-1 text-[12px] flex items-start" style={{ height: "22px", lineHeight: "18px" }}>
           {/* the missing-text notice takes this row when there is nothing to count anywhere */}
-          <span style={{ color: RED }}>{textMissing ? "יש להדביק טקסט אחד לפחות כדי לשמור" : ""}</span>
+          <span style={{ color: RED }}>
+            {renameUnconfirmed && renaming !== null ? `יש לאשר את שם הטקסט ׳${texts[renaming].title}׳ לפני השמירה`
+              : textMissing ? "יש להדביק טקסט אחד לפחות כדי לשמור" : ""}
+          </span>
           <span className="flex-1" />
           <span style={{ color: subCol }}>{counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}</span>
         </div>
