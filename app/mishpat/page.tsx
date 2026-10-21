@@ -2432,7 +2432,13 @@ function ExampleModal({
   const requestClose = () => { if (dirty) setConfirmLeave(true); else onClose(); };
 
   const save = () => {
-    if (renaming !== null) { setRenameUnconfirmed(true); renameRef.current?.focus(); return; }
+    if (renaming !== null) {
+      setRenameUnconfirmed(true);
+      // back to the field with the caret at the end — no selection, so the red underline shows
+      const el = renameRef.current;
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      return;
+    }
     if (saveBlocked) { setAttempted(true); return; }
     onSave({
       id: initial?.id ?? uid(),
