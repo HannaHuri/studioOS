@@ -2601,7 +2601,7 @@ function ExampleModal({
         <div className="px-6 pt-1 text-[12px] flex items-start" style={{ height: "22px", lineHeight: "18px" }}>
           {/* the missing-text notice takes this row when there is nothing to count anywhere */}
           <span style={{ color: RED }}>
-            {renameUnconfirmed && renaming !== null ? `יש לאשר את שם הטקסט ׳${texts[renaming].title}׳ לפני השמירה`
+            {renameUnconfirmed && renaming !== null ? "יש לאשר את שם הטקסט לפני השמירה"
               : textMissing ? "יש להדביק טקסט אחד לפחות כדי לשמור" : ""}
           </span>
           <span className="flex-1" />
