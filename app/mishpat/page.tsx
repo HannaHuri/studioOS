@@ -2348,7 +2348,10 @@ function ExampleModal({
   );
   const [active, setActive] = useState(0);
   const [renaming, setRenaming] = useState<number | null>(null);
+  // the title as it was when renaming began — Esc, or leaving it empty, puts it back
+  const [renameFrom, setRenameFrom] = useState("");
   const [pendingText, setPendingText] = useState<number | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [showRule, setShowRule] = useState(false);
   const [hoveredTab, setHoveredTab] = useState<number | null>(null);
   const [attempted, setAttempted] = useState(false);
@@ -2409,6 +2412,25 @@ function ExampleModal({
     setActive((a) => (a >= i && a > 0 ? a - 1 : a));
   };
 
+  // There is no ✓/✕ on the rename: Enter or leaving the field keeps the new title, as when
+  // renaming a file. The modal's own Save is what commits it.
+  // Esc unmounts the field, and a blur can still fire on the way out — this stops it keeping the text
+  const renameDone = useRef(false);
+  const startRename = (i: number) => { renameDone.current = false; setRenameFrom(texts[i].title); setRenaming(i); };
+  const endRename = (keep: boolean) => {
+    if (renaming === null || renameDone.current) return;
+    renameDone.current = true;
+    if (!keep || !texts[renaming].title.trim()) setTitle(renaming, renameFrom);
+    else setTitle(renaming, texts[renaming].title.trim());
+    setRenaming(null);
+  };
+
+  // Only the ✕ closes the modal, never a click on the backdrop — and it asks first when
+  // something would be lost.
+  const [snapshot] = useState(() => JSON.stringify({ name, texts }));
+  const dirty = JSON.stringify({ name, texts }) !== snapshot;
+  const requestClose = () => { if (dirty) setConfirmLeave(true); else onClose(); };
+
   const save = () => {
     if (saveBlocked) { setAttempted(true); return; }
     onSave({
@@ -2420,10 +2442,9 @@ function ExampleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
       <div
         dir="rtl"
-        onClick={(e) => e.stopPropagation()}
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{
           width: "min(1100px, 92vw)", height: "min(760px, 88vh)",
@@ -2438,7 +2459,7 @@ function ExampleModal({
               {initial ? "עריכת דוגמה" : "הוספת דוגמה חדשה"}
             </div>
           </div>
-          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
+          <button onClick={requestClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
             <X size={18} />
           </button>
         </div>
@@ -2494,11 +2515,12 @@ function ExampleModal({
                     autoFocus
                     value={t.title}
                     onChange={(e) => setTitle(i, e.target.value)}
-                    onBlur={() => setRenaming(null)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setRenaming(null); }}
+                    onBlur={() => endRename(true)}
+                    onKeyDown={(e) => { if (e.key === "Enter") endRename(true); if (e.key === "Escape") endRename(false); }}
                     onClick={(e) => e.stopPropagation()}
                     className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-right"
-                    style={{ color: textCol }}
+                    // the blue underline is what says "you are editing the name"
+                    style={{ color: textCol, borderBottom: `1px solid ${c.primary}` }}
                   />
                 ) : (
                   <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
@@ -2507,7 +2529,7 @@ function ExampleModal({
                 {on && (
                   <>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setRenaming(i); }}
+                      onClick={(e) => { e.stopPropagation(); startRename(i); }}
                       className="flex-none opacity-60 hover:opacity-100 transition-opacity"
                       style={{ color: subCol }}
                       title="שינוי שם"
@@ -2623,7 +2645,7 @@ function ExampleModal({
             <div className="flex-1" />
 
             <button
-              onClick={onClose}
+              onClick={requestClose}
               className="rounded-md px-5 py-2 text-[14px] transition-colors hover:bg-black/5 mt-4"
               style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}
             >ביטול</button>
@@ -2644,6 +2666,26 @@ function ExampleModal({
           onConfirm={() => { removeText(pendingText); setPendingText(null); }}
           onClose={() => setPendingText(null)}
         />
+      )}
+
+      {confirmLeave && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={() => setConfirmLeave(false)}>
+          <div
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+            className="rounded-lg shadow-2xl px-7 py-6 text-center"
+            style={{ width: "min(420px, 90vw)", backgroundColor: surface, fontFamily: "Noto Sans Hebrew, sans-serif" }}
+          >
+            <div className="text-[15px]" style={{ color: titleCol }}>יציאה בלי שמירה</div>
+            <div className="text-[16px] leading-relaxed mt-4" style={{ color: textCol }}>
+              יש שינויים שלא נשמרו. לצאת בלי לשמור?
+            </div>
+            <div className="flex gap-3 justify-center mt-6">
+              <button onClick={onClose} className="rounded-md px-7 py-2 text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>יציאה בלי שמירה</button>
+              <button onClick={() => setConfirmLeave(false)} className="rounded-md px-8 py-2 text-[14px] text-white transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary }}>המשך עריכה</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
