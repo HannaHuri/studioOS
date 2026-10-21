@@ -1209,7 +1209,7 @@ export function PromptEditor({
                 className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-3"
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
               />
-              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
+              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} collapsible foldAll />
             </>
           ) : (
             <>
@@ -1323,7 +1323,10 @@ export function PromptEditor({
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
-          <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
+          {/* with "שימוש בפרומפט" above, that is the window's one filled button and saving steps back */}
+          <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={pane && live && onUse
+            ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }
+            : { backgroundColor: c.primary, color: "white" }}>
             {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
           </button>
           {pendingKind && (
