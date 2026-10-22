@@ -24,7 +24,7 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { Brain, GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
+import { Bot, GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
@@ -111,10 +111,11 @@ const QUESTION_KINDS: KindRow[] = [
 // The temporary version for development (/mishpat/dev): the earlier answer modes take the
 // basic question's place, with no detailed question, and התממה is left out of the checks for now.
 const DEV_KINDS: KindRow[] = [
-  { key: "agents", label: "סוכנים", Icon: Brain },
-  { key: "direct", label: "ישיר", Icon: Send, mirror: true },
-  { key: "fast", label: "מהיר", Icon: Zap },
+  { key: "agents", label: "סוכנים",   desc: "מענה לבקשות מורכבות על-ידי ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
+  { key: "direct", label: "צ'ט ישיר", desc: "מענה לבקשות על-ידי שליחת הבקשה ישירות", Icon: Send, mirror: true },
+  { key: "fast",   label: "צ'ט מהיר", desc: "מענה מהיר לבקשות ממוקדות", Icon: Zap },
 ];
+const DEV_MENU_W = 300; // room for the modes' descriptions
 const TASK_MENU_W = 240;
 
 type DocItem = { name: string; words: string; summary: string };
@@ -913,7 +914,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   function handleTaskToggle() {
     if (!taskOpen && taskBtnRef.current) {
       const r = taskBtnRef.current.getBoundingClientRect();
-      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - TASK_MENU_W - 8));
+      const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - (dev ? DEV_MENU_W : TASK_MENU_W) - 8));
       const down = isEmpty && window.innerHeight - r.bottom >= 400;
       setTaskPos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
     }
@@ -1428,7 +1429,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
-        <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
+        <div dir="rtl" role="menu" style={panel(taskPos, dev ? DEV_MENU_W : TASK_MENU_W)}>
           {kinds.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === qKind;
             return (
