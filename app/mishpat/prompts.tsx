@@ -175,7 +175,7 @@ export const SEED_PROMPTS: Prompt[] = [
 // A prompt can carry details the user fills in, in the question line, before it runs. [דוגמה] is
 // the one special field: the example picked in the examples panel fills it instead of typing.
 export const EXAMPLE_FIELD = "דוגמה";
-export const FIELD_RE = /\[([^\]\n]{1,40})\]/g; // split() on it alternates text and field names
+export const FIELD_RE = /\[([^\]\n]{1,40})\]/g;
 export const fieldsOf = (body: string): string[] => {
   const out: string[] = [];
   for (const m of body.matchAll(FIELD_RE)) if (!out.includes(m[1])) out.push(m[1]);

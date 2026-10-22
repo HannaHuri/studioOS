@@ -1149,7 +1149,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             ref={inputRef}
             rows={1}
             className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
-            style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
+            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
