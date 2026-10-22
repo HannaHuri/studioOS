@@ -19,9 +19,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, CircleAlert,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
-import { c, dk, RED, AMBER, FONT } from "./theme";
+import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { PartsEditor, emptyPart, partsToText, partIncomplete, type PromptPart } from "./complexPrompt";
 
@@ -1635,7 +1635,7 @@ export function PromptConfirm({
         style={{ width: "min(460px, 92vw)", backgroundColor: surface, fontFamily: FONT }}
       >
         <div className="flex items-center gap-2 text-[17px]" style={{ color: textCol }}>
-          {warn && <CircleAlert size={20} style={{ color: AMBER, flexShrink: 0 }} />}
+          {warn && <TriangleAlert size={20} style={{ color: isDark ? dk.textMuted : c.iconGray, flexShrink: 0 }} />}
           {title}
         </div>
         <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
