@@ -112,8 +112,8 @@ const QUESTION_KINDS: KindRow[] = [
 // basic question's place, with no detailed question, and התממה is left out of the checks for now.
 const DEV_KINDS: KindRow[] = [
   { key: "agents", label: "סוכנים",   desc: "מענה לבקשות מורכבות על-ידי ניתוח הבקשה ובניית דרך פעולה", Icon: Bot },
-  { key: "direct", label: "צ'ט ישיר", desc: "מענה לבקשות על-ידי שליחת הבקשה ישירות", Icon: Send, mirror: true },
-  { key: "fast",   label: "צ'ט מהיר", desc: "מענה מהיר לבקשות ממוקדות", Icon: Zap },
+  { key: "direct", label: "ישיר", desc: "מענה לבקשות על-ידי שליחת הבקשה ישירות", Icon: Send, mirror: true },
+  { key: "fast",   label: "מהיר", desc: "מענה מהיר לבקשות ממוקדות", Icon: Zap },
 ];
 const DEV_MENU_W = 300; // room for the modes' descriptions
 const TASK_MENU_W = 240;
@@ -1180,6 +1180,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
+            {/* the development version shows the picked mode's icon beside its name, as the July picker did */}
+            {dev && !docMode && (() => { const k = kinds.find((k) => k.key === qKind)!; return <k.Icon size={14} style={{ flexShrink: 0, transform: k.mirror ? "scaleX(-1)" : undefined }} />; })()}
             <span>{docMode ? actions.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : kinds.find((k) => k.key === qKind)!.label}</span>
             <ChevronDown
               size={11}
