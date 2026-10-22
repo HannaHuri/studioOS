@@ -812,7 +812,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   const [taskOpen, setTaskOpen] = useState(false);
   const [checksHelp, setChecksHelp] = useState<{ top: number; right: number } | null>(null); // what the document actions do
   const taskBtnRef = useRef<HTMLButtonElement>(null);
-  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [taskPos, setTaskPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentStep, setAgentStep] = useState(0);
   const [agentSub, setAgentSub] = useState(false); // static sub-phase within a step (e.g. a concluding line) — not a new step, doesn't advance the counter
@@ -915,8 +915,14 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     if (!taskOpen && taskBtnRef.current) {
       const r = taskBtnRef.current.getBoundingClientRect();
       const right = Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - (dev ? DEV_MENU_W : TASK_MENU_W) - 8));
-      const down = isEmpty && window.innerHeight - r.bottom >= 400;
-      setTaskPos(down ? { top: r.bottom + 4, right } : { bottom: window.innerHeight - r.top + 4, right });
+      // on a short screen the side it would normally open to may not hold it, so it takes the roomier side
+      const below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+      const need = dev ? 340 : 260;
+      const down = isEmpty && below >= 400 || (above < need && below > above);
+      const all = window.innerHeight - 16;
+      // and when neither side holds it whole, it stays whole and lies over the input instead of cutting off options
+      if ((down ? below : above) < need) setTaskPos(down ? { bottom: 8, right, maxHeight: all } : { top: 8, right, maxHeight: all });
+      else setTaskPos(down ? { top: r.bottom + 4, right, maxHeight: below } : { bottom: window.innerHeight - r.top + 4, right, maxHeight: above });
     }
     setTaskOpen((v) => !v);
   }
@@ -1429,7 +1435,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     return (
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
-        <div dir="rtl" role="menu" style={panel(taskPos, dev ? DEV_MENU_W : TASK_MENU_W)}>
+        <div dir="rtl" role="menu" style={{ ...panel(taskPos, dev ? DEV_MENU_W : TASK_MENU_W), maxHeight: taskPos.maxHeight, overflowY: "auto" }}>
           {kinds.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === qKind;
             return (
