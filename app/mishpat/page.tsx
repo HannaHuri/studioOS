@@ -3356,6 +3356,7 @@ export default function MishpatPage() {
       {promptUse && (
         <PromptUseWindow
           isDark={isDark}
+          caseDocs={CASE_DOC_OPTIONS}
           prompt={promptUse}
           onUse={(pr) => { setPromptUse(null); applyPrompt(pr); }}
           onSave={(pr) => {

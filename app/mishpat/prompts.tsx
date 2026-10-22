@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
-import { PartsEditor, emptyPart, partsToText, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, partsToText, partIncomplete, type PromptPart } from "./complexPrompt";
 
 // ── Model ──────────────────────────────────────────────────────────────────
 export type PromptSource = "system" | "shared" | "mine";
@@ -1082,7 +1082,7 @@ export function PromptEditor({
   const cleanParts = parts?.map((pt) => ({ ...pt, task: pt.task.trim(), how: pt.how.trim() }));
 
   const save = () => {
-    if (!name.trim() || (parts ? parts.some((pt) => !pt.task.trim()) : !body.trim())) { setAttempted(true); return; }
+    if (!name.trim() || (parts ? parts.some(partIncomplete) : !body.trim())) { setAttempted(true); return; }
     const keep = mode === "edit" ? initial as Prompt : null;
     onSave({
       ...(keep ?? {

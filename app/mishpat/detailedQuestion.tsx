@@ -16,7 +16,7 @@
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
-import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, partIncomplete, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
   CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
@@ -122,8 +122,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   const hasPicked = parts.some((p) => scopeOf(p) === "docs");
 
   const send = () => {
-    const bad = parts.some((p) => !p.task.trim()
-      || (scopeOf(p) === "types" && !p.sources.length) || (scopeOf(p) === "docs" && !p.docs?.length));
+    const bad = parts.some(partIncomplete);
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
     if (keep) {
@@ -250,8 +249,9 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
 }
 
 // ── שימוש בפרומפט ──────────────────────────────────────────────────────────
-export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
+export function PromptUseWindow({ isDark, caseDocs, prompt, onUse, onSave, onClose }: {
   isDark: boolean;
+  caseDocs: CaseDocOption[]; // used inside a case, so a part can pick this case's documents
   prompt: Prompt;
   onUse: (pr: Prompt) => void;   // the prompt as it is to be used — the stored one, or this use's copy
   onSave: (pr: Prompt) => void;  // keep the change: mine is updated, anyone else's becomes mine
@@ -271,13 +271,16 @@ export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
   const isMine = prompt.source === "mine";
 
   const use = () => {
-    if (parts ? parts.some((p) => !p.task.trim()) : !body.trim()) { setAttempted(true); return; }
+    if (parts ? parts.some(partIncomplete) : !body.trim()) { setAttempted(true); return; }
     if (!changed) { onUse(prompt); return; }
     const done = parts ? clean(parts) : null;
     const edited: Prompt = { ...prompt, body: done ? partsToText(done, prompt.guidelines) : body.trim(), parts: done ?? undefined };
     if (keep) {
-      const stored: Prompt = isMine ? { ...edited, edited: today() } : {
-        ...edited, id: uid(), source: "mine", author: null, authorRole: undefined, basedOn: prompt.name,
+      // the library keeps the general form: picked documents go back to their types
+      const kept: Prompt = done ? { ...edited, parts: generalize(done, caseDocs) } : edited;
+      kept.body = kept.parts ? partsToText(kept.parts, prompt.guidelines) : kept.body;
+      const stored: Prompt = isMine ? { ...kept, edited: today() } : {
+        ...kept, id: uid(), source: "mine", author: null, authorRole: undefined, basedOn: prompt.name,
         fav: false, uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       };
       onSave(stored);
@@ -307,7 +310,7 @@ export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
         <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-2" dir="ltr">
           <div dir="rtl">
             {parts ? (
-              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
+              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} />
             ) : (
               <>
                 <textarea
