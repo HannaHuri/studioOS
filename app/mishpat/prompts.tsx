@@ -19,9 +19,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle,
+  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, CircleAlert,
 } from "lucide-react";
-import { c, dk, RED, FONT } from "./theme";
+import { c, dk, RED, AMBER, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { PartsEditor, emptyPart, partsToText, partIncomplete, type PromptPart } from "./complexPrompt";
 
@@ -1618,10 +1618,11 @@ export function PromptFill({
 
 // ── Confirm removing a prompt / withdrawing a share ────────────────────────
 export function PromptConfirm({
-  isDark, title, note, confirmLabel, onConfirm, onClose, safe,
+  isDark, title, note, confirmLabel, onConfirm, onClose, safe, warn,
 }: {
   isDark: boolean; title: string; note: string; confirmLabel: string; onConfirm: () => void; onClose: () => void;
   safe?: boolean; // nothing is lost, so the button is the ordinary blue rather than red
+  warn?: boolean; // the button stays blue, and a "!" beside the title says something will be lost
 }) {
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1633,7 +1634,10 @@ export function PromptConfirm({
         className="rounded-lg overflow-hidden shadow-2xl px-6 py-5"
         style={{ width: "min(460px, 92vw)", backgroundColor: surface, fontFamily: FONT }}
       >
-        <div className="text-[17px]" style={{ color: textCol }}>{title}</div>
+        <div className="flex items-center gap-2 text-[17px]" style={{ color: textCol }}>
+          {warn && <CircleAlert size={20} style={{ color: AMBER, flexShrink: 0 }} />}
+          {title}
+        </div>
         <div className="text-[13.5px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
         <div className="flex items-center justify-end gap-2 mt-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>

@@ -3375,6 +3375,8 @@ export default function MishpatPage() {
           title="להחליף את הטיוטה?"
           note={`יש לך טיוטה של שאלה מפורטת. הפרומפט ׳${draftReplace.name}׳ יחליף אותה והטיוטה תימחק.`}
           confirmLabel="החלפה"
+          safe
+          warn
           onConfirm={() => { loadDetailed(draftReplace); setDraftReplace(null); }}
           onClose={() => setDraftReplace(null)}
         />
