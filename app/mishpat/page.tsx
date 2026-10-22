@@ -24,7 +24,8 @@ import {
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
+import { Brain, GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
 // hand-copied path data from lucide.dev so it renders identically once the icon lands upstream.
@@ -101,10 +102,18 @@ const SCOPE_TOOLTIP = "היקף התוכן מהמסמכים הנבחרים שי�
 // below a line "פעולות על מסמך", a side menu of checks that run on an uploaded document, any
 // number of them together. The
 // agents decide on their own how far a question needs to go, so there is no mode to pick for that.
-type QuestionKind = "basic" | "detailed";
-const QUESTION_KINDS: { key: QuestionKind; label: string; desc?: string; Icon: LucideIcon; mirror?: boolean }[] = [
+type QuestionKind = "basic" | "detailed" | "agents" | "direct" | "fast";
+type KindRow = { key: QuestionKind; label: string; desc?: string; Icon: LucideIcon; mirror?: boolean };
+const QUESTION_KINDS: KindRow[] = [
   { key: "basic", label: "שאלה בסיסית", Icon: MessageSquare },
   { key: "detailed", label: "שאלה מפורטת", Icon: WandSparkles, mirror: true },
+];
+// The temporary version for development (/mishpat/dev): the earlier answer modes take the
+// basic question's place, with no detailed question, and התממה is left out of the checks for now.
+const DEV_KINDS: KindRow[] = [
+  { key: "agents", label: "סוכנים", Icon: Brain },
+  { key: "direct", label: "ישיר", Icon: Send, mirror: true },
+  { key: "fast", label: "מהיר", Icon: Zap },
 ];
 const TASK_MENU_W = 240;
 
@@ -759,7 +768,8 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed }: {
+function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed }: {
+  dev?: boolean; // the temporary version for development, at /mishpat/dev
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
@@ -789,7 +799,10 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
   // above never disappears behind the input.
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // What sending does: a basic question, the detailed one built in the input, or the ticked checks on the document.
-  const [qKind, setQKind] = useState<QuestionKind>("basic");
+  const kinds = dev ? DEV_KINDS : QUESTION_KINDS;
+  const actions = dev ? DRAFT_ACTIONS.filter((a) => a.key !== "anon") : DRAFT_ACTIONS;
+  const baseKind: QuestionKind = dev ? "agents" : "basic"; // what the menu falls back to
+  const [qKind, setQKind] = useState<QuestionKind>(baseKind);
   const detailedOpen = qKind === "detailed";
   const detailedRef = useRef<DetailedHandle>(null);
   // the document checks ticked in the menu; with any ticked, sending runs them on the document
@@ -918,7 +931,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     setUploadError(null);
     setTaskOpen(false);
     setChecksHelp(null);
-    setQKind("basic");
+    setQKind(baseKind);
     setPicked(NO_KINDS);
     setUsedChecks(NO_KINDS);
     setProofRun(null);
@@ -952,13 +965,14 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       return;
     }
     if (!inputText.trim()) return;
-    ask(inputText.trim(), true);
+    // ישיר and מהיר answer straight away; everything else goes through the agents' steps
+    ask(inputText.trim(), qKind !== "direct" && qKind !== "fast");
     setInputText("");
   }
 
   // A detailed question goes into the conversation as its parts, written out
   function sendDetailed(parts: PromptPart[], guidelines: string) {
-    setQKind("basic");
+    setQKind(baseKind);
     ask(partsToText(parts, guidelines), true);
   }
 
@@ -1038,7 +1052,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!insert || insert.n === insertN.current) return;
     insertN.current = insert.n;
     setInputText(insert.text);
-    setQKind("basic"); // a prompt's text goes in the question line, so a detailed question open steps aside
+    setQKind(baseKind); // a prompt's text goes in the question line, so a detailed question open steps aside
   }, [insert]);
 
   // A library prompt's parts take the detailed question's place, so the editor opens on them afresh
@@ -1104,7 +1118,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             maxHeight={isEmpty ? (draft ? "calc(100vh - 322px)" : "calc(100vh - 272px)") : "calc(100vh - 360px)"}
             onSend={sendDetailed}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
-            onClose={() => setQKind("basic")}
+            onClose={() => setQKind(baseKind)}
           />
         ) : (
           <textarea
@@ -1159,7 +1173,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span>{docMode ? DRAFT_ACTIONS.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : QUESTION_KINDS.find((k) => k.key === qKind)!.label}</span>
+            <span>{docMode ? actions.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : kinds.find((k) => k.key === qKind)!.label}</span>
             <ChevronDown
               size={11}
               style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }}
@@ -1415,7 +1429,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       <>
         <div className="fixed inset-0 z-[190]" onClick={close} />
         <div dir="rtl" role="menu" style={panel(taskPos, TASK_MENU_W)}>
-          {QUESTION_KINDS.map(({ key, label, desc, Icon, mirror }) => {
+          {kinds.map(({ key, label, desc, Icon, mirror }) => {
             const on = !docMode && key === qKind;
             return (
               <button
@@ -1449,7 +1463,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             </button>
           </div>
           {/* the checks sit right in the menu; they tick rather than pick: any number run together */}
-          {DRAFT_ACTIONS.map(({ key, title, Icon }) => {
+          {actions.map(({ key, title, Icon }) => {
             const done = usedChecks[key];
             const on = picked[key];
             const longWarn = key === "coherence" && on && pages !== null && pages > COHERENCE_PAGE_LIMIT;
@@ -1458,7 +1472,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
                 <button
                   role="menuitemcheckbox" aria-checked={done || on} aria-disabled={done}
                   // ticking leaves the detailed question; the menu stays open for more ticks
-                  onClick={done ? undefined : () => { setQKind("basic"); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
+                  onClick={done ? undefined : () => { setQKind(baseKind); setPicked((k) => ({ ...k, [key]: !k[key] })); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-right"
                   style={{ cursor: done ? "default" : "pointer" }}
                   onMouseEnter={e => { if (!done) e.currentTarget.style.backgroundColor = hover; }}
@@ -1489,7 +1503,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             <div className="text-[13px] mb-2" style={{ color: textCol2, fontWeight: 600 }}>פעולות על מסמך</div>
             <div className="text-[12.5px] leading-snug mb-2.5" style={{ color: subCol }}>מעלים מסמך Word ובוחרים פעולה אחת או כמה.</div>
             <div className="flex flex-col gap-2.5">
-              {DRAFT_ACTIONS.map(({ key, title, desc, Icon }) => (
+              {actions.map(({ key, title, desc, Icon }) => (
                 <div key={key} className="flex items-start gap-1.5">
                   <Icon size={15} style={{ color: c.iconGray, flexShrink: 0, marginTop: "2px" }} />
                   <span className="flex flex-col gap-0.5 text-[13px] leading-snug">
@@ -2770,6 +2784,8 @@ function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boo
 }
 
 export default function MishpatPage() {
+  // /mishpat/dev shows the same page with the development version's input menu
+  const dev = usePathname()?.endsWith("/dev") ?? false;
   const [isPanelOpen, setIsPanelOpen] = useState(false);     // documents
   // The case documents and their selection — held here so the selection survives closing the panel.
   const [docs, setDocs] = useState(initialDocs);
@@ -2893,6 +2909,8 @@ export default function MishpatPage() {
   };
   const applyPrompt = (pr: Prompt) => {
     // a detailed prompt takes the draft's place, so a draft that's there is asked about first
+    // the development version has no detailed question, so a detailed prompt goes in the question line written out
+    if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines)); setLibraryOpen(false); return; }
     if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
     if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
@@ -3082,6 +3100,7 @@ export default function MishpatPage() {
           )}
         <div className="flex-1 flex min-w-0 min-h-0 relative" style={{ paddingBottom: chatFloat ? 0 : FOOTER_HEIGHT, display: chatFloat && chatMin ? "none" : undefined }}>
           <ChatArea
+            dev={dev}
             isDark={isDark}
             conversationKey={convKey}
             onProofDone={addProofToHistory}
