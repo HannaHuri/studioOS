@@ -22,7 +22,7 @@ import {
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
-import { DetailedInline, PromptUseWindow, type DetailedHandle } from "./detailedQuestion";
+import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
 import { GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
 
@@ -759,15 +759,15 @@ const AGENT_STEPS: RunStep[] = [
 ];
 const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
 
-function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, complexName, onClearComplex }: {
+function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed }: {
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
   onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
-  complexName?: string | null;
-  onClearComplex?: () => void;
+  // a detailed prompt from the library, opened in the detailed question to be checked before it's sent
+  loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number };
 }) {
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -951,11 +951,8 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       if (anyKind(kinds)) handleRunActions(kinds);
       return;
     }
-    // an armed פרומפט מפורט is a complete request on its own, so it can be sent with nothing typed
-    if (!inputText.trim() && !complexName) return;
-    const q = complexName ? (inputText.trim() ? `${complexName}: ${inputText.trim()}` : complexName) : inputText.trim();
-    if (complexName) onClearComplex?.();
-    ask(q, true);
+    if (!inputText.trim()) return;
+    ask(inputText.trim(), true);
     setInputText("");
   }
 
@@ -1041,7 +1038,20 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
     if (!insert || insert.n === insertN.current) return;
     insertN.current = insert.n;
     setInputText(insert.text);
+    setQKind("basic"); // a prompt's text goes in the question line, so a detailed question open steps aside
   }, [insert]);
+
+  // A library prompt's parts take the detailed question's place, so the editor opens on them afresh
+  const loadN = useRef(0);
+  const [detailedKey, setDetailedKey] = useState(0);
+  useEffect(() => {
+    if (!loadDetailed || loadDetailed.n === loadN.current) return;
+    loadN.current = loadDetailed.n;
+    putDetailedDraft(loadDetailed.parts, loadDetailed.guidelines);
+    setDetailedKey((k) => k + 1);
+    setPicked(NO_KINDS);
+    setQKind("detailed");
+  }, [loadDetailed]);
 
   useEffect(() => {
     const el = inputRef.current;
@@ -1075,19 +1085,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           </div>
         </div>
       )}
-      {complexName && (
-        <div className="flex justify-center" dir="rtl">
-          <div
-            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px]"
-            style={{ backgroundColor: isDark ? "#243354" : c.badgeBg, color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}
-          >
-            <button onClick={onClearComplex} className="opacity-60 hover:opacity-100 transition-opacity" title="ביטול הפרומפט המפורט">
-              <X size={13} />
-            </button>
-            <span>פרומפט מפורט: {complexName}</span>
-          </div>
-        </div>
-      )}
       <div
         className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -1099,6 +1096,7 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
       >
         {detailedOpen ? (
           <DetailedInline
+            key={detailedKey}
             ref={detailedRef}
             isDark={isDark}
             caseDocs={CASE_DOC_OPTIONS}
@@ -2805,8 +2803,6 @@ export default function MishpatPage() {
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
   const [promptFill, setPromptFill] = useState<Prompt | null>(null);
-  // Choosing a prompt to use opens it first: use it as it is, or change it for this use
-  const [promptUse, setPromptUse] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
   // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
   // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
@@ -2823,9 +2819,9 @@ export default function MishpatPage() {
   const [chatMin, setChatMin] = useState(true);
   const rowRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
-  // A detailed prompt armed for the next send. It is too long to go into the question line as
-  // text, so it rides above the input as a chip, like an example.
-  const [complexInUse, setComplexInUse] = useState<string | null>(null);
+  // A detailed prompt is too long for the question line, so it opens in the detailed question
+  const [draftReplace, setDraftReplace] = useState<Prompt | null>(null); // a detailed prompt waiting on the draft's replacement
+  const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number }>({ parts: [], guidelines: "", n: 0 });
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
   const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
@@ -2890,19 +2886,22 @@ export default function MishpatPage() {
   // from the opening words rather than asking for it before anything is on screen.
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
   const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
+  const loadDetailed = (pr: Prompt) => {
+    setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
+    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1 }));
+    setLibraryOpen(false);
+  };
   const applyPrompt = (pr: Prompt) => {
-    if (pr.parts) {
-      setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
-      setComplexInUse(pr.name);
-      setLibraryOpen(false);
-      return;
-    }
+    // a detailed prompt takes the draft's place, so a draft that's there is asked about first
+    if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
     if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
     insertPrompt(pr.body);
     setLibraryOpen(false);
   };
-  const openUse = (pr: Prompt) => setPromptUse(pr);
+  // using a prompt puts it straight into the input, where it's checked and edited before it's sent
+  // (with the editor beside the table, the chat floats as a bar, so it opens to show it)
+  const openUse = (pr: Prompt) => { applyPrompt(pr); setChatMin(false); };
   const toggleFav = (id: string) => setPrompts((prev) => prev.map((x) => (x.id === id ? { ...x, fav: !x.fav } : x)));
   // A rating is cast once: there is no second click to change it, so the stars lock after the first.
   const ratePrompt = (id: string, n: number) =>
@@ -3101,8 +3100,7 @@ export default function MishpatPage() {
               ]);
               setToast(share ? "השאלה נשמרה בספרייה שלך ושותפה" : "השאלה נשמרה בספרייה שלך");
             }}
-            complexName={complexInUse}
-            onClearComplex={() => setComplexInUse(null)}
+            loadDetailed={detailedLoad}
           />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
@@ -3353,18 +3351,6 @@ export default function MishpatPage() {
           onRate={ratePrompt}
         />
       )}
-      {promptUse && (
-        <PromptUseWindow
-          isDark={isDark}
-          prompt={promptUse}
-          onUse={(pr) => { setPromptUse(null); applyPrompt(pr); }}
-          onSave={(pr) => {
-            setPrompts((prev) => (prev.some((x) => x.id === pr.id) ? prev.map((x) => (x.id === pr.id ? pr : x)) : [pr, ...prev]));
-            setToast(promptUse.source === "mine" ? "השינויים נשמרו בספרייה" : "נשמר בספרייה כפרומפט שלך");
-          }}
-          onClose={() => setPromptUse(null)}
-        />
-      )}
       {promptEdit && (
         <PromptEditor
           key={promptEdit.initial?.id ?? promptEdit.mode}
@@ -3381,6 +3367,18 @@ export default function MishpatPage() {
           initial={promptShare}
           onShare={doShare}
           onClose={() => setPromptShare(null)}
+        />
+      )}
+      {draftReplace && (
+        <PromptConfirm
+          isDark={isDark}
+          title="להחליף את הטיוטה?"
+          note={`יש לך טיוטה של שאלה מפורטת בשדה הצ׳אט. הפרומפט ׳${draftReplace.name}׳ יחליף אותה והטיוטה תימחק.`}
+          confirmLabel="החלפה"
+          safe
+          warn
+          onConfirm={() => { loadDetailed(draftReplace); setDraftReplace(null); }}
+          onClose={() => setDraftReplace(null)}
         />
       )}
       {promptFill && (

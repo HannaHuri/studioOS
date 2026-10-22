@@ -31,6 +31,9 @@ export type SourceScope = "all" | "types" | "docs";
 // pages that answer the how. One uploaded document can serve several parts, each with its own pages.
 export type PromptPart = { sources: string[]; task: string; how: string; docs?: DocPick[]; scope?: SourceScope; howDocs?: DocPick[] };
 export const scopeOf = (p: PromptPart): SourceScope => p.scope ?? (p.docs?.length ? "docs" : p.sources.length ? "types" : "all");
+// A part can't go out without its task, nor with a kind of sources chosen and none picked
+export const partIncomplete = (p: PromptPart) => !p.task.trim()
+  || (scopeOf(p) === "types" && !p.sources.length) || (scopeOf(p) === "docs" && !p.docs?.length);
 // A case document the sources field offers, under its document type.
 export type CaseDocOption = { type: string; name: string; pages: number };
 
@@ -275,10 +278,10 @@ const SCOPES: { key: SourceScope; label: string }[] = [
   { key: "types", label: "סוגי מסמכים" },
   { key: "docs", label: "מסמכים ספציפיים" },
 ];
-function ScopeSwitch({ value, onChange, isDark }: { value: SourceScope; onChange: (v: SourceScope) => void; isDark: boolean }) {
+function ScopeSwitch({ value, onChange, isDark, withDocs }: { value: SourceScope; onChange: (v: SourceScope) => void; isDark: boolean; withDocs: boolean }) {
   return (
     <div className="flex items-center gap-5 mb-2" role="radiogroup" aria-label="מקורות">
-      {SCOPES.map(({ key, label }) => {
+      {SCOPES.filter(({ key }) => withDocs || key !== "docs").map(({ key, label }) => {
         const on = key === value;
         return (
           <button
@@ -313,9 +316,9 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
   onChange: (parts: PromptPart[]) => void;
   attempted: boolean; // a save was tried — empty מה לעשות fields say so
   isDark: boolean;
-  // Given only when the question is built inside a case (from the chat's input): the sources field
-  // then also offers this case's documents, with page ranges. The library's prompts are general,
-  // so they keep document types alone.
+  // Given only when the question is built inside a case (the chat's input, or a library prompt used
+  // there): the sources then also offer this case's documents, with page ranges. The library's
+  // prompts are general, so there the choice is all documents or document types.
   caseDocs?: CaseDocOption[];
   // Inside the chat's input a part folds to its header line, so a long question can be read
   // whole: a new part opens and the ones above it fold, and any can be reopened.
@@ -431,19 +434,19 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
             {taskMissing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>יש לכתוב מה החלק הזה צריך לעשות.</div>}
 
             <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>מקורות</div>
-            {caseDocs ? (() => {
+            {(() => {
               // first which kind of sources, then the field that picks them
               const scope = scopeOf(p);
               const missing = attempted && ((scope === "types" && !p.sources.length) || (scope === "docs" && !p.docs?.length));
               return (
                 <>
-                  <ScopeSwitch value={scope} onChange={(v) => setPart(i, { scope: v })} isDark={isDark} />
+                  <ScopeSwitch value={scope} onChange={(v) => setPart(i, { scope: v })} isDark={isDark} withDocs={!!caseDocs} />
                   {scope === "types" && <SourcesInput only="types" value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} caseDocs={caseDocs} />}
-                  {scope === "docs" && <SourcesInput only="docs" value={[]} onChange={() => {}} isDark={isDark} caseDocs={caseDocs} docs={p.docs} onDocs={(v) => setPart(i, { docs: v })} />}
-                  {missing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>{scope === "types" ? "יש לבחור לפחות סוג מסמך אחד." : "יש לבחור לפחות מסמך אחד."}</div>}
+                  {scope === "docs" && caseDocs && <SourcesInput only="docs" value={[]} onChange={() => {}} isDark={isDark} caseDocs={caseDocs} docs={p.docs} onDocs={(v) => setPart(i, { docs: v })} />}
+                  {missing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>{scope === "types" ? "יש לבחור סוג מסמך אחד לפחות" : "יש לבחור מסמך אחד לפחות"}</div>}
                 </>
               );
-            })() : <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />}
+            })()}
 
             <div className="flex items-center justify-between mt-3 mb-1">
               <span className="text-[13px]" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></span>

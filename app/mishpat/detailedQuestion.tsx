@@ -1,22 +1,18 @@
 "use client";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Two ways of writing a question in parts:
-
    שאלה מפורטת — chosen in the input's task menu, and built inside the input itself. The same parts as
    a detailed prompt in the library, but built inside the case, so a part can also draw on specific documents of this case
    with a page range. It is sent once; "שמירה בספרייה שלי" keeps a copy as a library prompt,
    which is general, so its specific documents are kept as their document types. Sharing is a
    second, separate choice under it, since not everything I keep is something I pass on.
-
-   שימוש בפרומפט — choosing a prompt to use opens it here first: use it as it is, or change it
-   for this use only, with "שמירת השינויים בספרייה" to keep the change.
+   A detailed prompt used from the library opens here too, its parts in place of the draft.
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
-import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, type CaseDocOption, type PromptPart } from "./complexPrompt";
+import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, partIncomplete, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
   CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
@@ -59,6 +55,12 @@ function loadDraft(): DetailedDraft | null {
 }
 function saveDraft(d: DetailedDraft | null) {
   try { if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage off */ }
+}
+// Only a draft with something written is kept, so one that's there is worth asking about
+export const hasDetailedDraft = () => !!loadDraft();
+// A library prompt opened here becomes the draft, so the editor mounts on its parts
+export function putDetailedDraft(parts: PromptPart[], guidelines: string) {
+  saveDraft({ parts: parts.map((p) => ({ ...p, sources: [...p.sources], docs: p.docs?.map((d) => ({ ...d })) })), guidelines });
 }
 
 function Fold({ title, note, preview, open, onToggle, isDark, children }: {
@@ -122,8 +124,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   const hasPicked = parts.some((p) => scopeOf(p) === "docs");
 
   const send = () => {
-    const bad = parts.some((p) => !p.task.trim()
-      || (scopeOf(p) === "types" && !p.sources.length) || (scopeOf(p) === "docs" && !p.docs?.length));
+    const bad = parts.some(partIncomplete);
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
     if (keep) {
@@ -243,95 +244,6 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── שימוש בפרומפט ──────────────────────────────────────────────────────────
-export function PromptUseWindow({ isDark, prompt, onUse, onSave, onClose }: {
-  isDark: boolean;
-  prompt: Prompt;
-  onUse: (pr: Prompt) => void;   // the prompt as it is to be used — the stored one, or this use's copy
-  onSave: (pr: Prompt) => void;  // keep the change: mine is updated, anyone else's becomes mine
-  onClose: () => void;
-}) {
-  const [body, setBody] = useState(prompt.body);
-  const [parts, setParts] = useState<PromptPart[] | null>(prompt.parts ?? null);
-  const [attempted, setAttempted] = useState(false);
-  const [keep, setKeep] = useState(false);
-
-  const surface = isDark ? dk.surface : "white";
-  const textCol = isDark ? dk.text : c.text;
-  const subCol = isDark ? dk.textMuted : c.textLight;
-  const line = isDark ? dk.border : c.inputBorder;
-  const quietBorder = isDark ? dk.border : c.border;
-  const changed = parts ? JSON.stringify(parts) !== JSON.stringify(prompt.parts) : body !== prompt.body;
-  const isMine = prompt.source === "mine";
-
-  const use = () => {
-    if (parts ? parts.some((p) => !p.task.trim()) : !body.trim()) { setAttempted(true); return; }
-    if (!changed) { onUse(prompt); return; }
-    const done = parts ? clean(parts) : null;
-    const edited: Prompt = { ...prompt, body: done ? partsToText(done, prompt.guidelines) : body.trim(), parts: done ?? undefined };
-    if (keep) {
-      const stored: Prompt = isMine ? { ...edited, edited: today() } : {
-        ...edited, id: uid(), source: "mine", author: null, authorRole: undefined, basedOn: prompt.name,
-        fav: false, uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
-      };
-      onSave(stored);
-      onUse(stored);
-      return;
-    }
-    onUse(edited);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div
-        dir="rtl" onClick={(e) => e.stopPropagation()}
-        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: parts ? "min(850px, 92vw)" : "min(680px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
-      >
-        <div className="flex items-start px-6 pt-5 pb-1">
-          <div className="flex-1 min-w-0 text-[18px] truncate" style={{ color: textCol }}>{prompt.name}</div>
-          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="px-6 pb-3 text-[13.5px]" style={{ color: subCol }}>
-          אפשר להשתמש בפרומפט כמו שהוא, או לשנות אותו לשימוש הזה בלבד.
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-2" dir="ltr">
-          <div dir="rtl">
-            {parts ? (
-              <PartsEditor parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} />
-            ) : (
-              <>
-                <textarea
-                  value={body} onChange={(e) => setBody(e.target.value)} autoFocus
-                  className="w-full outline-none text-[15px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-y"
-                  style={{ minHeight: "220px", border: `1px solid ${attempted && !body.trim() ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
-                />
-                {attempted && !body.trim() && <div className="text-[12.5px] mt-1" style={{ color: RED }}>הפרומפט ריק.</div>}
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-6 pt-3 pb-5">
-          {/* only once something was changed — until then there is nothing to keep */}
-          <div className="flex-1" style={{ visibility: changed ? "visible" : "hidden" }}>
-            <CheckRow on={keep} onToggle={() => setKeep((v) => !v)} label={isMine ? "שמירת השינויים בספרייה" : "שמירה בספרייה כפרומפט שלי"} isDark={isDark} />
-          </div>
-          <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${quietBorder}`, color: textCol }}>
-            ביטול
-          </button>
-          <button onClick={use} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            {changed ? "שימוש בנוסח הזה" : "שימוש"}
-          </button>
         </div>
       </div>
     </div>
