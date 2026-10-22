@@ -156,8 +156,9 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, on
 // ── Documents with page ranges ──────────────────────────────────────────────
 // One row per document: its name, from which page to which, and removal. Used for the case's
 // documents under מקורות and for the documents uploaded under איך.
-function DocRows({ docs, onDocs, isDark, caseDocs }: {
+function DocRows({ docs, onDocs, isDark, caseDocs, className = "mt-2" }: {
   docs: DocPick[]; onDocs: (v: DocPick[]) => void; isDark: boolean; caseDocs?: CaseDocOption[];
+  className?: string; // its spacing: under the field it belongs to, or above it
 }) {
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
@@ -169,7 +170,7 @@ function DocRows({ docs, onDocs, isDark, caseDocs }: {
   };
   if (!docs.length) return null;
   return (
-    <div className="mt-2 flex flex-col gap-1.5">
+    <div className={`${className} flex flex-col gap-1.5`}>
       {docs.map((v) => {
         const d = caseDocs?.find((x) => x.name === v.name);
         const pages = d?.pages ?? v.pages;
@@ -451,6 +452,8 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
                 onPick={(d) => setPart(i, { howDocs: [...(p.howDocs ?? []).filter((x) => x.name !== d.name), d] })}
               />
             </div>
+            {/* the uploaded examples sit right under their upload link, above the pasted text */}
+            <DocRows docs={p.howDocs ?? []} onDocs={(v) => setPart(i, { howDocs: v })} isDark={isDark} className="mb-2" />
             <textarea
               value={p.how}
               onChange={(e) => setPart(i, { how: e.target.value })}
@@ -459,7 +462,6 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               className={area}
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
             />
-            <DocRows docs={p.howDocs ?? []} onDocs={(v) => setPart(i, { howDocs: v })} isDark={isDark} />
             </>}
           </div>
         );
