@@ -205,8 +205,9 @@ function DocRows({ docs, onDocs, isDark, caseDocs, className = "mt-2" }: {
 // In the איך label's row. Once a document was uploaded in any part, it opens a short menu: those
 // documents first, to use again with other pages, then uploading a new one. Before that it goes
 // straight to the file picker.
-function HowUpload({ uploaded, onPick, isDark }: {
+function HowUpload({ uploaded, onPick, isDark, more }: {
   uploaded: DocPick[]; // uploaded in other parts and not yet in this one
+  more: boolean; // this part already has a document, so the link offers another
   onPick: (d: DocPick) => void;
   isDark: boolean;
 }) {
@@ -237,7 +238,7 @@ function HowUpload({ uploaded, onPick, isDark }: {
         style={{ color: blue }}
         aria-haspopup={uploaded.length ? "menu" : undefined} aria-expanded={uploaded.length ? open : undefined}
       >
-        <Paperclip size={14} /> העלאת מסמך לדוגמה
+        <Paperclip size={14} /> {more ? "העלאת מסמך נוסף" : "העלאת מסמך לדוגמה"}
       </button>
       {open && (
         <div role="menu" className="absolute z-10 left-0 top-full mt-1 w-[264px] rounded-[4px] shadow-lg py-1"
@@ -448,6 +449,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               <span className="text-[13px]" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></span>
               <HowUpload
                 isDark={isDark}
+                more={!!p.howDocs?.length}
                 uploaded={uploadedDocs.filter((d) => !p.howDocs?.some((x) => x.name === d.name))}
                 onPick={(d) => setPart(i, { howDocs: [...(p.howDocs ?? []).filter((x) => x.name !== d.name), d] })}
               />
