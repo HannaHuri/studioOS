@@ -1165,17 +1165,6 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
             autoFocus={isEmpty}
           />
         )}
-        {fieldsLeft.length > 0 && (
-          <div className="text-[12.5px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>
-            {fieldsWarn ? (
-              <>
-                נשארו שדות למילוי: {fieldsLeft.map((f) => `[${f}]`).join(", ")}
-                <span className="mx-1.5">·</span>
-                <button onClick={() => handleSend(true)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>שליחה בכל זאת</button>
-              </>
-            ) : fieldsLeft.length === 1 ? "שדה אחד למילוי" : `${fieldsLeft.length} שדות למילוי · Tab למעבר`}
-          </div>
-        )}
         <div className="flex items-center gap-1.5" dir="ltr">
           {/* Send button — becomes a stop button while an agent run is in progress */}
           <button
@@ -1306,6 +1295,18 @@ function ChatArea({ isDark, conversationKey, inUseName, onClearInUse, insert, on
           </div>
         </div>
       </div>
+      {/* the [fields] note sits under the input, outside it */}
+      {fieldsLeft.length > 0 && (
+        <div className="px-3 text-[12.5px]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+          {fieldsWarn ? (
+            <>
+              נשארו שדות למילוי: {fieldsLeft.map((f) => `[${f}]`).join(", ")}
+              <span className="mx-1.5">·</span>
+              <button onClick={() => handleSend(true)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>שליחה בכל זאת</button>
+            </>
+          ) : fieldsLeft.length === 1 ? "שדה אחד למילוי" : `${fieldsLeft.length} שדות למילוי · Tab למעבר`}
+        </div>
+      )}
       </div>
     );
   }
