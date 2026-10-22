@@ -22,7 +22,7 @@ import {
   SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
-import { DetailedInline, putDetailedDraft, type DetailedHandle } from "./detailedQuestion";
+import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
 import { GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
 
@@ -2820,6 +2820,7 @@ export default function MishpatPage() {
   const rowRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
   // A detailed prompt is too long for the question line, so it opens in the detailed question
+  const [draftReplace, setDraftReplace] = useState<Prompt | null>(null); // a detailed prompt waiting on the draft's replacement
   const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number }>({ parts: [], guidelines: "", n: 0 });
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
@@ -2885,13 +2886,14 @@ export default function MishpatPage() {
   // from the opening words rather than asking for it before anything is on screen.
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
   const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
+  const loadDetailed = (pr: Prompt) => {
+    setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
+    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1 }));
+    setLibraryOpen(false);
+  };
   const applyPrompt = (pr: Prompt) => {
-    if (pr.parts) {
-      setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
-      setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1 }));
-      setLibraryOpen(false);
-      return;
-    }
+    // a detailed prompt takes the draft's place, so a draft that's there is asked about first
+    if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
     if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
     insertPrompt(pr.body);
@@ -3365,6 +3367,16 @@ export default function MishpatPage() {
           initial={promptShare}
           onShare={doShare}
           onClose={() => setPromptShare(null)}
+        />
+      )}
+      {draftReplace && (
+        <PromptConfirm
+          isDark={isDark}
+          title="להחליף את הטיוטה?"
+          note={`יש לך טיוטה של שאלה מפורטת. הפרומפט ׳${draftReplace.name}׳ יחליף אותה והטיוטה תימחק.`}
+          confirmLabel="החלפה"
+          onConfirm={() => { loadDetailed(draftReplace); setDraftReplace(null); }}
+          onClose={() => setDraftReplace(null)}
         />
       )}
       {promptFill && (

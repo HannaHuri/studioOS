@@ -56,6 +56,8 @@ function loadDraft(): DetailedDraft | null {
 function saveDraft(d: DetailedDraft | null) {
   try { if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage off */ }
 }
+// Only a draft with something written is kept, so one that's there is worth asking about
+export const hasDetailedDraft = () => !!loadDraft();
 // A library prompt opened here becomes the draft, so the editor mounts on its parts
 export function putDetailedDraft(parts: PromptPart[], guidelines: string) {
   saveDraft({ parts: parts.map((p) => ({ ...p, sources: [...p.sources], docs: p.docs?.map((d) => ({ ...d })) })), guidelines });
