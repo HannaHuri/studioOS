@@ -1638,7 +1638,7 @@ export function PromptConfirm({
           {warn && <TriangleAlert size={20} style={{ color: isDark ? dk.textMuted : c.iconGray, flexShrink: 0 }} />}
           {title}
         </div>
-        <div className="text-[14px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
+        <div className="text-[15px] mt-2 leading-relaxed" style={{ color: subCol }}>{note}</div>
         <div className="flex items-center justify-end gap-2 mt-5">
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
