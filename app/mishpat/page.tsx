@@ -3373,7 +3373,7 @@ export default function MishpatPage() {
         <PromptConfirm
           isDark={isDark}
           title="להחליף את הטיוטה?"
-          note={`יש לך טיוטה של שאלה מפורטת. הפרומפט ׳${draftReplace.name}׳ יחליף אותה והטיוטה תימחק.`}
+          note={`יש לך טיוטה של שאלה מפורטת בשדה הצ׳אט. הפרומפט ׳${draftReplace.name}׳ יחליף אותה והטיוטה תימחק.`}
           confirmLabel="החלפה"
           safe
           warn
