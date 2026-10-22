@@ -18,8 +18,8 @@ import {
   type ProofKinds, type ProofRun, type RunStep,
 } from "./proofread";
 import {
-  PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptFill, PromptConfirm, QuestionActions,
-  SEED_PROMPTS, fieldsOf, ME, MY_ROLE, type Prompt,
+  PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptConfirm, QuestionActions,
+  SEED_PROMPTS, fieldsOf, EXAMPLE_FIELD, FIELD_RE, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
@@ -791,6 +791,10 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   const scopeBtnRef = useRef<HTMLButtonElement>(null);
   const [scopePos, setScopePos]   = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [sendPressed, setSendPressed] = useState(false);
+  // A prompt's [fields] are filled in right here in the question line. A send with some still
+  // standing is held once, with a quiet line under the text rather than a window; this is the
+  // list it was held on, for a basic or a detailed question alike.
+  const [held, setHeld] = useState<{ detailed: boolean; fields: string[] } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null); // messages container — auto-scrolled to bottom as agent-step rows appear
   // A prompt chosen in the library lands here. The counter is what makes it fire, so choosing
   // the same prompt twice still works, and mounting doesn't overwrite what the user typed.
@@ -939,6 +943,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     setTaskOpen(false);
     setChecksHelp(null);
     setQKind(baseKind);
+    setHeld(null);
     setPicked(NO_KINDS);
     setUsedChecks(NO_KINDS);
     setProofRun(null);
@@ -961,8 +966,21 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     if (agent) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
 
-  function handleSend() {
-    if (detailedOpen) { detailedRef.current?.send(); return; }
+  // Selects the first [field] at or after `from` (wrapping round), so typing replaces it
+  function selectField(from: number) {
+    const el = inputRef.current;
+    if (!el) return;
+    const all = [...el.value.matchAll(FIELD_RE)];
+    const m = all.find((x) => x.index! >= from) ?? all[0];
+    if (!m) return;
+    el.focus();
+    el.setSelectionRange(m.index!, m.index! + m[0].length);
+  }
+  const fieldsWarn = held && held.detailed === detailedOpen ? held.fields : null; // only for the kind it was held on
+  const fieldsLeft = detailedOpen ? (fieldsWarn ?? []) : fieldsOf(inputText);
+
+  function handleSend(force?: boolean) {
+    if (detailedOpen) { detailedRef.current?.send(force); return; }
     // With checks ticked, sending runs them on the document — and with no document yet, it asks for one.
     if (docMode) {
       if (!draft) { fileRef.current?.click(); return; }
@@ -972,14 +990,17 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
       return;
     }
     if (!inputText.trim()) return;
+    if (fieldsLeft.length && !force) { setHeld({ detailed: false, fields: fieldsLeft }); selectField(0); return; }
     // ישיר and מהיר answer straight away; everything else goes through the agents' steps
     ask(inputText.trim(), qKind !== "direct" && qKind !== "fast");
     setInputText("");
+    setHeld(null);
   }
 
   // A detailed question goes into the conversation as its parts, written out
   function sendDetailed(parts: PromptPart[], guidelines: string) {
     setQKind(baseKind);
+    setHeld(null);
     ask(partsToText(parts, guidelines), true);
   }
 
@@ -1055,12 +1076,28 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     );
   }
 
+  const selectPending = useRef(false);
   useEffect(() => {
     if (!insert || insert.n === insertN.current) return;
     insertN.current = insert.n;
     setInputText(insert.text);
+    setHeld(null);
     setQKind(baseKind); // a prompt's text goes in the question line, so a detailed question open steps aside
+    selectPending.current = true; // once the text is in, its first field is selected to type over
   }, [insert]);
+  useEffect(() => {
+    if (!selectPending.current) return;
+    selectPending.current = false;
+    const id = requestAnimationFrame(() => selectField(0));
+    return () => cancelAnimationFrame(id);
+  }, [inputText]);
+
+  // picking an example in the panel fills a [דוגמה] waiting in the question line
+  const [seenInUse, setSeenInUse] = useState(inUseName);
+  if (inUseName !== seenInUse) {
+    setSeenInUse(inUseName);
+    if (inUseName) setInputText((t) => t.replaceAll(`[${EXAMPLE_FIELD}]`, inUseName));
+  }
 
   // A library prompt's parts take the detailed question's place, so the editor opens on them afresh
   const loadN = useRef(0);
@@ -1124,6 +1161,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             // mid-conversation the input sits at the bottom, so it leaves the latest answer some room
             maxHeight={isEmpty ? (draft ? "calc(100vh - 322px)" : "calc(100vh - 272px)") : "calc(100vh - 360px)"}
             onSend={sendDetailed}
+            onFieldsLeft={(fields) => setHeld({ detailed: true, fields })}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
             onClose={() => setQKind(baseKind)}
           />
@@ -1132,11 +1170,15 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             ref={inputRef}
             rows={1}
             className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
-            style={{ color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
+            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+              // Tab moves from field to field while there are any left
+              if (e.key === "Tab" && !e.shiftKey && fieldsLeft.length) { e.preventDefault(); selectField(e.currentTarget.selectionEnd); }
+            }}
             dir="rtl"
             placeholder={docMode
               ? (draft ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
@@ -1147,7 +1189,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         <div className="flex items-center gap-1.5" dir="ltr">
           {/* Send button — becomes a stop button while an agent run is in progress */}
           <button
-            onClick={agentRunning ? handleStop : handleSend}
+            onClick={agentRunning ? handleStop : () => handleSend()}
             className="size-8 flex items-center justify-center rounded border flex-shrink-0 transition-colors"
             style={{
               borderColor: sendPressed ? c.primary : (isDark ? dk.border : c.border),
@@ -1276,6 +1318,18 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           </div>
         </div>
       </div>
+      {/* the [fields] note sits under the input, outside it */}
+      {fieldsLeft.length > 0 && (
+        <div className="px-3 text-[12.5px]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+          {fieldsWarn ? (
+            <>
+              נשארו שדות למילוי: {fieldsLeft.map((f) => `[${f}]`).join(", ")}
+              <span className="mx-1.5">·</span>
+              <button onClick={() => handleSend(true)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>שליחה בכל זאת</button>
+            </>
+          ) : fieldsLeft.length === 1 ? "שדה אחד למילוי" : `${fieldsLeft.length} שדות למילוי · Tab למעבר`}
+        </div>
+      )}
       </div>
     );
   }
@@ -2827,7 +2881,6 @@ export default function MishpatPage() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);
-  const [promptFill, setPromptFill] = useState<Prompt | null>(null);
   const [promptDelete, setPromptDelete] = useState<Prompt | null>(null);
   // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
   // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
@@ -2921,9 +2974,9 @@ export default function MishpatPage() {
     // the development version has no detailed question, so a detailed prompt goes in the question line written out
     if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines)); setLibraryOpen(false); return; }
     if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
-    if (fieldsOf(pr.body).length) { setPromptFill(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
-    insertPrompt(pr.body);
+    // an example already in use fills the prompt's [דוגמה]
+    insertPrompt(inUse ? pr.body.replaceAll(`[${EXAMPLE_FIELD}]`, inUse.name) : pr.body);
     setLibraryOpen(false);
   };
   // using a prompt puts it straight into the input, where it's checked and edited before it's sent
@@ -3407,24 +3460,6 @@ export default function MishpatPage() {
           warn
           onConfirm={() => { loadDetailed(draftReplace); setDraftReplace(null); }}
           onClose={() => setDraftReplace(null)}
-        />
-      )}
-      {promptFill && (
-        <PromptFill
-          isDark={isDark}
-          prompt={promptFill}
-          exampleNames={examples.map((e) => e.name)}
-          onInsert={(text, exName) => {
-            setPrompts((prev) => prev.map((x) => (x.id === promptFill.id ? { ...x, uses: x.uses + 1 } : x)));
-            insertPrompt(text);
-            // [דוגמה] doesn't just name an example — it puts that example into the conversation,
-            // the same state the examples panel's "שימוש בדוגמה" sets.
-            const ex = examples.find((e) => e.name === exName);
-            if (ex) setInUse(ex);
-            setPromptFill(null);
-            setLibraryOpen(false);
-          }}
-          onClose={() => setPromptFill(null)}
         />
       )}
       {promptDelete && (

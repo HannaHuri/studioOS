@@ -14,7 +14,7 @@ import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, partIncomplete, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
-  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, findIdentifiers, scrub, today, uid, type Prompt,
+  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, fieldsOf, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
 
 function CheckRow({ on, onToggle, label, isDark }: { on: boolean; onToggle: () => void; label: string; isDark: boolean }) {
@@ -45,7 +45,7 @@ function generalize(parts: PromptPart[], docs: CaseDocOption[]): PromptPart[] {
 // Built inside the chat's input, in place of the question line, rather than in a window over the
 // page: the conversation stays in view, and the input's own send button sends it. Every section
 // folds to one line, so a long question can be read whole before it goes.
-export type DetailedHandle = { send: () => void };
+export type DetailedHandle = { send: (force?: boolean) => void }; // force sends with fields still unfilled
 
 // The draft of the detailed question being written, kept in this browser
 type DetailedDraft = { parts: PromptPart[]; guidelines: string };
@@ -86,12 +86,13 @@ function Fold({ title, note, preview, open, onToggle, isDark, children }: {
   );
 }
 
-export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSaveToLibrary, onClose }: {
+export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFieldsLeft, onSaveToLibrary, onClose }: {
   ref?: React.Ref<DetailedHandle>;
   isDark: boolean;
   caseDocs: CaseDocOption[];
   maxHeight: string; // past it the sections scroll, so the input never pushes the page away
   onSend: (parts: PromptPart[], guidelines: string) => void;
+  onFieldsLeft: (fields: string[]) => void; // a send held back because [fields] are still in the text
   onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
   onClose: () => void;
 }) {
@@ -123,10 +124,12 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   const quietBorder = isDark ? dk.border : c.border;
   const hasPicked = parts.some((p) => scopeOf(p) === "docs");
 
-  const send = () => {
+  const send = (force?: boolean) => {
     const bad = parts.some(partIncomplete);
     if (bad || (keep && !name.trim())) { setAttempted(true); return; }
     const done = clean(parts);
+    const left = fieldsOf(partsToText(done, guidelines.trim()));
+    if (left.length && !force) { onFieldsLeft(left); return; }
     if (keep) {
       // The shared copy goes out with identifying details swapped for fields, as the library
       // editor does; my own copy and the question sent here keep them.

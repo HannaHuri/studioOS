@@ -172,17 +172,15 @@ export const SEED_PROMPTS: Prompt[] = [
 ];
 
 // ── Fields — [שם השדה] inside the body ─────────────────────────────────────
-// A prompt can carry instructions the user fills in before it runs. [דוגמה] is the one
-// special field: it binds to the examples panel instead of being typed.
+// A prompt can carry details the user fills in, in the question line, before it runs. [דוגמה] is
+// the one special field: the example picked in the examples panel fills it instead of typing.
 export const EXAMPLE_FIELD = "דוגמה";
-const NO_EXAMPLE = "ללא דוגמה";
+export const FIELD_RE = /\[([^\]\n]{1,40})\]/g;
 export const fieldsOf = (body: string): string[] => {
   const out: string[] = [];
-  for (const m of body.matchAll(/\[([^\]\n]{1,40})\]/g)) if (!out.includes(m[1])) out.push(m[1]);
+  for (const m of body.matchAll(FIELD_RE)) if (!out.includes(m[1])) out.push(m[1]);
   return out;
 };
-export const fillFields = (body: string, values: Record<string, string>) =>
-  body.replace(/\[([^\]\n]{1,40})\]/g, (whole, key: string) => (values[key]?.trim() ? values[key].trim() : whole));
 
 // ── Identifying details ────────────────────────────────────────────────────
 // A question that was actually asked names the parties. Sharing it verbatim publishes
@@ -1534,86 +1532,6 @@ export function PromptShare({
           </button>
           <button onClick={share} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
             שיתוף
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Fill the prompt's fields before it lands in the question line ───────────
-export function PromptFill({
-  isDark, prompt, exampleNames, onInsert, onClose,
-}: {
-  isDark: boolean; prompt: Prompt; exampleNames: string[];
-  onInsert: (text: string, exampleName: string | null) => void; onClose: () => void;
-}) {
-  const fields = fieldsOf(prompt.body);
-  const [vals, setVals] = useState<Record<string, string>>({});
-  const surface = isDark ? dk.surface : "white";
-  const textCol = isDark ? dk.text : c.text;
-  const subCol = isDark ? dk.textMuted : c.textLight;
-  const line = isDark ? dk.border : c.inputBorder;
-
-  const insert = () => {
-    const ex = vals[EXAMPLE_FIELD]?.trim() || null;
-    // an unfilled field is left standing in the text rather than blocking the insert — the
-    // user can see exactly what is missing once it's in the question line
-    onInsert(fillFields(prompt.body, vals), ex);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div
-        dir="rtl" onClick={(e) => e.stopPropagation()}
-        className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
-        style={{ width: "min(620px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
-      >
-        <div className="flex items-start px-6 pt-5 pb-2">
-          <div className="flex-1">
-            <div className="text-[18px]" style={{ color: textCol, fontWeight: 400 }}>{prompt.name}</div>
-            <div className="text-[13px] mt-1" style={{ color: subCol }}>מילוי השדות שבפרומפט</div>
-          </div>
-          <button onClick={onClose} className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors" style={{ color: subCol }} title="סגירה">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 py-2 flex flex-col gap-3">
-          {fields.map((fld) => (
-            <div key={fld}>
-              <div className="text-[13px] mb-1" style={{ color: subCol }}>{fld}</div>
-              {fld === EXAMPLE_FIELD ? (
-                <Dropdown
-                  label="בחירת דוגמה"
-                  value={vals[fld] || NO_EXAMPLE}
-                  options={[NO_EXAMPLE, ...exampleNames]}
-                  onChange={(v) => setVals((prev) => ({ ...prev, [fld]: v === NO_EXAMPLE ? "" : v }))}
-                  isDark={isDark}
-                  width={320}
-                  noAny
-                />
-              ) : (
-                <input
-                  value={vals[fld] ?? ""}
-                  onChange={(e) => setVals((p) => ({ ...p, [fld]: e.target.value }))}
-                  className="w-full px-3 py-2 text-[14px] outline-none rounded-[4px] text-right"
-                  style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
-                />
-              )}
-            </div>
-          ))}
-          <div className="text-[13px] leading-relaxed rounded-[4px] px-3 py-2.5 mt-1" style={{ backgroundColor: isDark ? dk.input : c.hoverBg, color: isDark ? dk.textMuted : c.textGray }}>
-            {fillFields(prompt.body, vals)}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-6 py-4">
-          <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
-            ביטול
-          </button>
-          <button onClick={insert} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: "white" }}>
-            הכנסה לשורת השאלה
           </button>
         </div>
       </div>
