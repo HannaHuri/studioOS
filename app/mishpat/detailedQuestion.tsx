@@ -99,7 +99,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onSav
   const [parts, setParts] = useState<PromptPart[]>(draft0?.parts ?? [emptyPart()]);
   const [guidelines, setGuidelines] = useState(draft0?.guidelines ?? ""); // general instructions for all the parts
   const [editorKey, setEditorKey] = useState(0); // a cleared draft starts the parts afresh, folded
-  const hasContent = !!guidelines.trim() || parts.some((p) => p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length);
+  const hasContent = !!guidelines.trim() || parts.some((p) => p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length || p.howDocs?.length);
   useEffect(() => { saveDraft(hasContent ? { parts, guidelines } : null); }, [parts, guidelines, hasContent]);
   const clearDraft = () => { setParts([emptyPart()]); setGuidelines(""); setAttempted(false); setEditorKey((k) => k + 1); };
   const [guideOpen, setGuideOpen] = useState(true);

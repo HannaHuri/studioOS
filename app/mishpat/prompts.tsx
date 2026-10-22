@@ -983,8 +983,8 @@ export function PromptEditor({
   // Switching between basic and detailed, from the switch at the top. What's written carries over
   // where it can; when anything has been written, the switch asks first.
   const [pendingKind, setPendingKind] = useState<"basic" | "detailed" | null>(null);
-  const partsWritten = !!parts?.some((pt) => pt.task.trim() || pt.how.trim() || pt.sources.length);
-  const partsLose = !!parts && (parts.length > 1 || parts.some((pt) => pt.how.trim() || pt.sources.length));
+  const partsWritten = !!parts?.some((pt) => pt.task.trim() || pt.how.trim() || pt.sources.length || pt.howDocs?.length);
+  const partsLose = !!parts && (parts.length > 1 || parts.some((pt) => pt.how.trim() || pt.sources.length || pt.howDocs?.length));
   const toDetailed = () => { setParts([{ ...emptyPart(), task: body }]); setPendingKind(null); };
   const toBasic = () => {
     setBody((parts ?? []).map((pt) => pt.task.trim()).filter(Boolean).join("\n\n"));
