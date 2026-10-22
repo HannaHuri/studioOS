@@ -18,7 +18,7 @@ import { UseExampleIcon } from "./icons";
 import {
   ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS, STAGES, COURTS, TAGS, fitsCase,
   Dropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
-  saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK,
+  saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, FIELD_RE,
   type Prompt, type Filters, type SortKey,
 } from "./prompts";
 
@@ -26,6 +26,10 @@ import {
 const WIDE = 980;
 const COLS_NARROW = "30px minmax(0,1fr) 44px 112px 76px 64px 34px 32px";
 const COLS_WIDE = "30px minmax(0,1fr) 44px 136px 90px 84px 108px 96px 84px 64px 34px 32px";
+
+// a prompt's [fields] stand out in its preview, so it shows there is something to fill in
+const withFields = (text: string, color: string) =>
+  text.split(FIELD_RE).map((t, i) => (i % 2 ? <span key={i} style={{ color }}>[{t}]</span> : t));
 
 export function PromptTablePanel({
   isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
@@ -230,7 +234,7 @@ export function PromptTablePanel({
                     {pr.parts && <span title="פרומפט מפורט" className="flex-none flex"><WandSparkles size={13} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
                     <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
                   </div>
-                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
+                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : withFields(pr.body, isDark ? dk.blue : c.primary)}</div>
                 </div>
 
                 <div className="flex items-center justify-center" title={srcName(pr)}>
