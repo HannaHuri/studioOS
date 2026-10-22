@@ -1015,6 +1015,11 @@ export function PromptEditor({
   const [hits, setHits] = useState<Hit[]>([]);
   const [kept, setKept] = useState<Set<number>>(new Set());
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
+  // Nothing to save or cancel until something changes; the X still closes. A question brought from
+  // the chat is there to be saved, so its buttons are live from the start.
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon });
+  const [startSnapshot] = useState(snapshot);
+  const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
 
   const toggleShare = () => {
@@ -1320,11 +1325,11 @@ export function PromptEditor({
   );
   const footer = (
         <div className="flex items-center justify-end gap-2 px-6 py-4" style={pane ? { borderTop: `1px solid ${isDark ? dk.border : "#eef2f7"}` } : undefined}>
-          <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
+          <button onClick={onClose} disabled={untouched} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
           {/* with "שימוש בפרומפט" above, that is the window's one filled button and saving steps back */}
-          <button onClick={save} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90" style={pane && live && onUse
+          <button onClick={save} disabled={untouched} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-default disabled:hover:opacity-40" style={pane && live && onUse
             ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }
             : { backgroundColor: c.primary, color: "white" }}>
             {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
