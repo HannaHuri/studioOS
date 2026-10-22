@@ -16,7 +16,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useImperativeHandle, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
 
@@ -24,9 +24,12 @@ import { PromptConfirm } from "./prompts";
 // built from the chat's input, inside a case — on specific documents of that case, each with an
 // optional page range (`docs`). `scope` is which of the three was chosen; left out, it follows
 // what's filled in.
-export type DocPick = { name: string; from?: number; to?: number };
+// `pages` is set on a document uploaded by the user, which the case's list doesn't know.
+export type DocPick = { name: string; from?: number; to?: number; pages?: number };
 export type SourceScope = "all" | "types" | "docs";
-export type PromptPart = { sources: string[]; task: string; how: string; docs?: DocPick[]; scope?: SourceScope };
+// `howDocs`: documents uploaded as an example for איך — often an earlier judgment — each with the
+// pages that answer the how. One uploaded document can serve several parts, each with its own pages.
+export type PromptPart = { sources: string[]; task: string; how: string; docs?: DocPick[]; scope?: SourceScope; howDocs?: DocPick[] };
 export const scopeOf = (p: PromptPart): SourceScope => p.scope ?? (p.docs?.length ? "docs" : p.sources.length ? "types" : "all");
 // A case document the sources field offers, under its document type.
 export type CaseDocOption = { type: string; name: string; pages: number };
@@ -72,10 +75,6 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, on
   const add = (o: Opt) => {
     if (o.kind === "type") onChange([...value, o.label]); else onDocs?.([...docs, { name: o.label }]);
     setQ(""); setHi(0); setOpen(false); inputRef.current?.focus();
-  };
-  const setRange = (name: string, k: "from" | "to", raw: string, max: number) => {
-    const n = raw === "" ? undefined : Math.max(1, Math.min(max, parseInt(raw, 10) || 1));
-    onDocs?.(docs.map((v) => (v.name === name ? { ...v, [k]: n } : v)));
   };
   const firstDoc = options.findIndex((o) => o.kind === "doc");
 
@@ -149,32 +148,119 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, on
         </div>
       )}
       {/* The specific documents picked, each with its own page range */}
-      {docs.length > 0 && (
-        <div className="mt-2 flex flex-col gap-1.5">
-          {docs.map((v) => {
-            const d = caseDocs?.find((x) => x.name === v.name);
-            const max = d?.pages ?? 9999;
-            const num = "w-[56px] h-7 px-1.5 text-center text-[13px] outline-none rounded-[3px]";
-            return (
-              <div key={v.name} className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px]" style={{ border: `1px solid ${line}`, backgroundColor: surface }}>
-                <FileText size={14} style={{ color: c.primary, flexShrink: 0 }} />
-                <span className="flex-1 min-w-0 truncate text-[13.5px]" style={{ color: textCol }}>
-                  {v.name}{d && <span className="text-[12px]" style={{ color: subCol }}> · {d.type}</span>}
-                </span>
-                <span className="flex items-center gap-1 text-[12.5px] flex-shrink-0" style={{ color: subCol }}>
-                  עמודים
-                  <input type="number" min={1} max={max} value={v.from ?? ""} placeholder="1" onChange={(e) => setRange(v.name, "from", e.target.value, max)}
-                    className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="מעמוד" />
-                  עד
-                  <input type="number" min={1} max={max} value={v.to ?? ""} placeholder={d ? String(d.pages) : ""} onChange={(e) => setRange(v.name, "to", e.target.value, max)}
-                    className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="עד עמוד" />
-                </span>
-                <button onClick={() => onDocs?.(docs.filter((x) => x.name !== v.name))} className="size-6 flex items-center justify-center rounded hover:bg-black/5" style={{ color: subCol }} title="הסרה">
-                  <X size={13} />
-                </button>
-              </div>
-            );
-          })}
+      <DocRows docs={docs} onDocs={(v) => onDocs?.(v)} isDark={isDark} caseDocs={caseDocs} />
+    </div>
+  );
+}
+
+// ── Documents with page ranges ──────────────────────────────────────────────
+// One row per document: its name, from which page to which, and removal. Used for the case's
+// documents under מקורות and for the documents uploaded under איך.
+function DocRows({ docs, onDocs, isDark, caseDocs }: {
+  docs: DocPick[]; onDocs: (v: DocPick[]) => void; isDark: boolean; caseDocs?: CaseDocOption[];
+}) {
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  const line = isDark ? dk.border : c.inputBorder;
+  const surface = isDark ? dk.surface : "white";
+  const setRange = (name: string, k: "from" | "to", raw: string, max: number) => {
+    const n = raw === "" ? undefined : Math.max(1, Math.min(max, parseInt(raw, 10) || 1));
+    onDocs(docs.map((v) => (v.name === name ? { ...v, [k]: n } : v)));
+  };
+  if (!docs.length) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      {docs.map((v) => {
+        const d = caseDocs?.find((x) => x.name === v.name);
+        const pages = d?.pages ?? v.pages;
+        const max = pages ?? 9999;
+        const num = "w-[56px] h-7 px-1.5 text-center text-[13px] outline-none rounded-[3px]";
+        return (
+          <div key={v.name} className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px]" style={{ border: `1px solid ${line}`, backgroundColor: surface }}>
+            <FileText size={14} style={{ color: c.primary, flexShrink: 0 }} />
+            <span className="flex-1 min-w-0 truncate text-[13.5px]" style={{ color: textCol }}>
+              {v.name}{d ? <span className="text-[12px]" style={{ color: subCol }}> · {d.type}</span>
+                : pages && <span className="text-[12px]" style={{ color: subCol }}> · {pages} עמ׳</span>}
+            </span>
+            <span className="flex items-center gap-1 text-[12.5px] flex-shrink-0" style={{ color: subCol }}>
+              עמודים
+              <input type="number" min={1} max={max} value={v.from ?? ""} placeholder="1" onChange={(e) => setRange(v.name, "from", e.target.value, max)}
+                className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="מעמוד" />
+              עד
+              <input type="number" min={1} max={max} value={v.to ?? ""} placeholder={pages ? String(pages) : ""} onChange={(e) => setRange(v.name, "to", e.target.value, max)}
+                className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="עד עמוד" />
+            </span>
+            <button onClick={() => onDocs(docs.filter((x) => x.name !== v.name))} className="size-6 flex items-center justify-center rounded hover:bg-black/5" style={{ color: subCol }} title="הסרה">
+              <X size={13} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Uploading an example for איך ────────────────────────────────────────────
+// In the איך label's row. Once a document was uploaded in any part, it opens a short menu: those
+// documents first, to use again with other pages, then uploading a new one. Before that it goes
+// straight to the file picker.
+function HowUpload({ uploaded, onPick, isDark }: {
+  uploaded: DocPick[]; // uploaded in other parts and not yet in this one
+  onPick: (d: DocPick) => void;
+  isDark: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const textCol = isDark ? dk.text : c.text;
+  const subCol = isDark ? dk.textMuted : c.textLight;
+  const line = isDark ? dk.border : c.inputBorder;
+  const surface = isDark ? dk.surface : "white";
+  const blue = isDark ? dk.blue : c.primary;
+  const item = "w-full flex items-center gap-2 text-right px-3 h-8 text-[13.5px] transition-colors";
+  const hover = isDark ? dk.input : c.hoverBg;
+  return (
+    <div className="relative">
+      <input
+        ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          // a prototype: the page count is guessed from the file's size
+          if (f) onPick({ name: f.name.replace(/\.(pdf|docx?)$/i, ""), pages: Math.max(1, Math.round(f.size / 40000)) });
+        }}
+      />
+      <button
+        onClick={() => (uploaded.length ? setOpen((v) => !v) : fileRef.current?.click())}
+        onBlur={() => setOpen(false)}
+        className="h-6 px-1 flex items-center gap-1 rounded text-[12.5px] hover:underline"
+        style={{ color: blue }}
+        aria-haspopup={uploaded.length ? "menu" : undefined} aria-expanded={uploaded.length ? open : undefined}
+      >
+        <Paperclip size={14} /> העלאת מסמך לדוגמה
+      </button>
+      {open && (
+        <div role="menu" className="absolute z-10 left-0 top-full mt-1 w-[264px] rounded-[4px] shadow-lg py-1"
+          style={{ backgroundColor: surface, border: `1px solid ${line}` }}>
+          <div className="px-3 pt-1 pb-1 text-[12px]" style={{ color: subCol }}>מסמכים שכבר הועלו</div>
+          {uploaded.map((d) => (
+            <button key={d.name} role="menuitem"
+              onMouseDown={(e) => { e.preventDefault(); setOpen(false); onPick({ name: d.name, pages: d.pages }); }}
+              className={item} style={{ color: textCol }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hover)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
+              <FileText size={14} style={{ color: c.iconGray, flexShrink: 0 }} />
+              <span className="flex-1 min-w-0 truncate">{d.name}</span>
+              {d.pages && <span className="text-[12px] flex-shrink-0" style={{ color: subCol }}>{d.pages} עמ׳</span>}
+            </button>
+          ))}
+          <div className="my-1 h-px" style={{ backgroundColor: line }} />
+          <button role="menuitem"
+            onMouseDown={(e) => { e.preventDefault(); setOpen(false); fileRef.current?.click(); }}
+            className={item} style={{ color: blue }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hover)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
+            <Upload size={14} style={{ flexShrink: 0 }} /> העלאת מסמך חדש
+          </button>
         </div>
       )}
     </div>
@@ -234,8 +320,8 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
   collapsible?: boolean;
   foldAll?: boolean; // open/fold-all beside the parts heading, where no top bar carries them
 }) {
-  // folded from the start, so the first look shows the general instructions and that there are parts to define
-  const [closed, setClosed] = useState<boolean[]>(() => parts.map(() => true));
+  // the first part opens at the start, so writing begins right away; the rest fold
+  const [closed, setClosed] = useState<boolean[]>(() => parts.map((_, i) => i > 0));
   const isClosed = (i: number) => !!collapsible && !!closed[i] && !(attempted && !parts[i].task.trim());
   const [pendingDelete, setPendingDelete] = useState<number | null>(null); // the part waiting on its delete confirmation
   const listEnd = useRef<HTMLButtonElement>(null); // the "הוספת חלק" button, last in the list
@@ -257,13 +343,15 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
   };
   // a copy goes right under its part, open, so picking many document types isn't done twice
   const duplicate = (i: number) => {
-    onChange([...parts.slice(0, i + 1), { ...parts[i], sources: [...parts[i].sources], docs: parts[i].docs?.map((d) => ({ ...d })) }, ...parts.slice(i + 1)]);
+    onChange([...parts.slice(0, i + 1), { ...parts[i], sources: [...parts[i].sources], docs: parts[i].docs?.map((d) => ({ ...d })), howDocs: parts[i].howDocs?.map((d) => ({ ...d })) }, ...parts.slice(i + 1)]);
     const c2 = parts.map((_, j) => !!closed[j]);
     setClosed([...c2.slice(0, i + 1), false, ...c2.slice(i + 1)]);
   };
   const setAll = (fold: boolean) => setClosed(parts.map(() => fold));
   useImperativeHandle(ref, () => ({ setAll }));
   const full = parts.length >= MAX_PARTS;
+  // every document uploaded for איך in this prompt, once each, so another part can use it again
+  const uploadedDocs = parts.flatMap((p) => p.howDocs ?? []).filter((d, j, all) => all.findIndex((x) => x.name === d.name) === j);
   const addPart = () => {
     if (full) return;
     onChange([...parts, emptyPart()]);
@@ -316,7 +404,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               <button className={iconBtn} style={{ color: subCol }} disabled={i === parts.length - 1} onClick={() => move(i, 1)} title="הזזה למטה"><ArrowDown size={15} /></button>
               <button className={iconBtn} style={{ color: subCol }} disabled={parts.length === 1} onClick={() => {
                 // an empty part goes straight away; one with anything written in it asks first
-                if (p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length) setPendingDelete(i);
+                if (p.task.trim() || p.how.trim() || p.sources.length || p.docs?.length || p.howDocs?.length) setPendingDelete(i);
                 else remove(i);
               }} title="מחיקת החלק"><Trash2 size={15} /></button>
               <button className={iconBtn} style={{ color: subCol }} disabled={full} onClick={() => duplicate(i)} title={full ? `אפשר להוסיף עד ${MAX_PARTS} חלקים` : "שכפול החלק"}><Copy size={15} /></button>
@@ -355,7 +443,14 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               );
             })() : <SourcesInput value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} />}
 
-            <div className="text-[13px] mt-3 mb-1" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></div>
+            <div className="flex items-center justify-between mt-3 mb-1">
+              <span className="text-[13px]" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></span>
+              <HowUpload
+                isDark={isDark}
+                uploaded={uploadedDocs.filter((d) => !p.howDocs?.some((x) => x.name === d.name))}
+                onPick={(d) => setPart(i, { howDocs: [...(p.howDocs ?? []).filter((x) => x.name !== d.name), d] })}
+              />
+            </div>
             <textarea
               value={p.how}
               onChange={(e) => setPart(i, { how: e.target.value })}
@@ -364,6 +459,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               className={area}
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
             />
+            <DocRows docs={p.howDocs ?? []} onDocs={(v) => setPart(i, { howDocs: v })} isDark={isDark} />
             </>}
           </div>
         );
@@ -497,5 +593,6 @@ export const sourcesText = (p: PromptPart) => {
 export const partsToText = (parts: PromptPart[], guidelines?: string) =>
   (guidelines?.trim() ? `הנחיות כלליות: ${guidelines.trim()}\n\n` : "") +
   parts.map((p, i) =>
-    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nאיך: ${p.how}` : ""}`,
+    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nאיך: ${p.how}` : ""}` +
+    (p.howDocs?.length ? `\nדוגמה: ${p.howDocs.map((d) => d.name + pagesText(d)).join(", ")}` : ""),
   ).join("\n\n");
