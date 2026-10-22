@@ -353,7 +353,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
                   <ScopeSwitch value={scope} onChange={(v) => setPart(i, { scope: v })} isDark={isDark} withDocs={!!caseDocs} />
                   {scope === "types" && <SourcesInput only="types" value={p.sources} onChange={(v) => setPart(i, { sources: v })} isDark={isDark} caseDocs={caseDocs} />}
                   {scope === "docs" && caseDocs && <SourcesInput only="docs" value={[]} onChange={() => {}} isDark={isDark} caseDocs={caseDocs} docs={p.docs} onDocs={(v) => setPart(i, { docs: v })} />}
-                  {missing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>{scope === "types" ? "יש לבחור לפחות סוג מסמך אחד." : "יש לבחור לפחות מסמך אחד."}</div>}
+                  {missing && <div className="text-[12.5px] mt-1" style={{ color: RED }}>{scope === "types" ? "יש לבחור סוג מסמך אחד לפחות" : "יש לבחור מסמך אחד לפחות"}</div>}
                 </>
               );
             })()}
