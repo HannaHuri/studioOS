@@ -1172,7 +1172,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             dir="rtl" aria-disabled
           >
             <Lock size={14} style={{ flexShrink: 0 }} />
-            {docMode ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש לבחור בדיקה לביצוע על המסמך, מהתפריט שלמטה"}
+            {docMode ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש לבחור בדיקה לביצוע על המסמך מהתפריט שלמטה"}
           </div>
         ) : detailedOpen ? (
           <DetailedInline
@@ -1205,7 +1205,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             dir="rtl"
             placeholder={docMode
               ? (draft ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
-              : docLocked ? "יש לבחור בדיקה לביצוע על המסמך, מהתפריט שלמטה"
+              : docLocked ? "יש לבחור בדיקה לביצוע על המסמך מהתפריט שלמטה"
               : draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
             autoFocus={isEmpty}
           />
