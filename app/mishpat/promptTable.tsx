@@ -33,7 +33,7 @@ const COL_LABELS: Record<ColKey, string> = {
   source: "מקור", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "סוג עניין", stage: "שלב", rating: "דירוג", uses: "שימושים",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  source: "44px", author: "120px", date: "80px", court: "90px", caseType: "84px", matter: "108px", stage: "96px", rating: "76px", uses: "64px",
+  source: "44px", author: "112px", date: "64px", court: "90px", caseType: "84px", matter: "108px", stage: "96px", rating: "76px", uses: "64px",
 };
 const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "uses"];
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
@@ -191,11 +191,11 @@ export function PromptTablePanel({
   );
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
-  const cols = ["30px", "minmax(160px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
+  const cols = ["30px", "minmax(140px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 30 + 160 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
+  const minW = 30 + 140 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
   const CENTERED: ColKey[] = ["source", "uses"];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
@@ -215,8 +215,14 @@ export function PromptTablePanel({
           </div>
         );
       }
-      case "date":
-        return <div key={k} className="px-1.5 text-[12.5px]" style={{ color: dateOf(pr) ? cellCol : subCol }}>{dateOf(pr) || "—"}</div>;
+      case "date": {
+        // the documents table's date: 27.05.26, in Figtree
+        const d = dateOf(pr);
+        const [dd, mm, yy] = d.split("/");
+        return d
+          ? <div key={k} className="px-1.5 text-[12px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
+          : <div key={k} className="px-1.5 text-[12.5px]" style={{ color: subCol }}>—</div>;
+      }
       case "court": case "caseType": case "matter": case "stage":
         return (
           <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={pr[k]}>
