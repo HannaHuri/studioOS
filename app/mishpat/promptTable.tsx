@@ -37,7 +37,7 @@ const COL_TRACKS: Record<ColKey, string> = {
 };
 const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "uses"];
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  source: true, author: true, date: true, court: false, caseType: false, matter: false, stage: false, rating: true, uses: true,
+  source: true, author: true, date: false, court: false, caseType: false, matter: false, stage: false, rating: true, uses: true,
 };
 const COLS_LS_KEY = "mishpat-promptCols-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
