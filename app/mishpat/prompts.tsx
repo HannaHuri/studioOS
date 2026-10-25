@@ -566,7 +566,13 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses" | "date";
+// A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
+// share the release date, which says nothing about any one of them.
+export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
+const dayNum = (d: string) => { if (!d) return 0; const [dd, mm, yy] = d.split("/").map(Number); return yy * 10000 + mm * 100 + dd; };
+// newest first; the undated system rows land at the end
+export const byDate = (a: Prompt, b: Prompt) => dayNum(dateOf(b)) - dayNum(dateOf(a));
 export type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
   tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
@@ -705,6 +711,7 @@ export function PromptLibrary({
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
+      date: byDate,
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;

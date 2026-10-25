@@ -6,26 +6,52 @@
    the prompt in an editor to its left, where the documents screen opens the PDF.
 
    The table is the library window's table, moved into the page: same filters, same
-   counts, same sort-by-header. At its normal width it keeps the columns that tell one
-   prompt from another (name, source, author, rating, uses); expanded to full width it
-   adds the four classification columns.
+   counts, same sort-by-header. Its columns are the user's to pick and order, from the ⋮
+   in the header's corner, as on the documents table. The name is always there; the four
+   classification columns start switched off, at any width.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useMemo, useState } from "react";
-import { ChevronDown, Maximize2, Minimize2, Plus, Search, WandSparkles, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
+import { Tick } from "./proofread";
 import {
   ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS, STAGES, COURTS, TAGS, fitsCase,
   Dropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
-  saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK,
+  saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
 } from "./prompts";
 
-// Wide enough to hold the four classification columns beside the name without starving it.
+// Wide enough for the matter and stage filters beside the others.
 const WIDE = 980;
-const COLS_NARROW = "30px minmax(0,1fr) 44px 112px 76px 64px 34px 32px";
-const COLS_WIDE = "30px minmax(0,1fr) 44px 136px 90px 84px 108px 96px 84px 64px 34px 32px";
+
+// The data columns the user can show, hide and reorder. The saved mark, the name and the two
+// row actions are structural and always there.
+type ColKey = "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating" | "uses";
+const COL_LABELS: Record<ColKey, string> = {
+  source: "מקור", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "סוג עניין", stage: "שלב", rating: "דירוג", uses: "שימושים",
+};
+const COL_TRACKS: Record<ColKey, string> = {
+  source: "44px", author: "120px", date: "80px", court: "90px", caseType: "84px", matter: "108px", stage: "96px", rating: "76px", uses: "64px",
+};
+const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "uses"];
+const DEFAULT_SHOWN: Record<ColKey, boolean> = {
+  source: true, author: true, date: true, court: false, caseType: false, matter: false, stage: false, rating: true, uses: true,
+};
+const COLS_LS_KEY = "mishpat-promptCols-v1";
+type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
+// The panel only mounts once the library is opened, after hydration, so it can read storage up front
+const loadCols = (): ColState => {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(COLS_LS_KEY) ?? "null");
+    if (raw) {
+      const order = (raw.order as string[]).filter((k): k is ColKey => k in COL_LABELS);
+      return { order: [...order, ...DEFAULT_ORDER.filter((k) => !order.includes(k))], shown: { ...DEFAULT_SHOWN, ...raw.shown } };
+    }
+  } catch { /* fall back to the defaults */ }
+  return { order: DEFAULT_ORDER, shown: DEFAULT_SHOWN };
+};
 
 export function PromptTablePanel({
   isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
@@ -42,6 +68,52 @@ export function PromptTablePanel({
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
   const [caseOnly, setCaseOnly] = useState(true);
   const wide = width >= WIDE;
+
+  const [colState, setColState] = useState<ColState>(loadCols);
+  const saveCols = (next: ColState) => {
+    setColState(next);
+    try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const shownCols = colState.order.filter((k) => colState.shown[k]);
+  const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
+  // Reorder by dragging a row in the menu; a plain click still toggles the column
+  const colRowRefs = useRef<Partial<Record<ColKey, HTMLDivElement | null>>>({});
+  const [drag, setDrag] = useState<{ key: ColKey; to: number } | null>(null);
+  const justDragged = useRef(false);
+  const startColDrag = (key: ColKey, e: ReactMouseEvent) => {
+    const startY = e.clientY;
+    let dragging = false;
+    let to = -1;
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging) {
+        if (Math.abs(ev.clientY - startY) < 4) return;
+        dragging = true; document.body.style.userSelect = "none";
+      }
+      to = colState.order.length;
+      for (let j = 0; j < colState.order.length; j++) {
+        const el = colRowRefs.current[colState.order[j]];
+        if (el && ev.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2) { to = j; break; }
+      }
+      setDrag({ key, to });
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = "";
+      if (!dragging) return;
+      justDragged.current = true; setTimeout(() => { justDragged.current = false; }, 0);
+      setDrag(null);
+      const target = colState.order[to];
+      if (target === key) return;
+      const rest = colState.order.filter((k) => k !== key);
+      rest.splice(target ? rest.indexOf(target) : rest.length, 0, key);
+      saveCols({ ...colState, order: rest });
+    };
+    document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
+  };
+  const resetCols = () => {
+    setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
+    try { window.localStorage.removeItem(COLS_LS_KEY); } catch { /* ignore */ }
+    setColsMenu(null);
+  };
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
   const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
@@ -70,6 +142,7 @@ export function PromptTablePanel({
       court: (a, b) => b.court.localeCompare(a.court, "he"),
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
+      date: byDate,
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -117,10 +190,91 @@ export function PromptTablePanel({
     </button>
   );
 
-  const cols = wide ? COLS_WIDE : COLS_NARROW;
+  // the name keeps a readable width; with many columns on, the table scrolls sideways instead
+  const cols = ["30px", "minmax(160px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
+  // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
+  const minW = 30 + 160 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
+  const CENTERED: ColKey[] = ["source", "uses"];
+  const cell = (k: ColKey, pr: Prompt) => {
+    switch (k) {
+      case "source":
+        return (
+          <div key={k} className="flex items-center justify-center" title={srcName(pr)}>
+            <SourceMark pr={pr} isDark={isDark} size={15} />
+          </div>
+        );
+      case "author": {
+        const n = authorName(pr) || "מערכת";
+        const named = n !== "מערכת" && n !== "אנונימי";
+        return (
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
+            <span style={named ? undefined : { color: subCol }}>{n}</span>
+            {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
+          </div>
+        );
+      }
+      case "date":
+        return <div key={k} className="px-1.5 text-[12.5px]" style={{ color: dateOf(pr) ? cellCol : subCol }}>{dateOf(pr) || "—"}</div>;
+      case "court": case "caseType": case "matter": case "stage":
+        return (
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={pr[k]}>
+            {pr[k] === GENERAL ? "" : pr[k]}
+          </div>
+        );
+      case "rating":
+        return (
+          <div key={k} className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }}>
+            {pr.ratingCount ? (
+              <>
+                <span>{avgOf(pr).toFixed(1)}</span>
+                <span style={{ color: subCol }}>({pr.ratingCount})</span>
+              </>
+            ) : <span style={{ color: subCol }}>—</span>}
+          </div>
+        );
+      case "uses":
+        return <div key={k} className="px-1.5 text-[12.5px] text-center" style={{ color: cellCol }}>{pr.uses}</div>;
+    }
+  };
 
   return (
     <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
+      {colsMenu && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={() => setColsMenu(null)} />
+          <div
+            className="fixed z-[200] rounded-[8px] overflow-hidden"
+            style={{ top: colsMenu.bottom + 6, left: Math.max(8, colsMenu.right - 212), width: "212px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}
+          >
+            <div className="px-3 py-2 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${rowLine}` }}>
+              עמודות בטבלה <span className="font-normal" style={{ color: subCol }}>· גררו לשינוי סדר</span>
+            </div>
+            <div className="py-1">
+              {colState.order.map((k, i) => (
+                <div
+                  key={k}
+                  ref={(el) => { colRowRefs.current[k] = el; }}
+                  onMouseDown={(e) => startColDrag(k, e)}
+                  onClick={() => { if (!justDragged.current) saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } }); }}
+                  className="relative flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
+                  style={{ opacity: drag?.key === k ? 0.4 : 1, cursor: "grab" }}
+                >
+                  {drag && drag.to === i && <div className="absolute left-2 right-2 top-0" style={{ height: "2px", backgroundColor: c.primary }} />}
+                  {drag && drag.to === colState.order.length && i === colState.order.length - 1 && <div className="absolute left-2 right-2 bottom-0" style={{ height: "2px", backgroundColor: c.primary }} />}
+                  <span className="flex-shrink-0" style={{ color: isDark ? dk.textMuted : c.iconGray }} title="גרירה לשינוי סדר"><GripVertical size={13} /></span>
+                  <Tick checked={colState.shown[k]} />
+                  <span className="text-[13px]" style={{ color: textCol }}>{COL_LABELS[k]}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-3 py-1.5" style={{ borderTop: `1px solid ${rowLine}` }}>
+              <button onClick={resetCols} className="text-[12.5px] hover:underline" style={{ color: c.primary }} title="החזרת סדר והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
+            </div>
+          </div>
+        </>
+      )}
       {/* Row A: search, then the window controls pinned to the far end — as on the documents table */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -179,22 +333,25 @@ export function PromptTablePanel({
       </div>
 
       {/* Header row + rows */}
-      <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr" style={{ scrollbarGutter: "stable" }}>
-        <div dir="rtl" className="px-3 pb-4">
+      <div ref={scroller} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="ltr" style={{ scrollbarGutter: "stable" }}>
+        <div dir="rtl" className="px-3 pb-4" style={{ minWidth: `${minW}px` }}>
           <div
             className="sticky top-0 z-10 grid items-stretch h-8"
             style={{ gridTemplateColumns: cols, backgroundColor: surface, borderBottom: `1px solid ${rowLine}` }}
           >
-            <div />
+            {/* the columns menu, in the header's otherwise empty corner — where the documents table keeps it */}
+            <div className="flex items-center justify-center">
+              <button
+                onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setColsMenu((v) => (v ? null : rect)); }}
+                className="size-[18px] flex items-center justify-center rounded transition-colors hover:bg-black/5"
+                style={{ color: colsMenu ? c.primary : (isDark ? dk.textMuted : c.textGray), backgroundColor: colsMenu ? (isDark ? "#22304a" : "#eff4ff") : undefined }}
+                title="התאמת עמודות"
+              >
+                <MoreVertical size={15} />
+              </button>
+            </div>
             {th("name", "שם הפרומפט")}
-            {th("source", "מקור", "center")}
-            {th("author", "מחבר")}
-            {wide && th("court", "ערכאה")}
-            {wide && th("caseType", "סוג תיק")}
-            {wide && th("matter", "סוג עניין")}
-            {wide && th("stage", "שלב")}
-            {th("rating", "דירוג")}
-            {th("uses", "שימושים", "center")}
+            {shownCols.map((k) => <span key={k} className="contents">{th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}</span>)}
             <div />
             <div />
           </div>
@@ -233,35 +390,7 @@ export function PromptTablePanel({
                   <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
                 </div>
 
-                <div className="flex items-center justify-center" title={srcName(pr)}>
-                  <SourceMark pr={pr} isDark={isDark} size={15} />
-                </div>
-
-                <div className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
-                  {(() => {
-                    const n = authorName(pr) || "מערכת";
-                    const named = n !== "מערכת" && n !== "אנונימי";
-                    return <span style={named ? undefined : { color: subCol }}>{n}</span>;
-                  })()}
-                  {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
-                </div>
-
-                {wide && ([pr.court, pr.caseType, pr.matter, pr.stage] as const).map((v, i) => (
-                  <div key={i} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={v}>
-                    {v === GENERAL ? "" : v}
-                  </div>
-                ))}
-
-                <div className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }}>
-                  {pr.ratingCount ? (
-                    <>
-                      <span>{avgOf(pr).toFixed(1)}</span>
-                      <span style={{ color: subCol }}>({pr.ratingCount})</span>
-                    </>
-                  ) : <span style={{ color: subCol }}>—</span>}
-                </div>
-
-                <div className="px-1.5 text-[12.5px] text-center" style={{ color: cellCol }}>{pr.uses}</div>
+                {shownCols.map((k) => cell(k, pr))}
 
                 {/* Using a prompt stays one click: it doesn't need the editor open first */}
                 <div className="flex items-center justify-center">
