@@ -7,11 +7,11 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert,
+  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
-import { Badge, UseExampleIcon } from "./icons";
+import { Badge, Loader, UseExampleIcon } from "./icons";
 import {
   DraftStrip, ProofAnswer, ProofHistoryIcon, Tick, proofKindLabel, proofSteps, proofFiles,
   DRAFT_ACTIONS, COHERENCE_PAGE_LIMIT, NO_KINDS, anyKind, DRAFT_ANSWER, countDocxWords, pagesOf, WORD_LIMIT,
@@ -840,6 +840,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   // In the development version a document is only for checks for now: free questions about it
   // can't be handled yet, so the question line and the answer modes wait until a check has run.
   const docLocked = !!dev && (!!uploading || (!!draft && !anyKind(usedChecks)));
+  // Nothing to send yet: checks ticked with no document in, or a locked line with no check ticked
+  const sendOff = !!uploading || (docMode && !draft) || (docLocked && !docMode);
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -991,9 +993,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   function handleSend(force?: boolean) {
     if (detailedOpen) { detailedRef.current?.send(force); return; }
     // With checks ticked, sending runs them on the document — and with no document yet, it asks for one.
-    if (uploading) return;
+    if (sendOff) return;
     if (docMode) {
-      if (!draft) { fileRef.current?.click(); return; }
       const kinds: ProofKinds = { lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence, anon: picked.anon && !usedChecks.anon };
       setPicked(NO_KINDS);
       if (anyKind(kinds)) handleRunActions(kinds);
@@ -1163,7 +1164,17 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         }}
         dir="rtl"
       >
-        {detailedOpen ? (
+        {docLocked && !inputText ? (
+          // Locked, the question line shows it: a grey well with a lock, the next step written in it
+          <div
+            className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[14px] select-none"
+            style={{ backgroundColor: isDark ? dk.surface : c.hoverBg, color: isDark ? dk.textMuted : c.textGray, cursor: "not-allowed", fontFamily: "Noto Sans Hebrew, sans-serif" }}
+            dir="rtl" aria-disabled
+          >
+            <Lock size={14} style={{ flexShrink: 0 }} />
+            {docMode ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש לבחור בדיקה לביצוע על המסמך, מהתפריט שלמטה"}
+          </div>
+        ) : detailedOpen ? (
           <DetailedInline
             key={detailedKey}
             ref={detailedRef}
@@ -1202,17 +1213,20 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         <div className="flex items-center gap-1.5" dir="ltr">
           {/* Send button — becomes a stop button while an agent run is in progress */}
           <button
-            onClick={agentRunning ? handleStop : () => handleSend()}
+            onClick={agentRunning ? handleStop : sendOff ? undefined : () => handleSend()}
+            aria-disabled={sendOff}
             className="size-8 flex items-center justify-center rounded border flex-shrink-0 transition-colors"
             style={{
               borderColor: sendPressed ? c.primary : (isDark ? dk.border : c.border),
               backgroundColor: "transparent",
               color: c.iconGray,
+              opacity: sendOff ? 0.4 : 1,
+              cursor: sendOff ? "default" : "pointer",
             }}
             title={agentRunning ? "עצור" : "שלח"}
-            onMouseEnter={e => { if (!sendPressed) e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseEnter={e => { if (!sendPressed && !sendOff) e.currentTarget.style.backgroundColor = c.hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setSendPressed(false); }}
-            onMouseDown={() => { setSendPressed(true); }}
+            onMouseDown={() => { if (!sendOff) setSendPressed(true); }}
             onMouseUp={() => setSendPressed(false)}
           >
             {agentRunning ? <Equal size={17} style={{ transform: "rotate(90deg)" }} /> : <ArrowUp size={17} />}
@@ -1283,21 +1297,21 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                 left-to-right and wraps them on its own, which scrambled the Hebrew line with "Word" in it. */}
             <span className="relative flex-shrink-0">
               <button
-                onClick={draft ? undefined : () => { setUploadTip(false); fileRef.current?.click(); }}
-                aria-disabled={!!draft}
+                onClick={draft || uploading ? undefined : () => { setUploadTip(false); fileRef.current?.click(); }}
+                aria-disabled={!!draft || !!uploading}
                 aria-label="העלאת מסמך"
                 className="size-7 flex items-center justify-center rounded flex-shrink-0 transition-colors"
                 style={{
                   color: docMode && !draft ? (isDark ? dk.blue : c.primary) : c.iconGray,
                   opacity: draft ? 0.4 : 1,
-                  cursor: draft ? "default" : "pointer",
+                  cursor: draft || uploading ? "default" : "pointer",
                 }}
-                onMouseEnter={e => { if (!draft) { e.currentTarget.style.backgroundColor = c.hoverBg; setUploadTip(true); } }}
+                onMouseEnter={e => { if (!draft && !uploading) { e.currentTarget.style.backgroundColor = c.hoverBg; setUploadTip(true); } }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; setUploadTip(false); }}
               >
-                <FilePlus size={15} />
+                {uploading ? <Loader size={16} label="מעלה את המסמך" /> : <FilePlus size={15} />}
               </button>
-              {uploadTip && !draft && (
+              {uploadTip && !draft && !uploading && (
                 <span
                   dir="rtl"
                   className="absolute z-50 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap text-right pointer-events-none"
@@ -1627,7 +1641,6 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             >
               שלום, טל. במה אוכל לעזור?
             </p>}
-            {uploading && <div className="flex" dir="rtl"><DraftStrip name={uploading} isDark={isDark} loading /></div>}
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
           </div>
@@ -1647,12 +1660,10 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           {/* The draft's file card, pinned. The band that holds it takes the page's own background,
               so the thread disappears under it as it scrolls instead of showing around the card —
               and, being the page colour, it draws no line across the conversation. */}
-          {(draft || uploading) && (
+          {draft && (
             <div className="sticky top-0 z-10 px-6 pt-3 pb-2 flex justify-center" style={{ backgroundColor: bg }}>
               <div className="w-full max-w-[768px] flex" dir="rtl">
-                {draft
-                  ? <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
-                  : <DraftStrip name={uploading!} isDark={isDark} loading />}
+                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
               </div>
             </div>
           )}

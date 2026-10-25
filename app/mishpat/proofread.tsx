@@ -16,7 +16,6 @@
 import { ChevronDown, Download, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
 import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
-import { Loader } from "./icons";
 
 // One row of the progress tracker. Loose enough to hold the hand-drawn icons the agent run uses.
 export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; style?: CSSProperties }>;
@@ -138,8 +137,7 @@ export function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) 
 // onRemove is given only until the draft is used: once checks ran on it or a question was asked
 // with it, the conversation refers to it, and another draft means a new conversation. From then
 // on the card offers the file back instead (downloadUrl).
-// `loading` is the file still being read in: the loader stands where the file icon will be.
-export function DraftStrip({ name, isDark, onRemove, downloadUrl, loading }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string; loading?: boolean }) {
+export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string }) {
   return (
     <div
       className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
@@ -150,10 +148,8 @@ export function DraftStrip({ name, isDark, onRemove, downloadUrl, loading }: { n
       dir="rtl"
       title={name}
     >
-      {loading
-        ? <Loader size={16} label="מעלה את המסמך" />
-        : <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />}
-      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? (loading ? dk.textMuted : dk.text) : (loading ? c.textGray : c.text), fontFamily: FONT }}>
+      <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
         {name}
       </span>
       {onRemove && (
