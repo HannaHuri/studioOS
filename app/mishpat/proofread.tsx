@@ -16,6 +16,7 @@
 import { ChevronDown, Download, FileCheck2, FileText, Info, Send, SpellCheck, Terminal, TextSearch, UserRoundX, X } from "lucide-react";
 import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import { c, dk, FONT } from "./theme";
+import { Loader } from "./icons";
 
 // One row of the progress tracker. Loose enough to hold the hand-drawn icons the agent run uses.
 export type RunStepIcon = ComponentType<{ size?: number; strokeWidth?: number; style?: CSSProperties }>;
@@ -63,8 +64,11 @@ export const ANON_REPLACEMENTS: { before: string; after: string; kind: string }[
 ];
 
 // The canned answer to a question asked with the draft in context.
-export const DRAFT_ANSWER =
-  'לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח. הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.';
+// Each sentence with the citations that follow it.
+export const DRAFT_ANSWER: [string, number[]][] = [
+  ["לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח.", [1]],
+  ['הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.', [2, 3]],
+];
 
 // ── The run's progress steps ───────────────────────────────────────────────
 // The list changes with the chosen checks, so the tracker never claims to be doing
@@ -134,7 +138,8 @@ export function Tick({ checked, muted }: { checked: boolean; muted?: boolean }) 
 // onRemove is given only until the draft is used: once checks ran on it or a question was asked
 // with it, the conversation refers to it, and another draft means a new conversation. From then
 // on the card offers the file back instead (downloadUrl).
-export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string }) {
+// `loading` is the file still being read in: the loader stands where the file icon will be.
+export function DraftStrip({ name, isDark, onRemove, downloadUrl, loading }: { name: string; isDark: boolean; onRemove?: () => void; downloadUrl?: string; loading?: boolean }) {
   return (
     <div
       className="inline-flex items-center gap-2 max-w-full rounded px-2.5 py-1.5"
@@ -145,8 +150,10 @@ export function DraftStrip({ name, isDark, onRemove, downloadUrl }: { name: stri
       dir="rtl"
       title={name}
     >
-      <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />
-      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? dk.text : c.text, fontFamily: FONT }}>
+      {loading
+        ? <Loader size={16} label="מעלה את המסמך" />
+        : <FileText size={15} style={{ color: c.primary, flexShrink: 0 }} />}
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px]" style={{ color: isDark ? (loading ? dk.textMuted : dk.text) : (loading ? c.textGray : c.text), fontFamily: FONT }}>
         {name}
       </span>
       {onRemove && (

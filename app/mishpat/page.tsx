@@ -767,7 +767,11 @@ const AGENT_STEPS: RunStep[] = [
   { Icon: Terminal, text: "מעבד את הנתונים, זה עשוי לקחת רגע" },
   { Icon: Send, text: "מכין את התשובה הסופית" },
 ];
-const AGENT_ANSWER = "בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים. מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.";
+// Each sentence with the citations that follow it
+const AGENT_ANSWER: [string, number[]][] = [
+  ["בבדיקת התיעוד שהוגש עד כה בתיק, קיימים שני תצהירים התומכים בגרסת התובע, וחוות דעת מומחה מטעם הנתבע המערערת על חלק מהממצאים.", [1, 2, 3]],
+  ["מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.", [4]],
+];
 
 function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed }: {
   dev?: boolean; // the temporary version for development, at /mishpat/dev
@@ -831,6 +835,11 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   const [usedChecks, setUsedChecks] = useState<ProofKinds>(NO_KINDS);
   // a wrong upload can be taken back until the draft is used — by a check, or by a question asked with it
   const draftRemovable = !anyKind(usedChecks) && !messages.some((m) => m.withDraft);
+  // The file being read in, before it becomes the draft: its strip shows the loader meanwhile
+  const [uploading, setUploading] = useState<string | null>(null);
+  // In the development version a document is only for checks for now: free questions about it
+  // can't be handled yet, so the question line and the answer modes wait until a check has run.
+  const docLocked = !!dev && (!!uploading || (!!draft && !anyKind(usedChecks)));
   const [proofRun, setProofRun] = useState<ProofRun | null>(null); // set while a check is the thing running
   const [openLog, setOpenLog] = useState<number | null>(null); // which message has its step log open
   const fileRef = useRef<HTMLInputElement>(null);
@@ -982,6 +991,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   function handleSend(force?: boolean) {
     if (detailedOpen) { detailedRef.current?.send(force); return; }
     // With checks ticked, sending runs them on the document — and with no document yet, it asks for one.
+    if (uploading) return;
     if (docMode) {
       if (!draft) { fileRef.current?.click(); return; }
       const kinds: ProofKinds = { lang: picked.lang && !usedChecks.lang, coherence: picked.coherence && !usedChecks.coherence, anon: picked.anon && !usedChecks.anon };
@@ -989,7 +999,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
       if (anyKind(kinds)) handleRunActions(kinds);
       return;
     }
-    if (!inputText.trim()) return;
+    if (docLocked || !inputText.trim()) return;
     if (fieldsLeft.length && !force) { setHeld({ detailed: false, fields: fieldsLeft }); selectField(0); return; }
     // ישיר and מהיר answer straight away; everything else goes through the agents' steps
     ask(inputText.trim(), qKind !== "direct" && qKind !== "fast");
@@ -1080,6 +1090,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   useEffect(() => {
     if (!insert || insert.n === insertN.current) return;
     insertN.current = insert.n;
+    if (docLocked) return; // the question line is closed while the document waits for a check
     setInputText(insert.text);
     setHeld(null);
     setQKind(baseKind); // a prompt's text goes in the question line, so a detailed question open steps aside
@@ -1172,6 +1183,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
             style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
             value={inputText}
+            disabled={docLocked}
             onChange={(e) => setInputText(e.target.value)}
             // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
             onKeyDown={(e) => {
@@ -1182,6 +1194,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             dir="rtl"
             placeholder={docMode
               ? (draft ? "השליחה תריץ את הפעולות שנבחרו על המסמך" : "יש להעלות מסמך Word, ואז לשלוח כדי להריץ את הפעולות")
+              : docLocked ? "יש לבחור בדיקה לביצוע על המסמך, מהתפריט שלמטה"
               : draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
             autoFocus={isEmpty}
           />
@@ -1249,7 +1262,11 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                 const f = e.target.files?.[0];
                 e.target.value = ""; // so picking the same file twice still fires
                 if (!f) return;
-                const words = await countDocxWords(f);
+                setUploading(f.name);
+                if (dev) setInputText(""); // the line locks with the document in, so nothing typed is left stranded in it
+                // Demo only: reading a file takes no time here, so the loader is held a beat to be seen
+                const [words] = await Promise.all([countDocxWords(f), new Promise((r) => setTimeout(r, 1500))]);
+                setUploading(null);
                 if (words !== null && words > WORD_LIMIT) {
                   setUploadError(`הקובץ כולל כ-${pagesOf(words)} עמודים. ניתן להעלות קבצים של עד ${WORD_LIMIT.toLocaleString("he-IL")} מילים (כ-${pagesOf(WORD_LIMIT)} עמודים).`);
                   return;
@@ -1257,7 +1274,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                 setUploadError(null);
                 // straight into the conversation — the actions are in the menu beside the icon
                 setDraft({ name: f.name, size: f.size, words, url: URL.createObjectURL(f) });
-                requestAnimationFrame(() => inputRef.current?.focus());
+                if (!dev) requestAnimationFrame(() => inputRef.current?.focus());
               }}
             />
             {/* Upload a draft. One per conversation, so once it's in the icon goes grey and disabled.
@@ -1331,6 +1348,20 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         </div>
       )}
       </div>
+    );
+  }
+
+  // An answer to a question, every mode alike, cites its sources; the eye in the actions row hides them
+  function renderCited(sentences: [string, number[]][]) {
+    return (
+      <p>
+        {sentences.map(([text, nums], i) => (
+          <span key={i}>
+            {i > 0 && " "}{text}
+            {showBadges && <>{" "}{nums.map((n) => <Badge key={n} num={n} />)}</>}
+          </span>
+        ))}
+      </p>
     );
   }
 
@@ -1493,14 +1524,15 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         <div className="fixed inset-0 z-[190]" onClick={close} />
         <div dir="rtl" role="menu" style={{ ...panel(taskPos, dev ? DEV_MENU_W : TASK_MENU_W), maxHeight: taskPos.maxHeight, overflowY: "auto" }}>
           {kinds.map(({ key, label, desc, Icon, mirror }) => {
-            const on = !docMode && key === qKind;
+            const on = !docMode && !docLocked && key === qKind;
             return (
               <button
-                key={key} role="menuitemradio" aria-checked={on}
-                onClick={() => { setPicked(NO_KINDS); setQKind(key); close(); }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = hover)}
+                key={key} role="menuitemradio" aria-checked={on} aria-disabled={docLocked}
+                onClick={docLocked ? undefined : () => { setPicked(NO_KINDS); setQKind(key); close(); }}
+                onMouseEnter={e => { if (!docLocked) e.currentTarget.style.backgroundColor = hover; }}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 className="w-full flex items-start justify-between gap-2 px-4 py-2.5 text-right"
+                style={{ opacity: docLocked ? 0.5 : 1, cursor: docLocked ? "default" : "pointer" }}
               >
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="flex items-center gap-1.5 text-[14px]" style={{ color: on ? c.primary : textCol2, fontWeight: on ? 600 : 400 }}>
@@ -1595,6 +1627,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             >
               שלום, טל. במה אוכל לעזור?
             </p>}
+            {uploading && <div className="flex" dir="rtl"><DraftStrip name={uploading} isDark={isDark} loading /></div>}
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
           </div>
@@ -1614,10 +1647,12 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           {/* The draft's file card, pinned. The band that holds it takes the page's own background,
               so the thread disappears under it as it scrolls instead of showing around the card —
               and, being the page colour, it draws no line across the conversation. */}
-          {draft && (
+          {(draft || uploading) && (
             <div className="sticky top-0 z-10 px-6 pt-3 pb-2 flex justify-center" style={{ backgroundColor: bg }}>
               <div className="w-full max-w-[768px] flex" dir="rtl">
-                <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
+                {draft
+                  ? <DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} />
+                  : <DraftStrip name={uploading!} isDark={isDark} loading />}
               </div>
             </div>
           )}
@@ -1648,8 +1683,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                     <div data-chat-a className="text-right text-[15px] leading-relaxed" style={{ color: textCol, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl" }}>
                       {showingAgentProgress ? renderAgentProgress()
                         : msg.proof ? <ProofAnswer isDark={isDark} run={msg.proof} />
-                        : msg.withDraft ? <p>{DRAFT_ANSWER}</p>
-                        : msg.agent ? <p>{AGENT_ANSWER}</p>
+                        : msg.withDraft ? renderCited(DRAFT_ANSWER)
+                        : msg.agent ? renderCited(AGENT_ANSWER)
                         : renderFirstAnswer()}
                     </div>
                     {!showingAgentProgress && (
