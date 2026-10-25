@@ -1242,7 +1242,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             style={{
               backgroundColor: "transparent",
               border: "none",
-              color: docMode || detailedOpen ? (isDark ? dk.blue : c.primary) : c.iconGray,
+              // blue while it's the next step: locked with a document in, a check is what's left to pick
+              color: docMode || detailedOpen || docLocked ? (isDark ? dk.blue : c.primary) : c.iconGray,
               fontFamily: "Noto Sans Hebrew, sans-serif",
             }}
             title="סוג הפנייה"
@@ -1250,8 +1251,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
             {/* the development version shows the picked mode's icon beside its name, as the July picker did */}
-            {dev && !docMode && (() => { const k = kinds.find((k) => k.key === qKind)!; return <k.Icon size={14} style={{ flexShrink: 0, transform: k.mirror ? "scaleX(-1)" : undefined }} />; })()}
-            <span>{docMode ? actions.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : kinds.find((k) => k.key === qKind)!.label}</span>
+            {dev && !docMode && !docLocked && (() => { const k = kinds.find((k) => k.key === qKind)!; return <k.Icon size={14} style={{ flexShrink: 0, transform: k.mirror ? "scaleX(-1)" : undefined }} />; })()}
+            <span>{docMode ? actions.filter((a) => picked[a.key]).map((a) => a.short).join(", ") : docLocked ? "בחירת בדיקה" : kinds.find((k) => k.key === qKind)!.label}</span>
             <ChevronDown
               size={11}
               style={{ transition: "transform 0.15s", transform: taskOpen ? "rotate(180deg)" : "none" }}
