@@ -175,3 +175,12 @@ button:not(:disabled) { cursor: pointer; }
     @apply bg-background text-foreground;
   }
 }
+/* The loader, after Vibe's: the circle turns while its arc grows and shrinks */
+@keyframes loaderRotate {
+  100% { transform: rotate(360deg); }
+}
+@keyframes loaderDash {
+  0%   { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50%  { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}

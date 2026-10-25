@@ -41,3 +41,20 @@ export function UseExampleIcon({ size = 24, style, className }: { size?: number;
     </svg>
   );
 }
+
+// ── Loader ─────────────────────────────────────────────────────────────────
+// Vibe's circle loader (xs 16, small 24, medium 40, large 64): an arc that grows and shrinks
+// as it turns. Drawn here so the product has one loader to use everywhere something is on its way.
+export function Loader({ size = 24, color = c.primary, label = "טוען" }: { size?: number; color?: string; label?: string }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 50 50" role="status" aria-label={label}
+      style={{ flexShrink: 0, animation: "loaderRotate 2s linear infinite" }}
+    >
+      <circle
+        cx="25" cy="25" r="20" fill="none" stroke={color} strokeWidth={5} strokeLinecap="round"
+        style={{ animation: "loaderDash 1.5s ease-in-out infinite" }}
+      />
+    </svg>
+  );
+}

@@ -63,8 +63,11 @@ export const ANON_REPLACEMENTS: { before: string; after: string; kind: string }[
 ];
 
 // The canned answer to a question asked with the draft in context.
-export const DRAFT_ANSWER =
-  'לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח. הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.';
+// Each sentence with the citations that follow it.
+export const DRAFT_ANSWER: [string, number[]][] = [
+  ["לפי הטיוטה, התובע פנה למרכז הרפואי ביום 12.6.2023, נותח בעקבות בדיקה ראשונית, והתביעה נשענת על טענה להתרשלות במהלך הניתוח.", [1]],
+  ['הנזק הכספי מועמד בסעיף 4 על 1,250,000 ש"ח, אך בסעיף הסעדים מתבקש סכום של 1,400,000 ש"ח — כדאי ליישב בין השניים לפני ההגשה.', [2, 3]],
+];
 
 // ── The run's progress steps ───────────────────────────────────────────────
 // The list changes with the chosen checks, so the tracker never claims to be doing
