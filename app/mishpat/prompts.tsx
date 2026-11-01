@@ -400,8 +400,11 @@ export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle
 }
 
 // ── Row menu (⋮) — fixed position so it isn't clipped by a scroll container ──
+const MENU_W = 176;
 export function RowMenu({ items, isDark }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean }) {
-  const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  // opens leftward from the button; a button too near the window's left edge (the full-width
+  // table) opens it rightward instead, so it isn't cut off
+  const [at, setAt] = useState<{ top: number; right?: number; left?: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -425,7 +428,7 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
         onClick={(e) => {
           e.stopPropagation();
           const r = e.currentTarget.getBoundingClientRect();
-          setAt(at ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+          setAt(at ? null : r.right - MENU_W < 8 ? { top: r.bottom + 4, left: r.left } : { top: r.bottom + 4, right: window.innerWidth - r.right });
         }}
         className="size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
         style={{ color: isDark ? dk.textMuted : c.iconGray }}
@@ -438,7 +441,7 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
           dir="rtl" ref={ref}
           className="rounded-md overflow-hidden shadow-lg"
           style={{
-            position: "fixed", top: at.top, right: at.right, zIndex: 80, minWidth: "176px",
+            position: "fixed", top: at.top, right: at.right, left: at.left, zIndex: 80, minWidth: `${MENU_W}px`,
             backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${isDark ? dk.border : c.border}`, fontFamily: FONT,
           }}
         >
