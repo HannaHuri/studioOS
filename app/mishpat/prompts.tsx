@@ -1190,7 +1190,8 @@ export function PromptEditor({
           </div>
         )}
 
-        {mode === "fork" && (
+        {/* only once they start editing — opening a prompt just to read it changes nothing */}
+        {mode === "fork" && !untouched && (
           <div
             className="mx-6 mb-3 px-3 py-2 rounded-[4px] text-[12.5px] leading-relaxed flex items-start gap-2"
             style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}
