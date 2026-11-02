@@ -1281,7 +1281,7 @@ export function PromptEditor({
               >
                 {favNew && <Check size={12} style={{ color: "white" }} />}
               </span>
-              שמירה במועדפים
+              שמירה כפרומפט מועדף
             </button>
           )}
           <button onClick={toggleShare} className={`flex items-center gap-2 ${mode === "new" ? "mt-3" : "mt-4"} text-[13px]`} style={{ color: textCol }}>

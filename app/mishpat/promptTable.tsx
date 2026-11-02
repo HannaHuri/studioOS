@@ -105,7 +105,14 @@ export function PromptTablePanel({
     };
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
+  // hiding a column takes its filter with it, so nothing filters the table out of sight
+  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage"];
+  const toggleCol = (k: ColKey) => {
+    if (colState.shown[k] && FILTERED.includes(k)) set(k as "source" | "court" | "caseType" | "matter" | "stage", ANY);
+    saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } });
+  };
   const resetCols = () => {
+    setF((prev) => ({ ...prev, court: ANY, caseType: ANY, matter: ANY, stage: ANY })); // their columns go back to hidden
     setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
     try { window.localStorage.removeItem(COLS_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
@@ -260,7 +267,7 @@ export function PromptTablePanel({
                   key={k}
                   ref={(el) => { colRowRefs.current[k] = el; }}
                   onMouseDown={(e) => startColDrag(k, e)}
-                  onClick={() => { if (!justDragged.current) saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } }); }}
+                  onClick={() => { if (!justDragged.current) toggleCol(k); }}
                   className="relative flex items-center gap-2 px-3 py-1.5 hover:bg-black/5"
                   style={{ opacity: drag?.key === k ? 0.4 : 1, cursor: "grab" }}
                 >
@@ -309,8 +316,8 @@ export function PromptTablePanel({
           </button>
         </div>
 
-        {/* Row B: the case chip, then the filters */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Row B: the case chip, then the filters — one line; past the panel's edge they're cut, and widening shows them */}
+        <div className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
           <button
             onClick={() => setCaseOnly((v) => !v)}
             className="h-8 px-2.5 rounded-md text-[13px] transition-colors"
@@ -321,12 +328,13 @@ export function PromptTablePanel({
           >
             מתאימים לתיק
           </button>
-          <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={96} counts={facets.source} />
+          {/* a column's filter shows only while the column does; the tag has no column, so it always shows */}
+          {colState.shown.source && <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={96} counts={facets.source} />}
           <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={104} counts={facets.tag} />
-          <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={100} counts={facets.court} />
-          <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />
-          <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={130} counts={facets.matter} />
-          <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />
+          {colState.shown.court && <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={100} counts={facets.court} />}
+          {colState.shown.caseType && <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
+          {colState.shown.matter && <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={130} counts={facets.matter} />}
+          {colState.shown.stage && <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
               ניקוי
