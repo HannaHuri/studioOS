@@ -83,8 +83,9 @@ export const fitsCase = (pr: { caseType: string; matter: string; stage: string; 
   (pr.court === GENERAL || pr.court === CASE_CONTEXT.court);
 
 // whoever is signed in — the name and title a prompt shared בשמי carries
-export const ME = "טל חבקין";
-export const MY_ROLE = "כב׳";
+// the demo user is named by title only, as on the documents screen (lab)
+export const ME = "כבוד השופט/ת";
+export const MY_ROLE = "";
 
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -375,6 +376,90 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
               style={{ color: txt }}
             >
               <span className="w-3.5 flex-none">{o === value && <Check size={13} style={{ color: c.primary }} />}</span>
+              <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>
+                {o}
+                {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A filter that takes several values at once — e.g. נזיקין together with כללי, which fits every
+// case type. Nothing ticked means everything; the menu stays open while ticking.
+export function MultiDropdown({ label, value, options, onChange, isDark, width = 132, counts }: {
+  label: string; value: string[]; options: string[]; onChange: (v: string[]) => void; isDark: boolean; width?: number;
+  counts?: Record<string, number>;
+}) {
+  const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  const open = at !== null;
+  const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!ref.current?.contains(t) && !menuRef.current?.contains(t)) setAt(null);
+    };
+    const off = () => setAt(null);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("resize", off);
+    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", off); };
+  }, [open]);
+  const set = value.length > 0;
+  const line = isDark ? dk.border : c.border;
+  const txt = isDark ? dk.text : c.text;
+  const toggle = (o: string) => onChange(value.includes(o) ? value.filter((x) => x !== o) : options.filter((x) => x === o || value.includes(x)));
+  const box = (on: boolean) => (
+    <span
+      className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
+      style={{ border: `1px solid ${on ? c.primary : line}`, backgroundColor: on ? c.primary : "transparent" }}
+    >
+      {on && <Check size={12} style={{ color: "white" }} />}
+    </span>
+  );
+  return (
+    <div ref={ref} className="relative" style={{ width }}>
+      <button
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAt(open ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+        }}
+        className="w-full h-8 flex items-center gap-1 px-2.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
+        style={{ border: `1px solid ${set ? c.primary : line}`, color: set ? c.primary : txt, backgroundColor: isDark ? dk.input : "white" }}
+        title={set ? `${label}: ${value.join(", ")}` : label}
+      >
+        <span className="flex-1 min-w-0 text-right truncate">{set ? value.join(", ") : label}</span>
+        <ChevronDown size={12} style={{ transition: "transform .15s", transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }} />
+      </button>
+      {at && (
+        <div
+          ref={menuRef}
+          className="rounded-md shadow-lg overflow-hidden max-h-[320px] overflow-y-auto py-1"
+          style={{ position: "fixed", top: at.top, right: at.right, zIndex: 90, minWidth: Math.max(width, 160), backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
+        >
+          <button
+            onClick={() => onChange([])}
+            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-right hover:bg-black/5 transition-colors"
+            style={{ color: txt, borderBottom: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}
+          >
+            {box(!set)}
+            <span className="flex-1">
+              {ANY}
+              {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[ANY] ?? 0})</span>}
+            </span>
+          </button>
+          {options.map((o) => (
+            <button
+              key={o}
+              onClick={() => toggle(o)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-right hover:bg-black/5 transition-colors"
+              style={{ color: txt }}
+            >
+              {box(value.includes(o))}
               <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>
                 {o}
                 {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}

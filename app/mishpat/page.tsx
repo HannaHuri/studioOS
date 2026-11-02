@@ -1640,7 +1640,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               className="text-right text-[22px] font-medium mb-2"
               style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
             >
-              שלום, טל. במה אוכל לעזור?
+              שלום, כבוד השופט/ת. במה אוכל לעזור?
             </p>}
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
@@ -1762,9 +1762,9 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
             className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors"
             style={{ backgroundColor: menuOpen ? (isDark ? "#2a3150" : c.hoverBg) : "transparent" }}
           >
-            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>טח</div>
+            <div className="size-7 rounded-full flex items-center justify-center text-white text-[13px] flex-shrink-0 select-none" style={{ backgroundColor: "#6b7ea8", fontFamily: "Noto Sans Hebrew, sans-serif" }}>כש</div>
             <div className="flex flex-col leading-tight text-right">
-              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>טל חבקין</span>
+              <span className="text-[13px] whitespace-nowrap" style={{ color: isDark ? dk.blue : c.darkBlue, fontFamily: "Noto Sans Hebrew, sans-serif" }}>כבוד השופט/ת</span>
             </div>
           </button>
 
