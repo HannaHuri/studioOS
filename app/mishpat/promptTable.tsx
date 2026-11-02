@@ -415,7 +415,7 @@ export function PromptTablePanel({
                 </div>
 
                 <div className="min-w-0 text-right px-1.5 py-2">
-                  <div className="text-[14px] font-medium truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
+                  <div className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
                   {/* a detailed prompt's wand sits with the line that says so, so every name starts at the same edge */}
                   {pr.parts ? (
                     <div className="text-[13px] mt-0.5 flex items-center gap-1 min-w-0" style={{ color: subCol }}>
