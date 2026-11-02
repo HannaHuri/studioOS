@@ -190,7 +190,7 @@ export function PromptTablePanel({
   const th = (key: SortKey, label: string, align: "right" | "center" = "right") => (
     <button
       onClick={() => sortBy(key)}
-      className="h-full w-full min-w-0 flex items-center gap-1 px-1.5 text-[13px] transition-colors hover:bg-black/[0.04]"
+      className="h-full w-full min-w-0 flex items-center gap-1 px-1.5 text-[12.5px] transition-colors hover:bg-black/[0.04]"
       style={{ color: f.sort === key ? c.primary : subCol, justifyContent: align === "center" ? "center" : "flex-start" }}
       title={`מיון לפי ${label}`}
     >
@@ -218,7 +218,7 @@ export function PromptTablePanel({
         const n = authorName(pr) || "מערכת";
         const named = n !== "מערכת" && n !== "אנונימי";
         return (
-          <div key={k} className="px-1.5 min-w-0 text-[13px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
             <span style={named ? undefined : { color: subCol }}>{n}</span>
             {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
           </div>
@@ -229,18 +229,18 @@ export function PromptTablePanel({
         const d = dateOf(pr);
         const [dd, mm, yy] = d.split("/");
         return d
-          ? <div key={k} className="px-1.5 text-[13px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
-          : <div key={k} className="px-1.5 text-[13px]" style={{ color: subCol }}>—</div>;
+          ? <div key={k} className="px-1.5 text-[12.5px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
+          : <div key={k} className="px-1.5 text-[12.5px]" style={{ color: subCol }}>—</div>;
       }
       case "court": case "caseType": case "matter": case "stage":
         return (
-          <div key={k} className="px-1.5 min-w-0 text-[13px] truncate" style={{ color: cellCol }} title={pr[k]}>
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={pr[k]}>
             {pr[k] === GENERAL ? "" : pr[k]}
           </div>
         );
       case "rating":
         return (
-          <div key={k} className="px-1.5 text-[13px] flex items-center gap-1" style={{ color: cellCol }}>
+          <div key={k} className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }}>
             {pr.ratingCount ? (
               <>
                 <span>{avgOf(pr).toFixed(1)}</span>
@@ -254,7 +254,7 @@ export function PromptTablePanel({
         return (
           <div key={k} className="px-1.5 min-w-0 flex items-center gap-1 overflow-hidden *:shrink-0" title={pr.tags.join(", ")}>
             {pr.tags.map((t) => (
-              <span key={t} className="h-6 px-2 flex items-center rounded-[4px] text-[13px]" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{t}</span>
+              <span key={t} className="h-6 px-2 flex items-center rounded-[4px] text-[12.5px]" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{t}</span>
             ))}
           </div>
         );
@@ -418,12 +418,12 @@ export function PromptTablePanel({
                   <div className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
                   {/* a detailed prompt's wand sits with the line that says so, so every name starts at the same edge */}
                   {pr.parts ? (
-                    <div className="text-[13px] mt-0.5 flex items-center gap-1 min-w-0" style={{ color: subCol }}>
+                    <div className="text-[12.5px] mt-0.5 flex items-center gap-1 min-w-0" style={{ color: subCol }}>
                       <WandSparkles size={13} className="flex-none" style={{ transform: "scaleX(-1)" }} />
                       <span className="truncate">פרומפט מפורט · {pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}</span>
                     </div>
                   ) : (
-                    <div className="text-[13px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.body}</div>
+                    <div className="text-[12.5px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.body}</div>
                   )}
                 </div>
 
@@ -450,7 +450,7 @@ export function PromptTablePanel({
 
           {/* the count, with the platform's disclaimer behind the i — the chat carries its own
               disclaimer, and two of them side by side read as one too many */}
-          <div className="pt-3 px-2 flex items-center gap-1.5 text-[13px]" style={{ color: subCol }}>
+          <div className="pt-3 px-2 flex items-center gap-1.5 text-[12.5px]" style={{ color: subCol }}>
             <span>{list.length} פרומפטים</span>
             <button
               onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setInfo((v) => (v ? null : rect)); }}
