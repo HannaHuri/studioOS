@@ -30,15 +30,15 @@ const COL_LABELS: Record<ColKey, string> = {
   source: "מקור", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "תחום", stage: "שלב", tags: "תגיות", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  source: "48px", author: "128px", date: "76px", court: "96px", caseType: "88px", matter: "120px", stage: "104px", tags: "152px", rating: "84px",
+  source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", tags: "152px", rating: "76px",
 };
 const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "tags", "rating"];
-// מקור, סוג תיק and תחום fit the side panel's width with a readable name; the rest are there to add
+// מקור, סוג תיק, תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: false, rating: false,
+  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: false, rating: true,
 };
-// v2: the defaults changed (uses gone, tags and the categories in), so older saved picks start over
-const COLS_LS_KEY = "mishpat-promptCols-v2";
+// v3: the defaults changed (uses gone, tags and the categories in, then דירוג), so older saved picks start over
+const COLS_LS_KEY = "mishpat-promptCols-v3";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
 const loadCols = (): ColState => {
@@ -415,11 +415,16 @@ export function PromptTablePanel({
                 </div>
 
                 <div className="min-w-0 text-right px-1.5 py-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {pr.parts && <span title="פרומפט מפורט" className="flex-none flex"><WandSparkles size={15} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
-                    <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
-                  </div>
-                  <div className="text-[13px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
+                  <div className="text-[15px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
+                  {/* a detailed prompt's wand sits with the line that says so, so every name starts at the same edge */}
+                  {pr.parts ? (
+                    <div className="text-[13px] mt-0.5 flex items-center gap-1 min-w-0" style={{ color: subCol }}>
+                      <WandSparkles size={13} className="flex-none" style={{ transform: "scaleX(-1)" }} />
+                      <span className="truncate">פרומפט מפורט · {pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}</span>
+                    </div>
+                  ) : (
+                    <div className="text-[13px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.body}</div>
+                  )}
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
