@@ -569,7 +569,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses" | "date";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -715,6 +715,7 @@ export function PromptLibrary({
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
       date: byDate,
+      fav: (a, b) => saved(a) - saved(b) || b.uses - a.uses,
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -1019,13 +1020,15 @@ export function PromptEditor({
   // Ticking the box does what the share screen does on open: it swaps identifying details for
   // fields, and asks whose name it goes out under.
   const [share, setShare] = useState(false);
+  // a new prompt can go into the favorites as it's made; it starts ticked, since it was written to be used
+  const [favNew, setFavNew] = useState(true);
   const [anon, setAnon] = useState(false);
   const [hits, setHits] = useState<Hit[]>([]);
   const [kept, setKept] = useState<Set<number>>(new Set());
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
   // Nothing to save or cancel until something changes; the X still closes. A question brought from
   // the chat is there to be saved, so its buttons are live from the start.
-  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon });
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
@@ -1109,10 +1112,9 @@ export function PromptEditor({
       parts: cleanParts,
       guidelines: cleanParts && guidelines.trim() ? guidelines.trim() : undefined,
       source: "mine",
-      // Only the star gesture stars: saving a question that was sent came from pressing a star,
-      // so it lands starred; writing one from scratch, or forking someone else's, does not. If
-      // every prompt of mine were starred, the star would stop sorting anything.
-      fav: keep ? keep.fav : mode === "fromMessage",
+      // Saving a question that was sent came from pressing a star, so it lands starred; a new
+      // prompt follows its own "שמירה במועדפים" tick; forking someone else's does not star it.
+      fav: keep ? keep.fav : mode === "fromMessage" || (mode === "new" && favNew),
     }, share ? { anon } : undefined);
   };
 
@@ -1271,7 +1273,18 @@ export function PromptEditor({
             ))}
           </div>
 
-          <button onClick={toggleShare} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
+          {mode === "new" && (
+            <button onClick={() => setFavNew((v) => !v)} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
+              <span
+                className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
+                style={{ border: `1px solid ${favNew ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: favNew ? c.primary : "transparent" }}
+              >
+                {favNew && <Check size={12} style={{ color: "white" }} />}
+              </span>
+              שמירה במועדפים
+            </button>
+          )}
+          <button onClick={toggleShare} className={`flex items-center gap-2 ${mode === "new" ? "mt-3" : "mt-4"} text-[13px]`} style={{ color: textCol }}>
             <span
               className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
               style={{ border: `1px solid ${share ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: share ? c.primary : "transparent" }}

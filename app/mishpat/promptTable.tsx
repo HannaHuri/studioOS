@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { Bookmark, ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
@@ -22,9 +22,6 @@ import {
   saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
 } from "./prompts";
-
-// Wide enough for the matter and stage filters beside the others.
-const WIDE = 980;
 
 // The data columns the user can show, hide and reorder. The saved mark, the name and the two
 // row actions are structural and always there.
@@ -54,7 +51,7 @@ const loadCols = (): ColState => {
 };
 
 export function PromptTablePanel({
-  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
+  isDark, prompts, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
@@ -67,7 +64,6 @@ export function PromptTablePanel({
   // replaced it. One click on the chip takes it back to the whole מאגר.
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
   const [caseOnly, setCaseOnly] = useState(true);
-  const wide = width >= WIDE;
 
   const [colState, setColState] = useState<ColState>(loadCols);
   const saveCols = (next: ColState) => {
@@ -143,6 +139,7 @@ export function PromptTablePanel({
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
       date: byDate,
+      fav: (a, b) => saved(a) - saved(b) || b.uses - a.uses,
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -191,11 +188,11 @@ export function PromptTablePanel({
   );
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
-  const cols = ["30px", "minmax(140px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
+  const cols = ["20px", "30px", "minmax(140px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 30 + 140 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
+  const minW = 20 + 30 + 140 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
   const CENTERED: ColKey[] = ["source", "uses"];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
@@ -328,8 +325,8 @@ export function PromptTablePanel({
           <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={104} counts={facets.tag} />
           <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={100} counts={facets.court} />
           <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />
-          {wide && <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={130} counts={facets.matter} />}
-          {wide && <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
+          <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={130} counts={facets.matter} />
+          <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
               ניקוי
@@ -345,7 +342,7 @@ export function PromptTablePanel({
             className="sticky top-0 z-10 grid items-stretch h-8"
             style={{ gridTemplateColumns: cols, backgroundColor: surface, borderBottom: `1px solid ${rowLine}` }}
           >
-            {/* the columns menu, in the header's otherwise empty corner — where the documents table keeps it */}
+            {/* the columns menu, in a column of its own at the header's end, so the saved column can sort */}
             <div className="flex items-center justify-center">
               <button
                 onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setColsMenu((v) => (v ? null : rect)); }}
@@ -356,6 +353,14 @@ export function PromptTablePanel({
                 <MoreVertical size={15} />
               </button>
             </div>
+            <button
+              // one click puts the favorites first, a second goes back to the usual order
+              onClick={() => setF((prev) => ({ ...prev, sort: prev.sort === "fav" ? "relevance" : "fav", dir: "desc" }))}
+              className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
+              title="מיון: המועדפים קודם"
+            >
+              <Bookmark size={14} fill="currentColor" style={{ color: f.sort === "fav" ? c.primary : subCol }} />
+            </button>
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => <span key={k} className="contents">{th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}</span>)}
             <div />
@@ -384,6 +389,7 @@ export function PromptTablePanel({
               >
                 {/* the open row carries the documents table's blue edge */}
                 {active && <div className="absolute top-0 bottom-0 right-0" style={{ width: "3px", backgroundColor: c.primary }} />}
+                <div />
                 <div className="flex items-center justify-center">
                   <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
                 </div>
@@ -421,6 +427,11 @@ export function PromptTablePanel({
             <div className="pt-3 px-2 text-[12px]" style={{ color: subCol }}>{list.length} פרומפטים</div>
           )}
         </div>
+      </div>
+
+      {/* stays in view under the list, however long it is */}
+      <div className="px-4 py-2 text-[12px] leading-relaxed" style={{ color: subCol, borderTop: `1px solid ${rowLine}` }}>
+        הנהלת בתי המשפט מעמידה פלטפורמה זו לשיתוף ידע בלבד, ואינה נושאת באחריות לתוכן, לדיוק או לתוצאות השימוש בפרומפטים בחלק שלא עבר תיקוף.
       </div>
     </div>
   );
