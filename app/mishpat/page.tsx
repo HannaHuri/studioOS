@@ -19,7 +19,7 @@ import {
 } from "./proofread";
 import {
   PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptConfirm, QuestionActions,
-  SEED_PROMPTS, fieldsOf, EXAMPLE_FIELD, FIELD_RE, ME, MY_ROLE, type Prompt,
+  seedPrompts, fieldsOf, EXAMPLE_FIELD, FIELD_RE, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
@@ -2924,7 +2924,7 @@ export default function MishpatPage() {
   // Prompts (מאגר הפרומפטים) — one library in place of the three separate pools.
   // The rail's bookmark used to be the old favourite-questions list; it opens this now.
   const [isPromptsOpen, setIsPromptsOpen] = useState(false);
-  const [prompts, setPrompts] = useState<Prompt[]>(SEED_PROMPTS);
+  const [prompts, setPrompts] = useState<Prompt[]>(seedPrompts);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [promptEdit, setPromptEdit] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" | "fromMessage" } | null>(null);
   const [promptShare, setPromptShare] = useState<(Partial<Prompt> & { body: string }) | null>(null);

@@ -47,6 +47,7 @@ export type Prompt = {
   edited: string;
   parts?: PromptPart[];    // set = a פרומפט מורכב; body then holds the parts as text
   guidelines?: string;     // a detailed prompt's general instructions, for all its parts
+  userNotes?: string;      // a shared prompt's notes for the people who use it — shown, never sent to the chat
 };
 
 // The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
@@ -94,7 +95,12 @@ const p = (x: Partial<Prompt> & { name: string; body: string; source: PromptSour
   ...x,
 });
 
-export const SEED_PROMPTS: Prompt[] = [
+// a seed פרומפט מפורט: its parts, and the body the parts produce
+const detailed = (parts: PromptPart[], guidelines?: string) => ({ parts, guidelines, body: partsToText(parts, guidelines) });
+
+// built on first use rather than at import: the detailed seeds run partsToText, and complexPrompt
+// imports this file back
+export const seedPrompts = (): Prompt[] => [
   p({
     name: "איתור סתירות בין עדויות",
     body: "עבור על פרוטוקולי ההוכחות בתיק ואתר סתירות בין עדותם של [שם העד] לבין יתר העדים. הצג כל סתירה כשורה בטבלה: הנושא, מה נאמר, ההפניה לפרוטוקול. אין להסיק מסקנות משפטיות בשלב זה.",
@@ -132,9 +138,30 @@ export const SEED_PROMPTS: Prompt[] = [
     tags: ["איתור", "חקיקה ופסיקה"], uses: 341, ratingSum: 812, ratingCount: 181, edited: "22/12/2024",
   }),
   p({
+    name: "ניתוח חוות דעת מומחים",
+    source: "system", caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות",
+    tags: ["השוואה", "סיכום"], uses: 0, ratingSum: 712, ratingCount: 163, edited: "19/01/2025",
+    ...detailed([
+      { sources: ["חוות דעת"], task: "סכם כל חוות דעת בנפרד: המומחה, תחום המומחיות, הממצאים והמסקנה.", how: "טבלה, שורה לכל חוות דעת" },
+      { sources: ["חוות דעת"], task: "הצג את נקודות המחלוקת בין המומחים.", how: "רשימה ממוספרת, לכל נקודה מה טוען כל צד" },
+      { sources: ["פרוטוקול דיון"], task: "אתר את החקירות הנגדיות של המומחים והצג מה נאמר בכל נקודת מחלוקת.", how: "" },
+    ], "להתבסס רק על מסמכי התיק, בלי להסיק מסקנות משפטיות"),
+  }),
+  p({
+    name: "הכנה לדיון הוכחות",
+    source: "shared", author: "עמית מזרחי", authorRole: "כב׳", stage: "הוכחות",
+    tags: ["סיכום", "איתור"], uses: 0, ratingSum: 302, ratingCount: 71, edited: "14/02/2025",
+    userNotes: "מתאים לתיקים עם כמה עדים. כדאי להריץ אחרי שכל התצהירים הוגשו, ולמלא את שם העד המרכזי בחלק השני.",
+    ...detailed([
+      { sources: ["כתב תביעה", "כתב הגנה"], task: "פרט את השאלות העובדתיות השנויות במחלוקת.", how: "רשימה קצרה" },
+      { sources: ["תצהיר"], task: "סכם את תצהירו של [שם העד] ואת הנקודות שכדאי לחקור עליהן.", how: "" },
+    ]),
+  }),
+  p({
     name: "הגהה לשונית לפני הוצאה",
     body: "עבור על המסמך והגה אותו לשונית בלבד — שגיאות כתיב, תחביר, אחידות מונחים, ומספור סעיפים. אל תשנה ניסוח משפטי ואל תוסיף תוכן. הצג את התיקונים כרשימה.",
     source: "shared", author: "רונית שגב", authorRole: "עו״ד", stage: GENERAL,
+    userNotes: "עובד הכי טוב על מסמך אחד בכל פעם. לא משנה ניסוח משפטי, רק שגיאות.",
     tags: ["הגהה"], uses: 188, ratingSum: 431, ratingCount: 97, edited: "18/02/2025",
   }),
   p({
@@ -487,7 +514,7 @@ export function PromptsPanel({
   const shortlist = useMemo(() => {
     return prompts
       .filter((pr) => (pr.source !== "shared" || pr.fav) && fitsCase(pr))
-      .sort((a, b) => saved(a) - saved(b) || mine(a) - mine(b) || b.uses - a.uses);
+      .sort((a, b) => saved(a) - saved(b) || mine(a) - mine(b) || avgOf(b) - avgOf(a));
   }, [prompts]);
 
   return (
@@ -569,7 +596,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses" | "date" | "fav";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "tags" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -603,13 +630,13 @@ export const matches = (pr: Prompt, ff: Filters) => {
     (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
     (!ff.favOnly || pr.fav);
 };
-// ★ | שם + תקציר | מקור | מחבר | ערכאה | סוג תיק | סוג עניין | שלב | דירוג | שימושים | ⋮
+// ★ | שם + תקציר | מקור | מחבר | ערכאה | סוג תיק | תחום | שלב | דירוג | ⋮
 // The four run widest to narrowest — which court, then which kind of case, then what it is
 // about, then where it has got to — so the row reads the way the classification is decided.
 // Every dimension is its own column: each is a separate thing to filter and sort by, and one
 // joined cell could only ever be truncated. מקור and מחבר are two such questions — which kind of
 // prompt is this, and whose is it — and a reader looking for one judge's prompts needs the second.
-const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 74px 36px";
+const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
@@ -701,7 +728,7 @@ export function PromptLibrary({
     // The panel already answers "what suits this case", and it is the screen this one is reached
     // FROM: opening on the same order would hand back the rows the panel just showed.
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || b.uses - a.uses,
+      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || avgOf(b) - avgOf(a),
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       // the name, never the title; the authorless system rows land at the end of the list
@@ -713,9 +740,9 @@ export function PromptLibrary({
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
-      uses: (a, b) => b.uses - a.uses,
       date: byDate,
-      fav: (a, b) => saved(a) - saved(b) || b.uses - a.uses,
+      tags: (a, b) => (b.tags[0] ?? "").localeCompare(a.tags[0] ?? "", "he"),
+      fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -800,7 +827,7 @@ export function PromptLibrary({
             <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
             <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
-            <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
+            <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
             <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
             <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={122} counts={facets.tag} />
             {filtered && (
@@ -831,10 +858,9 @@ export function PromptLibrary({
               {th("author", "מחבר")}
               {th("court", "ערכאה")}
               {th("caseType", "סוג תיק")}
-              {th("matter", "סוג עניין")}
+              {th("matter", "תחום")}
               {th("stage", "שלב")}
               {th("rating", "דירוג")}
-              {th("uses", "שימושים", "center")}
               <div />
             </div>
 
@@ -918,8 +944,6 @@ export function PromptLibrary({
                         </>
                       ) : <span style={{ color: subCol }}>—</span>}
                     </div>
-
-                    <div className="px-2 text-[12.5px] text-center" style={{ color: isDark ? dk.textMuted : c.textGray }}>{pr.uses}</div>
 
                     <div className="flex items-center justify-center">
                       <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
@@ -1023,12 +1047,14 @@ export function PromptEditor({
   // a new prompt can go into the favorites as it's made; it starts ticked, since it was written to be used
   const [favNew, setFavNew] = useState(true);
   const [anon, setAnon] = useState(false);
+  // optional notes for whoever uses the prompt once it's shared; they never go into the chat
+  const [userNotes, setUserNotes] = useState(initial?.userNotes ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [kept, setKept] = useState<Set<number>>(new Set());
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
   // Nothing to save or cancel until something changes; the X still closes. A question brought from
   // the chat is there to be saved, so its buttons are live from the start.
-  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew });
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
@@ -1111,6 +1137,7 @@ export function PromptEditor({
       body: cleanParts ? partsToText(cleanParts, guidelines) : body.trim(),
       parts: cleanParts,
       guidelines: cleanParts && guidelines.trim() ? guidelines.trim() : undefined,
+      userNotes: share && userNotes.trim() ? userNotes.trim() : keep?.userNotes,
       source: "mine",
       // Saving a question that was sent came from pressing a star, so it lands starred; a new
       // prompt follows its own "שמירה במועדפים" tick; forking someone else's does not star it.
@@ -1176,7 +1203,6 @@ export function PromptEditor({
           <div className="mx-6 mb-3 flex items-center gap-3 flex-wrap text-[12.5px]" style={{ color: subCol }}>
             <span className="flex items-center gap-1"><SourceMark pr={live} isDark={isDark} size={13} /> {sourceLabel(live)}</span>
             {live.basedOn && <span>· מבוסס על &quot;{live.basedOn}&quot;</span>}
-            <span>· {live.uses} שימושים</span>
             <div className="flex-1" />
             {onRate && <Stars pr={live} isDark={isDark} onRate={onRate} />}
             {onUse && (
@@ -1189,6 +1215,14 @@ export function PromptEditor({
                 שימוש בפרומפט
               </button>
             )}
+          </div>
+        )}
+
+        {/* what the person who shared it wants users to know — read here, never sent with the prompt */}
+        {pane && live?.userNotes && (
+          <div className="mx-6 mb-3 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? dk.input : "#f4f6f9" }}>
+            <div className="text-[13px] mb-1" style={{ color: subCol }}>הנחיות למשתמשים</div>
+            <div className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: textCol }}>{live.userNotes}</div>
           </div>
         )}
 
@@ -1263,7 +1297,7 @@ export function PromptEditor({
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-              { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
+              { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
@@ -1339,6 +1373,13 @@ export function PromptEditor({
                   </button>
                 ))}
               </div>
+              <div className="text-[12.5px] mt-3 mb-1" style={{ color: isDark ? dk.text : c.darkBlue }}>הנחיות למשתמשים <span style={{ color: subCol }}>(לא חובה)</span></div>
+              <textarea
+                value={userNotes} onChange={(e) => setUserNotes(e.target.value)} rows={2}
+                placeholder="למשל: מתי כדאי להשתמש בפרומפט ומה למלא בשדות. ההנחיות מוצגות למשתמשים ולא נשלחות לצ'אט"
+                className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y"
+                style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.surface : "white", color: textCol }}
+              />
             </div>
           )}
         </div>
@@ -1428,6 +1469,7 @@ export function PromptShare({
   const [stage, setStage] = useState(initial.stage ?? GENERAL);
   const [court, setCourt] = useState(initial.court ?? GENERAL);
   const [anon, setAnon] = useState(false);
+  const [userNotes, setUserNotes] = useState(initial.userNotes ?? "");
   const [attempted, setAttempted] = useState(false);
 
   // While the text hasn't been hand-edited, toggling a detection re-derives it.
@@ -1452,6 +1494,7 @@ export function PromptShare({
       author: anon ? "אנונימי" : ME, authorRole: anon ? undefined : MY_ROLE,
       fav: false, caseType, matter, stage, court,
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
+      userNotes: userNotes.trim() || undefined,
     });
   };
 
@@ -1525,7 +1568,7 @@ export function PromptShare({
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-              { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
+              { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
@@ -1548,6 +1591,14 @@ export function PromptShare({
               </button>
             ))}
           </div>
+
+          <div className="text-[13px] mt-4 mb-2" style={{ color: subCol }}>הנחיות למשתמשים <span>(לא חובה)</span></div>
+          <textarea
+            value={userNotes} onChange={(e) => setUserNotes(e.target.value)} rows={2}
+            placeholder="למשל: מתי כדאי להשתמש בפרומפט ומה למלא בשדות. ההנחיות מוצגות למשתמשים ולא נשלחות לצ'אט"
+            className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-2"
+            style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
+          />
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
