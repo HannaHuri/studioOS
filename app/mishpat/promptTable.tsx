@@ -18,7 +18,7 @@ import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
 import {
   ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS, STAGES, COURTS, TAGS, fitsCase,
-  Dropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
+  MultiDropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
   saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
 } from "./prompts";
@@ -38,6 +38,32 @@ const DEFAULT_SHOWN: Record<ColKey, boolean> = {
   source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: false, rating: true,
 };
 // v3: the defaults changed (uses gone, tags and the categories in, then דירוג), so older saved picks start over
+// the filters that take several values, and what each one reads off a prompt
+type MKey = "source" | "caseType" | "matter" | "stage" | "court" | "tag";
+type Multi = Record<MKey, string[]>;
+const M_KEYS: MKey[] = ["source", "caseType", "matter", "stage", "court", "tag"];
+const EMPTY_MULTI: Multi = { source: [], caseType: [], matter: [], stage: [], court: [], tag: [] };
+const VALUE_OF: Record<MKey, (pr: Prompt) => string | string[]> = {
+  source: srcName, caseType: (pr) => pr.caseType, matter: (pr) => pr.matter, stage: (pr) => pr.stage, court: (pr) => pr.court, tag: (pr) => pr.tags,
+};
+// the filter picks are kept between visits, like the columns — a judge who works in one area
+// shouldn't have to pick it again each time
+const FILTERS_LS_KEY = "mishpat-promptFilters-v1";
+const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(FILTERS_LS_KEY) ?? "null");
+    if (raw) {
+      const out = { ...EMPTY_MULTI };
+      for (const k of M_KEYS) {
+        // a filter whose column is hidden doesn't apply, so it isn't restored either
+        const col: ColKey = k === "tag" ? "tags" : k;
+        if (Array.isArray(raw[k]) && shown[col]) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string");
+      }
+      return out;
+    }
+  } catch { /* fall back to nothing picked */ }
+  return EMPTY_MULTI;
+};
 const COLS_LS_KEY = "mishpat-promptCols-v3";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
@@ -112,28 +138,36 @@ export function PromptTablePanel({
   const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage", "tags"];
   const toggleCol = (k: ColKey) => {
     if (colState.shown[k] && FILTERED.includes(k)) {
-      if (k === "tags") set("tag", ANY); else set(k as "source" | "court" | "caseType" | "matter" | "stage", ANY);
+      setMulti(k === "tags" ? "tag" : (k as MKey), []);
     }
     saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } });
   };
   const resetCols = () => {
-    setF((prev) => ({ ...prev, court: ANY, stage: ANY, tag: ANY })); // their columns go back to hidden
+    setM((prev) => ({ ...prev, court: [], stage: [], tag: [] })); // their columns go back to hidden
     setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
     try { window.localStorage.removeItem(COLS_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
   };
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
-  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
-  const filtered = FILTER_KEYS.some((k) => f[k] !== EMPTY_FILTERS[k]);
-  const clearFilters = () => setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir }));
+  // the column filters take several values each — נזיקין together with כללי, say. Nothing picked = all.
+  const [m, setMState] = useState<Multi>(() => loadMulti(colState.shown));
+  const setM = (next: Multi | ((prev: Multi) => Multi)) => setMState((prev) => {
+    const v = typeof next === "function" ? next(prev) : next;
+    try { window.localStorage.setItem(FILTERS_LS_KEY, JSON.stringify(v)); } catch { /* ignore */ }
+    return v;
+  });
+  const setMulti = (k: MKey, v: string[]) => setM((prev) => ({ ...prev, [k]: v }));
+  const filtered = f.q !== "" || f.favOnly || M_KEYS.some((k) => m[k].length > 0);
+  const clearFilters = () => { setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir })); setM(EMPTY_MULTI); };
   const sortBy = (key: SortKey) =>
     setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
-  const pass = (pr: Prompt, ff: Filters) => matches(pr, ff) && (!caseOnly || fitsCase(pr));
+  const pass = (pr: Prompt, ff: Filters, mm: Multi) =>
+    matches(pr, ff) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v))) && (!caseOnly || fitsCase(pr));
 
   const list = useMemo(() => {
-    const out = prompts.filter((pr) => pass(pr, f));
+    const out = prompts.filter((pr) => pass(pr, f, m));
     const fit = (pr: Prompt) =>
       (pr.caseType === CASE_CONTEXT.caseType ? 2 : pr.caseType === GENERAL ? 1 : 0) +
       (pr.matter === CASE_CONTEXT.matter ? 2 : pr.matter === GENERAL ? 1 : 0) +
@@ -156,26 +190,27 @@ export function PromptTablePanel({
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompts, f, caseOnly]);
+  }, [prompts, f, m, caseOnly]);
 
   const facets = useMemo(() => {
-    const tally = (key: keyof Filters, values: readonly string[], of: (pr: Prompt) => string | string[]) => {
-      const base = prompts.filter((pr) => pass(pr, { ...f, [key]: ANY }));
-      const m: Record<string, number> = { [ANY]: base.length };
-      for (const v of values) m[v] = 0;
-      for (const pr of base) for (const v of [of(pr)].flat()) if (v in m) m[v] += 1;
-      return m;
+    // each count leaves out its own filter's picks, so it says what ticking that value would add
+    const tally = (key: MKey, values: readonly string[]) => {
+      const base = prompts.filter((pr) => pass(pr, f, { ...m, [key]: [] }));
+      const out: Record<string, number> = { [ANY]: base.length };
+      for (const v of values) out[v] = 0;
+      for (const pr of base) for (const v of [VALUE_OF[key](pr)].flat()) if (v in out) out[v] += 1;
+      return out;
     };
     return {
-      source: tally("source", SOURCE_OPTS, srcName),
-      caseType: tally("caseType", CASE_TYPES, (pr) => pr.caseType),
-      matter: tally("matter", MATTERS, (pr) => pr.matter),
-      stage: tally("stage", STAGES, (pr) => pr.stage),
-      court: tally("court", COURTS, (pr) => pr.court),
-      tag: tally("tag", TAGS, (pr) => pr.tags),
+      source: tally("source", SOURCE_OPTS),
+      caseType: tally("caseType", CASE_TYPES),
+      matter: tally("matter", MATTERS),
+      stage: tally("stage", STAGES),
+      court: tally("court", COURTS),
+      tag: tally("tag", TAGS),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompts, f, caseOnly]);
+  }, [prompts, f, m, caseOnly]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -341,12 +376,12 @@ export function PromptTablePanel({
             מתאימים לתיק
           </button>
           {/* a column's filter shows only while the column does */}
-          {colState.shown.source && <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={96} counts={facets.source} />}
-          {colState.shown.tags && <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={104} counts={facets.tag} />}
-          {colState.shown.court && <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={100} counts={facets.court} />}
-          {colState.shown.caseType && <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={150} counts={facets.matter} />}
-          {colState.shown.stage && <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
+          {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
+          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={TAGS} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} />}
+          {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
+          {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
+          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={MATTERS} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} />}
+          {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
               ניקוי
