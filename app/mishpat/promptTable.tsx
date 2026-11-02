@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { Bookmark, ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
@@ -25,18 +25,20 @@ import {
 
 // The data columns the user can show, hide and reorder. The saved mark, the name and the two
 // row actions are structural and always there.
-type ColKey = "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating" | "uses";
+type ColKey = "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "tags" | "rating";
 const COL_LABELS: Record<ColKey, string> = {
-  source: "מקור", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "סוג עניין", stage: "שלב", rating: "דירוג", uses: "שימושים",
+  source: "מקור", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "תחום", stage: "שלב", tags: "תגיות", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  source: "44px", author: "112px", date: "64px", court: "90px", caseType: "84px", matter: "108px", stage: "96px", rating: "76px", uses: "64px",
+  source: "48px", author: "128px", date: "76px", court: "96px", caseType: "88px", matter: "120px", stage: "104px", tags: "152px", rating: "84px",
 };
-const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "uses"];
+const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "tags", "rating"];
+// מקור, סוג תיק and תחום fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  source: true, author: true, date: false, court: false, caseType: false, matter: false, stage: false, rating: true, uses: true,
+  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: false, rating: false,
 };
-const COLS_LS_KEY = "mishpat-promptCols-v1";
+// v2: the defaults changed (uses gone, tags and the categories in), so older saved picks start over
+const COLS_LS_KEY = "mishpat-promptCols-v2";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
 const loadCols = (): ColState => {
@@ -72,6 +74,7 @@ export function PromptTablePanel({
   };
   const shownCols = colState.order.filter((k) => colState.shown[k]);
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
+  const [info, setInfo] = useState<DOMRect | null>(null); // the disclaimer, open from the i by the count
   // Reorder by dragging a row in the menu; a plain click still toggles the column
   const colRowRefs = useRef<Partial<Record<ColKey, HTMLDivElement | null>>>({});
   const [drag, setDrag] = useState<{ key: ColKey; to: number } | null>(null);
@@ -106,13 +109,15 @@ export function PromptTablePanel({
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // hiding a column takes its filter with it, so nothing filters the table out of sight
-  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage"];
+  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage", "tags"];
   const toggleCol = (k: ColKey) => {
-    if (colState.shown[k] && FILTERED.includes(k)) set(k as "source" | "court" | "caseType" | "matter" | "stage", ANY);
+    if (colState.shown[k] && FILTERED.includes(k)) {
+      if (k === "tags") set("tag", ANY); else set(k as "source" | "court" | "caseType" | "matter" | "stage", ANY);
+    }
     saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } });
   };
   const resetCols = () => {
-    setF((prev) => ({ ...prev, court: ANY, caseType: ANY, matter: ANY, stage: ANY })); // their columns go back to hidden
+    setF((prev) => ({ ...prev, court: ANY, stage: ANY, tag: ANY })); // their columns go back to hidden
     setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
     try { window.localStorage.removeItem(COLS_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
@@ -135,7 +140,7 @@ export function PromptTablePanel({
       (pr.stage === CASE_CONTEXT.stage ? 2 : pr.stage === GENERAL ? 1 : 0) +
       (pr.court === CASE_CONTEXT.court ? 2 : pr.court === GENERAL ? 1 : 0);
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || b.uses - a.uses,
+      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || avgOf(b) - avgOf(a),
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       author: (a, b) => (authorName(a) ? 0 : 1) - (authorName(b) ? 0 : 1) || authorName(a).localeCompare(authorName(b), "he"),
@@ -144,9 +149,9 @@ export function PromptTablePanel({
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
-      uses: (a, b) => b.uses - a.uses,
+      tags: (a, b) => (b.tags[0] ?? "").localeCompare(a.tags[0] ?? "", "he"),
       date: byDate,
-      fav: (a, b) => saved(a) - saved(b) || b.uses - a.uses,
+      fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -185,7 +190,7 @@ export function PromptTablePanel({
   const th = (key: SortKey, label: string, align: "right" | "center" = "right") => (
     <button
       onClick={() => sortBy(key)}
-      className="h-full w-full min-w-0 flex items-center gap-1 px-1.5 text-[12.5px] transition-colors hover:bg-black/[0.04]"
+      className="h-full w-full min-w-0 flex items-center gap-1 px-1.5 text-[13px] transition-colors hover:bg-black/[0.04]"
       style={{ color: f.sort === key ? c.primary : subCol, justifyContent: align === "center" ? "center" : "flex-start" }}
       title={`מיון לפי ${label}`}
     >
@@ -195,25 +200,25 @@ export function PromptTablePanel({
   );
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
-  const cols = ["20px", "30px", "minmax(140px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
+  const cols = ["20px", "30px", "minmax(160px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 20 + 30 + 140 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
-  const CENTERED: ColKey[] = ["source", "uses"];
+  const minW = 20 + 30 + 160 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
+  const CENTERED: ColKey[] = ["source"];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
       case "source":
         return (
           <div key={k} className="flex items-center justify-center" title={srcName(pr)}>
-            <SourceMark pr={pr} isDark={isDark} size={15} />
+            <SourceMark pr={pr} isDark={isDark} size={16} />
           </div>
         );
       case "author": {
         const n = authorName(pr) || "מערכת";
         const named = n !== "מערכת" && n !== "אנונימי";
         return (
-          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
+          <div key={k} className="px-1.5 min-w-0 text-[14px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
             <span style={named ? undefined : { color: subCol }}>{n}</span>
             {roleOf(pr) && authorName(pr) && <span style={{ color: subCol }}> ({roleOf(pr)})</span>}
           </div>
@@ -224,18 +229,18 @@ export function PromptTablePanel({
         const d = dateOf(pr);
         const [dd, mm, yy] = d.split("/");
         return d
-          ? <div key={k} className="px-1.5 text-[12px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
-          : <div key={k} className="px-1.5 text-[12.5px]" style={{ color: subCol }}>—</div>;
+          ? <div key={k} className="px-1.5 text-[14px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
+          : <div key={k} className="px-1.5 text-[14px]" style={{ color: subCol }}>—</div>;
       }
       case "court": case "caseType": case "matter": case "stage":
         return (
-          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={pr[k]}>
+          <div key={k} className="px-1.5 min-w-0 text-[14px] truncate" style={{ color: cellCol }} title={pr[k]}>
             {pr[k] === GENERAL ? "" : pr[k]}
           </div>
         );
       case "rating":
         return (
-          <div key={k} className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }}>
+          <div key={k} className="px-1.5 text-[14px] flex items-center gap-1" style={{ color: cellCol }}>
             {pr.ratingCount ? (
               <>
                 <span>{avgOf(pr).toFixed(1)}</span>
@@ -244,8 +249,15 @@ export function PromptTablePanel({
             ) : <span style={{ color: subCol }}>—</span>}
           </div>
         );
-      case "uses":
-        return <div key={k} className="px-1.5 text-[12.5px] text-center" style={{ color: cellCol }}>{pr.uses}</div>;
+      case "tags":
+        // one line; what doesn't fit is cut, and the whole list is in the tooltip
+        return (
+          <div key={k} className="px-1.5 min-w-0 flex items-center gap-1 overflow-hidden *:shrink-0" title={pr.tags.join(", ")}>
+            {pr.tags.map((t) => (
+              <span key={t} className="h-6 px-2 flex items-center rounded-[4px] text-[13px]" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{t}</span>
+            ))}
+          </div>
+        );
     }
   };
 
@@ -280,7 +292,7 @@ export function PromptTablePanel({
               ))}
             </div>
             <div className="px-3 py-1.5" style={{ borderTop: `1px solid ${rowLine}` }}>
-              <button onClick={resetCols} className="text-[12.5px] hover:underline" style={{ color: c.primary }} title="החזרת סדר והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
+              <button onClick={resetCols} className="text-[13px] hover:underline" style={{ color: c.primary }} title="החזרת סדר והצגת העמודות למצב ההתחלתי">איפוס לברירת מחדל</button>
             </div>
           </div>
         </>
@@ -328,12 +340,12 @@ export function PromptTablePanel({
           >
             מתאימים לתיק
           </button>
-          {/* a column's filter shows only while the column does; the tag has no column, so it always shows */}
+          {/* a column's filter shows only while the column does */}
           {colState.shown.source && <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={96} counts={facets.source} />}
-          <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={104} counts={facets.tag} />
+          {colState.shown.tags && <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={104} counts={facets.tag} />}
           {colState.shown.court && <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={100} counts={facets.court} />}
           {colState.shown.caseType && <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <Dropdown label="סוג עניין" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={130} counts={facets.matter} />}
+          {colState.shown.matter && <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={150} counts={facets.matter} />}
           {colState.shown.stage && <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
@@ -391,7 +403,7 @@ export function PromptTablePanel({
                 key={pr.id}
                 onClick={() => onOpen(pr)}
                 className="group relative grid items-center cursor-pointer transition-colors"
-                style={{ gridTemplateColumns: cols, minHeight: "52px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : undefined }}
+                style={{ gridTemplateColumns: cols, minHeight: "60px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : undefined }}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "#f7f9fc"; }}
                 onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = ""; }}
               >
@@ -404,10 +416,10 @@ export function PromptTablePanel({
 
                 <div className="min-w-0 text-right px-1.5 py-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    {pr.parts && <span title="פרומפט מפורט" className="flex-none flex"><WandSparkles size={13} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
-                    <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
+                    {pr.parts && <span title="פרומפט מפורט" className="flex-none flex"><WandSparkles size={15} style={{ color: subCol, transform: "scaleX(-1)" }} /></span>}
+                    <span className="text-[16px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
                   </div>
-                  <div className="text-[12px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
+                  <div className="text-[14px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : pr.body}</div>
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
@@ -431,16 +443,37 @@ export function PromptTablePanel({
             );
           })}
 
-          {list.length > 0 && (
-            <div className="pt-3 px-2 text-[12px]" style={{ color: subCol }}>{list.length} פרומפטים</div>
-          )}
+          {/* the count, with the platform's disclaimer behind the i — the chat carries its own
+              disclaimer, and two of them side by side read as one too many */}
+          <div className="pt-3 px-2 flex items-center gap-1.5 text-[13px]" style={{ color: subCol }}>
+            <span>{list.length} פרומפטים</span>
+            <button
+              onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setInfo((v) => (v ? null : rect)); }}
+              className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5"
+              style={{ color: info ? c.primary : c.iconGray }}
+              title="על מאגר הפרומפטים"
+            >
+              <Info size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* stays in view under the list, however long it is */}
-      <div className="px-4 py-2 text-[12px] leading-relaxed" style={{ color: subCol, borderTop: `1px solid ${rowLine}` }}>
-        הנהלת בתי המשפט מעמידה פלטפורמה זו לשיתוף ידע בלבד, ואינה נושאת באחריות לתוכן, לדיוק או לתוצאות השימוש בפרומפטים בחלק שלא עבר תיקוף.
-      </div>
+      {info && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={() => setInfo(null)} />
+          <div
+            dir="rtl"
+            className="fixed z-[200] rounded-[8px] px-4 py-3 text-[13px] leading-relaxed"
+            style={{
+              bottom: window.innerHeight - info.top + 6, right: Math.max(8, window.innerWidth - info.right - 8), width: "320px",
+              backgroundColor: surface, color: textCol, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+            }}
+          >
+            הנהלת בתי המשפט מעמידה פלטפורמה זו לשיתוף ידע בלבד, ואינה נושאת באחריות לתוכן, לדיוק או לתוצאות השימוש בפרומפטים בחלק שלא עבר תיקוף.
+          </div>
+        </>
+      )}
     </div>
   );
 }

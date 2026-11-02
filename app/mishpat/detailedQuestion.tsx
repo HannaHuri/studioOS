@@ -205,7 +205,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
                     {([
                       { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
                       { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-                      { t: "סוג עניין", v: matter, o: MATTERS, set: setMatter, w: 150 },
+                      { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
                       { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
                     ] as const).map(({ t, v, o, set, w }) => (
                       <div key={t}>
