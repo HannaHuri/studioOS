@@ -504,12 +504,12 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
       {at && (
         <div
           ref={menuRef}
-          className="rounded-md shadow-lg overflow-hidden max-h-[320px] overflow-y-auto py-1"
+          className={`rounded-md shadow-lg overflow-hidden max-h-[320px] overflow-y-auto ${searchable ? "pb-1" : "py-1"}`}
           style={{ position: "fixed", top: at.top, bottom: at.bottom, right: at.right, zIndex: 90, minWidth: Math.max(width, 160), width: searchable ? 248 : undefined, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
         >
           {searchable && (
-            <div className="px-2 pb-1 pt-0.5 sticky top-0" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
-              <div className="flex items-center gap-1.5 h-8 px-2 rounded-[4px]" style={{ border: `1px solid ${line}` }}>
+            <div className="px-2 pt-1.5 pb-1 sticky top-0 z-10" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
+              <div className="flex items-center gap-1.5 h-8 px-2 rounded-[4px]" style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white" }}>
                 <Search size={14} style={{ color: isDark ? dk.textMuted : c.textLight, flexShrink: 0 }} />
                 <input
                   value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש" autoFocus
