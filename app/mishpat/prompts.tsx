@@ -17,6 +17,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
   Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
@@ -709,7 +710,9 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
       >
         <MoreHorizontal size={16} />
       </button>
-      {at && (
+      {/* rendered into the page body: inside the side panel, the panel's own layer (and its edge handle above it)
+          would cover the part of the menu that opens past the panel */}
+      {at && createPortal(
         <div
           dir="rtl" ref={ref}
           className="rounded-md overflow-hidden shadow-lg"
@@ -729,7 +732,8 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
               <span className="flex-1 text-right">{label}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
