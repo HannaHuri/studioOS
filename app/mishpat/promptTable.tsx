@@ -392,7 +392,7 @@ export function PromptTablePanel({
             onClick={() => setCaseOnly((v) => !v)}
             className="h-8 px-2.5 rounded-md text-[13px] transition-colors"
             style={caseOnly
-              ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }
+              ? { border: `1px solid ${c.primary}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }
               : { border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
             title={caseOnly ? "מוצגים רק פרומפטים שמתאימים לתיק הפתוח. לחיצה מציגה את כל המאגר" : "הצגת הפרומפטים שמתאימים לתיק הפתוח בלבד"}
           >
