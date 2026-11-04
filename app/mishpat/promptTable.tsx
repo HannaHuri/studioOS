@@ -17,9 +17,9 @@ import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
 import {
-  ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS_BY, TAGS_BY, GENERAL_TAGS, ALL_LISTED_TAGS, STAGES, COURTS, fitsCase,
+  ANY, GENERAL, CASE_TYPES, MATTERS_BY, TAGS_BY, GENERAL_TAGS, ALL_LISTED_TAGS, STAGES, COURTS,
   MultiDropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
-  saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
+  saved, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
 } from "./prompts";
 
@@ -32,10 +32,12 @@ const COL_LABELS: Record<ColKey, string> = {
 const COL_TRACKS: Record<ColKey, string> = {
   source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", tags: "152px", rating: "76px",
 };
-const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "tags", "rating"];
+// tags last: the table is wider than the side panel by default, and the column that gets cut is the tags,
+// enough of them showing that people know they're there
+const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "tags"];
 // מקור, סוג תיק, תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: false, rating: true,
+  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: true, rating: true,
 };
 // v3: the defaults changed (uses gone, tags and the categories in, then דירוג), so older saved picks start over
 // the filters that take several values, and what each one reads off a prompt
@@ -64,7 +66,8 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   } catch { /* fall back to nothing picked */ }
   return EMPTY_MULTI;
 };
-const COLS_LS_KEY = "mishpat-promptCols-v3";
+const COLS_LS_KEY = "mishpat-promptCols-v4";
+const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
 const loadCols = (): ColState => {
@@ -91,7 +94,6 @@ export function PromptTablePanel({
   // Opens on what suits the open case — the job the narrow "מוצעים" panel did before the table
   // replaced it. One click on the chip takes it back to the whole מאגר.
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
-  const [caseOnly, setCaseOnly] = useState(true);
 
   const [colState, setColState] = useState<ColState>(loadCols);
   const saveCols = (next: ColState) => {
@@ -149,6 +151,23 @@ export function PromptTablePanel({
     setColsMenu(null);
   };
 
+  // Column widths set by dragging a header's edge; only the columns the user resized, saved per user
+  const [colW, setColW] = useState<Partial<Record<ColKey, number>>>(() => {
+    try { return JSON.parse(window.localStorage.getItem(COLW_LS_KEY) ?? "{}") ?? {}; } catch { return {}; }
+  });
+  const startResize = (k: ColKey, e: ReactMouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const startW = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width;
+    const startX = e.clientX; let last = startW;
+    // RTL: the handle is on the column's left edge, so dragging left widens it
+    const onMove = (ev: MouseEvent) => { last = Math.max(40, Math.round(startW + (startX - ev.clientX))); setColW((prev) => ({ ...prev, [k]: last })); };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); document.body.style.userSelect = "";
+      setColW((prev) => { const next = { ...prev, [k]: last }; try { window.localStorage.setItem(COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+    };
+    document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp); document.body.style.userSelect = "none";
+  };
+
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
   // the column filters take several values each — נזיקין together with כללי, say. Nothing picked = all.
   const [m, setMState] = useState<Multi>(() => loadMulti(colState.shown));
@@ -187,21 +206,21 @@ export function PromptTablePanel({
     setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
   const pass = (pr: Prompt, ff: Filters, mm: Multi) =>
-    matches(pr, ff) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v))) && (!caseOnly || fitsCase(pr));
+    matches(pr, ff) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v)));
 
   const list = useMemo(() => {
     const out = prompts.filter((pr) => pass(pr, f, m));
-    const fit = (pr: Prompt) =>
-      (pr.caseType === CASE_CONTEXT.caseType ? 2 : pr.caseType === GENERAL ? 1 : 0) +
-      (pr.matter === CASE_CONTEXT.matter ? 2 : pr.matter === GENERAL ? 1 : 0) +
-      (pr.stage === CASE_CONTEXT.stage ? 2 : pr.stage === GENERAL ? 1 : 0) +
-      (pr.court === CASE_CONTEXT.court ? 2 : pr.court === GENERAL ? 1 : 0);
+    // the open case can't be matched to this classification, so the default order stands on its own:
+    // favorites, then rating, then case type A to ת with כללי first (which is all it is at launch,
+    // before there are ratings), then name. The case type header sorts the same way.
+    const ctKey = (pr: Prompt) => (pr.caseType === GENERAL ? "" : pr.caseType);
+    const byCaseType = (a: Prompt, b: Prompt) => ctKey(a).localeCompare(ctKey(b), "he");
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => saved(a) - saved(b) || mine(a) - mine(b) || fit(b) - fit(a) || avgOf(b) - avgOf(a),
+      relevance: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a) || byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       author: (a, b) => (authorName(a) ? 0 : 1) - (authorName(b) ? 0 : 1) || authorName(a).localeCompare(authorName(b), "he"),
-      caseType: (a, b) => b.caseType.localeCompare(a.caseType, "he"),
+      caseType: (a, b) => byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
@@ -212,8 +231,7 @@ export function PromptTablePanel({
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompts, f, m, caseOnly]);
+  }, [prompts, f, m]);
 
   const facets = useMemo(() => {
     // each count leaves out its own filter's picks, so it says what ticking that value would add
@@ -233,7 +251,7 @@ export function PromptTablePanel({
       tag: tally("tag", subs.tags),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompts, f, m, caseOnly]);
+  }, [prompts, f, m]);
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -258,11 +276,16 @@ export function PromptTablePanel({
   );
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
-  const cols = ["20px", "30px", "minmax(160px,1fr)", ...shownCols.map((k) => COL_TRACKS[k]), "34px", "32px"].join(" ");
+  // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px" };
+  // a width the user dragged wins over both (as in the documents table in /lab)
+  const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
+  const nameMin = 160;
+  const cols = ["20px", "30px", `minmax(${nameMin}px,1fr)`, ...shownCols.map(track), "34px", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 20 + 30 + 160 + shownCols.reduce((sum, k) => sum + parseInt(COL_TRACKS[k], 10), 0) + 34 + 32 + 24;
+  const minW = 20 + 30 + nameMin + shownCols.reduce((sum, k) => sum + parseInt(track(k), 10), 0) + 34 + 32 + 24;
   const CENTERED: ColKey[] = ["source"];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
@@ -293,22 +316,22 @@ export function PromptTablePanel({
       case "court": case "caseType": case "matter": case "stage":
         return (
           <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={pr[k]}>
-            {pr[k] === GENERAL ? "" : pr[k]}
+            {pr[k]}
           </div>
         );
       case "rating":
         return (
-          <div key={k} className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }}>
+          <div key={k} className="px-1.5 text-[12.5px] flex items-center gap-1" style={{ color: cellCol }} title={pr.ratingCount ? `${avgOf(pr).toFixed(1)} מתוך 5 · ${pr.ratingCount} מדרגים` : "עדיין לא דורג"}>
             {pr.ratingCount ? (
               <>
                 <span>{avgOf(pr).toFixed(1)}</span>
-                <span style={{ color: subCol }}>({pr.ratingCount})</span>
+                {isFocus && <span style={{ color: subCol }}>({pr.ratingCount})</span>}
               </>
             ) : <span style={{ color: subCol }}>—</span>}
           </div>
         );
       case "tags":
-        // one line; what doesn't fit is cut, and the whole list is in the tooltip
+        // one line; past the panel's edge the column is cut, and the whole list is in the tooltip
         return (
           <div key={k} className="px-1.5 min-w-0 flex items-center gap-1 overflow-hidden *:shrink-0" title={pr.tags.join(", ")}>
             {pr.tags.map((t) => (
@@ -388,16 +411,6 @@ export function PromptTablePanel({
 
         {/* Row B: the case chip, then the filters — one line; past the panel's edge they're cut, and widening shows them */}
         <div className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
-          <button
-            onClick={() => setCaseOnly((v) => !v)}
-            className="h-8 px-2.5 rounded-md text-[13px] transition-colors"
-            style={caseOnly
-              ? { border: `1px solid ${c.primary}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary }
-              : { border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
-            title={caseOnly ? "מוצגים רק פרומפטים שמתאימים לתיק הפתוח. לחיצה מציגה את כל המאגר" : "הצגת הפרומפטים שמתאימים לתיק הפתוח בלבד"}
-          >
-            מתאימים לתיק
-          </button>
           {/* a column's filter shows only while the column does */}
           {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
           {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
@@ -440,17 +453,28 @@ export function PromptTablePanel({
               <Bookmark size={14} fill="currentColor" style={{ color: f.sort === "fav" ? c.primary : subCol }} />
             </button>
             {th("name", "שם הפרומפט")}
-            {shownCols.map((k) => <span key={k} className="contents">{th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}</span>)}
-            <div />
-            <div />
+            {shownCols.map((k) => (
+              <div key={k} className="relative min-w-0">
+                {th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}
+                <div
+                  onMouseDown={(e) => startResize(k, e)}
+                  onDoubleClick={() => setColW((prev) => { const next = { ...prev }; delete next[k]; try { window.localStorage.setItem(COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; })}
+                  className="absolute top-0 bottom-0 z-10 group/rz"
+                  style={{ insetInlineEnd: "-3px", width: "7px", cursor: "col-resize" }}
+                  title="גרירה לשינוי רוחב העמודה"
+                >
+                  <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineEnd: "3px", width: "2px", borderRadius: "1px" }} />
+                </div>
+              </div>
+            ))}
+            {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
+            <div className="sticky z-[1]" style={{ left: "32px", backgroundColor: surface }} />
+            <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
 
           {list.length === 0 && (
             <div className="py-16 text-center text-[13.5px]" style={{ color: subCol }}>
               לא נמצאו פרומפטים התואמים לחיפוש.
-              {caseOnly && (
-                <button onClick={() => setCaseOnly(false)} className="block mx-auto mt-2 hover:underline" style={{ color: c.primary }}>הצגת כל המאגר</button>
-              )}
             </div>
           )}
 
@@ -461,9 +485,9 @@ export function PromptTablePanel({
                 key={pr.id}
                 onClick={() => onOpen(pr)}
                 className="group relative grid items-center cursor-pointer transition-colors"
-                style={{ gridTemplateColumns: cols, minHeight: "60px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : undefined }}
+                style={{ gridTemplateColumns: cols, minHeight: "60px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "#f7f9fc"; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = ""; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = surface; }}
               >
                 {/* the open row carries the documents table's blue edge */}
                 {active && <div className="absolute top-0 bottom-0 right-0" style={{ width: "3px", backgroundColor: c.primary }} />}
@@ -488,7 +512,7 @@ export function PromptTablePanel({
                 {shownCols.map((k) => cell(k, pr))}
 
                 {/* Using a prompt stays one click: it doesn't need the editor open first */}
-                <div className="flex items-center justify-center">
+                <div className="self-stretch sticky z-[1] flex items-center justify-center" style={{ left: "32px", backgroundColor: "inherit" }}>
                   <button
                     onClick={(e) => { e.stopPropagation(); onUse(pr); }}
                     className="size-7 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/5 transition-opacity"
@@ -499,7 +523,7 @@ export function PromptTablePanel({
                   </button>
                 </div>
 
-                <div className="flex items-center justify-center">
+                <div className="self-stretch sticky left-0 z-[1] flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
                   <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
                 </div>
               </div>
