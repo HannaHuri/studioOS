@@ -181,6 +181,9 @@ export function PromptTablePanel({
     return { ...prev, caseType: v, matter: prev.matter.filter((x) => s2.matters.includes(x)), tag: prev.tag.filter((x) => s2.tags.includes(x)) };
   });
   const subs = sub(m.caseType);
+  // "מתאימים לתיק" narrows the table and every filter's counts, so both say so out loud
+  const caseNote = caseOnly ? { text: "מסונן לפי התיק הפתוח.", action: "הצגת כל המאגר", onAction: () => setCaseOnly(false) } : undefined;
+  const caseLine = [CASE_CONTEXT.caseType, CASE_CONTEXT.matter, CASE_CONTEXT.stage, CASE_CONTEXT.court].filter((v) => v && v !== GENERAL).join(" · ");
   const filtered = f.q !== "" || f.favOnly || M_KEYS.some((k) => m[k].length > 0);
   const clearFilters = () => { setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir })); setM(EMPTY_MULTI); };
   const sortBy = (key: SortKey) =>
@@ -399,18 +402,24 @@ export function PromptTablePanel({
             מתאימים לתיק
           </button>
           {/* a column's filter shows only while the column does */}
-          {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
-          {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
-          {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
-          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable />}
-          {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
+          {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} note={caseNote} />}
+          {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} note={caseNote} />}
+          {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} note={caseNote} />}
+          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable note={caseNote} />}
+          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable note={caseNote} />}
+          {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} note={caseNote} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
               ניקוי
             </button>
           )}
         </div>
+        {caseOnly && (
+          <div className="flex items-center gap-1 mt-2 text-[12.5px] min-w-0" style={{ color: subCol }}>
+            <span className="truncate">מוצגים פרומפטים שמתאימים לתיק: <span style={{ color: textCol }}>{caseLine}</span></span>
+            <button onClick={() => setCaseOnly(false)} className="flex-none ms-1 hover:underline" style={{ color: c.primary }}>הצגת כל המאגר</button>
+          </div>
+        )}
       </div>
 
       {/* Header row + rows */}

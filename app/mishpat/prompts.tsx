@@ -514,7 +514,7 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
 
 // A filter that takes several values at once — e.g. נזיקין together with כללי, which fits every
 // case type. Nothing ticked means everything; the menu stays open while ticking.
-export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable }: {
+export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable, note }: {
   label: string; value: string[]; options: string[]; onChange: (v: string[]) => void; isDark: boolean; width?: number;
   counts?: Record<string, number>;
   // optional headings: the options shown under each, in order (e.g. a case type's תחומים)
@@ -524,6 +524,8 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
   picker?: boolean;
   // long lists (תחום, תגית) get a search field at the top of the menu
   searchable?: boolean;
+  // a line at the top of the menu saying what already narrows it (e.g. the open case), with a way out
+  note?: { text: string; action: string; onAction: () => void };
 }) {
   const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const open = at !== null;
@@ -581,6 +583,12 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
           className={`rounded-md shadow-lg overflow-hidden max-h-[320px] overflow-y-auto ${searchable ? "pb-1" : "py-1"}`}
           style={{ position: "fixed", top: at.top, bottom: at.bottom, right: at.right, zIndex: 90, minWidth: Math.max(width, 160), width: searchable ? 248 : undefined, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
         >
+          {note && (
+            <div className="px-3 pt-2 pb-1.5 text-[12px] leading-snug" style={{ color: isDark ? dk.textMuted : c.textGray, borderBottom: `1px solid ${isDark ? dk.border : "#eef2f7"}` }}>
+              {note.text}{" "}
+              <button onClick={() => { note.onAction(); }} className="hover:underline" style={{ color: c.primary }}>{note.action}</button>
+            </div>
+          )}
           {searchable && (
             <div className="px-2 pt-1.5 pb-1 sticky top-0 z-10" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
               <div className="flex items-center gap-1.5 h-8 px-2 rounded-[4px]" style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white" }}>
