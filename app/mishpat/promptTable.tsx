@@ -400,10 +400,10 @@ export function PromptTablePanel({
           </button>
           {/* a column's filter shows only while the column does */}
           {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
-          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable />}
           {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
           {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
           {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
+          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable />}
           {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
