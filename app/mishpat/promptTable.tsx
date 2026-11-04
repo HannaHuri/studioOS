@@ -512,7 +512,8 @@ export function PromptTablePanel({
                 {shownCols.map((k) => cell(k, pr))}
 
                 {/* Using a prompt stays one click: it doesn't need the editor open first */}
-                <div className="self-stretch sticky z-[1] flex items-center justify-center" style={{ left: "32px", backgroundColor: "inherit" }}>
+                {/* no z-index on these sticky cells: one would trap the row menu (position: fixed) under the panel's edge handle */}
+                <div className="self-stretch sticky flex items-center justify-center" style={{ left: "32px", backgroundColor: "inherit" }}>
                   <button
                     onClick={(e) => { e.stopPropagation(); onUse(pr); }}
                     className="size-7 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/5 transition-opacity"
@@ -523,7 +524,7 @@ export function PromptTablePanel({
                   </button>
                 </div>
 
-                <div className="self-stretch sticky left-0 z-[1] flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
+                <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
                   <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
                 </div>
               </div>
