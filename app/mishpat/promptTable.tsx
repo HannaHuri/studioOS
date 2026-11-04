@@ -277,10 +277,11 @@ export function PromptTablePanel({
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px" };
+  // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", tags: "64px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
-  const nameMin = 160;
+  const nameMin = isFocus ? 160 : 120;
   const cols = ["20px", "30px", `minmax(${nameMin}px,1fr)`, ...shownCols.map(track), "34px", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
@@ -331,7 +332,15 @@ export function PromptTablePanel({
           </div>
         );
       case "tags":
-        // one line; past the panel's edge the column is cut, and the whole list is in the tooltip
+        // side panel: the first tag in one chip, cut with "..."; all of them in the tooltip
+        if (!isFocus && !colW.tags) return (
+          <div key={k} className="px-1.5 min-w-0 flex items-center" title={pr.tags.join(", ")}>
+            {pr.tags.length > 0 && (
+              <span className="h-6 px-2 min-w-0 rounded-[4px] text-[12.5px] leading-6 truncate" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{pr.tags[0]}</span>
+            )}
+          </div>
+        );
+        // expanded (or widened): one line; what doesn't fit is cut, and the whole list is in the tooltip
         return (
           <div key={k} className="px-1.5 min-w-0 flex items-center gap-1 overflow-hidden *:shrink-0" title={pr.tags.join(", ")}>
             {pr.tags.map((t) => (
