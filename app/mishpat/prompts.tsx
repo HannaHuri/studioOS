@@ -66,14 +66,58 @@ export const mine = (pr: Prompt) => (pr.source === "mine" ? 0 : pr.source === "s
 export const ANY = "הכל";
 export const GENERAL = "כללי";
 
-export const CASE_TYPES = [GENERAL, "אזרחי", "פלילי", "משפחה", "עבודה", "מנהלי"];
-export const MATTERS = [GENERAL, "רשלנות רפואית", "נזקי גוף", "חוזים", "מקרקעין", "לשון הרע", "משמורת"];
+// ── Classification (lists from Hanna, 2026-11-03/04) ─────────────────────
+// סוג תיק is the main topic; each has its own תחומים and its own תגיות. A תחום or a tag only
+// means something under its case type, so both lists open once a case type is chosen.
+const he = (a: string, b: string) => a.localeCompare(b, "he");
+const sortHe = (xs: string[]) => [...xs].sort(he);
+const MATTERS_RAW: Record<string, string[]> = {
+  "אזרחי": ["לשון הרע", "הגנת הפרטיות", "הוצאה לפועל", "שטרות", "מתן חשבונות", "חוזים", "הטרדה מאיימת", "קניין רוחני", "רכב", "ביטוח", "מטרד", "נזיקין", "בוררות", "אכיפת פסק חוץ"],
+  "מקרקעין": ["פינוי מושכר", "זכויות במקרקעין", "ליקויי בניה", "איחור במסירה", "פירוק שיתוף", "סילוק יד", "בתים משותפים", "הגנת הדייר", "הפקעות", "עבירות בנייה וצווי הריסה"],
+  "נזקי גוף": ["תאונות דרכים", "תאונות עבודה", "רשלנות רפואית", "חוק הנכים"],
+  "פלילי": ["מעצרים", "עבירות מין", "עבירות רכוש", "עבירות אלימות", "עבירות כלכליות", "עבירות נשק וביטחון"],
+  "משפחה": ["משמורת", "מזונות", "ירושה", "אימוץ", "רכוש", "הסכם ממון", "הכרזת גיל", "כשרות משפטית", "חטיפת ילדים", "שינוי שם/מרשם אוכלוסין", "נשיאת עוברים"],
+  "ערעורים": ["בקשת רשות ערעור החלטה אחרת", "תביעות קטנות", "ערעור אזרחי", "ערעור פלילי"],
+  "תובענות ייצוגיות": ["עוסק", "ביטוח", "תאגיד בנקאי", "חוק התחרות הכלכלית", "זירת סוחר", "זיקה לני״ע", "מפגע סביבתי", "איסור הפליה", "רשות מנהלית", "ספאם", "נגישות"],
+  "מנהלי": ["מכרזים", "רישוי", "מינויים", "הגירה ומעמד", "חופש המידע", "חינוך", "ארנונה - סיווג", "ארנונה - חיובים", "תכנון ובניה - תוכנית", "תכנון ובניה - היתר", "היטל השבחה", "פיצוי לפי ס׳ 197"],
+  "עבודה": ["יחסי עובד מעסיק", "ביטוח לאומי", "ביטוח בריאות וסל תרופות", "פיטורים", "שכר וזכויות", "אפליה והטרדה בעבודה", "יחסי עבודה קיבוציים"],
+  "תעבורה": ["נהיגה בשכרות", "תאונות דרכים", "נהיגה ללא רישיון/בזמן פסילה", "עבירות מהירות", "עבירות רמזור ותמרורים"],
+  "נוער": [],
+  "קהילתי": [],
+  "כלכלי": [],
+  "מסים": ["מס הכנסה", "מיסוי מקרקעין", "מכס ומע״מ"],
+  "חדלות פירעון ופש״ר": [],
+};
+const TAGS_RAW: Record<string, string[]> = {
+  "אזרחי": ["כספים וחיובים", "סדר דין אזרחי", "סעדים", "ראיות", "תביעות כספיות", "התיישנות", "סעדים זמניים", "צו מניעה", "צו עשה", "צו עיקול", "צו איסור יציאה", "צו ביניים", "סמכות", "קניין רוחני"],
+  "פלילי": ["הכרעת דין", "גזר דין", "סדר דין פלילי", "ענישה", "עיון בחומרי חקירה"],
+  "נזקי גוף": ["פיצויים", "הערכת נזק", "קשר סיבתי", "אחריות", "נכות", "מומחים", "עדים", "תחשיבים", "אחריות מעסיקים", "רשלנות מקצועית", "אחריות רשויות וגופים ציבוריים"],
+  "משפחה": ["אחריות הורית", "זמני שהות", "אפוטרופסות", "חלוקת רכוש"],
+  "עבודה": ["פיטורים", "זכויות עובדים", "שכר", "הסכמים", "שעות עבודה ומנוחה", "פיצויי פיטורין", "אפליה בעבודה"],
+  "תעבורה": ["ענישה", "פסילת רישיון", "נהיגה ללא רישיון", "נהיגה בזמן פסילה"],
+  "מנהלי": ["עתירה מנהלית", "רשויות מקומיות", "סמכות מנהלית", "סבירות ומידתיות"],
+  "כלכלי": ["חברות", "שותפויות", "סכסוכים עסקיים", "בנקאות", "חוזים מסחריים", "בעלי מניות", "מיזוגים ורכישות"],
+  "מקרקעין": ["בעלות וזכויות במקרקעין", "שכירות", "בתים משותפים", "עסקאות מכר", "תכנון ובנייה", "פירוק שיתוף", "פינוי", "רישום מקרקעין"],
+  "חדלות פירעון ופש״ר": ["יחידים", "תאגידים", "צו פתיחת הליכים", "הסדרי חוב", "שיקום כלכלי", "מימוש נכסים", "תביעות חוב", "הפטר", "איחוד תיקים", "איסור פרסום"],
+};
+// every list A to ב, with כללי first where it appears
+export const CASE_TYPES = [GENERAL, ...sortHe(Object.keys(MATTERS_RAW))];
+export const MATTERS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(MATTERS_RAW).map(([k, v]) => [k, sortHe(v)]));
+export const TAGS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(TAGS_RAW).map(([k, v]) => [k, sortHe(v)]));
+// tags that fit any case type, offered alongside the case type's own
+export const GENERAL_TAGS = sortHe(["היתר לעיון", "הארכת מועד"]);
+// a prompt's own form: the תחומים its case type offers (כללי alone for כללי or a case type without any)
+export const mattersOf = (caseType: string) => [GENERAL, ...(MATTERS_BY[caseType] ?? [])];
+export const tagsOf = (caseType: string) => [...(TAGS_BY[caseType] ?? []), ...GENERAL_TAGS];
+// a tag outside every list was typed in by hand, and stays whatever the case type
+export const ALL_LISTED_TAGS = new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS]);
+// flat lists, for the older library window that filters by one value
+export const MATTERS = [GENERAL, ...sortHe([...new Set(Object.values(MATTERS_RAW).flat())])];
+export const TAGS = sortHe([...new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS])]);
 export const STAGES = [GENERAL, "קדם משפט", "לפני דיון", "הוכחות", "סיכומים", "פס״ד", "ערעור"];
 export const COURTS = [GENERAL, "שלום", "מחוזי", "עליון", "בית דין לעבודה"];
-export const TAGS = ["הגהה", "ניסוח", "סיכום", "השוואה", "בדיקת טיוטה", "איתור", "חקיקה ופסיקה"];
 
-// What the open case is, for the panel's shortlist and the table's relevance tint.
-export const CASE_CONTEXT = { caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי" };
+export const CASE_CONTEXT = { caseType: "נזקי גוף", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי" };
 
 // A prompt fits the case when nothing about it contradicts the case — כללי fits everything.
 export const fitsCase = (pr: { caseType: string; matter: string; stage: string; court: string }) =>
@@ -105,43 +149,43 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "איתור סתירות בין עדויות",
     body: "עבור על פרוטוקולי ההוכחות בתיק ואתר סתירות בין עדותם של [שם העד] לבין יתר העדים. הצג כל סתירה כשורה בטבלה: הנושא, מה נאמר, ההפניה לפרוטוקול. אין להסיק מסקנות משפטיות בשלב זה.",
-    source: "system", caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
-    tags: ["השוואה", "איתור"], uses: 412, ratingSum: 1123, ratingCount: 244, edited: "12/01/2025",
+    source: "system", caseType: "נזקי גוף", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
+    tags: ["עדים"], uses: 412, ratingSum: 1123, ratingCount: 244, edited: "12/01/2025",
   }),
   p({
     name: "סיכום חוות דעת רפואית",
     body: "סכם את חוות הדעת הרפואית שצורפה. ציין: תחום המומחיות, הנכות הרפואית והתפקודית שנקבעה, ההנמקה, והנקודות שבהן המומחה הסתייג. אם קיימת חוות דעת נגדית — הצג את הפערים ביניהן.",
-    source: "system", caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
-    tags: ["סיכום"], uses: 388, ratingSum: 1002, ratingCount: 218, edited: "12/01/2025",
+    source: "system", caseType: "נזקי גוף", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
+    tags: ["מומחים", "נכות"], uses: 388, ratingSum: 1002, ratingCount: 218, edited: "12/01/2025",
   }),
   p({
     name: "בדיקת טיוטת פסק דין",
     body: "עבור על טיוטת פסק הדין ובדוק: האם כל טענה מרכזית של הצדדים נדונה, האם כל קביעה עובדתית נסמכת על ראיה שהוצגה, והאם ההכרעה האופרטיבית עקבית עם ההנמקה. חייבים לציין במפורש האם התביעה נדחית או מתקבלת.",
     source: "system", stage: "פס״ד",
-    tags: ["בדיקת טיוטה", "הגהה"], uses: 907, ratingSum: 2371, ratingCount: 502, edited: "05/01/2025",
+    tags: [], uses: 907, ratingSum: 2371, ratingCount: 502, edited: "05/01/2025",
   }),
   p({
     name: "רשימת אזכורים בסיכומים",
     body: "הכן רשימה של כל האזכורים בסיכומי [הצד] — חקיקה ופסיקה בנפרד. לכל אזכור ציין היכן הוא מופיע ולאיזו טענה הוא נטען לתמוך.",
     source: "system", stage: "סיכומים",
-    tags: ["איתור", "חקיקה ופסיקה"], uses: 654, ratingSum: 1704, ratingCount: 371, edited: "05/01/2025",
+    tags: [], uses: 654, ratingSum: 1704, ratingCount: 371, edited: "05/01/2025",
   }),
   p({
     name: "טיוטת החלטה בבקשה לסעד זמני",
     body: "נסח טיוטת החלטה בבקשה לסעד זמני. התייחס לשלושת התנאים: קיומה של זכות לכאורה, מאזן הנוחות, ותום לב ושיהוי. השתמש ב[דוגמה] כמבנה ההחלטה.",
     source: "system", caseType: "אזרחי", stage: "קדם משפט",
-    tags: ["ניסוח"], uses: 233, ratingSum: 561, ratingCount: 126, edited: "22/12/2024",
+    tags: ["סעדים זמניים", "צו מניעה"], uses: 233, ratingSum: 561, ratingCount: 126, edited: "22/12/2024",
   }),
   p({
     name: "בדיקת טענת התיישנות",
     body: "בדוק את טענת ההתיישנות שהועלתה בכתב ההגנה: מתי קם עילת התביעה, מהי תקופת ההתיישנות החלה, והאם מתקיים אחד מחריגי ההשעיה. הצג את התאריכים כציר זמן.",
     source: "system", caseType: "אזרחי",
-    tags: ["איתור", "חקיקה ופסיקה"], uses: 341, ratingSum: 812, ratingCount: 181, edited: "22/12/2024",
+    tags: ["התיישנות"], uses: 341, ratingSum: 812, ratingCount: 181, edited: "22/12/2024",
   }),
   p({
     name: "ניתוח חוות דעת מומחים",
-    source: "system", caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות",
-    tags: ["השוואה", "סיכום"], uses: 0, ratingSum: 712, ratingCount: 163, edited: "19/01/2025",
+    source: "system", caseType: "נזקי גוף", matter: "רשלנות רפואית", stage: "הוכחות",
+    tags: ["מומחים", "קשר סיבתי"], uses: 0, ratingSum: 712, ratingCount: 163, edited: "19/01/2025",
     ...detailed([
       { sources: ["חוות דעת"], task: "סכם כל חוות דעת בנפרד: המומחה, תחום המומחיות, הממצאים והמסקנה.", how: "טבלה, שורה לכל חוות דעת" },
       { sources: ["חוות דעת"], task: "הצג את נקודות המחלוקת בין המומחים.", how: "רשימה ממוספרת, לכל נקודה מה טוען כל צד" },
@@ -151,7 +195,7 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "הכנה לדיון הוכחות",
     source: "shared", author: "עמית מזרחי", authorRole: "כב׳", stage: "הוכחות",
-    tags: ["סיכום", "איתור"], uses: 0, ratingSum: 302, ratingCount: 71, edited: "14/02/2025",
+    tags: [], uses: 0, ratingSum: 302, ratingCount: 71, edited: "14/02/2025",
     userNotes: "מתאים לתיקים עם כמה עדים. כדאי להריץ אחרי שכל התצהירים הוגשו, ולמלא את שם העד המרכזי בחלק השני.",
     ...detailed([
       { sources: ["כתב תביעה", "כתב הגנה"], task: "פרט את השאלות העובדתיות השנויות במחלוקת.", how: "רשימה קצרה" },
@@ -163,39 +207,39 @@ export const seedPrompts = (): Prompt[] => [
     body: "עבור על המסמך והגה אותו לשונית בלבד — שגיאות כתיב, תחביר, אחידות מונחים, ומספור סעיפים. אל תשנה ניסוח משפטי ואל תוסיף תוכן. הצג את התיקונים כרשימה.",
     source: "shared", author: "רונית שגב", authorRole: "עו״ד", stage: GENERAL,
     userNotes: "עובד הכי טוב על מסמך אחד בכל פעם. לא משנה ניסוח משפטי, רק שגיאות.",
-    tags: ["הגהה"], uses: 188, ratingSum: 431, ratingCount: 97, edited: "18/02/2025",
+    tags: [], uses: 188, ratingSum: 431, ratingCount: 97, edited: "18/02/2025",
   }),
   p({
     name: "השוואת גרסאות של הסכם",
     body: "השווה בין שתי הגרסאות של ההסכם שצורפו והצג טבלת הבדלים: הסעיף, הנוסח הקודם, הנוסח החדש, ומשמעות השינוי לצד [הצד].",
     source: "shared", author: "אנונימי", caseType: "אזרחי", matter: "חוזים",
-    tags: ["השוואה", "בדיקת טיוטה"], uses: 96, ratingSum: 214, ratingCount: 48, edited: "11/02/2025",
+    tags: ["תביעות כספיות"], uses: 96, ratingSum: 214, ratingCount: 48, edited: "11/02/2025",
   }),
   p({
     name: "תמצית תיק לקראת דיון",
     body: "הכן תמצית של התיק לקראת הדיון הקרוב: הצדדים, מה נטען, מה כבר הוכרע בהחלטות ביניים, ומה פתוח להכרעה. עד עמוד אחד.",
     source: "shared", author: "עמית מזרחי", authorRole: "כב׳", stage: "לפני דיון",
-    tags: ["סיכום"], uses: 421, ratingSum: 1180, ratingCount: 249, edited: "03/02/2025",
+    tags: [], uses: 421, ratingSum: 1180, ratingCount: 249, edited: "03/02/2025",
   }),
   p({
     name: "איתור מסמכים שלא הוגשו במועד",
     body: "עבור על מסמכי התיק ואתר מסמכים שהוגשו לאחר המועד שנקבע בהחלטה. ציין לכל מסמך: מי הגיש, מתי, מה היה המועד, והאם התבקשה הארכה.",
     source: "shared", author: "אנונימי",
-    tags: ["איתור"], uses: 54, ratingSum: 108, ratingCount: 26, edited: "28/01/2025",
+    tags: ["הארכת מועד"], uses: 54, ratingSum: 108, ratingCount: 26, edited: "28/01/2025",
   }),
   p({
     name: "סיכום חוות דעת — הגרסה שלי",
     body: "סכם את חוות הדעת הרפואית שצורפה בטבלה בת שלוש עמודות: ממצא, ההנמקה של המומחה, וההפניה לעמוד. בסוף הוסף שורה אחת: מה הכי שנוי במחלוקת בין המומחים.",
     source: "mine", fav: true, basedOn: "סיכום חוות דעת רפואית",
-    caseType: "אזרחי", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
-    tags: ["סיכום"], uses: 31, ratingSum: 0, ratingCount: 0, edited: "24/02/2025",
+    caseType: "נזקי גוף", matter: "רשלנות רפואית", stage: "הוכחות", court: "מחוזי",
+    tags: ["מומחים"], uses: 31, ratingSum: 0, ratingCount: 0, edited: "24/02/2025",
   }),
   p({
     name: "מכתב תזכורת לצדדים",
     body: "נסח הודעה לצדדים לקראת הדיון ביום [תאריך הדיון]: תזכורת להגשת רשימת עדים שבעה ימים מראש, ואזהרה לגבי אי-התייצבות. נוסח קצר ופורמלי.",
     // written by me but not starred — "שלי" and "מועדף" are two different things
     source: "mine", fav: false, stage: "לפני דיון",
-    tags: ["ניסוח"], uses: 12, ratingSum: 0, ratingCount: 0, edited: "20/02/2025",
+    tags: [], uses: 12, ratingSum: 0, ratingCount: 0, edited: "20/02/2025",
   }),
 ];
 
@@ -323,8 +367,10 @@ export function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) 
   );
 }
 
-export function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false, counts }: {
+export function Dropdown({ label, value, options, onChange, isDark, width = 132, noAny = false, counts, disabledHint }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void; isDark: boolean; width?: number;
+  // set = the field can't be opened yet, and this says why (on hover)
+  disabledHint?: string;
   // noAny: a form field always has a value (כללי is one), so it gets no "הכל" row —
   // that row only makes sense for a filter, where nothing chosen means everything.
   noAny?: boolean;
@@ -334,7 +380,7 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
 }) {
   // The menu is positioned fixed, anchored to the button: inside a scrolling dialog an
   // absolutely-positioned list gets clipped by the scroll container and loses its last rows.
-  const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const open = at !== null;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -353,12 +399,16 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
     <div ref={ref} className="relative" style={{ width }}>
       <button
         onClick={(e) => {
+          if (disabledHint) return;
           const r = e.currentTarget.getBoundingClientRect();
-          setAt(open ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+          // near the bottom of the screen the menu opens upward instead of running off it
+          const up = window.innerHeight - r.bottom < 336 && r.top > window.innerHeight - r.bottom;
+          setAt(open ? null : up ? { bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right } : { top: r.bottom + 4, right: window.innerWidth - r.right });
         }}
-        className="w-full h-8 flex items-center gap-1 px-2.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
-        style={{ border: `1px solid ${set ? c.primary : line}`, color: set ? c.primary : txt, backgroundColor: isDark ? dk.input : "white" }}
-        title={label}
+        className={`w-full h-8 flex items-center gap-1 px-2.5 rounded-[4px] text-[13px] transition-colors ${disabledHint ? "cursor-default" : "hover:bg-black/[0.03]"}`}
+        style={{ border: `1px solid ${set ? c.primary : line}`, color: set ? c.primary : txt, backgroundColor: isDark ? dk.input : "white", opacity: disabledHint ? 0.45 : 1 }}
+        title={disabledHint ?? label}
+        aria-disabled={!!disabledHint}
       >
         <span className="flex-1 min-w-0 text-right truncate">{noAny || set ? value : label}</span>
         <ChevronDown size={12} style={{ transition: "transform .15s", transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }} />
@@ -366,7 +416,7 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
       {at && (
         <div
           className="rounded-md shadow-lg overflow-hidden max-h-[280px] overflow-y-auto"
-          style={{ position: "fixed", top: at.top, right: at.right, zIndex: 90, minWidth: width, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
+          style={{ position: "fixed", top: at.top, bottom: at.bottom, right: at.right, zIndex: 90, minWidth: width, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
         >
           {(noAny ? options : [ANY, ...options]).map((o) => (
             <button
@@ -390,12 +440,23 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
 
 // A filter that takes several values at once — e.g. נזיקין together with כללי, which fits every
 // case type. Nothing ticked means everything; the menu stays open while ticking.
-export function MultiDropdown({ label, value, options, onChange, isDark, width = 132, counts }: {
+export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable }: {
   label: string; value: string[]; options: string[]; onChange: (v: string[]) => void; isDark: boolean; width?: number;
   counts?: Record<string, number>;
+  // optional headings: the options shown under each, in order (e.g. a case type's תחומים)
+  groups?: { title: string; options: string[] }[];
+  disabledHint?: string;
+  // a picker (the editor's tags) keeps its label and has no "all" row: what's picked shows as chips beside it
+  picker?: boolean;
+  // long lists (תחום, תגית) get a search field at the top of the menu
+  searchable?: boolean;
 }) {
-  const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const open = at !== null;
+  const [q, setQ] = useState("");
+  const shownGroups = (groups ?? [{ title: "", options }])
+    .map((g) => ({ ...g, options: q.trim() ? g.options.filter((o) => o.includes(q.trim())) : g.options }))
+    .filter((g) => g.options.length > 0);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -425,22 +486,42 @@ export function MultiDropdown({ label, value, options, onChange, isDark, width =
     <div ref={ref} className="relative" style={{ width }}>
       <button
         onClick={(e) => {
+          if (disabledHint) return;
+          setQ("");
           const r = e.currentTarget.getBoundingClientRect();
-          setAt(open ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+          // near the bottom of the screen the menu opens upward instead of running off it
+          const up = window.innerHeight - r.bottom < 336 && r.top > window.innerHeight - r.bottom;
+          setAt(open ? null : up ? { bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right } : { top: r.bottom + 4, right: window.innerWidth - r.right });
         }}
-        className="w-full h-8 flex items-center gap-1 px-2.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
-        style={{ border: `1px solid ${set ? c.primary : line}`, color: set ? c.primary : txt, backgroundColor: isDark ? dk.input : "white" }}
-        title={set ? `${label}: ${value.join(", ")}` : label}
+        className={`w-full h-8 flex items-center gap-1 px-2.5 rounded-[4px] text-[13px] transition-colors ${disabledHint ? "cursor-default" : "hover:bg-black/[0.03]"}`}
+        style={{ border: `1px solid ${set ? c.primary : line}`, color: set ? c.primary : txt, backgroundColor: isDark ? dk.input : "white", opacity: disabledHint ? 0.45 : 1 }}
+        title={disabledHint ?? (set ? `${label}: ${value.join(", ")}` : label)}
+        aria-disabled={!!disabledHint}
       >
-        <span className="flex-1 min-w-0 text-right truncate">{set ? value.join(", ") : label}</span>
+        <span className="flex-1 min-w-0 text-right truncate">{set && !picker ? value.join(", ") : label}</span>
         <ChevronDown size={12} style={{ transition: "transform .15s", transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }} />
       </button>
       {at && (
         <div
           ref={menuRef}
           className="rounded-md shadow-lg overflow-hidden max-h-[320px] overflow-y-auto py-1"
-          style={{ position: "fixed", top: at.top, right: at.right, zIndex: 90, minWidth: Math.max(width, 160), backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
+          style={{ position: "fixed", top: at.top, bottom: at.bottom, right: at.right, zIndex: 90, minWidth: Math.max(width, 160), width: searchable ? 248 : undefined, backgroundColor: isDark ? dk.surface : "white", border: `1px solid ${line}` }}
         >
+          {searchable && (
+            <div className="px-2 pb-1 pt-0.5 sticky top-0" style={{ backgroundColor: isDark ? dk.surface : "white" }}>
+              <div className="flex items-center gap-1.5 h-8 px-2 rounded-[4px]" style={{ border: `1px solid ${line}` }}>
+                <Search size={14} style={{ color: isDark ? dk.textMuted : c.textLight, flexShrink: 0 }} />
+                <input
+                  value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש" autoFocus
+                  className="flex-1 min-w-0 bg-transparent outline-none text-[13px]" style={{ color: txt }}
+                />
+              </div>
+            </div>
+          )}
+          {q.trim() && shownGroups.length === 0 && (
+            <div className="px-3 py-2 text-[13px]" style={{ color: isDark ? dk.textMuted : c.textLight }}>לא נמצאו תוצאות</div>
+          )}
+          {!picker && !q.trim() && (
           <button
             onClick={() => onChange([])}
             className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-right hover:bg-black/5 transition-colors"
@@ -452,9 +533,13 @@ export function MultiDropdown({ label, value, options, onChange, isDark, width =
               {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[ANY] ?? 0})</span>}
             </span>
           </button>
-          {options.map((o) => (
+          )}
+          {shownGroups.map((g) => (
+            <div key={g.title || "all"}>
+              {g.title && <div className="px-3 pt-2 pb-1 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray }}>{g.title}</div>}
+              {g.options.map((o) => (
             <button
-              key={o}
+              key={`${g.title}/${o}`}
               onClick={() => toggle(o)}
               className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-right hover:bg-black/5 transition-colors"
               style={{ color: txt }}
@@ -465,6 +550,8 @@ export function MultiDropdown({ label, value, options, onChange, isDark, width =
                 {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}
               </span>
             </button>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -1121,6 +1208,21 @@ export function PromptEditor({
   // general is a little noise that shows itself and gets corrected. So: כללי until stated.
   const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
+  // tags are picked by hand from the case type's list (plus the general ones), or typed in
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [newTag, setNewTag] = useState("");
+  const addTag = () => {
+    const t = newTag.trim();
+    if (t && !tags.includes(t)) setTags([...tags, t]);
+    setNewTag("");
+  };
+  // a תחום or a tag belongs to its case type, so changing the case type lets go of the old one's
+  const pickCaseType = (v: string) => {
+    if (v === caseType) return;
+    setCaseType(v);
+    setMatter(GENERAL);
+    setTags((prev) => prev.filter((t) => tagsOf(v).includes(t) || !ALL_LISTED_TAGS.has(t)));
+  };
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
   const [court, setCourt] = useState(initial?.court ?? GENERAL);
   const [attempted, setAttempted] = useState(false);
@@ -1139,7 +1241,7 @@ export function PromptEditor({
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
   // Nothing to save or cancel until something changes; the X still closes. A question brought from
   // the chat is there to be saved, so its buttons are live from the start.
-  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes });
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes, tags });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
@@ -1189,19 +1291,6 @@ export function PromptEditor({
     : mode === "fromMessage" ? "שמירת השאלה כפרומפט"
     : "פרומפט חדש";
 
-  // Tags are assigned automatically from the wording, so the user is never asked to tag.
-  const tags = useMemo(() => {
-    const t = new Set<string>(initial?.tags ?? []);
-    const s = `${name} ${text}`;
-    if (/הגה|כתיב|תחביר|לשונ/.test(s)) t.add("הגהה");
-    if (/נסח|ניסוח|טיוט(?!ה)|מכתב|הודעה/.test(s)) t.add("ניסוח");
-    if (/סכם|סיכום|תמצית/.test(s)) t.add("סיכום");
-    if (/השווה|השוואה|סתיר|פער/.test(s)) t.add("השוואה");
-    if (/בדוק|בדיקה|טיוטה/.test(s)) t.add("בדיקת טיוטה");
-    if (/אתר|איתור|רשימה|מצא/.test(s)) t.add("איתור");
-    if (/פסיק|חקיק|סעיף|חוק/.test(s)) t.add("חקיקה ופסיקה");
-    return [...t];
-  }, [name, text, initial?.tags]);
 
   const fields = fieldsOf(text);
   const nameMissing = attempted && !name.trim();
@@ -1367,12 +1456,6 @@ export function PromptEditor({
               {fields.includes(EXAMPLE_FIELD) && <span>· [{EXAMPLE_FIELD}] נבחרת מתוך פאנל הדוגמאות</span>}
             </div>
           )}
-          {tags.length > 0 && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap text-[12.5px]" style={{ color: subCol }}>
-              <span>תגיות שזוהו:</span>
-              {tags.map((t) => <Tag key={t} t={t} isDark={isDark} />)}
-            </div>
-          )}
 
           {/* Optional, and "כללי" means it fits every case — which is why it's the default. */}
           <div className="text-[12.5px] mt-3 mb-1.5" style={{ color: subCol }}>
@@ -1381,16 +1464,53 @@ export function PromptEditor({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-              { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
+              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
-                <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
+                <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
+                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
               </div>
             ))}
           </div>
+
+          {/* Tags are picked by the user (no longer guessed from the wording): the case type's list
+              plus the general ones, and anything else can be typed in. */}
+          <div className="text-[12px] mt-3 mb-1" style={{ color: subCol }}>תגיות</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <MultiDropdown
+              label="בחירה מהרשימה" value={tags.filter((t) => tagsOf(caseType).includes(t))} options={tagsOf(caseType)}
+              groups={[{ title: caseType, options: TAGS_BY[caseType] ?? [] }, { title: "כללי", options: GENERAL_TAGS }].filter((g) => g.options.length > 0)}
+              onChange={(v) => setTags([...v, ...tags.filter((t) => !tagsOf(caseType).includes(t))])}
+              isDark={isDark} width={140} picker disabledHint={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
+            />
+            <input
+              value={newTag} onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+              placeholder="הוספת תגית חופשית"
+              disabled={caseType === GENERAL} title={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
+              className="h-8 w-[140px] px-2.5 text-[13px] outline-none rounded-[4px]"
+              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, opacity: caseType === GENERAL ? 0.45 : 1 }}
+            />
+            {newTag.trim() && (
+              <button onClick={addTag} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5" style={{ color: c.primary }}>הוספה</button>
+            )}
+          </div>
+          {tags.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {tags.map((t) => (
+                <span key={t} className="flex items-center gap-1 ps-2 pe-1 h-[24px] rounded-[3px] text-[12.5px]"
+                  style={{ backgroundColor: isDark ? "#243354" : "#f0f3f9", color: isDark ? dk.text : c.textGray }}>
+                  {t}
+                  <button onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`הסרת ${t}`} className="p-0.5 rounded hover:bg-black/10">
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {mode === "new" && (
             <button onClick={() => setFavNew((v) => !v)} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
@@ -1551,6 +1671,7 @@ export function PromptShare({
   });
   const [caseType, setCaseType] = useState(initial.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial.matter ?? GENERAL);
+  const pickCaseType = (v: string) => { if (v !== caseType) { setCaseType(v); setMatter(GENERAL); } };
   const [stage, setStage] = useState(initial.stage ?? GENERAL);
   const [court, setCourt] = useState(initial.court ?? GENERAL);
   const [anon, setAnon] = useState(false);
@@ -1652,13 +1773,14 @@ export function PromptShare({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-              { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
+              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
-                <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
+                <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
+                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
               </div>
             ))}
           </div>
