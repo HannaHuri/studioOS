@@ -422,7 +422,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
             </div>
 
             {!folded && <>
-            <div className="text-[13px] mb-1" style={{ color: textCol }}>מה לעשות</div>
+            <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות</div>
             <textarea
               value={p.task}
               onChange={(e) => setPart(i, { task: e.target.value })}
@@ -449,7 +449,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
             })()}
 
             <div className="flex items-center justify-between mt-3 mb-1">
-              <span className="text-[13px]" style={{ color: textCol }}>איך <span style={{ color: subCol }}>(לא חובה)</span></span>
+              <span className="text-[13px]" style={{ color: textCol }}>תבנית <span style={{ color: subCol }}>(לא חובה)</span></span>
               <HowUpload
                 isDark={isDark}
                 more={!!p.howDocs?.length}
@@ -600,6 +600,6 @@ export const sourcesText = (p: PromptPart) => {
 export const partsToText = (parts: PromptPart[], guidelines?: string) =>
   (guidelines?.trim() ? `הנחיות כלליות: ${guidelines.trim()}\n\n` : "") +
   parts.map((p, i) =>
-    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nאיך: ${p.how}` : ""}` +
+    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nתבנית: ${p.how}` : ""}` +
     (p.howDocs?.length ? `\nדוגמה: ${p.howDocs.map((d) => d.name + pagesText(d)).join(", ")}` : ""),
   ).join("\n\n");

@@ -406,7 +406,7 @@ export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDar
 // offers. The author rides along with it — "משותף" without a name says less than it could.
 export const sourceLabel = (pr: Prompt) =>
   pr.source === "system" ? "מערכת"
-  : pr.source === "mine" ? "שלי"
+  : pr.source === "mine" ? "אני"
   : `משותף · ${authorFull(pr)}`;
 
 export function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
@@ -859,8 +859,8 @@ export type Filters = {
 };
 export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
-export const SOURCE_OPTS = ["שלי", "מערכת", "משותף"];
-export const SOURCE_RANK: Record<string, number> = { "שלי": 0, "מערכת": 1, "משותף": 2 };
+export const SOURCE_OPTS = ["אני", "מערכת", "משותף"];
+export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "משותף": 2 };
 const FILTER_KEY = "mishpat.prompts.filters";
 // The table scrolls and its scrollbar (8px, see globals.css) eats into the row's right edge.
 // The rows above it don't scroll, so they reserve the same strip — otherwise the search field
@@ -890,7 +890,7 @@ const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
-export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "שלי");
+export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "אני");
 
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
@@ -1440,7 +1440,7 @@ export function PromptEditor({
                     className="absolute z-50 top-[calc(100%+6px)] right-0 rounded px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ backgroundColor: c.text, color: "white" }}
                   >
-                    מה לעשות, על אילו מסמכים ואיך, ואפשר כמה חלקים שרצים לפי הסדר
+                    הנחיות, על אילו מסמכים ובאיזו תבנית, ואפשר כמה חלקים שרצים לפי הסדר
                   </span>
                 )}
                 </span>
@@ -1564,17 +1564,28 @@ export function PromptEditor({
               onChange={(v) => setTags([...v, ...tags.filter((t) => !tagsOf(caseType).includes(t))])}
               isDark={isDark} width={140} picker disabledHint={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
             />
-            <input
-              value={newTag} onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-              placeholder="הוספת תגית חופשית"
-              disabled={caseType === GENERAL} title={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
-              className="h-8 w-[140px] px-2.5 text-[13px] outline-none rounded-[4px]"
-              style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, opacity: caseType === GENERAL ? 0.45 : 1 }}
-            />
-            {newTag.trim() && (
-              <button onClick={addTag} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5" style={{ color: c.primary }}>הוספה</button>
-            )}
+            {/* a text field with its add button inside, so it reads as a place to type, not as a button */}
+            <div
+              className="h-8 w-[180px] flex items-center rounded-[4px] ps-2.5 pe-1"
+              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white", opacity: caseType === GENERAL ? 0.45 : 1 }}
+              title={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
+            >
+              <input
+                value={newTag} onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                placeholder="הקלדת תגית חופשית"
+                disabled={caseType === GENERAL}
+                className="flex-1 min-w-0 h-full bg-transparent text-[13px] outline-none"
+                style={{ color: textCol }}
+              />
+              <button
+                onClick={addTag} disabled={!newTag.trim()} aria-label="הוספת התגית" title="הוספת התגית"
+                className="flex-none size-6 flex items-center justify-center rounded-[3px] hover:bg-black/5 disabled:hover:bg-transparent disabled:cursor-default"
+                style={{ color: newTag.trim() ? c.primary : subCol }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
           {tags.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -1685,10 +1696,10 @@ export function PromptEditor({
               isDark={isDark}
               title={pendingKind === "detailed" ? "לעבור לפרומפט מפורט?" : "לחזור לפרומפט בסיסי?"}
               note={pendingKind === "detailed"
-                ? "מה שכתבת יעבור לשדה \"מה לעשות\" בחלק הראשון."
+                ? "מה שכתבת יעבור לשדה \"הנחיות\" בחלק הראשון."
                 : partsLose
-                  ? "רק \"מה לעשות\" של כל חלק יישאר, כנוסח הפרומפט. המקורות, ה\"איך\" והחלוקה לחלקים יימחקו."
-                  : "מה שכתבת ב\"מה לעשות\" יהפוך לנוסח הפרומפט."}
+                  ? "רק ההנחיות של כל חלק יישארו, כנוסח הפרומפט. המקורות, התבנית והחלוקה לחלקים יימחקו."
+                  : "מה שכתבת ב\"הנחיות\" יהפוך לנוסח הפרומפט."}
               confirmLabel="מעבר"
               safe={pendingKind === "detailed" || !partsLose}
               onConfirm={pendingKind === "detailed" ? toDetailed : toBasic}
