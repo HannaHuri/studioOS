@@ -145,9 +145,10 @@ export function PromptTablePanel({
     saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } });
   };
   const resetCols = () => {
-    setM((prev) => ({ ...prev, court: [], stage: [], tag: [] })); // their columns go back to hidden
+    setM((prev) => ({ ...prev, court: [], stage: [] })); // their columns go back to hidden
     setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
-    try { window.localStorage.removeItem(COLS_LS_KEY); } catch { /* ignore */ }
+    setColW({}); // dragged widths too
+    try { window.localStorage.removeItem(COLS_LS_KEY); window.localStorage.removeItem(COLW_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
   };
 
