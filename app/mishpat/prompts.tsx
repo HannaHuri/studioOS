@@ -161,7 +161,7 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "בדיקת טיוטת פסק דין",
     body: "עבור על טיוטת פסק הדין ובדוק: האם כל טענה מרכזית של הצדדים נדונה, האם כל קביעה עובדתית נסמכת על ראיה שהוצגה, והאם ההכרעה האופרטיבית עקבית עם ההנמקה. חייבים לציין במפורש האם התביעה נדחית או מתקבלת.",
-    source: "system", stage: "פס״ד",
+    fav: true, source: "system", stage: "פס״ד",
     tags: [], uses: 907, ratingSum: 2371, ratingCount: 502, edited: "05/01/2025",
   }),
   p({
@@ -256,7 +256,7 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "סיכום תסקיר סעד",
     body: "סכם את תסקיר פקידת הסעד: המלצות לגבי זמני השהות והמשמורת, הנימוקים, ועמדת כל אחד מההורים. ציין במפורש היכן ההמלצות שונות מבקשות הצדדים.",
-    source: "shared", author: "דנה כהן", authorRole: "כב׳", caseType: "משפחה", matter: "משמורת", court: "שלום",
+    fav: true, source: "shared", author: "דנה כהן", authorRole: "כב׳", caseType: "משפחה", matter: "משמורת", court: "שלום",
     tags: ["זמני שהות", "אחריות הורית"], uses: 0, ratingSum: 562, ratingCount: 124, edited: "16/02/2025",
     userNotes: "כדאי להעלות את התסקיר האחרון בלבד. אם יש כמה תסקירים, להריץ על כל אחד בנפרד.",
   }),
@@ -288,7 +288,7 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "תביעה לפינוי מושכר",
     body: "בדוק את עילת הפינוי הנטענת: תנאי הסכם השכירות, ההפרה, מועד ההתראה, והאם ניתנה לשוכר הזדמנות לתקן. הצג את טענות ההגנה של [השוכר] מול כל רכיב.",
-    source: "system", caseType: "מקרקעין", matter: "פינוי מושכר", court: "שלום",
+    fav: true, source: "system", caseType: "מקרקעין", matter: "פינוי מושכר", court: "שלום",
     tags: ["שכירות", "פינוי"], uses: 0, ratingSum: 622, ratingCount: 141, edited: "02/02/2025",
   }),
   p({
