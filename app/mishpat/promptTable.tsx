@@ -59,7 +59,8 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
       for (const k of M_KEYS) {
         // a filter whose column is hidden doesn't apply, so it isn't restored either
         const col: ColKey = k === "tag" ? "tags" : k;
-        if (Array.isArray(raw[k]) && shown[col]) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string");
+        if (Array.isArray(raw[k]) && shown[col]) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string")
+          .map((v: string) => (k === "source" && v === "שלי" ? "אני" : v)); // "שלי" was renamed "אני"
       }
       return out;
     }
