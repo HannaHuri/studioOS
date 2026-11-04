@@ -14,7 +14,7 @@ import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PartsEditor, emptyPart, type PartsEditorHandle, partsToText, scopeOf, partIncomplete, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import {
-  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, MATTERS, STAGES, fieldsOf, findIdentifiers, scrub, today, uid, type Prompt,
+  CASE_CONTEXT, CASE_TYPES, COURTS, Dropdown, GENERAL, mattersOf, STAGES, fieldsOf, findIdentifiers, scrub, today, uid, type Prompt,
 } from "./prompts";
 
 function CheckRow({ on, onToggle, label, isDark }: { on: boolean; onToggle: () => void; label: string; isDark: boolean }) {
@@ -115,6 +115,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
   const [court, setCourt] = useState(CASE_CONTEXT.court);
   const [caseType, setCaseType] = useState(CASE_CONTEXT.caseType);
   const [matter, setMatter] = useState(CASE_CONTEXT.matter);
+  const pickCaseType = (v: string) => { if (v !== caseType) { setCaseType(v); setMatter(GENERAL); } };
   const [stage, setStage] = useState(CASE_CONTEXT.stage);
 
   const surface = isDark ? dk.surface : "white";
@@ -204,13 +205,14 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
                   <div className="flex items-start gap-2 flex-wrap">
                     {([
                       { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-                      { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: setCaseType, w: 140 },
-                      { t: "תחום", v: matter, o: MATTERS, set: setMatter, w: 150 },
+                      { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+                      { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
                       { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
                     ] as const).map(({ t, v, o, set, w }) => (
                       <div key={t}>
                         <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
-                        <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny />
+                        <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
+                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
                       </div>
                     ))}
                   </div>

@@ -17,7 +17,7 @@ import { c, dk, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
 import {
-  ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS, STAGES, COURTS, TAGS, fitsCase,
+  ANY, GENERAL, CASE_CONTEXT, CASE_TYPES, MATTERS_BY, TAGS_BY, GENERAL_TAGS, ALL_LISTED_TAGS, STAGES, COURTS, fitsCase,
   MultiDropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
   saved, mine, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
@@ -157,7 +157,30 @@ export function PromptTablePanel({
     try { window.localStorage.setItem(FILTERS_LS_KEY, JSON.stringify(v)); } catch { /* ignore */ }
     return v;
   });
-  const setMulti = (k: MKey, v: string[]) => setM((prev) => ({ ...prev, [k]: v }));
+  // תחום and תגית are open from the start, with everything grouped under its case type (and a search in
+  // the menu); picking case types narrows them to those types, and removing a type lets go of its values
+  const sub = (cts: string[]) => {
+    const chosen = cts.filter((t) => t !== GENERAL);
+    const picked = chosen.length ? chosen : CASE_TYPES.filter((t) => t !== GENERAL);
+    const free = [...new Set(prompts.filter((pr) => !chosen.length || chosen.includes(pr.caseType)).flatMap((pr) => pr.tags))]
+      .filter((t) => !ALL_LISTED_TAGS.has(t)).sort((a, b) => a.localeCompare(b, "he"));
+    const matterGroups = picked.length > 1
+      ? [{ title: "", options: [GENERAL] }, ...picked.map((ct) => ({ title: ct, options: MATTERS_BY[ct] ?? [] })).filter((g) => g.options.length > 0)]
+      : [{ title: "", options: [GENERAL, ...(MATTERS_BY[picked[0]] ?? [])] }];
+    const tagGroups = [
+      ...picked.map((ct) => ({ title: ct, options: TAGS_BY[ct] ?? [] })),
+      { title: "כללי", options: GENERAL_TAGS },
+      { title: "תגיות נוספות", options: free },
+    ].filter((g) => g.options.length > 0);
+    const flat = (gs: { options: string[] }[]) => [...new Set(gs.flatMap((g) => g.options))];
+    return { matterGroups, tagGroups, matters: flat(matterGroups), tags: flat(tagGroups) };
+  };
+  const setMulti = (k: MKey, v: string[]) => setM((prev) => {
+    if (k !== "caseType") return { ...prev, [k]: v };
+    const s2 = sub(v);
+    return { ...prev, caseType: v, matter: prev.matter.filter((x) => s2.matters.includes(x)), tag: prev.tag.filter((x) => s2.tags.includes(x)) };
+  });
+  const subs = sub(m.caseType);
   const filtered = f.q !== "" || f.favOnly || M_KEYS.some((k) => m[k].length > 0);
   const clearFilters = () => { setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir })); setM(EMPTY_MULTI); };
   const sortBy = (key: SortKey) =>
@@ -204,10 +227,10 @@ export function PromptTablePanel({
     return {
       source: tally("source", SOURCE_OPTS),
       caseType: tally("caseType", CASE_TYPES),
-      matter: tally("matter", MATTERS),
+      matter: tally("matter", subs.matters),
       stage: tally("stage", STAGES),
       court: tally("court", COURTS),
-      tag: tally("tag", TAGS),
+      tag: tally("tag", subs.tags),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompts, f, m, caseOnly]);
@@ -377,10 +400,10 @@ export function PromptTablePanel({
           </button>
           {/* a column's filter shows only while the column does */}
           {colState.shown.source && <MultiDropdown label="מקור" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
-          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={TAGS} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} />}
+          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable />}
           {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
           {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={MATTERS} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} />}
+          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
           {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
