@@ -1074,7 +1074,7 @@ export function PromptLibrary({
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />
             </div>
-            <Dropdown label="מקור" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
+            <Dropdown label="מחבר" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
             <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
             <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
@@ -1104,8 +1104,8 @@ export function PromptLibrary({
                 <Bookmark size={14} fill={f.favOnly ? subtle(isDark) : "none"} style={{ color: subtle(isDark) }} />
               </button>
               {th("name", "שם הפרומפט")}
-              {th("source", "מקור", "center")}
-              {th("author", "מחבר")}
+              {th("source", "מחבר", "center")}
+              {th("author", "שם המחבר")}
               {th("court", "ערכאה")}
               {th("caseType", "סוג תיק")}
               {th("matter", "תחום")}
