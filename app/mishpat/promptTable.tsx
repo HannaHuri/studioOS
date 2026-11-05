@@ -14,7 +14,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
-import { UseExampleIcon } from "./icons";
 import { Tick } from "./proofread";
 import {
   ANY, GENERAL, CASE_TYPES, MATTERS_BY, TAGS_BY, GENERAL_TAGS, ALL_LISTED_TAGS, STAGES, COURTS,
@@ -280,11 +279,11 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", tags: "64px", caseType: "68px", matter: "96px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", tags: "96px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
-  const cols = ["20px", "30px", `minmax(${nameMin}px,1fr)`, ...shownCols.map(track), "34px", "32px"].join(" ");
+  const cols = ["20px", "30px", `minmax(${nameMin}px,1fr)`, ...shownCols.map(track), "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
@@ -479,7 +478,6 @@ export function PromptTablePanel({
               </div>
             ))}
             {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
-            <div className="sticky z-[1]" style={{ left: "32px", backgroundColor: surface }} />
             <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
 
@@ -494,7 +492,8 @@ export function PromptTablePanel({
             return (
               <div
                 key={pr.id}
-                onClick={() => onOpen(pr)}
+                onClick={() => onUse(pr)}
+                title="לחיצה מכניסה את הפרומפט לצ'אט"
                 className="group relative grid items-center cursor-pointer transition-colors"
                 style={{ gridTemplateColumns: cols, minHeight: "60px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "#f7f9fc"; }}
@@ -522,21 +521,9 @@ export function PromptTablePanel({
 
                 {shownCols.map((k) => cell(k, pr))}
 
-                {/* Using a prompt stays one click: it doesn't need the editor open first */}
-                {/* no z-index on these sticky cells: one would trap the row menu (position: fixed) under the panel's edge handle */}
-                <div className="self-stretch sticky flex items-center justify-center" style={{ left: "32px", backgroundColor: "inherit" }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onUse(pr); }}
-                    className="size-7 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/5 transition-opacity"
-                    style={{ color: c.primary }}
-                    title="שימוש בפרומפט"
-                  >
-                    <UseExampleIcon size={16} />
-                  </button>
-                </div>
-
+                {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
-                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav)} />
+                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen)} />
                 </div>
               </div>
             );
