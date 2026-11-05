@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bookmark, Check, ChevronDown, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
+  Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
   Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -714,7 +714,7 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
           would cover the part of the menu that opens past the panel */}
       {at && createPortal(
         <div
-          dir="rtl" ref={ref}
+          dir="rtl" ref={ref} onClick={(e) => e.stopPropagation()}
           className="rounded-md overflow-hidden shadow-lg"
           style={{
             position: "fixed", top: at.top, right: at.right, left: at.left, zIndex: 80, minWidth: `${MENU_W}px`,
@@ -914,7 +914,9 @@ export const menuFor = (
   pr: Prompt,
   onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
   onFav: (id: string) => void,
+  onOpen?: (p: Prompt) => void, // the table's row click uses the prompt, so viewing it moves here
 ) => [
+  ...(onOpen ? [{ label: "צפייה בפרומפט", Icon: Eye, act: () => onOpen(pr) }] : []),
   { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
   // The bookmark is the quick gesture; this is where the action is named. A mark that only
   // appears on hover can't teach anyone that it exists.
