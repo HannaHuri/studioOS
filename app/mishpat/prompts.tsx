@@ -1745,7 +1745,8 @@ export function PromptEditor({
     // The fields scroll and the buttons stay put, so ביטול and שמירה are always in reach.
     return (
       <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll">{form}</div>
+        {/* ltr outside, rtl inside: the scrollbar sits on the right, by where the reading starts (Hanna, 2026-11-08) */}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
         {footer}
       </div>
     );
@@ -1758,7 +1759,7 @@ export function PromptEditor({
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{ width: "min(760px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
-        {form}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
         {footer}
       </div>
     </div>
@@ -1847,7 +1848,7 @@ export function PromptShare({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-2">
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl" className="px-6 pb-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -1932,7 +1933,7 @@ export function PromptShare({
             className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-2"
             style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
           />
-        </div>
+        </div></div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
           {fromChat && (
