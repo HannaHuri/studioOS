@@ -763,7 +763,7 @@ export function FavMark({ on, onToggle, isDark, quiet, small, faint }: { on: boo
 
 // ── Row menu (⋮) — fixed position so it isn't clipped by a scroll container ──
 const MENU_W = 176;
-export function RowMenu({ items, isDark }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean }) {
+export function RowMenu({ items, isDark, openAt }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean; openAt?: { x: number; y: number; n: number } | null }) {
   // opens leftward from the button; a button too near the window's left edge (the full-width
   // table) opens it rightward instead, so it isn't cut off
   const [at, setAt] = useState<{ top: number; right?: number; left?: number } | null>(null);
@@ -782,6 +782,15 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
     window.addEventListener("resize", close as unknown as EventListener);
     return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", close as unknown as EventListener); };
   }, [at]);
+  // a right-click on the row opens the same menu at the pointer (Hanna, 2026-11-08: in the wide table
+  // the ⋯ is far from where the eye is); it opens leftward, and up or rightward near the window's edges
+  useEffect(() => {
+    if (!openAt) return;
+    const h = items.length * 41 + 2;
+    const top = Math.max(8, Math.min(openAt.y, window.innerHeight - h - 8));
+    setAt(openAt.x - MENU_W < 8 ? { top, left: openAt.x } : { top, right: window.innerWidth - openAt.x });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAt?.n]);
   const line = isDark ? dk.border : "#eef2f7";
   return (
     <>

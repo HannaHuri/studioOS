@@ -345,6 +345,7 @@ export function PromptTablePanel({
   // with the content column on, the name keeps its own width and the content takes the spare room,
   // so it starts right after the name instead of across a white gap (Hanna, 2026-11-08)
   const hasContent = shownCols.includes("content");
+  const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number; n: number } | null>(null);
   const flexCol = (k: ColKey) => (k === "content" && !colW[k] ? `minmax(${track(k)},4fr)` : flex(k));
   const nameTrack = hasContent ? `${nameW}px` : `minmax(${nameW}px,3fr)`;
   const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), `${ICON_COL}px`, "32px"].join(" ");
@@ -560,6 +561,7 @@ export function PromptTablePanel({
               <div
                 key={pr.id}
                 onClick={() => onUse(pr)}
+                onContextMenu={(e) => { e.preventDefault(); setCtxMenu((v) => ({ id: pr.id, x: e.clientX, y: e.clientY, n: (v?.n ?? 0) + 1 })); }}
                 title="לחיצה מכניסה את הפרומפט לצ'אט"
                 className="group relative grid items-center cursor-pointer transition-colors"
                 style={{ gridTemplateColumns: cols, minHeight: "44px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
@@ -588,7 +590,7 @@ export function PromptTablePanel({
                 </div>
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
-                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} />
+                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} openAt={ctxMenu?.id === pr.id ? ctxMenu : null} />
                 </div>
               </div>
             );
