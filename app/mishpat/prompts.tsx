@@ -16,11 +16,11 @@
    out of the model rather than needing a rule.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, ShieldCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
+  Bookmark, Check, ChevronDown, Eye, Pin, PinOff, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
+  Star, Trash2, User, Users, X, Copy, BadgeCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -49,6 +49,7 @@ export type Prompt = {
   parts?: PromptPart[];    // set = a פרומפט מורכב; body then holds the parts as text
   guidelines?: string;     // a detailed prompt's general instructions, for all its parts
   userNotes?: string;      // a shared prompt's notes for the people who use it — shown, never sent to the chat
+  pinned?: number;         // my pin: when it was pinned. Pinned rows head the table, the last pinned first
 };
 
 // The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
@@ -68,12 +69,13 @@ export const ANY = "הכל";
 export const GENERAL = "כללי";
 
 // ── Classification (lists from Hanna, 2026-11-03/04) ─────────────────────
-// סוג תיק is the main topic; each has its own תחומים and its own תגיות. A תחום or a tag only
-// means something under its case type, so both lists open once a case type is chosen.
+// The labels on screen (2026-11-08): the case type (caseType) reads "תחום" and its sub-topics (matter)
+// read "תת תחום". A sub-topic only means something under its תחום, so its list opens once one is chosen.
+// Tags were dropped.
 const he = (a: string, b: string) => a.localeCompare(b, "he");
 const sortHe = (xs: string[]) => [...xs].sort(he);
 const MATTERS_RAW: Record<string, string[]> = {
-  "אזרחי": ["לשון הרע", "הגנת הפרטיות", "הוצאה לפועל", "שטרות", "מתן חשבונות", "חוזים", "הטרדה מאיימת", "קניין רוחני", "רכב", "ביטוח", "מטרד", "נזיקין", "בוררות", "אכיפת פסק חוץ"],
+  "אזרחי": ["כספי", "לשון הרע", "הגנת הפרטיות", "הוצאה לפועל", "שטרות", "מתן חשבונות", "חוזים", "הטרדה מאיימת", "קניין רוחני", "רכב", "ביטוח", "מטרד", "נזיקין", "בוררות", "אכיפת פסק חוץ"],
   "מקרקעין": ["פינוי מושכר", "זכויות במקרקעין", "ליקויי בניה", "איחור במסירה", "פירוק שיתוף", "סילוק יד", "בתים משותפים", "הגנת הדייר", "הפקעות", "עבירות בנייה וצווי הריסה"],
   "נזקי גוף": ["תאונות דרכים", "תאונות עבודה", "רשלנות רפואית", "חוק הנכים"],
   "פלילי": ["מעצרים", "עבירות מין", "עבירות רכוש", "עבירות אלימות", "עבירות כלכליות", "עבירות נשק וביטחון"],
@@ -85,36 +87,17 @@ const MATTERS_RAW: Record<string, string[]> = {
   "תעבורה": ["נהיגה בשכרות", "תאונות דרכים", "נהיגה ללא רישיון/בזמן פסילה", "עבירות מהירות", "עבירות רמזור ותמרורים"],
   "נוער": [],
   "קהילתי": [],
-  "כלכלי": [],
+  "כלכלי": ["קיפוח", "אישור חלוקה - סעיף 303", "ייעוץ השקעות", "תביעות נאמן נגד נושא משרה", "תביעה נגזרת", "סכסוך בעלי מניות", "שוק ההון וני״ע", "מיזוגים ורכישות", "אכיפה", "כלכלי-פלילי", "תביעה ייצוגית"],
   "מסים": ["מס הכנסה", "מיסוי מקרקעין", "מכס ומע״מ"],
-  "חדלות פירעון ופש״ר": [],
-};
-const TAGS_RAW: Record<string, string[]> = {
-  "אזרחי": ["כספים וחיובים", "סדר דין אזרחי", "סעדים", "ראיות", "תביעות כספיות", "התיישנות", "סעדים זמניים", "צו מניעה", "צו עשה", "צו עיקול", "צו איסור יציאה", "צו ביניים", "סמכות", "קניין רוחני"],
-  "פלילי": ["הכרעת דין", "גזר דין", "סדר דין פלילי", "ענישה", "עיון בחומרי חקירה"],
-  "נזקי גוף": ["פיצויים", "הערכת נזק", "קשר סיבתי", "אחריות", "נכות", "מומחים", "עדים", "תחשיבים", "אחריות מעסיקים", "רשלנות מקצועית", "אחריות רשויות וגופים ציבוריים"],
-  "משפחה": ["אחריות הורית", "זמני שהות", "אפוטרופסות", "חלוקת רכוש"],
-  "עבודה": ["פיטורים", "זכויות עובדים", "שכר", "הסכמים", "שעות עבודה ומנוחה", "פיצויי פיטורין", "אפליה בעבודה"],
-  "תעבורה": ["ענישה", "פסילת רישיון", "נהיגה ללא רישיון", "נהיגה בזמן פסילה"],
-  "מנהלי": ["עתירה מנהלית", "רשויות מקומיות", "סמכות מנהלית", "סבירות ומידתיות"],
-  "כלכלי": ["חברות", "שותפויות", "סכסוכים עסקיים", "בנקאות", "חוזים מסחריים", "בעלי מניות", "מיזוגים ורכישות"],
-  "מקרקעין": ["בעלות וזכויות במקרקעין", "שכירות", "בתים משותפים", "עסקאות מכר", "תכנון ובנייה", "פירוק שיתוף", "פינוי", "רישום מקרקעין"],
-  "חדלות פירעון ופש״ר": ["יחידים", "תאגידים", "צו פתיחת הליכים", "הסדרי חוב", "שיקום כלכלי", "מימוש נכסים", "תביעות חוב", "הפטר", "איחוד תיקים", "איסור פרסום"],
+  "חדלות פירעון ופש״ר": ["צו פתיחת הליכים", "הסדרי חוב", "שיקום כלכלי", "מימוש נכסים", "תביעות חוב", "הפטר"],
 };
 // every list A to ב, with כללי first where it appears
 export const CASE_TYPES = [GENERAL, ...sortHe(Object.keys(MATTERS_RAW))];
 export const MATTERS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(MATTERS_RAW).map(([k, v]) => [k, sortHe(v)]));
-export const TAGS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(TAGS_RAW).map(([k, v]) => [k, sortHe(v)]));
-// tags that fit any case type, offered alongside the case type's own
-export const GENERAL_TAGS = sortHe(["היתר לעיון", "הארכת מועד"]);
 // a prompt's own form: the תחומים its case type offers (כללי alone for כללי or a case type without any)
 export const mattersOf = (caseType: string) => [GENERAL, ...(MATTERS_BY[caseType] ?? [])];
-export const tagsOf = (caseType: string) => [...(TAGS_BY[caseType] ?? []), ...GENERAL_TAGS];
-// a tag outside every list was typed in by hand, and stays whatever the case type
-export const ALL_LISTED_TAGS = new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS]);
 // flat lists, for the older library window that filters by one value
 export const MATTERS = [GENERAL, ...sortHe([...new Set(Object.values(MATTERS_RAW).flat())])];
-export const TAGS = sortHe([...new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS])]);
 export const STAGES = [GENERAL, "קדם משפט", "לפני דיון", "הוכחות", "סיכומים", "פס״ד", "ערעור"];
 export const COURTS = [GENERAL, "שלום", "מחוזי", "עליון", "בית דין לעבודה"];
 
@@ -307,7 +290,7 @@ export const seedPrompts = (): Prompt[] => [
   p({
     name: "בקשה למתן הפטר",
     body: "סכם את דו״ח הממונה ואת התנהלות היחיד במהלך ההליך: עמידה בצו התשלומים, שיתוף פעולה, ונכסים שמומשו. הצג את עמדות הנושים לגבי מתן ההפטר.",
-    source: "system", caseType: "חדלות פירעון ופש״ר", court: "שלום",
+    source: "system", caseType: "חדלות פירעון ופש״ר", matter: "הפטר", court: "שלום",
     tags: ["הפטר", "יחידים"], uses: 0, ratingSum: 334, ratingCount: 77, edited: "19/01/2025",
   }),
   p({
@@ -315,6 +298,102 @@ export const seedPrompts = (): Prompt[] => [
     body: "בחן את בקשת האישור מול התנאים לאישור תובענה ייצוגית: עילה אישית, שאלות משותפות לחברי הקבוצה, אפשרות סבירה שיוכרעו לטובת הקבוצה, והאם ייצוגית היא הדרך היעילה. הצג כל תנאי בנפרד.",
     source: "system", caseType: "תובענות ייצוגיות", matter: "ביטוח", court: "מחוזי",
     tags: [], uses: 0, ratingSum: 503, ratingCount: 112, edited: "27/01/2025",
+  }),  // ── Detailed prompts from the team's document (2026-11-08) ──
+  p({
+    name: "פס״ד המקבל תביעה קטנה",
+    source: "system", caseType: "אזרחי", court: "שלום", stage: "פס״ד",
+    uses: 0, ratingSum: 392, ratingCount: 88, edited: "08/11/2026",
+    ...detailed([
+      { sources: ["כתב תביעה"], task: "משפט פתיחה ורקע: פתח את פסק הדין במשפט פתיחה המציין את סכום התביעה המדויק ואת העילה המרכזית לתביעה [למשל: איחור במסירת דירה].", how: "" },
+      { sources: ["כתב תביעה", "כתב הגנה"], task: "תמצית כתבי הטענות וסעיפי ההסכם: סכם בתמצית את טענות התובעים ואת טענות ההגנה של הנתבעת. ציין והתייחס לסעיפים הרלוונטיים מתוך ההסכם שבין הצדדים.", how: "" },
+      { sources: ["כתב תביעה", "כתב הגנה", "פרוטוקול דיון"], task: "דיון והכרעה – עובדות ופלוגתות: פתח כותרת מרכזית \"דיון והכרעה\". פרט את העובדות שאינן במחלוקת, והגדר באופן ברור את הפלוגתות העיקריות שעל הפרק.", how: "" },
+      { sources: ["פרוטוקול דיון", "תצהיר", "מוצגים"], task: "ניתוח הפלוגתות, לפי הסדר: עבור כל פלוגתה התייחס לטענות הצדדים ולעולה מחומר הראיות, נמק והרחב ככל הנדרש, וסיים במסקנה מוגדרת.\n1. [פלוגתה ראשונה] – מסקנה: [___]\n2. [פלוגתה שנייה] – מסקנה: [___]\n3. זכאות התובעים לפיצויים וסכום הפיצוי – דיון בבסיס הזכאות ובחישוב הסכום, ומסקנה: קביעת הזכאות והסכום שנפסק.", how: "" },
+      { sources: [], task: "סוף דבר והוראות אופרטיביות: פתח כותרת \"סוף דבר\". ציין באופן מפורש כי התביעה מתקבלת. הנתבעים חייבים במלוא הסכום הנתבע, בתוספת הפרשי הצמדה וריבית שקלית ממועד הגשת התביעה ועד מתן פסק הדין. חייב את הנתבע בהוצאות משפט ושכר טרחת עו״ד בסך [...] ₪. ציין כי הסכומים ישולמו תוך 30 ימים, שאם לא כן יתווספו להם דמי פיגורים ממועד מתן פסק הדין ועד התשלום בפועל.", how: "" },
+    ], "תכתוב טיוטת פסק דין המקבלת את התביעה."),
+  }),
+  p({
+    name: "החלטה בבקשה לקבלת חומרי חקירה",
+    source: "system", caseType: "פלילי",
+    uses: 0, ratingSum: 318, ratingCount: 71, edited: "08/11/2026",
+    ...detailed([
+      { sources: ["בקשה"], task: "רקע: כתוב פסקת פתיחה לבקשה לקבלת חומרי חקירה. ציין את זהות הצדדים, ואת תמצית כתב האישום: תיאור העבירה, חלקו של המבקש (הנאשם), מתי בוצעה העבירה והאם בוצעה רק על ידי הנאשם. בנוסף, כתוב את תמצית הבקשה.", how: "ממוספרת, עם רווח בין כל בקשה, באופן הדומה לדוגמה המצורפת" },
+      { sources: ["בקשה", "תגובה לבקשה"], task: "טענות הצדדים: ראשית כתוב את טענות המבקש. לגבי כל סוג חומר שהוא מבקש כתוב את הנימוקים המשפטיים שעליהם הוא מתבסס, ומדוע לטעמו הוא זכאי לקבלו. ציין את טענותיו ביחס לסייגים: \"החומר אינו בגדר חומר חקירה\", \"החומר אינו מצוי בידי המאשימה\", \"החומר אינו רלוונטי\" או \"מתן החומר יצריך הקצאת משאבים לא סבירה\". בהמשך, כתוב את תגובת המשיבה.", how: "" },
+      { sources: ["בקשה", "תגובה לבקשה"], task: "מחקר: כתוב את תמצית השאלות המשפטיות העולות מטענות הצדדים, וכתוב שאילתה למערכת AI שיש לה גישה לפסקי דין ולחקיקה.", how: "" },
+      { sources: [], task: "דיון: ערוך דיון בסוגיות שהעלו הצדדים. ראשית כתוב פסקה כללית עם רקע נורמטיבי, כמו בדוגמה. עמוד בקצרה מאוד על טענות הצדדים, ובהתאם למחקר המשפטי ולמסקנות שהוספתי ערוך פסקה שתסביר מדוע החלטתי לדחות / לקבל באופן חלקי / לקבל את הבקשה.", how: "" },
+    ]),
+  }),
+  p({
+    name: "גזר דין מפורט",
+    source: "system", caseType: "פלילי", stage: "פס״ד",
+    uses: 0, ratingSum: 611, ratingCount: 134, edited: "08/11/2026",
+    userNotes: "יש להוסיף לפני השימוש את הקביעות השיפוטיות ודוגמאות מתאימות של גזרי דין.",
+    ...detailed([
+      { sources: ["פרוטוקול דיון", "כתב אישום", "תסקיר שירות המבחן", "מוצגים"], task: "מבוא:\n1. העבירות: כל העבירות המיוחסות לנאשם [כולל שם העבירה, סעיף החיקוק המדויק, שם החוק המלא ושנת חקיקתו].\n2. עובדות כתב האישום: הבא את עובדות כתב האישום המתוקן [מילה במילה, כולל חלק כללי, ללא השמטה, קיצור או שינוי ניסוח].\n3. תסקירי שירות המבחן: סכם אותם, אם קיימים [נתונים אישיים, התרשמות שירות המבחן, ההליך האבחוני והטיפולי, גורמי סיכון וסיכוי, ההמלצה הסופית במלואה].\n4. טיעוני הצדדים: סכם את טיעוני המאשימה וההגנה לעונש בשתי פסקאות נפרדות [לכל צד: המתחם המבוקש, העונש המבוקש, הנימוקים].\n5. דברי הנאשם: סכם את דבריו בטיעונים לעונש [אם לקח אחריות, הביע חרטה או צער; אם אמר שאין לו מה להוסיף, ציין זאת].", how: "" },
+      { sources: ["פרוטוקול דיון", "מוצגים"], task: "דיון והכרעה:\n6. ציין האם מדובר באירוע אחד או במספר אירועים, ונמק.\n7. פרט את הערכים החברתיים שנפגעו ואת מידת הפגיעה בהם.\n8. נסיבות ביצוע העבירה: נתח באופן מפורט [התכנון שקדם לביצוע; חלקו היחסי של הנאשם והשפעת אחר עליו; הנזק הצפוי והנזק שנגרם; הסיבות לביצוע; יכולתו להבין את מעשיו ולהימנע מהם; ניצול לרעה של כוחו, מעמדו או יחסיו עם נפגע העבירה].", how: "" },
+      { sources: ["פרוטוקול דיון", "מוצגים", "פסיקה שהגישו הצדדים"], task: "קביעת המתחם:\n9. מדיניות הענישה הנוהגת: סכם אותה על בסיס הפסיקה מהדוגמאות והפסיקה שאליה הפנו הצדדים [כל גזר דין בפסקה נפרדת: מראה מקום (שם ההליך, בית המשפט, מספר התיק, הצדדים, התאריך), העבירות, נסיבות המקרה בתמצית, המתחם שנקבע ורכיבי הענישה].\n10. ציין את מתחם העונש ההולם.\n11. ציין שלא נמצאו שיקולים המצדיקים סטייה מהמתחם.", how: "" },
+      { sources: ["פרוטוקול דיון", "מוצגים"], task: "גזירת העונש:\n12. פרט נסיבות שאינן קשורות לביצוע העבירה, לחומרה ולקולה, בשתי פסקאות נפרדות [עבר פלילי או היעדרו; נטילת אחריות וחזרה למוטב; שיתוף פעולה עם רשויות האכיפה; התנהגות חיובית ותרומה לחברה; מאמצים לתיקון ולפיצוי; נסיבות חיים קשות; חלוף הזמן; התנהגות רשויות האכיפה; הפגיעה של העונש בנאשם ובמשפחתו].\n13. ציין את מיקום העונש בתוך המתחם [ברף התחתון / האמצעי / העליון].\n14. סוף דבר: פרט את רכיבי הענישה שהוטלו [מאסר, מאסר על תנאי, קנס, פיצוי, התחייבות, פסילה, צווים נלווים], כל רכיב בפסקה נפרדת, עם הוראות אופרטיביות מפורטות וברורות.", how: "" },
+    ], "כתוב גזר דין מפורט ומורחב בתיק זה, בהתאם למבנה, לניסוח ולסגנון של גזרי הדין בדוגמאות שצורפו, תוך שימוש בכותרות ובכותרות משנה מודגשות ומספור הפסקאות.\nקביעות שיפוטיות: [כאן יש להוסיף את כל הקביעות וההנחיות הנוגעות לשיקול הדעת השיפוטי]"),
+  }),
+  p({
+    name: "אישור הסדר פשרה בייצוגית",
+    source: "system", caseType: "תובענות ייצוגיות", court: "מחוזי", stage: "פס״ד",
+    uses: 0, ratingSum: 276, ratingCount: 62, edited: "08/11/2026",
+    userNotes: "יש לצרף את נוסח סעיפים 19, 22 ו-23 לחוק תובענות ייצוגיות ותקנה 7א(א) לתקנות האגרות, כדי שהסוכן לא יצטט מהזיכרון. הקביעות מותנות בחומר התיק.",
+    ...detailed([
+      { sources: ["בקשה"], task: "רקע: תאר בתמצית את התובענה ועילתה, את הצדדים, את הגדרת הקבוצה כלשונה בתיק, ובאיזה שלב הוגש ההסדר (לפני או אחרי אישור התובענה כייצוגית).", how: "פסקאות ממוספרות קצרות, ללא טענות הצדדים וללא פירוט הליכי ביניים" },
+      { sources: ["בקשה", "תגובה לבקשה", "תשובה לתגובה"], task: "טענות הצדדים: סכם את עיקרי טענות המבקש ואת עיקרי טענות ההגנה, לרבות הסברי המשיבה ופעולות תיקון שדווחו. ציין אילו נתונים של המבקש לא הוכחשו, רק אם כך עולה מהתשובה.", how: "תת-פרקים \"טענות המבקש\" ו\"טענות המשיבה\", בפירוט דומה, ללא הכרעה" },
+      { sources: ["החלטה", "פרוטוקול דיון"], task: "השתלשלות ההליך, עד להגשת בקשת אישור ההסדר: אתר אירועים דיוניים מהותיים (הגשות, תגובות, דיונים, החלטות, גישור או מו״מ) וסדר אותם מהמוקדם למאוחר, עם תאריך והפניה למקור.", how: "פסקאות ממוספרות בסדר כרונולוגי, ללא תוכן ההסדר. תאריך חסר: [נדרש להשלים: תאריך]; אל תחשב מועדים יחסיים" },
+      { sources: ["בקשה", "החלטה", "פרוטוקול דיון"], task: "הבקשה לאישור הסדר הפשרה: פרט את עיקרי ההסדר (מנגנון הפיצוי, הטבות, סעדים צופי פני עתיד, תרומה לציבור, סכומים), את הבקשות לגמול, שכר טרחה ופטור מאגרה, את ההתנגדויות (לרבות עמדת היועץ המשפטי לממשלה, אם הוגשה) וכיצד ההסדר המתוקן התייחס אליהן, ואת מהלך הדיון בסדר כרונולוגי.", how: "פסקאות ממוספרות בכותרות משנה, ללא ניתוח והכרעה" },
+      { sources: [], task: "המסגרת הנורמטיבית: צטט את סעיף 19 לחוק תובענות ייצוגיות, התשס״ו-2006 במלואו, כלשונו, מנוסח שצורף; אם לא צורף סמן [נדרש להשלים: נוסח סעיף 19]. הצג את התנאים לאישור הסדר פשרה: \"ראוי, הוגן וסביר בהתחשב בעניינם של חברי הקבוצה\" ו\"הדרך היעילה וההוגנת להכרעה במחלוקת\".", how: "פסקאות ממוספרות. אל תצטט הלכות שלא צורפו" },
+      { sources: [], task: "בחינת הסדר הפשרה מול תנאי סעיף 19: (א) סיום בפשרה כדרך יעילה והוגנת; (ב) עמדת המשיבה כלפי הנתונים שהציג המבקש; (ג) תיקון הליקוי בעקבות ההליך, והאם הבקשה מעוררת על פניה שאלות משותפות ויש אפשרות סבירה שיוכרעו לטובת הקבוצה; (ד) התועלת לחברי הקבוצה; (ה) השוואה לסיכונים ולעלויות של המשך ההליך.", how: "פסקאות ממוספרות וקביעה מנומקת. נקודה שאינה נתמכת בתיק: [נדרש להשלים: ___]" },
+      { sources: [], task: "מינוי בודק: בחן אם יש צורך במינוי בודק, בשים לב לפשטות מנגנון הפיצוי ולעלות המינוי מול התועלת הצפויה.", how: "פסקה או שתיים עם קביעה מנומקת, שנתמכת במנגנון הפיצוי שבתיק" },
+      { sources: [], task: "גמול למבקש ושכר טרחה לבא כוחו: ציין את הסכומים שהצדדים ביקשו, נתח אותם לפי סעיפים 22 ו-23 לחוק וההלכה שצורפה, ובחן אם יש לאשרם לאור התועלת לקבוצה והמו״מ שקיימו הצדדים.", how: "פסקאות ממוספרות עם הסכומים המדויקים כפי שהם מופיעים בהסדר" },
+      { sources: ["בקשה"], task: "פטור ממחצית שנייה של אגרה: ציין את הבקשה, צטט את תקנה 7א(א) לתקנות האגרות במלואה מנוסח שצורף, ובחן אם קיימים טעמים מיוחדים. ציין כי סיום בפשרה אינו כשלעצמו טעם מיוחד, ובחן אם יש בבקשה חידוש או ייחודיות.", how: "פסקאות ממוספרות עם קביעה מנומקת" },
+      { sources: [], task: "סוף דבר: הצהר בבירור על ההחלטה בבקשה, וכלול הוראות אופרטיביות לפי ההסדר והתיק: פרסום הודעה לציבור, מועדי דיווח לבית המשפט, מועדי תשלום (גמול, שכר טרחה, אגרה), והוראה על סגירת התיק.", how: "הצהרה והוראות ממוספרות. מועד שאינו בתיק: [נדרש להשלים: מועד]" },
+    ], "אתה סוכן עזר בניסוח טיוטת פסק דין המאשר הסדר פשרה בתובענה ייצוגית, עבור שופט/ת. התוצר הוא טיוטה לעיון ולהחלטת בית המשפט.\n- הסתמך רק על מסמכי התיק ועל נוסחי חקיקה שצורפו; אל תוסיף מקורות ואל תמציא עובדות, סכומים, ציטוטים או אסמכתאות.\n- צטט חקיקה רק מנוסח שצורף; אחרת סמן [נדרש להשלים: נוסח הסעיף].\n- סמן חוסר וסתירה, אל תכריע בסתירה עובדתית, והפנה למקור (מסמך, סעיף/עמוד).\n- כתוב בעברית משפטית, בגוף שלישי, ורק בפרטים הנחוצים.\nבצע את החלקים לפי הסדר, ושמור על אחידות שמות הצדדים, הגדרת הקבוצה והתאריכים. בסיום אחד לטיוטה אחת, והצג בנפרד \"מידע חסר\" ו\"סתירות\"."),
+  }),
+  p({
+    name: "דחיית בר״ע בתביעות קטנות",
+    source: "system", caseType: "ערעורים", matter: "תביעות קטנות", court: "מחוזי",
+    uses: 0, ratingSum: 354, ratingCount: 79, edited: "08/11/2026",
+    userNotes: "נועד להחלטת דחייה בלבד. יש לצרף את נוסח סעיף 79א לחוק בתי המשפט והלכות על רשות ערעור בתביעות קטנות.",
+    ...detailed([
+      { sources: ["בקשה", "פסק דין"], task: "כותרת ותיאור כללי: הצב בכותרת את ההכרעה (דחייה). פתח בציון כי מדובר בבקשת רשות ערעור על פסק דינו של בית המשפט לתביעות קטנות ב[מיקום] שניתן ביום [תאריך] ב[מספר התיק]. תאר בקצרה את מהות התביעה המקורית.", how: "כותרת ופסקה אחת או שתיים. פרט חסר: [נדרש להשלים: ___]" },
+      { sources: ["כתב תביעה", "כתב הגנה", "פרוטוקול דיון"], task: "רקע – ההליכים בבית המשפט לתביעות קטנות: תאר את תמצית טענות התובע המקורי, כולל הסעד שנתבע וסכומו, את טענות ההגנה המרכזיות של הנתבע (המבקש כאן), ואירועים פרוצדורליים מהותיים (דיון, הסכמה לפסיקה לפי סעיף 79א, אי-התייצבות של צד), כשהם עולים מהתיק.", how: "פסקאות ממוספרות, בלי קביעות בית המשפט קמא" },
+      { sources: ["פסק דין", "פרוטוקול דיון"], task: "קביעות בית המשפט לתביעות קטנות: הצג את עיקרי קביעותיו העובדתיות והמשפטיות ואת התוצאה הסופית, כולל הסכום שנפסק או דחיית התביעה. ציין אם נפסק על דרך הפשרה לפי סעיף 79א.", how: "פסקאות ממוספרות שמסכמות באופן אמין את פסק הדין, בלי ביקורת עליו" },
+      { sources: ["בקשה"], task: "טענות המבקש: פרט את הנימוקים העיקריים שהעלה נגד פסק הדין, כגון טעות משפטית, פער בלתי סביר בין הממצאים לפיצוי, אי-מתן משקל מספק לטענות מסוימות או טענות פרוצדורליות, רק כפי שהועלו בבקשה.", how: "פסקאות ממוספרות או רשימה קצרה, בלי הכרעה" },
+      { sources: ["בקשה", "פסק דין"], task: "עקרונות למתן רשות ערעור: פתח בקביעה שלאחר עיון בבקשה ובתיק קמא דין הבקשה להידחות מבלי לבקש תשובה (רק אם הדבר עולה מהתיק). הסבר שרשות ערעור על פסק דין בתביעות קטנות ניתנת רק במקרים חריגים: פגם מהותי, עוול קשה, או שאלה משפטית בעלת חשיבות עקרונית. אם פסק הדין ניתן על דרך הפשרה לפי סעיף 79א, הדגש שערכאת הערעור מתערבת רק במצבים נדירים.", how: "פסקאות ממוספרות. אל תצטט הלכות שלא צורפו" },
+      { sources: ["בקשה", "פסק דין", "פרוטוקול דיון"], task: "יישום העקרונות על המקרה: התייחס לטענות הספציפיות של המבקש ודחה אותן בנימוק, בשים לב לכך שבית המשפט קמא בחן אותן ונתן פסק דין מנומק. בדוק אם הפיצוי שנקבע אינו בלתי סביר או מופרך, ואם נפל פגם פרוצדורלי.", how: "פסקאות ממוספרות עם קביעה מנומקת. נקודה שאינה נתמכת בתיק: [נדרש להשלים: ___]" },
+      { sources: [], task: "סוף דבר: סיים בקביעה חד-משמעית שהבקשה לרשות ערעור נדחית. אם לא נתבקשה תגובת המשיב, ציין שאין צו להוצאות. הורה על החזרת הערבון על פירותיו למבקש, רק אם הופקד ערבון בתיק.", how: "ההחלטה בפסקה אחת והוראות ממוספרות" },
+    ], "אתה סוכן עזר בניסוח טיוטת החלטה בבקשת רשות ערעור על פסק דין של בית המשפט לתביעות קטנות, עבור שופט/ת. התוצר הוא טיוטה לעיון ולהחלטת בית המשפט.\n- הסתמך רק על מסמכי התיק ועל נוסחי חקיקה שצורפו; אל תמציא עובדות, סכומים, ציטוטים, הלכות או אסמכתאות.\n- צטט חקיקה רק מנוסח שצורף; אחרת סמן [נדרש להשלים: נוסח הסעיף].\n- סמן חוסר וסתירה, אל תכריע בסתירה עובדתית, והפנה למקור.\n- כתוב בעברית משפטית, בגוף ראשון בסגנון החלטה.\nבצע את החלקים לפי הסדר ואחד להחלטה אחת. הצג בנפרד מידע חסר וסתירות."),
+  }),
+  p({
+    name: "החלטה בבקשה, לפי דוגמאות",
+    source: "system",
+    uses: 0, ratingSum: 489, ratingCount: 107, edited: "08/11/2026",
+    ...detailed([
+      { sources: ["בקשה"], task: "הקדמה ובקשה: תאר את מהות הבקשה, כולל סעיפי החוק הרלוונטיים.", how: "" },
+      { sources: ["בקשה", "תגובה לבקשה", "תשובה לתגובה"], task: "רקע וטיעוני הצדדים.", how: "" },
+      { sources: [], task: "דיון והכרעה: הגדר את נקודת המחלוקת המרכזית. הצג את העקרונות המשפטיים והמסגרת הנורמטיבית, תוך הפניה לסעיפי חוק ולפסיקה רלוונטיים. בצע ניתוח עובדתי-משפטי מנומק של העובדות והטענות לאור העקרונות, והצג את ההכרעה עם הנמקה ברורה ומפורטת.", how: "" },
+      { sources: [], task: "סוף דבר: סכם את ההחלטה והצג את ההוראות האופרטיביות באופן מפורט וברור.", how: "" },
+    ], "כתוב טיוטת החלטה מפורטת ומעמיקה בבקשה ל[___], הכוללת נימוקים, ציטוטים מדויקים והפניות לאסמכתאות משפטיות, בהתאם למבנה, לניסוח ולסגנון של הדוגמאות שצורפו. השתמש בכותרות ובכותרות משנה מודגשות. שלב התייחסות לאסמכתאות הרלוונטיות מתוך הדוגמאות ומתוך סקירת הפסיקה והחקיקה, במקומות המתאימים.\nהערות נוספות: [___]"),
+  }),
+  p({
+    name: "פס״ד בתביעת תאונת דרכים",
+    source: "system", caseType: "נזקי גוף", matter: "תאונות דרכים", stage: "פס״ד",
+    uses: 0, ratingSum: 702, ratingCount: 151, edited: "08/11/2026",
+    userNotes: "יש למלא את הכרעות השופט/ת בהנחיות הכלליות לפני השימוש.",
+    ...detailed([
+      { sources: ["כתב תביעה", "כתב הגנה"], task: "פתח דבר: פתח במשפט \"לפניי תביעה לפיצויים בגין נזקי גוף לפי חוק פיצויים לנפגעי תאונות דרכים, התשל״ה-1975 (להלן: \"חוק הפיצויים\")\". ציין את תאריך הלידה של התובע; מועד התאונה, מקומה ונסיבותיה בקצרה; הרכב והמבטחת; הטיפול הרפואי הראשוני; הכרת המל״ל בתאונת עבודה, אם הייתה; ומה במחלוקת ומה לא.", how: "" },
+      { sources: ["כתב תביעה", "סיכומים"], task: "התביעה: תמצית טענות התובע (מצבו ועיסוקו לפני התאונה והשפעתה עליו); ראשי הנזק והסכומים שנתבעו בסיכומים וסך הכול; הנתונים שעליהם נשען החישוב (בסיס שכר, שיעור נכות, גיל פרישה).", how: "ראשי הנזק בתבליטים" },
+      { sources: ["כתב הגנה", "סיכומים"], task: "ההגנה: תמצית טענות הנתבעת בחבות (אם יש), בנכות ובנזק; עמדתה לכל ראש נזק; הניכויים שהיא טוענת להם (מל״ל, תשלומים תכופים, ניכוי רעיוני); והסכום הכולל שהציעה.", how: "עמדה לכל ראש נזק בתבליטים" },
+      { sources: ["חוות דעת מומחה מטעם בית המשפט"], task: "חוות דעת רפואיות מטעם בית המשפט: לכל מומחה בנפרד – שם ותחום, מועד הבדיקה, התלונות והממצאים, נכויות זמניות (שיעור ותקופה), נכות צמיתה והסעיף בתקנות שלפיו נקבעה, ניכוי בגין מצב קודם, חוות דעת משלימות, והאם נחקר ומה עלה בחקירה. אם הנכות נקבעה בוועדה רפואית של המל״ל, תאר את קביעותיה וציין שהן מחייבות לפי סעיף 6ב לחוק הפיצויים. בפרק זה רק מתארים, בלי להכריע.", how: "" },
+      { sources: ["פרוטוקול דיון", "מוצגים"], task: "הראיות: מי העיד מטעם כל צד ומה תפקידו או קרבתו לתובע; המוצגים העיקריים (מסמכים רפואיים, תלושי שכר, דו״ח רציפות, דו״ח חוקר); ואילו מומחים נחקרו.", how: "" },
+      { sources: [], task: "דיון והכרעה – חבות: פתח במשפט שמציג את השאלות המרכזיות להכרעה. אם החבות לא במחלוקת, כתוב זאת במשפט אחד. אם היא במחלוקת: דון קודם בטענות הסף, הבא את ההוראה הרלוונטית בחוק, החל אותה על העובדות שהוכחו עם הפניות לראיות, וסיים בקביעה מפורשת: \"לפיכך, אני קובע ש…\".", how: "" },
+      { sources: ["חוות דעת מומחה מטעם בית המשפט"], task: "הנכות הרפואית והתפקודית: סכם את קביעות המומחים והכרע לפי קביעת השופט/ת. אם צד טוען לסטות מחוות הדעת, הבא את הכלל שבית המשפט יאמץ את מסקנות המומחה מטעמו אלא אם מצא סיבה טובה לסטות מהן. סיים בשיעור הנכות המשוקללת והצג את החישוב. בנכות התפקודית: טענות הצדדים בקצרה, הכלל (ע״א 3049/93 גירוגיסיאן נ׳ רמזי, פ״ד נב(3) 792, 798 (1995)), הנימוקים מהתיק, וקביעת השופט/ת באחוזים.", how: "" },
+      { sources: [], task: "שומת הנזק: בסיס השכר (טענות הצדדים וקביעת השופט/ת לעבר ולעתיד, וממה נגזר); נתוני היסוד; ולכל ראש נזק כותרת משנה ובה מה ביקש התובע, מה טענה הנתבעת, והכרעה עם נימוק וחישוב – הפסדי שכר לעבר ולעתיד, הפסדי פנסיה, עזרת צד שלישי, הוצאות רפואיות ונסיעות, כאב וסבל, וראשי נזק נוספים. לבסוף הניכויים, בלי לנכות פעמיים סכום שכבר הובא בחשבון.", how: "נתוני היסוד ברשימה; כל חישוב בסוגריים, למשל (12,900 ₪ × 5% × 80 חודשים)" },
+      { sources: [], task: "סוף דבר: פסקה מסכמת (התאונה, הפגיעות, הנכות וחבות הנתבעת); ראשי הנזק, סך הכול, הניכויים והסכום לתשלום; צו התשלום (פיצויים, אגרות והוצאות משפט, שכר טרחת עורך דין); מועד התשלום; ו\"ניתן היום, [תאריך עברי], [תאריך לועזי], בהעדר הצדדים.\". לפני ההגשה בדוק שכל סכום זהה לסכום בפרק ראשי הנזק ושכל קביעה תואמת את הכרעות השופט/ת. אחרי פסק הדין, בנפרד, הוסף רשימה של כל הסימונים [להשלמה] ו-[לבדיקה].", how: "" },
+    ], "אתה עוזר משפטי של השופט/ת. כתוב טיוטת פסק דין בתביעה לפי חוק פיצויים לנפגעי תאונות דרכים, התשל״ה-1975. השתמש במסמכי התיק בלבד, ופעל לפי הכרעות השופט/ת שבסוף ההנחיה.\n- אל תמציא עובדות, נתונים, ציטוטים או פסיקה; צטט רק פסיקה שמופיעה בהנחיה או בתיק.\n- אל תכריע בעצמך בשום שאלה. אם חסרה הכרעה, כתוב [להשלמת השופט/ת: ...] והמשך.\n- לכל עובדה ולכל נימוק הוסף הפניה מדויקת, למשל (פרוטוקול דיון מיום 25/6/2019, עמ׳ 53 ש׳ 5-16). אם אין תימוכין, סמן [לבדיקה].\n- בחישובים השתמש רק בנתונים שקבע השופט/ת; אל תחשב מקדם היוון או כאב וסבל, ואם לא ניתנו כתוב [להשלמה].\n- פסקאות ממוספרות ברצף, גוף ראשון יחיד, משפטים קצרים. תאריכים בפורמט 16/7/2015, סכומים בספרות עם ₪.\nהכרעות השופט/ת: חבות [___]; נכות רפואית משוקללת [___]; נכות תפקודית [___]; בסיס שכר לעבר / לעתיד [___]; גיל פרישה ומקדם היוון [___]; ראשי הנזק [___]; ניכויים [___]; הוצאות ושכר טרחה [___]; מועד תשלום [___]."),
   }),
 ];
 
@@ -393,7 +472,9 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // The source is a mark rather than a word wherever it repeats: three values only, and a shape
 // is read faster than text down a column or across a row. The shield is the one the לשכה badge
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
-const SOURCE_ICON = { system: ShieldCheck, shared: Users, mine: User } as const;
+// system prompts: a verified badge (Hanna, 2026-11-08, after a shield, a book, a courthouse (the courts
+// are them, we are the הנהלה) and an office building)
+const SOURCE_ICON = { system: BadgeCheck, shared: Users, mine: User } as const;
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
@@ -402,12 +483,18 @@ export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDar
   return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
+// the same marks by the name the filter offers, for its options
+export function SourceNameMark({ name, isDark, size = 13 }: { name: string; isDark: boolean; size?: number }) {
+  const I = name === "מערכת" ? SOURCE_ICON.system : name === "אני" ? SOURCE_ICON.mine : SOURCE_ICON.shared;
+  return <I size={size} style={{ flexShrink: 0, color: markCol(isDark) }} />;
+}
+
 // One wording, used wherever the source is named: the same word the column shows and the filter
 // offers. The author rides along with it — "משותף" without a name says less than it could.
 export const sourceLabel = (pr: Prompt) =>
   pr.source === "system" ? "מערכת"
   : pr.source === "mine" ? "אני"
-  : `משותף · ${authorFull(pr)}`;
+  : `אחרים · ${authorFull(pr)}`;
 
 export function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
   const [hov, setHov] = useState(0);
@@ -515,16 +602,18 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
 
 // A filter that takes several values at once — e.g. נזיקין together with כללי, which fits every
 // case type. Nothing ticked means everything; the menu stays open while ticking.
-export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable }: {
+export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable, icons }: {
   label: string; value: string[]; options: string[]; onChange: (v: string[]) => void; isDark: boolean; width?: number;
   counts?: Record<string, number>;
   // optional headings: the options shown under each, in order (e.g. a case type's תחומים)
   groups?: { title: string; options: string[] }[];
   disabledHint?: string;
-  // a picker (the editor's tags) keeps its label and has no "all" row: what's picked shows as chips beside it
+  // a picker keeps its label and has no "all" row: what's picked shows as chips beside it
   picker?: boolean;
-  // long lists (תחום, תגית) get a search field at the top of the menu
+  // long lists (תת תחום) get a search field at the top of the menu
   searchable?: boolean;
+  // a mark before an option, the one its column shows (the author's)
+  icons?: Record<string, ReactNode>;
 }) {
   const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const open = at !== null;
@@ -620,6 +709,7 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
               style={{ color: txt }}
             >
               {box(value.includes(o))}
+              {icons?.[o]}
               <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>
                 {o}
                 {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}
@@ -653,7 +743,7 @@ export function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean }) {
+export function FavMark({ on, onToggle, isDark, quiet, small, faint }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean; faint?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -661,21 +751,19 @@ export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle
       // hover — a column of grey outlines reads as a column of half-done things.
       // focus-VISIBLE, not focus: a click leaves the button focused, and plain focus: kept the
       // mark on screen after unsaving a row, so that row alone behaved unlike the rest.
-      className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
+      className={`${small ? "size-[18px]" : "size-7"} flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      {/* Filled means saved — that one is learned, and not worth being clever about. It is the
-          only solid icon on screen because it is the only icon that is a STATE; the rest are
-          labels. So the weight is what gets tuned, not the fill: a shade lighter than the text
-          and a size smaller than the other marks. */}
-      <Bookmark size={15} fill={on ? subtle(isDark) : "none"} style={{ color: subtle(isDark) }} />
+      {/* Filled grey means saved, as it first was (Hanna, 2026-11-08, after trying an outline and blue).
+          faint: always on screen, so off is a light grey outline that doesn't compete with the saved ones */}
+      <Bookmark size={small ? 14 : 15} fill={on ? (isDark ? dk.textMuted : "#b8c2d1") : "none"} style={{ color: on ? (isDark ? dk.textMuted : "#b8c2d1") : !faint ? subtle(isDark) : isDark ? dk.border : "#cfd4dc" }} />
     </button>
   );
 }
 
 // ── Row menu (⋮) — fixed position so it isn't clipped by a scroll container ──
 const MENU_W = 176;
-export function RowMenu({ items, isDark }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean }) {
+export function RowMenu({ items, isDark, openAt }: { items: { label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; act: () => void; danger?: boolean }[]; isDark: boolean; openAt?: { x: number; y: number; n: number } | null }) {
   // opens leftward from the button; a button too near the window's left edge (the full-width
   // table) opens it rightward instead, so it isn't cut off
   const [at, setAt] = useState<{ top: number; right?: number; left?: number } | null>(null);
@@ -694,6 +782,15 @@ export function RowMenu({ items, isDark }: { items: { label: string; Icon: React
     window.addEventListener("resize", close as unknown as EventListener);
     return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", close as unknown as EventListener); };
   }, [at]);
+  // a right-click on the row opens the same menu at the pointer (Hanna, 2026-11-08: in the wide table
+  // the ⋯ is far from where the eye is); it opens leftward, and up or rightward near the window's edges
+  useEffect(() => {
+    if (!openAt) return;
+    const h = items.length * 41 + 2;
+    const top = Math.max(8, Math.min(openAt.y, window.innerHeight - h - 8));
+    setAt(openAt.x - MENU_W < 8 ? { top, left: openAt.x } : { top, right: window.innerWidth - openAt.x });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAt?.n]);
   const line = isDark ? dk.border : "#eef2f7";
   return (
     <>
@@ -846,7 +943,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "tags" | "date" | "fav";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "content" | "kind" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -855,12 +952,13 @@ const dayNum = (d: string) => { if (!d) return 0; const [dd, mm, yy] = d.split("
 export const byDate = (a: Prompt, b: Prompt) => dayNum(dateOf(b)) - dayNum(dateOf(a));
 export type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
-  tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
+  favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
-export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
+export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
-export const SOURCE_OPTS = ["אני", "מערכת", "משותף"];
-export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "משותף": 2 };
+// shared prompts are "אחרים" (2026-11-08, was "משותף")
+export const SOURCE_OPTS = ["אני", "מערכת", "אחרים"];
+export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "אחרים": 2 };
 const FILTER_KEY = "mishpat.prompts.filters";
 // The table scrolls and its scrollbar (8px, see globals.css) eats into the row's right edge.
 // The rows above it don't scroll, so they reserve the same strip — otherwise the search field
@@ -877,10 +975,9 @@ export const matches = (pr: Prompt, ff: Filters) => {
     (ff.matter === ANY || pr.matter === ff.matter) &&
     (ff.stage === ANY || pr.stage === ff.stage) &&
     (ff.court === ANY || pr.court === ff.court) &&
-    (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
     (!ff.favOnly || pr.fav);
 };
-// ★ | שם + תקציר | מקור | מחבר | ערכאה | סוג תיק | תחום | שלב | דירוג | ⋮
+// ★ | שם + תקציר | מקור | מחבר | ערכאה | תחום | תת תחום | שלב | דירוג | ⋮
 // The four run widest to narrowest — which court, then which kind of case, then what it is
 // about, then where it has got to — so the row reads the way the classification is decided.
 // Every dimension is its own column: each is a separate thing to filter and sort by, and one
@@ -890,7 +987,7 @@ const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
-export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "אני");
+export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "אחרים" : "אני");
 
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
@@ -915,12 +1012,14 @@ export const menuFor = (
   onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
   onFav: (id: string) => void,
   onOpen?: (p: Prompt) => void, // the table's row click uses the prompt, so viewing it moves here
+  onPin?: (id: string) => void,  // the table only: pinning to the top (Hanna, 2026-11-08)
 ) => [
   ...(onOpen ? [{ label: "צפייה בפרומפט", Icon: Eye, act: () => onOpen(pr) }] : []),
   { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
   // The bookmark is the quick gesture; this is where the action is named. A mark that only
   // appears on hover can't teach anyone that it exists.
   { label: pr.fav ? "הסרה מהמועדפים" : "שמירה במועדפים", Icon: Bookmark, act: () => onFav(pr.id) },
+  ...(onPin ? [{ label: pr.pinned ? "ביטול נעיצה" : "נעיצה למעלה", Icon: pr.pinned ? PinOff : Pin, act: () => onPin(pr.id) }] : []),
   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
   ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
   ...(pr.source === "mine" || pr.author === ME
@@ -957,7 +1056,7 @@ export function PromptLibrary({
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
   // Sorting isn't filtering: clicking a column header shouldn't put a "ניקוי" on screen, and
   // ניקוי shouldn't throw away the order the user chose.
-  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
+  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "favOnly"] as const;
   const filtered = FILTER_KEYS.some((k) => f[k] !== EMPTY_FILTERS[k]);
   const clearFilters = () => setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir }));
 
@@ -992,8 +1091,9 @@ export function PromptLibrary({
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      content: (a, b) => b.body.localeCompare(a.body, "he"),
+      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0),
       date: byDate,
-      tags: (a, b) => (b.tags[0] ?? "").localeCompare(a.tags[0] ?? "", "he"),
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
@@ -1017,7 +1117,6 @@ export function PromptLibrary({
       matter: tally("matter", MATTERS, (pr) => pr.matter),
       stage: tally("stage", STAGES, (pr) => pr.stage),
       court: tally("court", COURTS, (pr) => pr.court),
-      tag: tally("tag", TAGS, (pr) => pr.tags),
     };
   }, [prompts, f]);
 
@@ -1078,10 +1177,9 @@ export function PromptLibrary({
             </div>
             <Dropdown label="מחבר" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
-            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
-            <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
-            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
-            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={122} counts={facets.tag} />
+            <Dropdown label="תחום" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
+            <Dropdown label="תת תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
+            <Dropdown label="שלב בתיק" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
@@ -1109,9 +1207,9 @@ export function PromptLibrary({
               {th("source", "מחבר", "center")}
               {th("author", "שם המחבר")}
               {th("court", "ערכאה")}
-              {th("caseType", "סוג תיק")}
-              {th("matter", "תחום")}
-              {th("stage", "שלב")}
+              {th("caseType", "תחום")}
+              {th("matter", "תת תחום")}
+              {th("stage", "שלב בתיק")}
               {th("rating", "דירוג")}
               <div />
             </div>
@@ -1210,7 +1308,6 @@ export function PromptLibrary({
                         {pr.body}
                       </p>
                       <div className="flex items-center gap-2 mt-3 flex-wrap" style={{ paddingInlineStart: "27px" }}>
-                        {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
                         <span className="text-[12px] flex items-center gap-1" style={{ color: subCol }}>
                           <SourceMark pr={pr} isDark={isDark} size={12} /> {sourceLabel(pr)}
                         </span>
@@ -1288,20 +1385,11 @@ export function PromptEditor({
   // general is a little noise that shows itself and gets corrected. So: כללי until stated.
   const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
-  // tags are picked by hand from the case type's list (plus the general ones), or typed in
-  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
-  const [newTag, setNewTag] = useState("");
-  const addTag = () => {
-    const t = newTag.trim();
-    if (t && !tags.includes(t)) setTags([...tags, t]);
-    setNewTag("");
-  };
-  // a תחום or a tag belongs to its case type, so changing the case type lets go of the old one's
+  // a sub-topic belongs to its תחום, so changing the תחום lets go of the old one's
   const pickCaseType = (v: string) => {
     if (v === caseType) return;
     setCaseType(v);
     setMatter(GENERAL);
-    setTags((prev) => prev.filter((t) => tagsOf(v).includes(t) || !ALL_LISTED_TAGS.has(t)));
   };
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
   const [court, setCourt] = useState(initial?.court ?? GENERAL);
@@ -1321,7 +1409,7 @@ export function PromptEditor({
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
   // Nothing to save or cancel until something changes; the X still closes. A question brought from
   // the chat is there to be saved, so its buttons are live from the start.
-  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes, tags });
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
@@ -1387,7 +1475,7 @@ export function PromptEditor({
       } as Prompt),
       caseType, matter, stage, court,
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
-      name: name.trim(), tags, edited: today(),
+      name: name.trim(), tags: [], edited: today(),
       body: cleanParts ? partsToText(cleanParts, guidelines) : body.trim(),
       parts: cleanParts,
       guidelines: cleanParts && guidelines.trim() ? guidelines.trim() : undefined,
@@ -1395,7 +1483,7 @@ export function PromptEditor({
       source: "mine",
       // Saving a question that was sent came from pressing a star, so it lands starred; a new
       // prompt follows its own "שמירה במועדפים" tick; forking someone else's does not star it.
-      fav: keep ? keep.fav : mode === "fromMessage" || (mode === "new" && favNew),
+      fav: keep ? keep.fav : (mode === "new" || mode === "fromMessage") && favNew,
     }, share ? { anon } : undefined);
   };
 
@@ -1544,66 +1632,20 @@ export function PromptEditor({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
-              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
-              { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+              { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
+              { t: "שלב בתיק", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
                 <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
-                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
+                  disabledHint={t === "תת תחום" && caseType === GENERAL ? "יש לבחור קודם תחום" : undefined} />
               </div>
             ))}
           </div>
 
-          {/* Tags are picked by the user (no longer guessed from the wording): the case type's list
-              plus the general ones, and anything else can be typed in. */}
-          <div className="text-[12px] mt-3 mb-1" style={{ color: subCol }}>תגיות</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <MultiDropdown
-              label="בחירה מהרשימה" value={tags.filter((t) => tagsOf(caseType).includes(t))} options={tagsOf(caseType)}
-              groups={[{ title: caseType, options: TAGS_BY[caseType] ?? [] }, { title: "כללי", options: GENERAL_TAGS }].filter((g) => g.options.length > 0)}
-              onChange={(v) => setTags([...v, ...tags.filter((t) => !tagsOf(caseType).includes(t))])}
-              isDark={isDark} width={140} picker disabledHint={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
-            />
-            {/* a text field with its add button inside, so it reads as a place to type, not as a button */}
-            <div
-              className="h-8 w-[180px] flex items-center rounded-[4px] ps-2.5 pe-1"
-              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white", opacity: caseType === GENERAL ? 0.45 : 1 }}
-              title={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
-            >
-              <input
-                value={newTag} onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                placeholder="הקלדת תגית חופשית"
-                disabled={caseType === GENERAL}
-                className="flex-1 min-w-0 h-full bg-transparent text-[13px] outline-none"
-                style={{ color: textCol }}
-              />
-              <button
-                onClick={addTag} disabled={!newTag.trim()} aria-label="הוספת התגית" title="הוספת התגית"
-                className="flex-none size-6 flex items-center justify-center rounded-[3px] hover:bg-black/5 disabled:hover:bg-transparent disabled:cursor-default"
-                style={{ color: newTag.trim() ? c.primary : subCol }}
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          </div>
-          {tags.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {tags.map((t) => (
-                <span key={t} className="flex items-center gap-1 ps-2 pe-1 h-[24px] rounded-[3px] text-[12.5px]"
-                  style={{ backgroundColor: isDark ? "#243354" : "#f0f3f9", color: isDark ? dk.text : c.textGray }}>
-                  {t}
-                  <button onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`הסרת ${t}`} className="p-0.5 rounded hover:bg-black/10">
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {mode === "new" && (
+          {/* saving a question from the chat no longer has to mean a favorite (2026-11-08) */}
+          {(mode === "new" || mode === "fromMessage") && (
             <button onClick={() => setFavNew((v) => !v)} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
               <span
                 className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
@@ -1691,7 +1733,7 @@ export function PromptEditor({
           <button onClick={save} disabled={untouched} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-default disabled:hover:opacity-40" style={pane && live && onUse
             ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }
             : { backgroundColor: c.primary, color: "white" }}>
-            {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
+            {share ? "שמירה ושיתוף" : mode === "fromMessage" && favNew ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
           </button>
           {pendingKind && (
             <PromptConfirm
@@ -1715,7 +1757,8 @@ export function PromptEditor({
     // The fields scroll and the buttons stay put, so ביטול and שמירה are always in reach.
     return (
       <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll">{form}</div>
+        {/* ltr outside, rtl inside: the scrollbar sits on the right, by where the reading starts (Hanna, 2026-11-08) */}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
         {footer}
       </div>
     );
@@ -1728,7 +1771,7 @@ export function PromptEditor({
         className="flex flex-col rounded-lg overflow-hidden shadow-2xl"
         style={{ width: "min(760px, 92vw)", maxHeight: "88vh", backgroundColor: surface, fontFamily: FONT }}
       >
-        {form}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
         {footer}
       </div>
     </div>
@@ -1745,9 +1788,12 @@ export function PromptEditor({
 export function PromptShare({
   isDark, initial, onShare, onClose,
 }: {
-  isDark: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt) => void; onClose: () => void;
+  isDark: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt, mine?: Prompt) => void; onClose: () => void;
 }) {
   const raw = initial.body;
+  // shared from the chat (no prompt behind it yet): keep a copy of my own too, unless unticked (Hanna, 2026-11-08)
+  const fromChat = !initial.id;
+  const [keepMine, setKeepMine] = useState(true);
   const hits = useMemo(() => findIdentifiers(raw), [raw]);
   // Identifiers are swapped out on arrival, not on request: the safe state is the default,
   // and each swap can be undone if the detector was wrong.
@@ -1786,13 +1832,15 @@ export function PromptShare({
 
   const share = () => {
     if (!name.trim() || !body.trim()) { setAttempted(true); return; }
-    onShare({
+    const pr: Prompt = {
       id: uid(), name: name.trim(), body: body.trim(), source: "shared",
       author: anon ? "אנונימי" : ME, authorRole: anon ? undefined : MY_ROLE,
       fav: false, caseType, matter, stage, court,
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       userNotes: userNotes.trim() || undefined,
-    });
+    };
+    // my copy is the text as I asked it, not the scrubbed one the others get
+    onShare(pr, fromChat && keepMine ? { ...pr, id: uid(), source: "mine", author: ME, authorRole: MY_ROLE, body: raw.trim(), name: name.trim() } : undefined);
   };
 
   return (
@@ -1812,7 +1860,7 @@ export function PromptShare({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll px-6 pb-2">
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl" className="px-6 pb-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -1864,14 +1912,14 @@ export function PromptShare({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
-              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
-              { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+              { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
+              { t: "שלב בתיק", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
                 <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
-                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
+                  disabledHint={t === "תת תחום" && caseType === GENERAL ? "יש לבחור קודם תחום" : undefined} />
               </div>
             ))}
           </div>
@@ -1897,9 +1945,20 @@ export function PromptShare({
             className="w-full outline-none text-[14px] leading-relaxed rounded-[4px] px-3 py-2 resize-y mb-2"
             style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
           />
-        </div>
+        </div></div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
+          {fromChat && (
+            <button onClick={() => setKeepMine((v) => !v)} className="flex items-center gap-2 text-[13px] me-auto" style={{ color: textCol }}>
+              <span
+                className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
+                style={{ border: `1px solid ${keepMine ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: keepMine ? c.primary : "transparent" }}
+              >
+                {keepMine && <Check size={12} style={{ color: "white" }} />}
+              </span>
+              שמירה גם בפרומפטים שלי
+            </button>
+          )}
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
@@ -1954,8 +2013,9 @@ export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; 
   const btn = "size-6 flex items-center justify-center rounded transition-colors hover:bg-black/10";
   return (
     <div className="flex items-center" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
-      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה למועדפים">
-        <Bookmark size={15} />
+      {/* a save icon, not the favorites' bookmark: the window it opens offers the favorites as an option */}
+      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה כפרומפט">
+        <Save size={15} />
       </button>
       <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
         <Share2 size={15} />

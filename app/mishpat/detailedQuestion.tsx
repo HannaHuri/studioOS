@@ -205,14 +205,14 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
                   <div className="flex items-start gap-2 flex-wrap">
                     {([
                       { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-                      { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
-                      { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
-                      { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+                      { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+                      { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
+                      { t: "שלב בתיק", v: stage, o: STAGES, set: setStage, w: 140 },
                     ] as const).map(({ t, v, o, set, w }) => (
                       <div key={t}>
                         <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
                         <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
-                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
+                  disabledHint={t === "תת תחום" && caseType === GENERAL ? "יש לבחור קודם תחום" : undefined} />
                       </div>
                     ))}
                   </div>
