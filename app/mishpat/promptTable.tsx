@@ -316,7 +316,7 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "60px", content: "160px", caseType: "68px", matter: "96px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "56px", content: "160px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
@@ -329,17 +329,25 @@ export function PromptTablePanel({
     const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx || !list.length) return nameMin;
     ctx.font = `400 14px ${FONT}`;
-    const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width, 0) / list.length;
-    return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
-  }, [list, nameMin, nameMax]);
+    const ws = list.map((pr) => ctx.measureText(pr.name).width).sort((a, b) => a - b);
+    // beside the content column the name doesn't stretch, so it takes most names whole (the 80th
+    // percentile) and the content starts right after it; otherwise the average, with spare room on top
+    const base = shownCols.includes("content") ? ws[Math.min(ws.length - 1, Math.floor(ws.length * 0.8))] : ws.reduce((a, b) => a + b, 0) / ws.length;
+    return Math.round(Math.min(nameMax, Math.max(nameMin, base + 16)));
+  }, [list, nameMin, nameMax, shownCols]);
   const ICON_COL = 34; // the favorite and the detailed columns: a mark, and the header's sort arrow on hover
   // the short columns (an icon, a number) keep their width: the room they'd get sat as a gap on their
   // left, before the detailed mark (Hanna, 2026-11-08); the text columns share it out instead
-  const FIXED: ColKey[] = [];
+  const FIXED: ColKey[] = ["rating"];
   const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : FIXED.includes(k) ? track(k) : `minmax(${track(k)},1fr)`);
   // the favorite and the detailed columns open the row, as the favorite did at first (Hanna, 2026-11-08)
   // the favorite opens the row and the detailed mark closes it, by the ⋯ (Hanna, 2026-11-08)
-  const cols = ["20px", `${ICON_COL}px`, `minmax(${nameW}px,3fr)`, ...shownCols.map(flex), `${ICON_COL}px`, "32px"].join(" ");
+  // with the content column on, the name keeps its own width and the content takes the spare room,
+  // so it starts right after the name instead of across a white gap (Hanna, 2026-11-08)
+  const hasContent = shownCols.includes("content");
+  const flexCol = (k: ColKey) => (k === "content" && !colW[k] ? `minmax(${track(k)},4fr)` : flex(k));
+  const nameTrack = hasContent ? `${nameW}px` : `minmax(${nameW}px,3fr)`;
+  const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), `${ICON_COL}px`, "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
