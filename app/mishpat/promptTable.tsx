@@ -267,7 +267,7 @@ export function PromptTablePanel({
   const lightBlueBtn = { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary };
 
   // the arrow shows on the sorted column, and on hover over any other, to say a click sorts it (Hanna, 2026-11-08)
-  const th = (key: SortKey, label: ReactNode, align: "right" | "center" = "right", tip?: string) => (
+  const th = (key: SortKey, label: ReactNode, align: "right" | "center" = "right", tip?: string, arrowAlways?: boolean) => (
     <button
       onClick={() => sortBy(key)}
       className={`group/th h-full w-full min-w-0 flex items-center gap-0.5 ${align === "center" ? "px-0" : "px-1.5"} text-[12.5px] transition-colors hover:bg-black/[0.04]`}
@@ -275,11 +275,11 @@ export function PromptTablePanel({
       title={`מיון לפי ${tip ?? label}`}
     >
       {typeof label === "string" ? <span className="truncate">{label}</span> : label}
-      <ChevronDown size={12} className={f.sort === key ? "" : "opacity-0 group-hover/th:opacity-70"}
+      <ChevronDown size={12} className={f.sort === key ? "" : arrowAlways ? "opacity-70" : "opacity-0 group-hover/th:opacity-70"}
         style={{ transform: f.sort === key && f.dir === "asc" ? "rotate(180deg)" : "none", flexShrink: 0 }} />
     </button>
   );
-  const idleHidden = (key: SortKey) => (f.sort === key ? "" : "opacity-0 group-hover/th:opacity-100");
+  const idleHidden = (key: SortKey) => (f.sort === key ? "" : "hidden group-hover/th:block");
   // the columns' sort: the author column sorts by source (אני, מערכת, אחרים), then by name
   const sortKeyOf = (k: ColKey): SortKey => (k === "author" ? "source" : k);
 
@@ -476,9 +476,10 @@ export function PromptTablePanel({
               </button>
             </div>
             {/* the two icon columns' headers are empty until hovered (the icon and the arrow, in grey) or
-                sorted (both stay, in blue), so no icon sits over them all the time (Hanna, 2026-11-08) */}
-            {th("fav", <Bookmark size={14} fill="currentColor" className={idleHidden("fav")} style={{ flexShrink: 0 }} />, "center", "מועדפים")}
-            {th("kind", <WandSparkles size={14} className={idleHidden("kind")} style={{ transform: "scaleX(-1)", flexShrink: 0 }} />, "center", "פרומפט מפורט")}
+                sorted (both stay, in blue), so no icon sits over them all the time; a small grey arrow stays
+                in the middle to hint that they sort (Hanna, 2026-11-08) */}
+            {th("fav", <Bookmark size={14} fill="currentColor" className={idleHidden("fav")} style={{ flexShrink: 0 }} />, "center", "מועדפים", true)}
+            {th("kind", <WandSparkles size={14} className={idleHidden("kind")} style={{ transform: "scaleX(-1)", flexShrink: 0 }} />, "center", "פרומפט מפורט", true)}
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
