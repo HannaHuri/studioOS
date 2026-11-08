@@ -303,9 +303,12 @@ export function PromptTablePanel({
     const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width, 0) / list.length;
     return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
   }, [list, nameMin, nameMax]);
+  // the look under comparison (2026-11-08): ?icons=b in the address
+  const iconsB = useMemo(() => new URLSearchParams(window.location.search).get("icons") === "b", []);
   const ICONS_W = 64; // the favorite, author and kind marks, in fixed slots
   const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : `minmax(${track(k)},1fr)`);
-  const cols = ["20px", `${ICONS_W}px`, `minmax(${nameW}px,2fr)`, ...shownCols.map(flex), "32px"].join(" ");
+  // the icons sit at the row's far end, by the ⋯ (Hanna, 2026-11-08)
+  const cols = ["20px", `minmax(${nameW}px,2fr)`, ...shownCols.map(flex), `${ICONS_W}px`, "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
@@ -492,16 +495,6 @@ export function PromptTablePanel({
                 <MoreVertical size={15} />
               </button>
             </div>
-            {/* the icons' header sorts by any one of them, from a small menu */}
-            <button
-              onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setSortMenu((v) => (v ? null : rect)); }}
-              className="h-full flex items-center justify-center gap-0.5 transition-colors hover:bg-black/[0.04]"
-              style={{ color: ICON_SORTS.some((o) => o.key === f.sort) || sortMenu ? c.primary : subCol }}
-              title="מיון לפי מועדפים, מחבר או סוג פרומפט"
-            >
-              <ArrowUpDown size={14} />
-              <ChevronDown size={11} />
-            </button>
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
@@ -517,6 +510,16 @@ export function PromptTablePanel({
                 </div>
               </div>
             ))}
+            {/* the icons' header sorts by any one of them, from a small menu */}
+            <button
+              onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setSortMenu((v) => (v ? null : rect)); }}
+              className="h-full flex items-center justify-center gap-0.5 transition-colors hover:bg-black/[0.04]"
+              style={{ color: ICON_SORTS.some((o) => o.key === f.sort) || sortMenu ? c.primary : subCol }}
+              title="מיון לפי מועדפים, מחבר או סוג פרומפט"
+            >
+              <ArrowUpDown size={14} />
+              <ChevronDown size={11} />
+            </button>
             {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
             <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
@@ -542,19 +545,6 @@ export function PromptTablePanel({
                 {/* the open row carries the documents table's blue edge */}
                 {active && <div className="absolute top-0 bottom-0 right-0" style={{ width: "3px", backgroundColor: c.primary }} />}
                 <div />
-                {/* fixed slots, so each kind of mark lines up down the table: favorite, author (none for
-                    the system's own), detailed */}
-                <div className="flex items-center justify-start gap-0.5 ps-0.5">
-                  <span className="w-[18px] flex justify-center"><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet small /></span>
-                  <span className="w-[18px] flex justify-center" title={pr.source === "system" ? undefined : srcName(pr) === "אני" ? "אני" : `משותף · ${authorFull(pr)}`}>
-                    {pr.source !== "system" && <SourceMark pr={pr} isDark={isDark} size={14} />}
-                  </span>
-                  <span className="w-[18px] flex justify-center" style={{ color: subCol }}
-                    title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : undefined}>
-                    {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
-                  </span>
-                </div>
-
                 {/* the name alone; the text is in the תוכן column */}
                 <div className="min-w-0 text-right px-1.5 py-2 flex items-center gap-1.5">
                   {/* a touch heavier than the cells; its text shows on hover, as in the תוכן column */}
@@ -563,6 +553,19 @@ export function PromptTablePanel({
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
+                {/* fixed slots, so each kind of mark lines up down the table: favorite, author, detailed.
+                    Two looks to compare (?icons=b): A shows a mark only where it says something; B, like
+                    Gmail's star, shows all three always, in blue where they're on. */}
+                <div className="flex items-center justify-start gap-0.5 ps-0.5">
+                  <span className="w-[18px] flex justify-center"><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet={!iconsB} small filled={iconsB} /></span>
+                  <span className="w-[18px] flex justify-center" title={pr.source === "system" ? "מערכת" : srcName(pr) === "אני" ? "אני" : `משותף · ${authorFull(pr)}`}>
+                    {(iconsB || pr.source !== "system") && <SourceMark pr={pr} isDark={isDark} size={14} />}
+                  </span>
+                  <span className="w-[18px] flex justify-center" style={{ color: iconsB ? (pr.parts ? c.primary : (isDark ? dk.border : "#d0d4dc")) : subCol }}
+                    title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : iconsB ? "פרומפט פשוט" : undefined}>
+                    {(iconsB || pr.parts) && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
+                  </span>
+                </div>
 
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>

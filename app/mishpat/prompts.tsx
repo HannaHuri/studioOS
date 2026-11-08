@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Search, Share2,
+  Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
   Star, Trash2, User, Users, X, Copy, Book, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -733,7 +733,7 @@ export function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-export function FavMark({ on, onToggle, isDark, quiet, small }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean }) {
+export function FavMark({ on, onToggle, isDark, quiet, small, filled }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean; filled?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -746,7 +746,7 @@ export function FavMark({ on, onToggle, isDark, quiet, small }: { on: boolean; o
     >
       {/* An outline like every other icon (Hanna, 2026-11-08: the filled one stood apart); saved is
           blue, as the "אני" mark is, and an unsaved one shows only on hover where it's quiet. */}
-      <Bookmark size={small ? 14 : 15} style={{ color: on ? c.primary : subtle(isDark) }} />
+      <Bookmark size={small ? 14 : 15} fill={filled && on ? c.primary : "none"} style={{ color: on ? c.primary : subtle(isDark) }} />
     </button>
   );
 }
@@ -1974,8 +1974,9 @@ export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; 
   const btn = "size-6 flex items-center justify-center rounded transition-colors hover:bg-black/10";
   return (
     <div className="flex items-center" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
+      {/* a save icon, not the favorites' bookmark: the window it opens offers the favorites as an option */}
       <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה כפרומפט">
-        <Bookmark size={15} />
+        <Save size={15} />
       </button>
       <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
         <Share2 size={15} />
