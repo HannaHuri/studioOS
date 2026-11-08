@@ -313,7 +313,7 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", content: "160px", caseType: "68px", matter: "96px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "60px", content: "160px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
@@ -330,7 +330,10 @@ export function PromptTablePanel({
     return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
   }, [list, nameMin, nameMax]);
   const ICON_COL = 34; // the favorite and the detailed columns: a mark, and the header's sort arrow on hover
-  const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : `minmax(${track(k)},1fr)`);
+  // the short columns (an icon, a number) keep their width: the room they'd get sat as a gap on their
+  // left, before the detailed mark (Hanna, 2026-11-08); the text columns share it out instead
+  const FIXED: ColKey[] = ["author", "rating"];
+  const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : FIXED.includes(k) ? track(k) : `minmax(${track(k)},1fr)`);
   // the favorite and the detailed columns open the row, as the favorite did at first (Hanna, 2026-11-08)
   // the favorite opens the row and the detailed mark closes it, by the ⋯ (Hanna, 2026-11-08)
   const cols = ["20px", `${ICON_COL}px`, `minmax(${nameW}px,2fr)`, ...shownCols.map(flex), `${ICON_COL}px`, "32px"].join(" ");
