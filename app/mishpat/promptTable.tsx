@@ -279,6 +279,7 @@ export function PromptTablePanel({
         style={{ transform: f.sort === key && f.dir === "asc" ? "rotate(180deg)" : "none", flexShrink: 0 }} />
     </button>
   );
+  const idleHidden = (key: SortKey) => (f.sort === key ? "" : "opacity-0 group-hover/th:opacity-100");
   // the columns' sort: the author column sorts by source (אני, מערכת, אחרים), then by name
   const sortKeyOf = (k: ColKey): SortKey => (k === "author" ? "source" : k);
 
@@ -474,8 +475,10 @@ export function PromptTablePanel({
                 <MoreVertical size={15} />
               </button>
             </div>
-            {th("fav", <Bookmark size={14} fill="currentColor" style={{ flexShrink: 0 }} />, "center", "מועדפים")}
-            {th("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)", flexShrink: 0 }} />, "center", "פרומפט מפורט")}
+            {/* the two icon columns' headers are empty until hovered (the icon and the arrow, in grey) or
+                sorted (both stay, in blue), so no icon sits over them all the time (Hanna, 2026-11-08) */}
+            {th("fav", <Bookmark size={14} fill="currentColor" className={idleHidden("fav")} style={{ flexShrink: 0 }} />, "center", "מועדפים")}
+            {th("kind", <WandSparkles size={14} className={idleHidden("kind")} style={{ transform: "scaleX(-1)", flexShrink: 0 }} />, "center", "פרומפט מפורט")}
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
