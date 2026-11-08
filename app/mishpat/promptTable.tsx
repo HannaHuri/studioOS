@@ -347,13 +347,16 @@ export function PromptTablePanel({
   // When the panel is narrower than the columns' widths, every column (the name and dragged widths
   // included) shrinks by the same factor instead of the table scrolling the first ones out of view
   // (Hanna, 2026-11-08); it scrolls only below each column's floor.
-  const EDGES = 20 + 2 * ICON_COL + 32 + 24 + 12; // the ⋮ and icon columns, the ⋯, padding, scrollbar
+  const EDGES = 20 + 2 * ICON_COL + 32 + 24; // the ⋮ and icon columns, the ⋯ and the padding
+  const GUTTER = 14; // the panel's border and the scrollbar's gutter, outside the table's own width
   const baseOf = (k: ColKey) => parseInt(track(k), 10);
   const nameBase = colW.name ?? nameW;
-  const fit = Math.min(1, Math.max(0, (width - EDGES) / (nameBase + shownCols.reduce((sum, k) => sum + baseOf(k), 0))));
+  // the icon and number columns keep their width, so their headers stay whole; the rest share what's left
+  const KEEP: ColKey[] = ["author", "rating"];
+  const floorOf = (k: ColKey) => (KEEP.includes(k) ? Math.min(56, baseOf(k)) : 40);
+  const kept = shownCols.filter((k) => KEEP.includes(k)).reduce((sum, k) => sum + floorOf(k), 0);
+  const fit = Math.min(1, Math.max(0, (width - GUTTER - EDGES - kept) / (nameBase + shownCols.filter((k) => !KEEP.includes(k)).reduce((sum, k) => sum + baseOf(k), 0))));
   const sc = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
-  // the icon and number columns keep their width, so their headers stay whole
-  const floorOf = (k: ColKey) => (k === "author" || k === "rating" ? Math.min(56, baseOf(k)) : 40);
   const flexCol = (k: ColKey) => {
     const w = sc(baseOf(k), floorOf(k));
     return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
