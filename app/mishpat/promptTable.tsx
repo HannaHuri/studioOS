@@ -569,7 +569,7 @@ export function PromptTablePanel({
                   <span className="text-[14px] font-semibold truncate" style={{ color: active ? c.primary : textCol }}
                     onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
                   {/* why it is at the top */}
-                  {pr.pinned && <span className="flex-none flex" style={{ color: subCol }} title="נעוץ למעלה"><Pin size={13} /></span>}
+                  {pr.pinned && <span className="flex-none flex" style={{ color: subCol, transform: "translateY(1.5px)" }} title="נעוץ למעלה"><Pin size={13} fill="currentColor" /></span>}
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
