@@ -328,7 +328,7 @@ export function PromptTablePanel({
   const nameW = useMemo(() => {
     const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx || !list.length) return nameMin;
-    ctx.font = `600 14px ${FONT}`;
+    ctx.font = `500 14px ${FONT}`;
     const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width, 0) / list.length;
     return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
   }, [list, nameMin, nameMax]);
@@ -566,7 +566,7 @@ export function PromptTablePanel({
                 {/* the name alone; the text is in the תוכן column */}
                 <div className="min-w-0 text-right px-1.5 py-2 flex items-center gap-1.5">
                   {/* a touch heavier than the cells; its text shows on hover, as in the תוכן column */}
-                  <span className="text-[14px] font-semibold truncate" style={{ color: active ? c.primary : textCol }}
+                  <span className="text-[14px] font-medium truncate" style={{ color: active ? c.primary : textCol }}
                     onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
                   {/* why it is at the top */}
                   {pr.pinned && <span className="flex-none flex" style={{ color: subCol, transform: "translateY(1.5px)" }} title="נעוץ למעלה"><Pin size={13} fill="currentColor" /></span>}
