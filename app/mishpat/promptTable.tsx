@@ -32,7 +32,7 @@ const COL_LABELS: Record<ColKey, string> = {
   content: "תוכן", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  content: "240px", author: "84px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
+  content: "240px", author: "56px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
 };
 const DEFAULT_ORDER: ColKey[] = ["content", "author", "date", "court", "caseType", "matter", "stage", "rating"];
 // תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
@@ -286,7 +286,7 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", content: "160px", caseType: "68px", matter: "96px", author: "80px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", content: "160px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
@@ -314,13 +314,12 @@ export function PromptTablePanel({
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
       case "author": {
-        // the mark and the word the filter offers; who wrote a shared one is in the tooltip
+        // the mark alone (Hanna, 2026-11-08: less text in the table); its word, and who wrote a shared
+        // one, are in the tooltip, and the מחבר filter shows each mark with its word
         const n = srcName(pr);
         return (
-          <div key={k} className="px-1.5 min-w-0 text-[12.5px] flex items-center gap-1.5" style={{ color: cellCol }}
-            title={pr.source === "shared" ? `${n} · ${authorFull(pr)}` : n}>
+          <div key={k} className="px-1.5 min-w-0 flex items-center" title={pr.source === "shared" ? `${n} · ${authorFull(pr)}` : n}>
             <SourceMark pr={pr} isDark={isDark} size={14} plain />
-            <span className="truncate">{n}</span>
           </div>
         );
       }
