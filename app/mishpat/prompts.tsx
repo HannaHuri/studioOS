@@ -68,12 +68,13 @@ export const ANY = "הכל";
 export const GENERAL = "כללי";
 
 // ── Classification (lists from Hanna, 2026-11-03/04) ─────────────────────
-// סוג תיק is the main topic; each has its own תחומים and its own תגיות. A תחום or a tag only
-// means something under its case type, so both lists open once a case type is chosen.
+// The labels on screen (2026-11-08): the case type (caseType) reads "תחום" and its sub-topics (matter)
+// read "תת תחום". A sub-topic only means something under its תחום, so its list opens once one is chosen.
+// Tags were dropped.
 const he = (a: string, b: string) => a.localeCompare(b, "he");
 const sortHe = (xs: string[]) => [...xs].sort(he);
 const MATTERS_RAW: Record<string, string[]> = {
-  "אזרחי": ["לשון הרע", "הגנת הפרטיות", "הוצאה לפועל", "שטרות", "מתן חשבונות", "חוזים", "הטרדה מאיימת", "קניין רוחני", "רכב", "ביטוח", "מטרד", "נזיקין", "בוררות", "אכיפת פסק חוץ"],
+  "אזרחי": ["כספי", "לשון הרע", "הגנת הפרטיות", "הוצאה לפועל", "שטרות", "מתן חשבונות", "חוזים", "הטרדה מאיימת", "קניין רוחני", "רכב", "ביטוח", "מטרד", "נזיקין", "בוררות", "אכיפת פסק חוץ"],
   "מקרקעין": ["פינוי מושכר", "זכויות במקרקעין", "ליקויי בניה", "איחור במסירה", "פירוק שיתוף", "סילוק יד", "בתים משותפים", "הגנת הדייר", "הפקעות", "עבירות בנייה וצווי הריסה"],
   "נזקי גוף": ["תאונות דרכים", "תאונות עבודה", "רשלנות רפואית", "חוק הנכים"],
   "פלילי": ["מעצרים", "עבירות מין", "עבירות רכוש", "עבירות אלימות", "עבירות כלכליות", "עבירות נשק וביטחון"],
@@ -85,36 +86,17 @@ const MATTERS_RAW: Record<string, string[]> = {
   "תעבורה": ["נהיגה בשכרות", "תאונות דרכים", "נהיגה ללא רישיון/בזמן פסילה", "עבירות מהירות", "עבירות רמזור ותמרורים"],
   "נוער": [],
   "קהילתי": [],
-  "כלכלי": [],
+  "כלכלי": ["קיפוח", "אישור חלוקה - סעיף 303", "ייעוץ השקעות", "תביעות נאמן נגד נושא משרה", "תביעה נגזרת", "סכסוך בעלי מניות", "שוק ההון וני״ע", "מיזוגים ורכישות", "אכיפה", "כלכלי-פלילי", "תביעה ייצוגית"],
   "מסים": ["מס הכנסה", "מיסוי מקרקעין", "מכס ומע״מ"],
-  "חדלות פירעון ופש״ר": [],
-};
-const TAGS_RAW: Record<string, string[]> = {
-  "אזרחי": ["כספים וחיובים", "סדר דין אזרחי", "סעדים", "ראיות", "תביעות כספיות", "התיישנות", "סעדים זמניים", "צו מניעה", "צו עשה", "צו עיקול", "צו איסור יציאה", "צו ביניים", "סמכות", "קניין רוחני"],
-  "פלילי": ["הכרעת דין", "גזר דין", "סדר דין פלילי", "ענישה", "עיון בחומרי חקירה"],
-  "נזקי גוף": ["פיצויים", "הערכת נזק", "קשר סיבתי", "אחריות", "נכות", "מומחים", "עדים", "תחשיבים", "אחריות מעסיקים", "רשלנות מקצועית", "אחריות רשויות וגופים ציבוריים"],
-  "משפחה": ["אחריות הורית", "זמני שהות", "אפוטרופסות", "חלוקת רכוש"],
-  "עבודה": ["פיטורים", "זכויות עובדים", "שכר", "הסכמים", "שעות עבודה ומנוחה", "פיצויי פיטורין", "אפליה בעבודה"],
-  "תעבורה": ["ענישה", "פסילת רישיון", "נהיגה ללא רישיון", "נהיגה בזמן פסילה"],
-  "מנהלי": ["עתירה מנהלית", "רשויות מקומיות", "סמכות מנהלית", "סבירות ומידתיות"],
-  "כלכלי": ["חברות", "שותפויות", "סכסוכים עסקיים", "בנקאות", "חוזים מסחריים", "בעלי מניות", "מיזוגים ורכישות"],
-  "מקרקעין": ["בעלות וזכויות במקרקעין", "שכירות", "בתים משותפים", "עסקאות מכר", "תכנון ובנייה", "פירוק שיתוף", "פינוי", "רישום מקרקעין"],
-  "חדלות פירעון ופש״ר": ["יחידים", "תאגידים", "צו פתיחת הליכים", "הסדרי חוב", "שיקום כלכלי", "מימוש נכסים", "תביעות חוב", "הפטר", "איחוד תיקים", "איסור פרסום"],
+  "חדלות פירעון ופש״ר": ["צו פתיחת הליכים", "הסדרי חוב", "שיקום כלכלי", "מימוש נכסים", "תביעות חוב", "הפטר"],
 };
 // every list A to ב, with כללי first where it appears
 export const CASE_TYPES = [GENERAL, ...sortHe(Object.keys(MATTERS_RAW))];
 export const MATTERS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(MATTERS_RAW).map(([k, v]) => [k, sortHe(v)]));
-export const TAGS_BY: Record<string, string[]> = Object.fromEntries(Object.entries(TAGS_RAW).map(([k, v]) => [k, sortHe(v)]));
-// tags that fit any case type, offered alongside the case type's own
-export const GENERAL_TAGS = sortHe(["היתר לעיון", "הארכת מועד"]);
 // a prompt's own form: the תחומים its case type offers (כללי alone for כללי or a case type without any)
 export const mattersOf = (caseType: string) => [GENERAL, ...(MATTERS_BY[caseType] ?? [])];
-export const tagsOf = (caseType: string) => [...(TAGS_BY[caseType] ?? []), ...GENERAL_TAGS];
-// a tag outside every list was typed in by hand, and stays whatever the case type
-export const ALL_LISTED_TAGS = new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS]);
 // flat lists, for the older library window that filters by one value
 export const MATTERS = [GENERAL, ...sortHe([...new Set(Object.values(MATTERS_RAW).flat())])];
-export const TAGS = sortHe([...new Set([...Object.values(TAGS_RAW).flat(), ...GENERAL_TAGS])]);
 export const STAGES = [GENERAL, "קדם משפט", "לפני דיון", "הוכחות", "סיכומים", "פס״ד", "ערעור"];
 export const COURTS = [GENERAL, "שלום", "מחוזי", "עליון", "בית דין לעבודה"];
 
@@ -521,9 +503,9 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
   // optional headings: the options shown under each, in order (e.g. a case type's תחומים)
   groups?: { title: string; options: string[] }[];
   disabledHint?: string;
-  // a picker (the editor's tags) keeps its label and has no "all" row: what's picked shows as chips beside it
+  // a picker keeps its label and has no "all" row: what's picked shows as chips beside it
   picker?: boolean;
-  // long lists (תחום, תגית) get a search field at the top of the menu
+  // long lists (תת תחום) get a search field at the top of the menu
   searchable?: boolean;
 }) {
   const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
@@ -846,7 +828,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "tags" | "date" | "fav";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "content" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -855,9 +837,9 @@ const dayNum = (d: string) => { if (!d) return 0; const [dd, mm, yy] = d.split("
 export const byDate = (a: Prompt, b: Prompt) => dayNum(dateOf(b)) - dayNum(dateOf(a));
 export type Filters = {
   q: string; source: string; caseType: string; matter: string; stage: string; court: string;
-  tag: string; favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
+  favOnly: boolean; sort: SortKey; dir: "asc" | "desc";
 };
-export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, tag: ANY, favOnly: false, sort: "relevance", dir: "desc" };
+export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
 export const SOURCE_OPTS = ["אני", "מערכת", "משותף"];
 export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "משותף": 2 };
@@ -877,10 +859,9 @@ export const matches = (pr: Prompt, ff: Filters) => {
     (ff.matter === ANY || pr.matter === ff.matter) &&
     (ff.stage === ANY || pr.stage === ff.stage) &&
     (ff.court === ANY || pr.court === ff.court) &&
-    (ff.tag === ANY || pr.tags.includes(ff.tag)) &&
     (!ff.favOnly || pr.fav);
 };
-// ★ | שם + תקציר | מקור | מחבר | ערכאה | סוג תיק | תחום | שלב | דירוג | ⋮
+// ★ | שם + תקציר | מקור | מחבר | ערכאה | תחום | תת תחום | שלב | דירוג | ⋮
 // The four run widest to narrowest — which court, then which kind of case, then what it is
 // about, then where it has got to — so the row reads the way the classification is decided.
 // Every dimension is its own column: each is a separate thing to filter and sort by, and one
@@ -957,7 +938,7 @@ export function PromptLibrary({
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setF((prev) => ({ ...prev, [k]: v }));
   // Sorting isn't filtering: clicking a column header shouldn't put a "ניקוי" on screen, and
   // ניקוי shouldn't throw away the order the user chose.
-  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "tag", "favOnly"] as const;
+  const FILTER_KEYS = ["q", "source", "caseType", "matter", "stage", "court", "favOnly"] as const;
   const filtered = FILTER_KEYS.some((k) => f[k] !== EMPTY_FILTERS[k]);
   const clearFilters = () => setF((prev) => ({ ...EMPTY_FILTERS, sort: prev.sort, dir: prev.dir }));
 
@@ -992,8 +973,8 @@ export function PromptLibrary({
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      content: (a, b) => b.body.localeCompare(a.body, "he"),
       date: byDate,
-      tags: (a, b) => (b.tags[0] ?? "").localeCompare(a.tags[0] ?? "", "he"),
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
@@ -1017,7 +998,6 @@ export function PromptLibrary({
       matter: tally("matter", MATTERS, (pr) => pr.matter),
       stage: tally("stage", STAGES, (pr) => pr.stage),
       court: tally("court", COURTS, (pr) => pr.court),
-      tag: tally("tag", TAGS, (pr) => pr.tags),
     };
   }, [prompts, f]);
 
@@ -1078,10 +1058,9 @@ export function PromptLibrary({
             </div>
             <Dropdown label="מחבר" value={f.source} options={SOURCE_OPTS} onChange={(v) => set("source", v)} isDark={isDark} width={124} counts={facets.source} />
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
-            <Dropdown label="סוג תיק" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
-            <Dropdown label="תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
+            <Dropdown label="תחום" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
+            <Dropdown label="תת תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
             <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
-            <Dropdown label="תגית" value={f.tag} options={TAGS} onChange={(v) => set("tag", v)} isDark={isDark} width={122} counts={facets.tag} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
@@ -1109,8 +1088,8 @@ export function PromptLibrary({
               {th("source", "מחבר", "center")}
               {th("author", "שם המחבר")}
               {th("court", "ערכאה")}
-              {th("caseType", "סוג תיק")}
-              {th("matter", "תחום")}
+              {th("caseType", "תחום")}
+              {th("matter", "תת תחום")}
               {th("stage", "שלב")}
               {th("rating", "דירוג")}
               <div />
@@ -1210,7 +1189,6 @@ export function PromptLibrary({
                         {pr.body}
                       </p>
                       <div className="flex items-center gap-2 mt-3 flex-wrap" style={{ paddingInlineStart: "27px" }}>
-                        {pr.tags.map((t) => <Tag key={t} t={t} isDark={isDark} active={f.tag === t} onClick={() => set("tag", f.tag === t ? ANY : t)} />)}
                         <span className="text-[12px] flex items-center gap-1" style={{ color: subCol }}>
                           <SourceMark pr={pr} isDark={isDark} size={12} /> {sourceLabel(pr)}
                         </span>
@@ -1288,20 +1266,11 @@ export function PromptEditor({
   // general is a little noise that shows itself and gets corrected. So: כללי until stated.
   const [caseType, setCaseType] = useState(initial?.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial?.matter ?? GENERAL);
-  // tags are picked by hand from the case type's list (plus the general ones), or typed in
-  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
-  const [newTag, setNewTag] = useState("");
-  const addTag = () => {
-    const t = newTag.trim();
-    if (t && !tags.includes(t)) setTags([...tags, t]);
-    setNewTag("");
-  };
-  // a תחום or a tag belongs to its case type, so changing the case type lets go of the old one's
+  // a sub-topic belongs to its תחום, so changing the תחום lets go of the old one's
   const pickCaseType = (v: string) => {
     if (v === caseType) return;
     setCaseType(v);
     setMatter(GENERAL);
-    setTags((prev) => prev.filter((t) => tagsOf(v).includes(t) || !ALL_LISTED_TAGS.has(t)));
   };
   const [stage, setStage] = useState(initial?.stage ?? GENERAL);
   const [court, setCourt] = useState(initial?.court ?? GENERAL);
@@ -1321,7 +1290,7 @@ export function PromptEditor({
   const [preShare, setPreShare] = useState<string | null>(null);   // the text as it was before the swap
   // Nothing to save or cancel until something changes; the X still closes. A question brought from
   // the chat is there to be saved, so its buttons are live from the start.
-  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes, tags });
+  const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
   const labels = hitLabels(hits, kept);
@@ -1387,7 +1356,7 @@ export function PromptEditor({
       } as Prompt),
       caseType, matter, stage, court,
       ...(mode === "fork" ? { basedOn: initial?.name } : {}),
-      name: name.trim(), tags, edited: today(),
+      name: name.trim(), tags: [], edited: today(),
       body: cleanParts ? partsToText(cleanParts, guidelines) : body.trim(),
       parts: cleanParts,
       guidelines: cleanParts && guidelines.trim() ? guidelines.trim() : undefined,
@@ -1544,64 +1513,17 @@ export function PromptEditor({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
-              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
+              { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
                 <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
-                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
+                  disabledHint={t === "תת תחום" && caseType === GENERAL ? "יש לבחור קודם תחום" : undefined} />
               </div>
             ))}
           </div>
-
-          {/* Tags are picked by the user (no longer guessed from the wording): the case type's list
-              plus the general ones, and anything else can be typed in. */}
-          <div className="text-[12px] mt-3 mb-1" style={{ color: subCol }}>תגיות</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <MultiDropdown
-              label="בחירה מהרשימה" value={tags.filter((t) => tagsOf(caseType).includes(t))} options={tagsOf(caseType)}
-              groups={[{ title: caseType, options: TAGS_BY[caseType] ?? [] }, { title: "כללי", options: GENERAL_TAGS }].filter((g) => g.options.length > 0)}
-              onChange={(v) => setTags([...v, ...tags.filter((t) => !tagsOf(caseType).includes(t))])}
-              isDark={isDark} width={140} picker disabledHint={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
-            />
-            {/* a text field with its add button inside, so it reads as a place to type, not as a button */}
-            <div
-              className="h-8 w-[180px] flex items-center rounded-[4px] ps-2.5 pe-1"
-              style={{ border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: isDark ? dk.input : "white", opacity: caseType === GENERAL ? 0.45 : 1 }}
-              title={caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined}
-            >
-              <input
-                value={newTag} onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                placeholder="הקלדת תגית חופשית"
-                disabled={caseType === GENERAL}
-                className="flex-1 min-w-0 h-full bg-transparent text-[13px] outline-none"
-                style={{ color: textCol }}
-              />
-              <button
-                onClick={addTag} disabled={!newTag.trim()} aria-label="הוספת התגית" title="הוספת התגית"
-                className="flex-none size-6 flex items-center justify-center rounded-[3px] hover:bg-black/5 disabled:hover:bg-transparent disabled:cursor-default"
-                style={{ color: newTag.trim() ? c.primary : subCol }}
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          </div>
-          {tags.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {tags.map((t) => (
-                <span key={t} className="flex items-center gap-1 ps-2 pe-1 h-[24px] rounded-[3px] text-[12.5px]"
-                  style={{ backgroundColor: isDark ? "#243354" : "#f0f3f9", color: isDark ? dk.text : c.textGray }}>
-                  {t}
-                  <button onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`הסרת ${t}`} className="p-0.5 rounded hover:bg-black/10">
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
 
           {mode === "new" && (
             <button onClick={() => setFavNew((v) => !v)} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
@@ -1864,14 +1786,14 @@ export function PromptShare({
           <div className="flex items-start gap-2 flex-wrap">
             {([
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
-              { t: "סוג תיק", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
-              { t: "תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
+              { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
+              { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
               { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
                 <Dropdown label={t} value={v} options={[...o]} onChange={set} isDark={isDark} width={w} noAny
-                  disabledHint={t === "תחום" && caseType === GENERAL ? "יש לבחור קודם סוג תיק" : undefined} />
+                  disabledHint={t === "תת תחום" && caseType === GENERAL ? "יש לבחור קודם תחום" : undefined} />
               </div>
             ))}
           </div>

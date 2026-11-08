@@ -16,7 +16,7 @@ import { Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVe
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
 import {
-  ANY, GENERAL, CASE_TYPES, MATTERS_BY, TAGS_BY, GENERAL_TAGS, ALL_LISTED_TAGS, STAGES, COURTS,
+  ANY, GENERAL, CASE_TYPES, MATTERS_BY, STAGES, COURTS,
   MultiDropdown, FavMark, RowMenu, SourceMark, menuFor, matches, srcName, authorName, authorFull, roleOf, avgOf,
   saved, EMPTY_FILTERS, SOURCE_OPTS, SOURCE_RANK, dateOf, byDate,
   type Prompt, type Filters, type SortKey,
@@ -24,28 +24,31 @@ import {
 
 // The data columns the user can show, hide and reorder. The saved mark, the name and the two
 // row actions are structural and always there.
-type ColKey = "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "tags" | "rating";
+// caseType reads "תחום" and matter "תת תחום" (2026-11-08); the prompt's text is a column of its own, off by default
+type ColKey = "content" | "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
 const COL_LABELS: Record<ColKey, string> = {
-  source: "מחבר", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "סוג תיק", matter: "תחום", stage: "שלב", tags: "תגיות", rating: "דירוג",
+  content: "תוכן", source: "מחבר", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", tags: "152px", rating: "76px",
+  content: "240px", source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
 };
-// tags last: the table is wider than the side panel by default, and the column that gets cut is the tags,
-// enough of them showing that people know they're there
-const DEFAULT_ORDER: ColKey[] = ["source", "author", "date", "court", "caseType", "matter", "stage", "rating", "tags"];
-// מקור, סוג תיק, תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
+const DEFAULT_ORDER: ColKey[] = ["content", "source", "author", "date", "court", "caseType", "matter", "stage", "rating"];
+// מחבר, תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, tags: true, rating: true,
+  content: false, source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
 };
+// a detailed prompt is one built of parts; the rest are plain
+const KIND_OPTS = ["פשוט", "מפורט"];
+const kindOf = (pr: Prompt) => (pr.parts ? "מפורט" : "פשוט");
 // v3: the defaults changed (uses gone, tags and the categories in, then דירוג), so older saved picks start over
 // the filters that take several values, and what each one reads off a prompt
-type MKey = "source" | "caseType" | "matter" | "stage" | "court" | "tag";
+// (kind — פשוט or מפורט — has no column, so its filter is always there)
+type MKey = "source" | "caseType" | "matter" | "stage" | "court" | "kind";
 type Multi = Record<MKey, string[]>;
-const M_KEYS: MKey[] = ["source", "caseType", "matter", "stage", "court", "tag"];
-const EMPTY_MULTI: Multi = { source: [], caseType: [], matter: [], stage: [], court: [], tag: [] };
+const M_KEYS: MKey[] = ["source", "caseType", "matter", "stage", "court", "kind"];
+const EMPTY_MULTI: Multi = { source: [], caseType: [], matter: [], stage: [], court: [], kind: [] };
 const VALUE_OF: Record<MKey, (pr: Prompt) => string | string[]> = {
-  source: srcName, caseType: (pr) => pr.caseType, matter: (pr) => pr.matter, stage: (pr) => pr.stage, court: (pr) => pr.court, tag: (pr) => pr.tags,
+  source: srcName, caseType: (pr) => pr.caseType, matter: (pr) => pr.matter, stage: (pr) => pr.stage, court: (pr) => pr.court, kind: kindOf,
 };
 // the filter picks are kept between visits, like the columns — a judge who works in one area
 // shouldn't have to pick it again each time
@@ -57,8 +60,7 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
       const out = { ...EMPTY_MULTI };
       for (const k of M_KEYS) {
         // a filter whose column is hidden doesn't apply, so it isn't restored either
-        const col: ColKey = k === "tag" ? "tags" : k;
-        if (Array.isArray(raw[k]) && shown[col]) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string")
+        if (Array.isArray(raw[k]) && (k === "kind" || shown[k])) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string")
           .map((v: string) => (k === "source" && v === "שלי" ? "אני" : v)); // "שלי" was renamed "אני"
       }
       return out;
@@ -66,7 +68,7 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   } catch { /* fall back to nothing picked */ }
   return EMPTY_MULTI;
 };
-const COLS_LS_KEY = "mishpat-promptCols-v4";
+const COLS_LS_KEY = "mishpat-promptCols-v5"; // v5: tags gone, content in
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
@@ -103,6 +105,8 @@ export function PromptTablePanel({
   const shownCols = colState.order.filter((k) => colState.shown[k]);
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null); // the disclaimer, open from the i by the count
+  // the content cell's tooltip: larger than the native one, as on the documents table in /lab
+  const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
   // Reorder by dragging a row in the menu; a plain click still toggles the column
   const colRowRefs = useRef<Partial<Record<ColKey, HTMLDivElement | null>>>({});
   const [drag, setDrag] = useState<{ key: ColKey; to: number } | null>(null);
@@ -137,10 +141,10 @@ export function PromptTablePanel({
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // hiding a column takes its filter with it, so nothing filters the table out of sight
-  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage", "tags"];
+  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage"];
   const toggleCol = (k: ColKey) => {
     if (colState.shown[k] && FILTERED.includes(k)) {
-      setMulti(k === "tags" ? "tag" : (k as MKey), []);
+      setMulti(k as MKey, []);
     }
     saveCols({ ...colState, shown: { ...colState.shown, [k]: !colState.shown[k] } });
   };
@@ -177,28 +181,21 @@ export function PromptTablePanel({
     try { window.localStorage.setItem(FILTERS_LS_KEY, JSON.stringify(v)); } catch { /* ignore */ }
     return v;
   });
-  // תחום and תגית are open from the start, with everything grouped under its case type (and a search in
-  // the menu); picking case types narrows them to those types, and removing a type lets go of its values
+  // תת תחום is open from the start, with everything grouped under its תחום (and a search in the menu);
+  // picking תחומים narrows it to those, and removing one lets go of its values
   const sub = (cts: string[]) => {
     const chosen = cts.filter((t) => t !== GENERAL);
     const picked = chosen.length ? chosen : CASE_TYPES.filter((t) => t !== GENERAL);
-    const free = [...new Set(prompts.filter((pr) => !chosen.length || chosen.includes(pr.caseType)).flatMap((pr) => pr.tags))]
-      .filter((t) => !ALL_LISTED_TAGS.has(t)).sort((a, b) => a.localeCompare(b, "he"));
     const matterGroups = picked.length > 1
       ? [{ title: "", options: [GENERAL] }, ...picked.map((ct) => ({ title: ct, options: MATTERS_BY[ct] ?? [] })).filter((g) => g.options.length > 0)]
       : [{ title: "", options: [GENERAL, ...(MATTERS_BY[picked[0]] ?? [])] }];
-    const tagGroups = [
-      ...picked.map((ct) => ({ title: ct, options: TAGS_BY[ct] ?? [] })),
-      { title: "כללי", options: GENERAL_TAGS },
-      { title: "תגיות נוספות", options: free },
-    ].filter((g) => g.options.length > 0);
     const flat = (gs: { options: string[] }[]) => [...new Set(gs.flatMap((g) => g.options))];
-    return { matterGroups, tagGroups, matters: flat(matterGroups), tags: flat(tagGroups) };
+    return { matterGroups, matters: flat(matterGroups) };
   };
   const setMulti = (k: MKey, v: string[]) => setM((prev) => {
     if (k !== "caseType") return { ...prev, [k]: v };
     const s2 = sub(v);
-    return { ...prev, caseType: v, matter: prev.matter.filter((x) => s2.matters.includes(x)), tag: prev.tag.filter((x) => s2.tags.includes(x)) };
+    return { ...prev, caseType: v, matter: prev.matter.filter((x) => s2.matters.includes(x)) };
   });
   const subs = sub(m.caseType);
   const filtered = f.q !== "" || f.favOnly || M_KEYS.some((k) => m[k].length > 0);
@@ -226,7 +223,7 @@ export function PromptTablePanel({
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
-      tags: (a, b) => (b.tags[0] ?? "").localeCompare(a.tags[0] ?? "", "he"),
+      content: (a, b) => b.body.localeCompare(a.body, "he"),
       date: byDate,
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
@@ -249,7 +246,7 @@ export function PromptTablePanel({
       matter: tally("matter", subs.matters),
       stage: tally("stage", STAGES),
       court: tally("court", COURTS),
-      tag: tally("tag", subs.tags),
+      kind: tally("kind", KIND_OPTS),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompts, f, m]);
@@ -279,7 +276,7 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", tags: "96px", caseType: "68px", matter: "96px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "48px", content: "160px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
@@ -332,21 +329,12 @@ export function PromptTablePanel({
             ) : <span style={{ color: subCol }}>—</span>}
           </div>
         );
-      case "tags":
-        // side panel: the first tag in one chip, cut with "..."; all of them in the tooltip
-        if (!isFocus && !colW.tags) return (
-          <div key={k} className="px-1.5 min-w-0 flex items-center" title={pr.tags.join(", ")}>
-            {pr.tags.length > 0 && (
-              <span className="h-6 px-2 min-w-0 rounded-[4px] text-[12.5px] leading-6 truncate" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{pr.tags[0]}</span>
-            )}
-          </div>
-        );
-        // expanded (or widened): one line; what doesn't fit is cut, and the whole list is in the tooltip
+      case "content":
+        // one line, cut; the whole text in the documents table's large tooltip (/lab's תקציר)
         return (
-          <div key={k} className="px-1.5 min-w-0 flex items-center gap-1 overflow-hidden *:shrink-0" title={pr.tags.join(", ")}>
-            {pr.tags.map((t) => (
-              <span key={t} className="h-6 px-2 flex items-center rounded-[4px] text-[12.5px]" style={{ backgroundColor: isDark ? dk.input : "#f1f3f6", color: cellCol }}>{t}</span>
-            ))}
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }}
+            onMouseEnter={(e) => setTip({ text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>
+            {pr.body}
           </div>
         );
     }
@@ -422,11 +410,22 @@ export function PromptTablePanel({
         {/* Row B: the case chip, then the filters — one line; past the panel's edge they're cut, and widening shows them */}
         <div className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
           {/* a column's filter shows only while the column does */}
+          {/* the favorites and the prompt's kind have no column, so these two are always there */}
+          <button
+            onClick={() => set("favOnly", !f.favOnly)}
+            className="h-8 px-2.5 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
+            style={{ border: `1px solid ${f.favOnly ? c.primary : (isDark ? dk.border : c.border)}`, color: f.favOnly ? c.primary : textCol, backgroundColor: isDark ? dk.input : "white" }}
+            title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים בלבד"}
+            aria-pressed={f.favOnly}
+          >
+            <Bookmark size={13} fill={f.favOnly ? "currentColor" : "none"} />
+            מועדפים
+          </button>
+          <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} />
           {colState.shown.source && <MultiDropdown label="מחבר" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
           {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
-          {colState.shown.caseType && <MultiDropdown label="סוג תיק" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <MultiDropdown label="תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
-          {colState.shown.tags && <MultiDropdown label="תגית" value={m.tag} options={subs.tags} groups={subs.tagGroups} onChange={(v) => setMulti("tag", v)} isDark={isDark} width={104} counts={facets.tag} searchable />}
+          {colState.shown.caseType && <MultiDropdown label="תחום" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
+          {colState.shown.matter && <MultiDropdown label="תת תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
           {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
@@ -495,7 +494,7 @@ export function PromptTablePanel({
                 onClick={() => onUse(pr)}
                 title="לחיצה מכניסה את הפרומפט לצ'אט"
                 className="group relative grid items-center cursor-pointer transition-colors"
-                style={{ gridTemplateColumns: cols, minHeight: "60px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
+                style={{ gridTemplateColumns: cols, minHeight: "44px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "#f7f9fc"; }}
                 onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = surface; }}
               >
@@ -506,16 +505,13 @@ export function PromptTablePanel({
                   <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
                 </div>
 
-                <div className="min-w-0 text-right px-1.5 py-2">
-                  <div className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</div>
-                  {/* a detailed prompt's wand sits with the line that says so, so every name starts at the same edge */}
-                  {pr.parts ? (
-                    <div className="text-[13px] mt-0.5 flex items-center gap-1 min-w-0" style={{ color: subCol }}>
-                      <WandSparkles size={13} className="flex-none" style={{ transform: "scaleX(-1)" }} />
-                      <span className="truncate">פרומפט מפורט · {pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}</span>
-                    </div>
-                  ) : (
-                    <div className="text-[13px] truncate mt-0.5" style={{ color: subCol }} title={pr.body}>{pr.body}</div>
+                {/* the name alone; the text moved to the תוכן column. A detailed prompt's wand follows its name. */}
+                <div className="min-w-0 text-right px-1.5 py-2 flex items-center gap-1.5">
+                  <span className="text-[14px] truncate" style={{ color: active ? c.primary : textCol }}>{pr.name}</span>
+                  {pr.parts && (
+                    <span className="flex-none flex" style={{ color: subCol }} title={`פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}`}>
+                      <WandSparkles size={13} style={{ transform: "scaleX(-1)" }} />
+                    </span>
                   )}
                 </div>
 
@@ -545,6 +541,14 @@ export function PromptTablePanel({
         </div>
       </div>
 
+      {tip && (
+        <div
+          className="fixed z-[300] pointer-events-none whitespace-pre-wrap overflow-hidden"
+          style={{ left: Math.min(tip.x + 14, window.innerWidth - 336), top: Math.min(tip.y + 18, window.innerHeight - 320), maxWidth: "320px", maxHeight: "300px", padding: "9px 12px", borderRadius: "8px", backgroundColor: isDark ? "#0d1424" : "#1e2732", color: "#fff", fontSize: "14.5px", lineHeight: 1.5, fontFamily: "Noto Sans Hebrew, sans-serif", boxShadow: "0 8px 26px rgba(0,0,0,0.28)", direction: "rtl" }}
+        >
+          {tip.text}
+        </div>
+      )}
       {info && (
         <>
           <div className="fixed inset-0 z-[190]" onClick={() => setInfo(null)} />
