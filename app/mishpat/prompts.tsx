@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, Book, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
+  Star, Trash2, User, Users, X, Copy, Landmark, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -471,15 +471,14 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // The source is a mark rather than a word wherever it repeats: three values only, and a shape
 // is read faster than text down a column or across a row. The shield is the one the לשכה badge
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
-// system prompts: a book, as in a מאגר (2026-11-08; the shield-check wasn't clear to users)
-const SOURCE_ICON = { system: Book, shared: Users, mine: User } as const;
-// the book faces right to left, as a Hebrew book does
+// system prompts: a building, the courts' (2026-11-08; the shield-check wasn't clear to users, then a book was tried)
+const SOURCE_ICON = { system: Landmark, shared: Users, mine: User } as const;
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
 export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDark: boolean; size?: number; plain?: boolean }) {
   const I = SOURCE_ICON[pr.source];
-  return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark), transform: pr.source === "system" ? "scaleX(-1)" : undefined }} />;
+  return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
@@ -733,7 +732,7 @@ export function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-export function FavMark({ on, onToggle, isDark, quiet, small, filled }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean; filled?: boolean }) {
+export function FavMark({ on, onToggle, isDark, quiet, small, faint }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean; faint?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -746,7 +745,8 @@ export function FavMark({ on, onToggle, isDark, quiet, small, filled }: { on: bo
     >
       {/* An outline like every other icon (Hanna, 2026-11-08: the filled one stood apart); saved is
           blue, as the "אני" mark is, and an unsaved one shows only on hover where it's quiet. */}
-      <Bookmark size={small ? 14 : 15} fill={filled && on ? c.primary : "none"} style={{ color: on ? c.primary : subtle(isDark) }} />
+      {/* faint: always on screen, so off is a very light grey that doesn't compete with the other marks */}
+      <Bookmark size={small ? 14 : 15} style={{ color: on ? c.primary : faint ? (isDark ? dk.border : "#cfd4dc") : subtle(isDark) }} />
     </button>
   );
 }

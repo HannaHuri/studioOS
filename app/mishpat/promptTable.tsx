@@ -303,8 +303,6 @@ export function PromptTablePanel({
     const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width, 0) / list.length;
     return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
   }, [list, nameMin, nameMax]);
-  // the look under comparison (2026-11-08): ?icons=b in the address
-  const iconsB = useMemo(() => new URLSearchParams(window.location.search).get("icons") === "b", []);
   const ICONS_W = 64; // the favorite, author and kind marks, in fixed slots
   const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : `minmax(${track(k)},1fr)`);
   // the icons sit at the row's far end, by the ⋯ (Hanna, 2026-11-08)
@@ -553,18 +551,18 @@ export function PromptTablePanel({
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
-                {/* fixed slots, so each kind of mark lines up down the table: favorite, author, detailed.
-                    Two looks to compare (?icons=b): A shows a mark only where it says something; B, like
-                    Gmail's star, shows all three always, in blue where they're on. */}
+                {/* fixed slots, so each kind of mark lines up down the table (Hanna, 2026-11-08), right to
+                    left: detailed (a grey wand, only on a detailed prompt), author (always, grey), and the
+                    favorite at the far end (always there, a very light grey; a blue outline when on) */}
                 <div className="flex items-center justify-start gap-0.5 ps-0.5">
-                  <span className="w-[18px] flex justify-center"><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet={!iconsB} small filled={iconsB} /></span>
+                  <span className="w-[18px] flex justify-center" style={{ color: subCol }}
+                    title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : undefined}>
+                    {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
+                  </span>
                   <span className="w-[18px] flex justify-center" title={pr.source === "system" ? "מערכת" : srcName(pr) === "אני" ? "אני" : `משותף · ${authorFull(pr)}`}>
-                    {(iconsB || pr.source !== "system") && <SourceMark pr={pr} isDark={isDark} size={14} />}
+                    <SourceMark pr={pr} isDark={isDark} size={14} plain />
                   </span>
-                  <span className="w-[18px] flex justify-center" style={{ color: iconsB ? (pr.parts ? c.primary : (isDark ? dk.border : "#d0d4dc")) : subCol }}
-                    title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : iconsB ? "פרומפט פשוט" : undefined}>
-                    {(iconsB || pr.parts) && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
-                  </span>
+                  <span className="w-[18px] flex justify-center"><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} small faint /></span>
                 </div>
 
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
