@@ -96,7 +96,7 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete,
+  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
@@ -172,10 +172,10 @@ export function PromptTablePanel({
   };
 
   // Column widths set by dragging a header's edge; only the columns the user resized, saved per user
-  const [colW, setColW] = useState<Partial<Record<ColKey, number>>>(() => {
+  const [colW, setColW] = useState<Partial<Record<ColKey | "name", number>>>(() => {
     try { return JSON.parse(window.localStorage.getItem(COLW_LS_KEY) ?? "{}") ?? {}; } catch { return {}; }
   });
-  const startResize = (k: ColKey, e: ReactMouseEvent) => {
+  const startResize = (k: ColKey | "name", e: ReactMouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     const startW = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width;
     const startX = e.clientX; let last = startW;
@@ -339,20 +339,31 @@ export function PromptTablePanel({
   // the short columns (an icon, a number) keep their width: the room they'd get sat as a gap on their
   // left, before the detailed mark (Hanna, 2026-11-08); the text columns share it out instead
   const FIXED: ColKey[] = ["rating"];
-  const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : FIXED.includes(k) ? track(k) : `minmax(${track(k)},1fr)`);
-  // the favorite and the detailed columns open the row, as the favorite did at first (Hanna, 2026-11-08)
   // the favorite opens the row and the detailed mark closes it, by the ⋯ (Hanna, 2026-11-08)
   // with the content column on, the name keeps its own width and the content takes the spare room,
   // so it starts right after the name instead of across a white gap (Hanna, 2026-11-08)
   const hasContent = shownCols.includes("content");
   const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number; n: number } | null>(null);
-  const flexCol = (k: ColKey) => (k === "content" && !colW[k] ? `minmax(${track(k)},4fr)` : flex(k));
-  const nameTrack = hasContent ? `${nameW}px` : `minmax(${nameW}px,3fr)`;
+  // When the panel is narrower than the columns' widths, every column (the name and dragged widths
+  // included) shrinks by the same factor instead of the table scrolling the first ones out of view
+  // (Hanna, 2026-11-08); it scrolls only below each column's floor.
+  const EDGES = 20 + 2 * ICON_COL + 32 + 24 + 12; // the ⋮ and icon columns, the ⋯, padding, scrollbar
+  const baseOf = (k: ColKey) => parseInt(track(k), 10);
+  const nameBase = colW.name ?? nameW;
+  const fit = Math.min(1, Math.max(0, (width - EDGES) / (nameBase + shownCols.reduce((sum, k) => sum + baseOf(k), 0))));
+  const sc = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
+  // the icon and number columns keep their width, so their headers stay whole
+  const floorOf = (k: ColKey) => (k === "author" || k === "rating" ? Math.min(56, baseOf(k)) : 40);
+  const flexCol = (k: ColKey) => {
+    const w = sc(baseOf(k), floorOf(k));
+    return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
+  };
+  const nameTrack = colW.name || hasContent ? `${sc(nameBase, 100)}px` : `minmax(${sc(nameBase, 100)}px,3fr)`;
   const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), `${ICON_COL}px`, "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 20 + 2 * ICON_COL + nameW + shownCols.reduce((sum, k) => sum + parseInt(track(k), 10), 0) + 34 + 32 + 24;
+  const minW = EDGES + sc(nameBase, 100) + shownCols.reduce((sum, k) => sum + sc(baseOf(k), floorOf(k)), 0);
   const CENTERED: ColKey[] = [];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
@@ -520,7 +531,18 @@ export function PromptTablePanel({
               </button>
             </div>
             {iconTh("fav", <Bookmark size={14} />, "מועדפים")}
-            {th("name", "שם הפרומפט")}
+            <div className="relative min-w-0">
+              {th("name", "שם הפרומפט")}
+              <div
+                onMouseDown={(e) => startResize("name", e)}
+                onDoubleClick={() => setColW((prev) => { const next = { ...prev }; delete next.name; try { window.localStorage.setItem(COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; })}
+                className="absolute top-0 bottom-0 z-10 group/rz"
+                style={{ insetInlineEnd: "-3px", width: "7px", cursor: "col-resize" }}
+                title="גרירה לשינוי רוחב העמודה"
+              >
+                <div className="absolute inset-y-1 transition-colors group-hover/rz:bg-[#9db6d6]" style={{ insetInlineEnd: "3px", width: "2px", borderRadius: "1px" }} />
+              </div>
+            </div>
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
                 {k === "content" ? (
