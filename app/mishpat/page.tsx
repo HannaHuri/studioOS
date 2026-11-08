@@ -2946,6 +2946,7 @@ export default function MishpatPage() {
   // null = the default: the table takes the screen and leaves an A4-wide area on its left for the
   // chat or the prompt editor, as the documents screen leaves for the PDF (Hanna, 2026-11-08)
   const [promptsWUser, setPromptsW] = useState<number | null>(null);
+  const [promptsMin, setPromptsMin] = useState(520); // the table reports the width that shows all its filters
   const [barText, setBarText] = useState(""); // the floating chat's one-line bar
   const [promptsResizing, setPromptsResizing] = useState(false);
   const [promptPaneWide, setPromptPaneWide] = useState(false); // editor expanded; the chat floats over it
@@ -3105,7 +3106,7 @@ export default function MishpatPage() {
   const docsW = isPanelOpen && !narrow ? 300 : 40;
   const A4_W = 700; // the documents viewer's width
   const promptsMax = vw - 55 - docsW - 380;
-  const promptsW = Math.min(promptsMax, promptsWUser ?? Math.max(640, vw - 55 - docsW - A4_W));
+  const promptsW = Math.min(promptsMax, Math.max(promptsMin, promptsWUser ?? Math.max(640, vw - 55 - docsW - A4_W)));
   const paneOpen = !narrow && isPromptsOpen && !!promptPane;
   const chatRoom = vw - 55 - docsW - promptsW - promptPaneW;
   const chatFloat = paneOpen && (promptPaneWide || chatRoom < 420);
@@ -3160,7 +3161,7 @@ export default function MishpatPage() {
     e.preventDefault();
     setPromptsResizing(true);
     // 520 keeps the narrow table's fixed columns from crushing the name; the chat keeps ~380px
-    const onMove = (ev: MouseEvent) => setPromptsW(Math.min(vw - 55 - docsW - 380, Math.max(520, window.innerWidth - 55 - ev.clientX)));
+    const onMove = (ev: MouseEvent) => setPromptsW(Math.min(vw - 55 - docsW - 380, Math.max(promptsMin, window.innerWidth - 55 - ev.clientX)));
     const onUp = () => {
       setPromptsResizing(false);
       document.removeEventListener("mousemove", onMove);
@@ -3435,6 +3436,7 @@ export default function MishpatPage() {
               onEdit={openPromptPane}
               onShare={(pr) => setPromptShare(pr)}
               onDelete={(pr) => setPromptDelete(pr)}
+              onMinWidth={setPromptsMin}
             />
             {/* Resize handle on the left edge, the documents table's grip chip */}
             {!promptsFocus && (

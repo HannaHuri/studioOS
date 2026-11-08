@@ -75,15 +75,17 @@ const COLS_LS_KEY = "mishpat-promptCols-v9"; // v5: tags gone, content in; v8: t
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
-const loadCols = (): ColState => {
+// the content column is on by default only where the table is wide enough to show it (Hanna, 2026-11-08)
+const defaultShown = (width: number): Record<ColKey, boolean> => ({ ...DEFAULT_SHOWN, content: width >= 900 });
+const loadCols = (width: number): ColState => {
   try {
     const raw = JSON.parse(window.localStorage.getItem(COLS_LS_KEY) ?? "null");
     if (raw) {
       const order = (raw.order as string[]).filter((k): k is ColKey => k in COL_LABELS);
-      return { order: [...order, ...DEFAULT_ORDER.filter((k) => !order.includes(k))], shown: { ...DEFAULT_SHOWN, ...raw.shown } };
+      return { order: [...order, ...DEFAULT_ORDER.filter((k) => !order.includes(k))], shown: { ...defaultShown(width), ...raw.shown } };
     }
   } catch { /* fall back to the defaults */ }
-  return { order: DEFAULT_ORDER, shown: DEFAULT_SHOWN };
+  return { order: DEFAULT_ORDER, shown: defaultShown(width) };
 };
 
 // /lab's text-wrap glyph (Google's format_text_wrap, Material Symbols, Apache-2.0), the one its תקציר uses
@@ -96,7 +98,7 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete,
+  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
@@ -104,12 +106,26 @@ export function PromptTablePanel({
   onOpen: (pr: Prompt) => void; onNew: () => void;
   onUse: (pr: Prompt) => void; onFav: (id: string) => void; onPin: (id: string) => void; onEdit: (pr: Prompt) => void;
   onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
+  onMinWidth?: (w: number) => void; // the narrowest the panel goes: every filter still in view
 }) {
   // Opens on what suits the open case — the job the narrow "מוצעים" panel did before the table
   // replaced it. One click on the chip takes it back to the whole מאגר.
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
 
-  const [colState, setColState] = useState<ColState>(loadCols);
+  const [colState, setColState] = useState<ColState>(() => loadCols(width));
+  // the filters' full line, plus the panel's padding, is the narrowest the panel may be dragged
+  // (Hanna, 2026-11-08: no filter cut off)
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const lastMin = useRef(0);
+  useEffect(() => {
+    const el = filtersRef.current;
+    if (!el || !onMinWidth) return;
+    // the line's own width (its filters and the gaps between them), not the room it was given
+    const kids = [...el.children] as HTMLElement[];
+    const line = kids.reduce((sum, k) => sum + k.offsetWidth, 0) + 6 * Math.max(0, kids.length - 1);
+    const need = Math.ceil(line + (width - el.clientWidth));
+    if (need !== lastMin.current) { lastMin.current = need; onMinWidth(need); }
+  });
   const saveCols = (next: ColState) => {
     setColState(next);
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -165,7 +181,7 @@ export function PromptTablePanel({
   };
   const resetCols = () => {
     setM((prev) => ({ ...prev, court: [], stage: [] })); // their columns go back to hidden
-    setColState({ order: DEFAULT_ORDER, shown: DEFAULT_SHOWN });
+    setColState({ order: DEFAULT_ORDER, shown: defaultShown(width) });
     setColW({}); // dragged widths too
     try { window.localStorage.removeItem(COLS_LS_KEY); window.localStorage.removeItem(COLW_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
@@ -486,7 +502,7 @@ export function PromptTablePanel({
         </div>
 
         {/* Row B: the case chip, then the filters — one line; past the panel's edge they're cut, and widening shows them */}
-        <div className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
+        <div ref={filtersRef} className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
           {/* a column's filter shows only while the column does */}
           {/* the favorites first, as their column opens the row, and the kind last, as its column closes it
               (Hanna, 2026-11-08). The favorites, the author and the kind are always there */}
