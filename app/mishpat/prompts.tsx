@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, Building2, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
+  Star, Trash2, User, Users, X, Copy, BadgeCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -471,9 +471,9 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // The source is a mark rather than a word wherever it repeats: three values only, and a shape
 // is read faster than text down a column or across a row. The shield is the one the לשכה badge
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
-// system prompts: an office building, the administration's (2026-11-08; the shield-check wasn't clear to
-// users, a book was tried, and a courthouse is the courts, not us, the הנהלה)
-const SOURCE_ICON = { system: Building2, shared: Users, mine: User } as const;
+// system prompts: a verified badge (Hanna, 2026-11-08, after a shield, a book, a courthouse (the courts
+// are them, we are the הנהלה) and an office building)
+const SOURCE_ICON = { system: BadgeCheck, shared: Users, mine: User } as const;
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
