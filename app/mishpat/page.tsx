@@ -3073,10 +3073,10 @@ export default function MishpatPage() {
     setPromptsFocus(false);
     setPromptPane({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" });
   };
-  const doShare = (pr: Prompt) => {
-    setPrompts((prev) => [pr, ...prev]);
+  const doShare = (pr: Prompt, mine?: Prompt) => {
+    setPrompts((prev) => (mine ? [mine, pr, ...prev] : [pr, ...prev]));
     setPromptShare(null);
-    setToast("הפרומפט שותף למאגר");
+    setToast(mine ? "הפרומפט נשמר ושותף למאגר" : "הפרומפט שותף למאגר");
   };
 
   const topIcons = [

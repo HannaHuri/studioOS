@@ -1167,7 +1167,7 @@ export function PromptLibrary({
             <Dropdown label="ערכאה" value={f.court} options={COURTS} onChange={(v) => set("court", v)} isDark={isDark} width={122} counts={facets.court} />
             <Dropdown label="תחום" value={f.caseType} options={CASE_TYPES} onChange={(v) => set("caseType", v)} isDark={isDark} width={124} counts={facets.caseType} />
             <Dropdown label="תת תחום" value={f.matter} options={MATTERS} onChange={(v) => set("matter", v)} isDark={isDark} width={146} counts={facets.matter} />
-            <Dropdown label="שלב" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
+            <Dropdown label="שלב בתיק" value={f.stage} options={STAGES} onChange={(v) => set("stage", v)} isDark={isDark} width={132} counts={facets.stage} />
             {filtered && (
               <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-[4px] hover:bg-black/5 transition-colors" style={{ color: subCol }}>
                 ניקוי
@@ -1197,7 +1197,7 @@ export function PromptLibrary({
               {th("court", "ערכאה")}
               {th("caseType", "תחום")}
               {th("matter", "תת תחום")}
-              {th("stage", "שלב")}
+              {th("stage", "שלב בתיק")}
               {th("rating", "דירוג")}
               <div />
             </div>
@@ -1622,7 +1622,7 @@ export function PromptEditor({
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
               { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
-              { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+              { t: "שלב בתיק", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
@@ -1775,9 +1775,12 @@ export function PromptEditor({
 export function PromptShare({
   isDark, initial, onShare, onClose,
 }: {
-  isDark: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt) => void; onClose: () => void;
+  isDark: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt, mine?: Prompt) => void; onClose: () => void;
 }) {
   const raw = initial.body;
+  // shared from the chat (no prompt behind it yet): keep a copy of my own too, unless unticked (Hanna, 2026-11-08)
+  const fromChat = !initial.id;
+  const [keepMine, setKeepMine] = useState(true);
   const hits = useMemo(() => findIdentifiers(raw), [raw]);
   // Identifiers are swapped out on arrival, not on request: the safe state is the default,
   // and each swap can be undone if the detector was wrong.
@@ -1816,13 +1819,15 @@ export function PromptShare({
 
   const share = () => {
     if (!name.trim() || !body.trim()) { setAttempted(true); return; }
-    onShare({
+    const pr: Prompt = {
       id: uid(), name: name.trim(), body: body.trim(), source: "shared",
       author: anon ? "אנונימי" : ME, authorRole: anon ? undefined : MY_ROLE,
       fav: false, caseType, matter, stage, court,
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       userNotes: userNotes.trim() || undefined,
-    });
+    };
+    // my copy is the text as I asked it, not the scrubbed one the others get
+    onShare(pr, fromChat && keepMine ? { ...pr, id: uid(), source: "mine", author: ME, authorRole: MY_ROLE, body: raw.trim(), name: name.trim() } : undefined);
   };
 
   return (
@@ -1896,7 +1901,7 @@ export function PromptShare({
               { t: "ערכאה", v: court, o: COURTS, set: setCourt, w: 130 },
               { t: "תחום", v: caseType, o: CASE_TYPES, set: pickCaseType, w: 140 },
               { t: "תת תחום", v: matter, o: mattersOf(caseType), set: setMatter, w: 150 },
-              { t: "שלב", v: stage, o: STAGES, set: setStage, w: 140 },
+              { t: "שלב בתיק", v: stage, o: STAGES, set: setStage, w: 140 },
             ] as const).map(({ t, v, o, set, w }) => (
               <div key={t}>
                 <div className="text-[12px] mb-1" style={{ color: subCol }}>{t}</div>
@@ -1930,6 +1935,17 @@ export function PromptShare({
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4">
+          {fromChat && (
+            <button onClick={() => setKeepMine((v) => !v)} className="flex items-center gap-2 text-[13px] me-auto" style={{ color: textCol }}>
+              <span
+                className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
+                style={{ border: `1px solid ${keepMine ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: keepMine ? c.primary : "transparent" }}
+              >
+                {keepMine && <Check size={12} style={{ color: "white" }} />}
+              </span>
+              שמירה גם בפרומפטים שלי
+            </button>
+          )}
           <button onClick={onClose} className="h-9 px-4 rounded-[4px] text-[14px] transition-colors hover:bg-black/5" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, color: textCol }}>
             ביטול
           </button>
