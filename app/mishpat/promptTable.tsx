@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { ArrowUpDown, Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
 import {
@@ -25,24 +25,25 @@ import {
 // The data columns the user can show, hide and reorder. The saved mark, the name and the two
 // row actions are structural and always there.
 // caseType reads "תחום" and matter "תת תחום" (2026-11-08); the prompt's text is a column of its own, off by default
-type ColKey = "kind" | "content" | "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
+// The favorite, the author and the kind are small icons together beside the name (2026-11-08), not columns.
+type ColKey = "content" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
 const COL_LABELS: Record<ColKey, string> = {
-  kind: "סוג פרומפט", content: "תוכן", source: "מחבר", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
+  content: "תוכן", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  kind: "32px", content: "240px", source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
+  content: "240px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
 };
-const DEFAULT_ORDER: ColKey[] = ["kind", "content", "source", "author", "date", "court", "caseType", "matter", "stage", "rating"];
-// מחבר, תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
+const DEFAULT_ORDER: ColKey[] = ["content", "author", "date", "court", "caseType", "matter", "stage", "rating"];
+// תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  kind: true, content: false, source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
+  content: false, author: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
 };
 // a detailed prompt is one built of parts; the rest are plain
 const KIND_OPTS = ["פשוט", "מפורט"];
 const kindOf = (pr: Prompt) => (pr.parts ? "מפורט" : "פשוט");
 // v3: the defaults changed (uses gone, tags and the categories in, then דירוג), so older saved picks start over
 // the filters that take several values, and what each one reads off a prompt
-// (kind — פשוט or מפורט — has no column, so its filter is always there)
+// (the author and the kind have no column, so their filters are always there)
 type MKey = "source" | "caseType" | "matter" | "stage" | "court" | "kind";
 type Multi = Record<MKey, string[]>;
 const M_KEYS: MKey[] = ["source", "caseType", "matter", "stage", "court", "kind"];
@@ -60,7 +61,7 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
       const out = { ...EMPTY_MULTI };
       for (const k of M_KEYS) {
         // a filter whose column is hidden doesn't apply, so it isn't restored either
-        if (Array.isArray(raw[k]) && (k === "kind" || shown[k])) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string")
+        if (Array.isArray(raw[k]) && (k === "kind" || k === "source" || shown[k as ColKey])) out[k] = raw[k].filter((v: unknown): v is string => typeof v === "string")
           .map((v: string) => (k === "source" && v === "שלי" ? "אני" : v)); // "שלי" was renamed "אני"
       }
       return out;
@@ -68,7 +69,7 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   } catch { /* fall back to nothing picked */ }
   return EMPTY_MULTI;
 };
-const COLS_LS_KEY = "mishpat-promptCols-v6"; // v5: tags gone, content in; v6: the kind column
+const COLS_LS_KEY = "mishpat-promptCols-v7"; // v5: tags gone, content in; v7: author and kind became icons
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
@@ -82,6 +83,13 @@ const loadCols = (): ColState => {
   } catch { /* fall back to the defaults */ }
   return { order: DEFAULT_ORDER, shown: DEFAULT_SHOWN };
 };
+
+// what the icons header can sort by; picking the one already on goes back to the usual order
+const ICON_SORTS: { key: SortKey; label: string }[] = [
+  { key: "fav", label: "מועדפים קודם" },
+  { key: "source", label: "לפי מחבר" },
+  { key: "kind", label: "מפורטים קודם" },
+];
 
 export function PromptTablePanel({
   isDark, prompts, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
@@ -104,7 +112,8 @@ export function PromptTablePanel({
   };
   const shownCols = colState.order.filter((k) => colState.shown[k]);
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
-  const [info, setInfo] = useState<DOMRect | null>(null); // the disclaimer, open from the i by the count
+  const [info, setInfo] = useState<DOMRect | null>(null);
+  const [sortMenu, setSortMenu] = useState<DOMRect | null>(null); // the icons header's sort menu // the disclaimer, open from the i by the count
   // the content cell's tooltip: larger than the native one, as on the documents table in /lab
   // over a name it opens with the name itself, since a long one is cut
   const [tip, setTip] = useState<{ title?: string; text: string; x: number; y: number } | null>(null);
@@ -142,7 +151,7 @@ export function PromptTablePanel({
     document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
   };
   // hiding a column takes its filter with it, so nothing filters the table out of sight
-  const FILTERED: ColKey[] = ["source", "court", "caseType", "matter", "stage"];
+  const FILTERED: ColKey[] = ["court", "caseType", "matter", "stage"];
   const toggleCol = (k: ColKey) => {
     if (colState.shown[k] && FILTERED.includes(k)) {
       setMulti(k as MKey, []);
@@ -282,34 +291,28 @@ export function PromptTablePanel({
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
-  // the name takes what it needs up to a cap, and the space left over goes after the last column,
-  // so the columns sit close to the name instead of past a wide gap (Hanna, 2026-11-08)
   const nameMax = isFocus ? 360 : 260;
-  // the rows are separate grids, so the name's width is set for the list as a whole: the average
-  // name's width (Hanna, 2026-11-08 — sized to the longest, most rows ended in white space), plus
-  // the cell's padding and the wand where it sits by the name. Longer names are cut; the full name is in the tooltip.
-  const wandByName = !colState.shown.kind;
+  // The rows are separate grids, so the widths are set for the list as a whole. Each column starts at
+  // what it needs (the name at the average name's width, plus padding), and the room left over is
+  // shared out: two parts to the name, one to every other column, so the spacing stays even and no
+  // gap collects in one place (Hanna, 2026-11-08). A width the user dragged stays as dragged.
   const nameW = useMemo(() => {
     const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx || !list.length) return nameMin;
     ctx.font = `600 14px ${FONT}`;
-    const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width + (wandByName && pr.parts ? 19 : 0), 0) / list.length;
+    const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width, 0) / list.length;
     return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
-  }, [list, nameMin, nameMax, wandByName]);
-  const cols = ["20px", "30px", `${nameW}px`, ...shownCols.map(track), "minmax(0,1fr)", "32px"].join(" ");
+  }, [list, nameMin, nameMax]);
+  const ICONS_W = 64; // the favorite, author and kind marks, in fixed slots
+  const flex = (k: ColKey) => (colW[k] ? `${colW[k]}px` : `minmax(${track(k)},1fr)`);
+  const cols = ["20px", `${ICONS_W}px`, `minmax(${nameW}px,2fr)`, ...shownCols.map(flex), "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
-  const minW = 20 + 30 + nameW + shownCols.reduce((sum, k) => sum + parseInt(track(k), 10), 0) + 34 + 32 + 24;
-  const CENTERED: ColKey[] = ["source"];
+  const minW = 20 + ICONS_W + nameW + shownCols.reduce((sum, k) => sum + parseInt(track(k), 10), 0) + 34 + 32 + 24;
+  const CENTERED: ColKey[] = [];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
-      case "source":
-        return (
-          <div key={k} className="flex items-center justify-center" title={srcName(pr)}>
-            <SourceMark pr={pr} isDark={isDark} size={16} />
-          </div>
-        );
       case "author": {
         const n = authorName(pr) || "מערכת";
         const named = n !== "מערכת" && n !== "אנונימי";
@@ -343,14 +346,6 @@ export function PromptTablePanel({
                 {isFocus && <span style={{ color: subCol }}>({pr.ratingCount})</span>}
               </>
             ) : <span style={{ color: subCol }}>—</span>}
-          </div>
-        );
-      case "kind":
-        // a detailed prompt's wand; a plain prompt's cell stays empty
-        return (
-          <div key={k} className="flex items-center justify-center" style={{ color: subCol }}
-            title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : "פרומפט פשוט"}>
-            {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
           </div>
         );
       case "content":
@@ -400,6 +395,25 @@ export function PromptTablePanel({
           </div>
         </>
       )}
+      {sortMenu && (
+        <>
+          <div className="fixed inset-0 z-[190]" onClick={() => setSortMenu(null)} />
+          <div
+            className="fixed z-[200] rounded-[8px] overflow-hidden py-1"
+            style={{ top: sortMenu.bottom + 6, right: Math.max(8, window.innerWidth - sortMenu.right - 8), width: "168px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}
+          >
+            <div className="px-3 py-1.5 text-[12px] font-semibold" style={{ color: isDark ? dk.textMuted : c.textGray }}>מיון</div>
+            {ICON_SORTS.map((o) => (
+              <button key={o.key}
+                onClick={() => { setF((prev) => ({ ...prev, sort: prev.sort === o.key ? "relevance" : o.key, dir: "desc" })); setSortMenu(null); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-right hover:bg-black/5" style={{ color: f.sort === o.key ? c.primary : textCol }}>
+                <Tick checked={f.sort === o.key} />
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {/* Row A: search, then the window controls pinned to the far end — as on the documents table */}
       <div className="px-3 pt-3 pb-2.5 flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -439,7 +453,7 @@ export function PromptTablePanel({
           {colState.shown.caseType && <MultiDropdown label="תחום" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
           {colState.shown.matter && <MultiDropdown label="תת תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
           <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} />
-          {colState.shown.source && <MultiDropdown label="מחבר" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />}
+          <MultiDropdown label="מחבר" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source} />
           {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
           {colState.shown.stage && <MultiDropdown label="שלב" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
           <button
@@ -478,27 +492,20 @@ export function PromptTablePanel({
                 <MoreVertical size={15} />
               </button>
             </div>
+            {/* the icons' header sorts by any one of them, from a small menu */}
             <button
-              // one click puts the favorites first, a second goes back to the usual order
-              onClick={() => setF((prev) => ({ ...prev, sort: prev.sort === "fav" ? "relevance" : "fav", dir: "desc" }))}
-              className="h-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
-              title="מיון: המועדפים קודם"
+              onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setSortMenu((v) => (v ? null : rect)); }}
+              className="h-full flex items-center justify-center gap-0.5 transition-colors hover:bg-black/[0.04]"
+              style={{ color: ICON_SORTS.some((o) => o.key === f.sort) || sortMenu ? c.primary : subCol }}
+              title="מיון לפי מועדפים, מחבר או סוג פרומפט"
             >
-              <Bookmark size={14} fill="currentColor" style={{ color: f.sort === "fav" ? c.primary : subCol }} />
+              <ArrowUpDown size={14} />
+              <ChevronDown size={11} />
             </button>
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
-                {k === "kind" ? (
-                  // like the favorites column: an icon for a header, and a click puts the detailed ones first
-                  <button
-                    onClick={() => setF((prev) => ({ ...prev, sort: prev.sort === "kind" ? "relevance" : "kind", dir: "desc" }))}
-                    className="h-full w-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
-                    title="מיון: הפרומפטים המפורטים קודם"
-                  >
-                    <WandSparkles size={14} style={{ transform: "scaleX(-1)", color: f.sort === "kind" ? c.primary : subCol }} />
-                  </button>
-                ) : th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}
+                {th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}
                 <div
                   onMouseDown={(e) => startResize(k, e)}
                   onDoubleClick={() => setColW((prev) => { const next = { ...prev }; delete next[k]; try { window.localStorage.setItem(COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; })}
@@ -510,7 +517,6 @@ export function PromptTablePanel({
                 </div>
               </div>
             ))}
-            <div />
             {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
             <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
@@ -536,24 +542,27 @@ export function PromptTablePanel({
                 {/* the open row carries the documents table's blue edge */}
                 {active && <div className="absolute top-0 bottom-0 right-0" style={{ width: "3px", backgroundColor: c.primary }} />}
                 <div />
-                <div className="flex items-center justify-center">
-                  <FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet />
+                {/* fixed slots, so each kind of mark lines up down the table: favorite, author (none for
+                    the system's own), detailed */}
+                <div className="flex items-center justify-start gap-0.5 ps-0.5">
+                  <span className="w-[18px] flex justify-center"><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} quiet small /></span>
+                  <span className="w-[18px] flex justify-center" title={pr.source === "system" ? undefined : srcName(pr) === "אני" ? "אני" : `משותף · ${authorFull(pr)}`}>
+                    {pr.source !== "system" && <SourceMark pr={pr} isDark={isDark} size={14} />}
+                  </span>
+                  <span className="w-[18px] flex justify-center" style={{ color: subCol }}
+                    title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : undefined}>
+                    {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
+                  </span>
                 </div>
 
-                {/* the name alone; the text moved to the תוכן column. A detailed prompt's wand follows its name. */}
+                {/* the name alone; the text is in the תוכן column */}
                 <div className="min-w-0 text-right px-1.5 py-2 flex items-center gap-1.5">
                   {/* a touch heavier than the cells; its text shows on hover, as in the תוכן column */}
                   <span className="text-[14px] font-semibold truncate" style={{ color: active ? c.primary : textCol }}
                     onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
-                  {wandByName && pr.parts && (
-                    <span className="flex-none flex" style={{ color: subCol }} title={`פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}`}>
-                      <WandSparkles size={13} style={{ transform: "scaleX(-1)" }} />
-                    </span>
-                  )}
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
-                <div />
 
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>

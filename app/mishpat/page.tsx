@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
+  Activity, Bookmark, Folder, ListCheck, Share2, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -516,8 +516,11 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Message action bar ─────────────────────────────────────────────────────
-function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, logOpen, onToggleLog }: {
+function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, logOpen, onToggleLog, onSaveQuestion, onShareQuestion }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
+  // users looked for these after the answer, not on the question; the labels say it's the question
+  // that's saved or shared as a prompt, not the answer (2026-11-08)
+  onSaveQuestion?: () => void; onShareQuestion?: () => void;
   // Set on a proofreading answer — the finished file is one of the things you can do with
   // this answer, so it sits with copy and retry rather than inside the answer.
   proof?: ProofRun;
@@ -574,6 +577,8 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
             { label: "המשך בשיחה חדשה", Icon: Split, iconRotate: 90 },
             ...(proof ? [] : [{ label: showBadges ? "הסתר ציטוטים" : "הצג ציטוטים", Icon: showBadges ? EyeClosed : Eye, onClick: onToggleBadges }]),
             ...(hasLog ? [{ label: logOpen ? "הסתר את מהלך העבודה" : "הצג את מהלך העבודה", Icon: ListCheck, onClick: onToggleLog }] : []),
+            ...(onSaveQuestion ? [{ label: "שמירת השאלה כפרומפט", Icon: Bookmark, onClick: onSaveQuestion }] : []),
+            ...(onShareQuestion ? [{ label: "שיתוף השאלה כפרומפט", Icon: Share2, onClick: onShareQuestion }] : []),
           ]}
         />
 
@@ -1708,6 +1713,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                         hasLog={!!msg.logSteps}
                         logOpen={openLog === i}
                         onToggleLog={() => setOpenLog((n) => (n === i ? null : i))}
+                        onSaveQuestion={onSaveQuestion ? () => onSaveQuestion(msg.q) : undefined}
+                        onShareQuestion={onShareQuestion ? () => onShareQuestion(msg.q) : undefined}
                       />
                     )}
                     {/* The run's own log, reopened after the fact from the actions row above */}

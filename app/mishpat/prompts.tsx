@@ -733,7 +733,7 @@ export function Tag({ t, isDark, onClick, active }: { t: string; isDark: boolean
 // Two different things were both a gold star: the prompt I saved, and the score everyone gives.
 // The saved one becomes a blue bookmark — the mark for "keep this" — and gold stars are left to
 // mean one thing only, a rating.
-export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean }) {
+export function FavMark({ on, onToggle, isDark, quiet, small }: { on: boolean; onToggle: () => void; isDark: boolean; quiet?: boolean; small?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -741,14 +741,12 @@ export function FavMark({ on, onToggle, isDark, quiet }: { on: boolean; onToggle
       // hover — a column of grey outlines reads as a column of half-done things.
       // focus-VISIBLE, not focus: a click leaves the button focused, and plain focus: kept the
       // mark on screen after unsaving a row, so that row alone behaved unlike the rest.
-      className={`size-7 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
+      className={`${small ? "size-[18px]" : "size-7"} flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      {/* Filled means saved — that one is learned, and not worth being clever about. It is the
-          only solid icon on screen because it is the only icon that is a STATE; the rest are
-          labels. So the weight is what gets tuned, not the fill: a shade lighter than the text
-          and a size smaller than the other marks. */}
-      <Bookmark size={15} fill={on ? subtle(isDark) : "none"} style={{ color: subtle(isDark) }} />
+      {/* An outline like every other icon (Hanna, 2026-11-08: the filled one stood apart); saved is
+          blue, as the "אני" mark is, and an unsaved one shows only on hover where it's quiet. */}
+      <Bookmark size={small ? 14 : 15} style={{ color: on ? c.primary : subtle(isDark) }} />
     </button>
   );
 }
@@ -1463,7 +1461,7 @@ export function PromptEditor({
       source: "mine",
       // Saving a question that was sent came from pressing a star, so it lands starred; a new
       // prompt follows its own "שמירה במועדפים" tick; forking someone else's does not star it.
-      fav: keep ? keep.fav : mode === "fromMessage" || (mode === "new" && favNew),
+      fav: keep ? keep.fav : (mode === "new" || mode === "fromMessage") && favNew,
     }, share ? { anon } : undefined);
   };
 
@@ -1624,7 +1622,8 @@ export function PromptEditor({
             ))}
           </div>
 
-          {mode === "new" && (
+          {/* saving a question from the chat no longer has to mean a favorite (2026-11-08) */}
+          {(mode === "new" || mode === "fromMessage") && (
             <button onClick={() => setFavNew((v) => !v)} className="flex items-center gap-2 mt-4 text-[13px]" style={{ color: textCol }}>
               <span
                 className="size-[16px] flex-none flex items-center justify-center rounded-[3px]"
@@ -1712,7 +1711,7 @@ export function PromptEditor({
           <button onClick={save} disabled={untouched} className="h-9 px-5 rounded-[4px] text-[14px] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-default disabled:hover:opacity-40" style={pane && live && onUse
             ? { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? dk.input : "white", color: c.primary }
             : { backgroundColor: c.primary, color: "white" }}>
-            {share ? "שמירה ושיתוף" : mode === "fromMessage" ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
+            {share ? "שמירה ושיתוף" : mode === "fromMessage" && favNew ? "שמירה למועדפים" : mode === "fork" ? "שמירה כפרומפט שלי" : "שמירה"}
           </button>
           {pendingKind && (
             <PromptConfirm
@@ -1975,7 +1974,7 @@ export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; 
   const btn = "size-6 flex items-center justify-center rounded transition-colors hover:bg-black/10";
   return (
     <div className="flex items-center" dir="ltr" style={{ gap: "2px", fontFamily: FONT }}>
-      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה למועדפים">
+      <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה כפרומפט">
         <Bookmark size={15} />
       </button>
       <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
