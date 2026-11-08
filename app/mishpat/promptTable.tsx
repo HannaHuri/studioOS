@@ -25,17 +25,17 @@ import {
 // The data columns the user can show, hide and reorder. The saved mark, the name and the two
 // row actions are structural and always there.
 // caseType reads "תחום" and matter "תת תחום" (2026-11-08); the prompt's text is a column of its own, off by default
-type ColKey = "content" | "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
+type ColKey = "kind" | "content" | "source" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
 const COL_LABELS: Record<ColKey, string> = {
-  content: "תוכן", source: "מחבר", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
+  kind: "סוג פרומפט", content: "תוכן", source: "מחבר", author: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  content: "240px", source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
+  kind: "32px", content: "240px", source: "48px", author: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
 };
-const DEFAULT_ORDER: ColKey[] = ["content", "source", "author", "date", "court", "caseType", "matter", "stage", "rating"];
+const DEFAULT_ORDER: ColKey[] = ["kind", "content", "source", "author", "date", "court", "caseType", "matter", "stage", "rating"];
 // מחבר, תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  content: false, source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
+  kind: true, content: false, source: true, author: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
 };
 // a detailed prompt is one built of parts; the rest are plain
 const KIND_OPTS = ["פשוט", "מפורט"];
@@ -68,7 +68,7 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   } catch { /* fall back to nothing picked */ }
   return EMPTY_MULTI;
 };
-const COLS_LS_KEY = "mishpat-promptCols-v5"; // v5: tags gone, content in
+const COLS_LS_KEY = "mishpat-promptCols-v6"; // v5: tags gone, content in; v6: the kind column
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
@@ -106,7 +106,8 @@ export function PromptTablePanel({
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null); // the disclaimer, open from the i by the count
   // the content cell's tooltip: larger than the native one, as on the documents table in /lab
-  const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
+  // over a name it opens with the name itself, since a long one is cut
+  const [tip, setTip] = useState<{ title?: string; text: string; x: number; y: number } | null>(null);
   // Reorder by dragging a row in the menu; a plain click still toggles the column
   const colRowRefs = useRef<Partial<Record<ColKey, HTMLDivElement | null>>>({});
   const [drag, setDrag] = useState<{ key: ColKey; to: number } | null>(null);
@@ -224,6 +225,7 @@ export function PromptTablePanel({
       court: (a, b) => b.court.localeCompare(a.court, "he"),
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
+      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avgOf(b) - avgOf(a),
       date: byDate,
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
@@ -283,15 +285,17 @@ export function PromptTablePanel({
   // the name takes what it needs up to a cap, and the space left over goes after the last column,
   // so the columns sit close to the name instead of past a wide gap (Hanna, 2026-11-08)
   const nameMax = isFocus ? 360 : 260;
-  // the rows are separate grids, so the name's width is measured from the longest name in the
-  // list rather than left to each row: the cell's padding, plus the wand where a prompt has one
+  // the rows are separate grids, so the name's width is set for the list as a whole: the average
+  // name's width (Hanna, 2026-11-08 — sized to the longest, most rows ended in white space), plus
+  // the cell's padding and the wand where it sits by the name. Longer names are cut; the full name is in the tooltip.
+  const wandByName = !colState.shown.kind;
   const nameW = useMemo(() => {
     const ctx = document.createElement("canvas").getContext("2d");
-    if (!ctx) return nameMax;
+    if (!ctx || !list.length) return nameMin;
     ctx.font = `600 14px ${FONT}`;
-    const widest = Math.max(0, ...list.map((pr) => ctx.measureText(pr.name).width + (pr.parts ? 19 : 0)));
-    return Math.round(Math.min(nameMax, Math.max(nameMin, widest + 16)));
-  }, [list, nameMin, nameMax]);
+    const avg = list.reduce((sum, pr) => sum + ctx.measureText(pr.name).width + (wandByName && pr.parts ? 19 : 0), 0) / list.length;
+    return Math.round(Math.min(nameMax, Math.max(nameMin, avg + 16)));
+  }, [list, nameMin, nameMax, wandByName]);
   const cols = ["20px", "30px", `${nameW}px`, ...shownCols.map(track), "minmax(0,1fr)", "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
@@ -339,6 +343,14 @@ export function PromptTablePanel({
                 {isFocus && <span style={{ color: subCol }}>({pr.ratingCount})</span>}
               </>
             ) : <span style={{ color: subCol }}>—</span>}
+          </div>
+        );
+      case "kind":
+        // a detailed prompt's wand; a plain prompt's cell stays empty
+        return (
+          <div key={k} className="flex items-center justify-center" style={{ color: subCol }}
+            title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : "פרומפט פשוט"}>
+            {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
           </div>
         );
       case "content":
@@ -477,7 +489,16 @@ export function PromptTablePanel({
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
               <div key={k} className="relative min-w-0">
-                {th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}
+                {k === "kind" ? (
+                  // like the favorites column: an icon for a header, and a click puts the detailed ones first
+                  <button
+                    onClick={() => setF((prev) => ({ ...prev, sort: prev.sort === "kind" ? "relevance" : "kind", dir: "desc" }))}
+                    className="h-full w-full flex items-center justify-center transition-colors hover:bg-black/[0.04]"
+                    title="מיון: הפרומפטים המפורטים קודם"
+                  >
+                    <WandSparkles size={14} style={{ transform: "scaleX(-1)", color: f.sort === "kind" ? c.primary : subCol }} />
+                  </button>
+                ) : th(k, COL_LABELS[k], CENTERED.includes(k) ? "center" : "right")}
                 <div
                   onMouseDown={(e) => startResize(k, e)}
                   onDoubleClick={() => setColW((prev) => { const next = { ...prev }; delete next[k]; try { window.localStorage.setItem(COLW_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; })}
@@ -523,8 +544,8 @@ export function PromptTablePanel({
                 <div className="min-w-0 text-right px-1.5 py-2 flex items-center gap-1.5">
                   {/* a touch heavier than the cells; its text shows on hover, as in the תוכן column */}
                   <span className="text-[14px] font-semibold truncate" style={{ color: active ? c.primary : textCol }}
-                    onMouseEnter={(e) => setTip({ text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
-                  {pr.parts && (
+                    onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
+                  {wandByName && pr.parts && (
                     <span className="flex-none flex" style={{ color: subCol }} title={`פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}`}>
                       <WandSparkles size={13} style={{ transform: "scaleX(-1)" }} />
                     </span>
@@ -563,6 +584,7 @@ export function PromptTablePanel({
           className="fixed z-[300] pointer-events-none whitespace-pre-wrap overflow-hidden"
           style={{ left: Math.min(tip.x + 14, window.innerWidth - 336), top: Math.min(tip.y + 18, window.innerHeight - 320), maxWidth: "320px", maxHeight: "300px", padding: "9px 12px", borderRadius: "8px", backgroundColor: isDark ? "#0d1424" : "#1e2732", color: "#fff", fontSize: "14.5px", lineHeight: 1.5, fontFamily: "Noto Sans Hebrew, sans-serif", boxShadow: "0 8px 26px rgba(0,0,0,0.28)", direction: "rtl" }}
         >
+          {tip.title && <div className="font-semibold mb-1">{tip.title}</div>}
           {tip.text}
         </div>
       )}

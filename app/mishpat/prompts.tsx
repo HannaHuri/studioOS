@@ -473,12 +473,13 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
 // system prompts: a book, as in a מאגר (2026-11-08; the shield-check wasn't clear to users)
 const SOURCE_ICON = { system: Book, shared: Users, mine: User } as const;
+// the book faces right to left, as a Hebrew book does
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
 export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDark: boolean; size?: number; plain?: boolean }) {
   const I = SOURCE_ICON[pr.source];
-  return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
+  return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark), transform: pr.source === "system" ? "scaleX(-1)" : undefined }} />;
 }
 
 // One wording, used wherever the source is named: the same word the column shows and the filter
@@ -925,7 +926,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "content" | "date" | "fav";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "content" | "kind" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -1071,6 +1072,7 @@ export function PromptLibrary({
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
+      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0),
       date: byDate,
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
