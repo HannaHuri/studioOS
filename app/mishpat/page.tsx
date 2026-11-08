@@ -2942,6 +2942,10 @@ export default function MishpatPage() {
   // The prompts table (the documents screen's layout): a row opens its prompt in an editor to the
   // table's left, where the documents screen opens the PDF. `promptPane` is that editor.
   const [promptPane, setPromptPane] = useState<{ initial: Partial<Prompt> | null; mode: "new" | "edit" | "fork" } | null>(null);
+  // the prompt last open in the editor: its row keeps a faint mark once the editor closes
+  const [lastPromptId, setLastPromptId] = useState<string | null>(null);
+  const paneId = promptPane?.initial?.id ?? null;
+  if (paneId && paneId !== lastPromptId) setLastPromptId(paneId); // follows the editor, set while rendering
   const [promptsFocus, setPromptsFocus] = useState(false);   // table expanded to the full width
   // null = the default: the table takes the screen and leaves an A4-wide area on its left for the
   // chat or the prompt editor, as the documents screen leaves for the PDF (Hanna, 2026-11-08)
@@ -3009,7 +3013,7 @@ export default function MishpatPage() {
     setIsExamplesOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsPromptsOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   const togglePrompts = () => {
     // the table always opens on its own, without an editor left over from last time
-    setPromptPane(null); setPromptsFocus(false); setPromptPaneWide(false);
+    setPromptPane(null); setLastPromptId(null); setPromptsFocus(false); setPromptPaneWide(false);
     setIsPromptsOpen((v) => { const nv = !v; if (nv) { setIsHistoryOpen(false); setIsExamplesOpen(false); if (vw < BOTH_MIN) setIsPanelOpen(false); } return nv; });
   };
 
@@ -3428,6 +3432,7 @@ export default function MishpatPage() {
               onToggleFocus={() => setPromptsFocus((v) => !v)}
               onClose={togglePrompts}
               openId={promptPane?.initial?.id ?? null}
+              lastId={promptPane ? null : lastPromptId}
               onOpen={openPromptPane}
               onNew={() => { setPromptsFocus(false); setChatMin(true); setChatPos(null); setPromptPane({ initial: null, mode: "new" }); }}
               onUse={openUse}
