@@ -16,11 +16,11 @@
    out of the model rather than needing a rule.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
-  Star, Trash2, User, Users, X, Copy, Landmark, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
+  Star, Trash2, User, Users, X, Copy, Building2, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -471,8 +471,9 @@ export function scrub(text: string, hits: Hit[], skip: Set<number>) {
 // The source is a mark rather than a word wherever it repeats: three values only, and a shape
 // is read faster than text down a column or across a row. The shield is the one the לשכה badge
 // carried, so it keeps saying "vetted" — one head is mine, two are shared.
-// system prompts: a building, the courts' (2026-11-08; the shield-check wasn't clear to users, then a book was tried)
-const SOURCE_ICON = { system: Landmark, shared: Users, mine: User } as const;
+// system prompts: an office building, the administration's (2026-11-08; the shield-check wasn't clear to
+// users, a book was tried, and a courthouse is the courts, not us, the הנהלה)
+const SOURCE_ICON = { system: Building2, shared: Users, mine: User } as const;
 
 // plain: no colour at all. The blue on "mine" earns its place in a table of dozens, where it is
 // the row the reader is scanning for; in a six-row panel there is nothing to scan for.
@@ -481,12 +482,18 @@ export function SourceMark({ pr, isDark, size = 13, plain }: { pr: Prompt; isDar
   return <I size={size} style={{ flexShrink: 0, color: !plain && pr.source === "mine" ? c.primary : markCol(isDark) }} />;
 }
 
+// the same marks by the name the filter offers, for its options
+export function SourceNameMark({ name, isDark, size = 13 }: { name: string; isDark: boolean; size?: number }) {
+  const I = name === "מערכת" ? SOURCE_ICON.system : name === "אני" ? SOURCE_ICON.mine : SOURCE_ICON.shared;
+  return <I size={size} style={{ flexShrink: 0, color: markCol(isDark) }} />;
+}
+
 // One wording, used wherever the source is named: the same word the column shows and the filter
 // offers. The author rides along with it — "משותף" without a name says less than it could.
 export const sourceLabel = (pr: Prompt) =>
   pr.source === "system" ? "מערכת"
   : pr.source === "mine" ? "אני"
-  : `משותף · ${authorFull(pr)}`;
+  : `אחרים · ${authorFull(pr)}`;
 
 export function Stars({ pr, onRate, isDark }: { pr: Prompt; onRate: (n: number) => void; isDark: boolean }) {
   const [hov, setHov] = useState(0);
@@ -594,7 +601,7 @@ export function Dropdown({ label, value, options, onChange, isDark, width = 132,
 
 // A filter that takes several values at once — e.g. נזיקין together with כללי, which fits every
 // case type. Nothing ticked means everything; the menu stays open while ticking.
-export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable }: {
+export function MultiDropdown({ label, value, options, groups, onChange, isDark, width = 132, counts, disabledHint, picker, searchable, icons }: {
   label: string; value: string[]; options: string[]; onChange: (v: string[]) => void; isDark: boolean; width?: number;
   counts?: Record<string, number>;
   // optional headings: the options shown under each, in order (e.g. a case type's תחומים)
@@ -604,6 +611,8 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
   picker?: boolean;
   // long lists (תת תחום) get a search field at the top of the menu
   searchable?: boolean;
+  // a mark before an option, the one its column shows (the author's)
+  icons?: Record<string, ReactNode>;
 }) {
   const [at, setAt] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const open = at !== null;
@@ -699,6 +708,7 @@ export function MultiDropdown({ label, value, options, groups, onChange, isDark,
               style={{ color: txt }}
             >
               {box(value.includes(o))}
+              {icons?.[o]}
               <span className="flex-1" style={{ opacity: counts && counts[o] === 0 ? 0.5 : 1 }}>
                 {o}
                 {counts && <span style={{ color: isDark ? dk.textMuted : c.textLight }}> ({counts[o] ?? 0})</span>}
@@ -743,10 +753,9 @@ export function FavMark({ on, onToggle, isDark, quiet, small, faint }: { on: boo
       className={`${small ? "size-[18px]" : "size-7"} flex-none flex items-center justify-center rounded hover:bg-black/5 transition-${quiet && !on ? "opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "colors"}`}
       title={on ? "הסרה מהמועדפים" : "שמירה במועדפים"}
     >
-      {/* An outline like every other icon (Hanna, 2026-11-08: the filled one stood apart); saved is
-          blue, as the "אני" mark is, and an unsaved one shows only on hover where it's quiet. */}
-      {/* faint: always on screen, so off is a very light grey that doesn't compete with the other marks */}
-      <Bookmark size={small ? 14 : 15} style={{ color: on ? c.primary : faint ? (isDark ? dk.border : "#cfd4dc") : subtle(isDark) }} />
+      {/* Filled grey means saved, as it first was (Hanna, 2026-11-08, after trying an outline and blue).
+          faint: always on screen, so off is a light grey outline that doesn't compete with the saved ones */}
+      <Bookmark size={small ? 14 : 15} fill={on ? subtle(isDark) : "none"} style={{ color: on || !faint ? subtle(isDark) : isDark ? dk.border : "#cfd4dc" }} />
     </button>
   );
 }
@@ -937,8 +946,9 @@ export type Filters = {
 };
 export const EMPTY_FILTERS: Filters = { q: "", source: ANY, caseType: ANY, matter: ANY, stage: ANY, court: ANY, favOnly: false, sort: "relevance", dir: "desc" };
 // mine first, then the vetted ones, then what other people shared — the order they matter in
-export const SOURCE_OPTS = ["אני", "מערכת", "משותף"];
-export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "משותף": 2 };
+// shared prompts are "אחרים" (2026-11-08, was "משותף")
+export const SOURCE_OPTS = ["אני", "מערכת", "אחרים"];
+export const SOURCE_RANK: Record<string, number> = { "אני": 0, "מערכת": 1, "אחרים": 2 };
 const FILTER_KEY = "mishpat.prompts.filters";
 // The table scrolls and its scrollbar (8px, see globals.css) eats into the row's right edge.
 // The rows above it don't scroll, so they reserve the same strip — otherwise the search field
@@ -967,7 +977,7 @@ const COLS = "34px minmax(0,1fr) 54px 136px 90px 84px 108px 96px 92px 36px";
 
 // The column value is one word, so it can be scanned down a column and matched against the
 // filter.
-export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "משותף" : "אני");
+export const srcName = (pr: Prompt) => (pr.source === "system" ? "מערכת" : pr.source === "shared" ? "אחרים" : "אני");
 
 // What the cell shows: the mark already says which of the three kinds it is, so the text can
 // spend itself on who — which is the part worth reading, and worth being credited for.
