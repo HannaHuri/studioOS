@@ -756,7 +756,7 @@ export function FavMark({ on, onToggle, isDark, quiet, small, faint }: { on: boo
     >
       {/* Filled grey means saved, as it first was (Hanna, 2026-11-08, after trying an outline and blue).
           faint: always on screen, so off is a light grey outline that doesn't compete with the saved ones */}
-      <Bookmark size={small ? 14 : 15} fill={on ? subtle(isDark) : "none"} style={{ color: on || !faint ? subtle(isDark) : isDark ? dk.border : "#cfd4dc" }} />
+      <Bookmark size={small ? 14 : 15} fill={on ? (isDark ? dk.textMuted : "#b8c2d1") : "none"} style={{ color: on ? (isDark ? dk.textMuted : "#b8c2d1") : !faint ? subtle(isDark) : isDark ? dk.border : "#cfd4dc" }} />
     </button>
   );
 }
