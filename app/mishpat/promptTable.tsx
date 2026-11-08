@@ -490,7 +490,7 @@ export function PromptTablePanel({
                 <MoreVertical size={15} />
               </button>
             </div>
-            {iconTh("fav", <Bookmark size={14} fill="currentColor" />, "מועדפים")}
+            {iconTh("fav", <Bookmark size={14} />, "מועדפים")}
             {iconTh("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />, "פרומפטים מפורטים")}
             {th("name", "שם הפרומפט")}
             {shownCols.map((k) => (
