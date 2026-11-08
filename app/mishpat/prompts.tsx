@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bookmark, Check, ChevronDown, Eye, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
+  Bookmark, Check, ChevronDown, Eye, Pin, PinOff, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
   Star, Trash2, User, Users, X, Copy, BadgeCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -49,6 +49,7 @@ export type Prompt = {
   parts?: PromptPart[];    // set = a פרומפט מורכב; body then holds the parts as text
   guidelines?: string;     // a detailed prompt's general instructions, for all its parts
   userNotes?: string;      // a shared prompt's notes for the people who use it — shown, never sent to the chat
+  pinned?: number;         // my pin: when it was pinned. Pinned rows head the table, the last pinned first
 };
 
 // The product doesn't colour its icons, and a mark that keeps its meaning without colour is one
@@ -1002,12 +1003,14 @@ export const menuFor = (
   onUse: (p: Prompt) => void, onEdit: (p: Prompt) => void, onShare: (p: Prompt) => void, onDelete: (p: Prompt) => void,
   onFav: (id: string) => void,
   onOpen?: (p: Prompt) => void, // the table's row click uses the prompt, so viewing it moves here
+  onPin?: (id: string) => void,  // the table only: pinning to the top (Hanna, 2026-11-08)
 ) => [
   ...(onOpen ? [{ label: "צפייה בפרומפט", Icon: Eye, act: () => onOpen(pr) }] : []),
   { label: "שימוש בפרומפט", Icon: UseExampleIcon, act: () => onUse(pr) },
   // The bookmark is the quick gesture; this is where the action is named. A mark that only
   // appears on hover can't teach anyone that it exists.
   { label: pr.fav ? "הסרה מהמועדפים" : "שמירה במועדפים", Icon: Bookmark, act: () => onFav(pr.id) },
+  ...(onPin ? [{ label: pr.pinned ? "ביטול נעיצה" : "נעיצה למעלה", Icon: pr.pinned ? PinOff : Pin, act: () => onPin(pr.id) }] : []),
   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
   ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
   ...(pr.source === "mine" || pr.author === ME

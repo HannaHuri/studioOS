@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { Bookmark, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { Bookmark, Pin, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
 import {
@@ -96,13 +96,13 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onEdit, onShare, onDelete,
+  isDark, prompts, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
   openId: string | null;              // the prompt open in the editor — its row is marked
   onOpen: (pr: Prompt) => void; onNew: () => void;
-  onUse: (pr: Prompt) => void; onFav: (id: string) => void; onEdit: (pr: Prompt) => void;
+  onUse: (pr: Prompt) => void; onFav: (id: string) => void; onPin: (id: string) => void; onEdit: (pr: Prompt) => void;
   onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
 }) {
   // Opens on what suits the open case — the job the narrow "מוצעים" panel did before the table
@@ -244,7 +244,10 @@ export function PromptTablePanel({
       fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
-    return f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
+    const ordered = f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
+    // pinned prompts head the table under any sort, the last pinned first; filters still apply to them
+    const pinned = ordered.filter((pr) => pr.pinned).sort((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
+    return [...pinned, ...ordered.filter((pr) => !pr.pinned)];
   }, [prompts, f, m]);
 
   const facets = useMemo(() => {
@@ -565,6 +568,8 @@ export function PromptTablePanel({
                   {/* a touch heavier than the cells; its text shows on hover, as in the תוכן column */}
                   <span className="text-[14px] font-semibold truncate" style={{ color: active ? c.primary : textCol }}
                     onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>{pr.name}</span>
+                  {/* why it is at the top */}
+                  {pr.pinned && <span className="flex-none flex" style={{ color: subCol }} title="נעוץ למעלה"><Pin size={13} /></span>}
                 </div>
 
                 {shownCols.map((k) => cell(k, pr))}
@@ -575,7 +580,7 @@ export function PromptTablePanel({
                 </div>
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
-                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen)} />
+                  <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} />
                 </div>
               </div>
             );

@@ -3040,6 +3040,7 @@ export default function MishpatPage() {
   // (with the editor beside the table, the chat floats as a bar, so it opens to show it)
   const openUse = (pr: Prompt) => { applyPrompt(pr); setChatMin(false); };
   const toggleFav = (id: string) => setPrompts((prev) => prev.map((x) => (x.id === id ? { ...x, fav: !x.fav } : x)));
+  const togglePin = (id: string) => setPrompts((prev) => prev.map((x) => (x.id === id ? { ...x, pinned: x.pinned ? undefined : Date.now() } : x)));
   // A rating is cast once: there is no second click to change it, so the stars lock after the first.
   const ratePrompt = (id: string, n: number) =>
     setPrompts((prev) => prev.map((x) => (x.id === id && x.myRating === null
@@ -3390,6 +3391,7 @@ export default function MishpatPage() {
               onNew={() => { setPromptsFocus(false); setPromptPane({ initial: null, mode: "new" }); }}
               onUse={openUse}
               onFav={toggleFav}
+              onPin={togglePin}
               onEdit={openPromptPane}
               onShare={(pr) => setPromptShare(pr)}
               onDelete={(pr) => setPromptDelete(pr)}
