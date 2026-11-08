@@ -98,11 +98,12 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
+  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, lastId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
   openId: string | null;              // the prompt open in the editor — its row is marked
+  lastId?: string | null;             // the prompt last open, once the editor closed: a faint mark of where the reader left off
   onOpen: (pr: Prompt) => void; onNew: () => void;
   onUse: (pr: Prompt) => void; onFav: (id: string) => void; onPin: (id: string) => void; onEdit: (pr: Prompt) => void;
   onShare: (pr: Prompt) => void; onDelete: (pr: Prompt) => void;
@@ -293,6 +294,7 @@ export function PromptTablePanel({
   const line = isDark ? dk.border : c.inputBorder;
   const rowLine = isDark ? dk.border : "#eef2f7";
   const activeBg = isDark ? "#22304a" : "#eaf2fd";
+  const lastBg = isDark ? "#1d2840" : "#f3f7fd"; // where the reader left off (Hanna, 2026-11-08)
   // the documents table's light-blue window controls
   const lightBlueBtn = { border: `1px solid ${isDark ? "#2f4a6e" : "#cfe1f7"}`, backgroundColor: isDark ? "#22304a" : "#eaf2fd", color: c.primary };
 
@@ -605,9 +607,9 @@ export function PromptTablePanel({
                 onContextMenu={(e) => { e.preventDefault(); setCtxMenu((v) => ({ id: pr.id, x: e.clientX, y: e.clientY, n: (v?.n ?? 0) + 1 })); }}
                 title="לחיצה מכניסה את הפרומפט לצ'אט"
                 className="group relative grid items-center cursor-pointer transition-colors"
-                style={{ gridTemplateColumns: cols, minHeight: "44px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : surface }}
+                style={{ gridTemplateColumns: cols, minHeight: "44px", borderBottom: `1px solid ${rowLine}`, backgroundColor: active ? activeBg : lastId === pr.id ? lastBg : surface }}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "#f7f9fc"; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = surface; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = lastId === pr.id ? lastBg : surface; }}
               >
                 {/* the open row carries the documents table's blue edge */}
                 {active && <div className="absolute top-0 bottom-0 right-0" style={{ width: "3px", backgroundColor: c.primary }} />}
