@@ -3108,7 +3108,7 @@ export default function MishpatPage() {
   // Prompts table + editor. The editor sits between the chat and the table while the chat keeps
   // a usable width; past that (or when the editor is expanded) the chat floats over the editor.
   const docsW = isPanelOpen && !narrow ? 300 : 40;
-  const A4_W = 700; // the documents viewer's width
+  const A4_W = 840; // the left area: the PDF shown a little larger than its full page (Hanna, 2026-11-09)
   const promptsMax = vw - 55 - docsW - 380;
   const promptsW = Math.min(promptsMax, Math.max(promptsMin, promptsWUser ?? Math.max(640, vw - 55 - docsW - A4_W)));
   const paneOpen = !narrow && isPromptsOpen && !!promptPane;
