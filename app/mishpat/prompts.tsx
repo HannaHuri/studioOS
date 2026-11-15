@@ -19,8 +19,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bookmark, Check, ChevronDown, Eye, Pin, PinOff, Info, MoreHorizontal, Pencil, Plus, Save, Search, Share2,
+  Bookmark, Check, ChevronDown, Eye, Pin, PinOff, Info, MoreHorizontal, Pencil, Plus, Save, Search,
   Star, Trash2, User, Users, X, Copy, BadgeCheck, LibraryBig, Maximize2, Minimize2, WandSparkles, MessageCircle, TriangleAlert,
+  createLucideIcon,
 } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { UseExampleIcon } from "./icons";
@@ -1021,7 +1022,7 @@ export const menuFor = (
   { label: pr.fav ? "הסרה מהמועדפים" : "שמירה במועדפים", Icon: Bookmark, act: () => onFav(pr.id) },
   ...(onPin ? [{ label: pr.pinned ? "ביטול נעיצה" : "נעיצה למעלה", Icon: pr.pinned ? PinOff : Pin, act: () => onPin(pr.id) }] : []),
   { label: pr.source === "mine" ? "עריכה" : "עריכה ושמירה כשלי", Icon: Pencil, act: () => onEdit(pr) },
-  ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: Share2, act: () => onShare(pr) }] : []),
+  ...(pr.source === "mine" ? [{ label: "שיתוף", Icon: FolderUsers, act: () => onShare(pr) }] : []),
   ...(pr.source === "mine" || pr.author === ME
     ? [{ label: pr.source === "mine" ? "מחיקה" : "הסרה משיתוף", Icon: Trash2, act: () => onDelete(pr), danger: true }]
     : []),
@@ -2007,8 +2008,18 @@ export function PromptConfirm({
   );
 }
 
-// ── The two actions under a question that was sent ─────────────────────────
-export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; onSave: () => void; onShare: () => void }) {
+// lucide's folder-users (added after the lucide-react version we're on): sharing a prompt with
+// colleagues, not sending it out of the system — Share2 read as WhatsApp-style sharing (2026-11-15)
+export const FolderUsers = createLucideIcon("folder-users", [
+  ["path", { d: "M5.254 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2V9.255", key: "a" }],
+  ["circle", { cx: "13", cy: "15", r: "3", key: "b" }],
+  ["path", { d: "M17 22a4 4 0 0 0-8 0", key: "c" }],
+  ["path", { d: "M22 22A4 4 0 0 0 20.24 18.686 1 1 0 0 1 20.1 17.143 3 3 0 0 0 19.5 12.402", key: "d" }],
+]);
+
+// ── The actions under a question that was sent ─────────────────────────────
+// Sharing left the question for the answer's row (2026-11-15): one place, where users looked for it.
+export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; onSave: () => void; onShare?: () => void }) {
   const col = isDark ? dk.textMuted : c.iconGray;
   const btn = "size-6 flex items-center justify-center rounded transition-colors hover:bg-black/10";
   return (
@@ -2017,9 +2028,11 @@ export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; 
       <button className={btn} style={{ color: col }} onClick={onSave} title="שמירה כפרומפט">
         <Save size={15} />
       </button>
-      <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף">
-        <Share2 size={15} />
-      </button>
+      {onShare && (
+        <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף כפרומפט עם עמיתים">
+          <FolderUsers size={15} />
+        </button>
+      )}
     </div>
   );
 }
