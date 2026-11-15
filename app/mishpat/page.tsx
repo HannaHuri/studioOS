@@ -1175,19 +1175,39 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     setQKind("detailed");
   }, [loadDetailed]);
 
+  // The question field grows with its text. Mid-conversation it stops at half the window, so the
+  // latest answer stays in view; at the start of a conversation there is nothing above it to keep,
+  // so it may grow nearly to the top. Past the cap it scrolls inside.
+  // The corner button opens it to (almost) the full height for long writing, and closes it back.
+  const [inputExpanded, setInputExpanded] = useState(false);
+  const [inputLong, setInputLong] = useState(false);          // 4+ lines: the expand button shows
+  const [winH, setWinH] = useState(800);
+  useEffect(() => {
+    const on = () => setWinH(window.innerHeight);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  // the expanded field fills the column: the window less the header, the bar under the text and the padding
+  const expandedH = Math.max(240, winH - (isEmpty ? 248 : 236));
+  const growCap = isEmpty ? Math.max(220, winH - 320) : Math.max(220, Math.round(winH * 0.5 / 4) * 4);
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     const fit = () => {
       el.style.height = "auto";                                // measure from scratch, so it shrinks too
+      setInputLong(!!inputText && el.scrollHeight > 96);
+      if (inputExpanded) { el.style.height = `${expandedH}px`; return; }
       // An empty field is one line by definition — measuring it can read a stretched box before
       // the first layout settles, and the field would open at its full height for no text at all.
-      el.style.height = inputText ? `${Math.min(el.scrollHeight, 220)}px` : "24px";
+      el.style.height = inputText ? `${Math.min(el.scrollHeight, growCap)}px` : "24px";
     };
     fit();
     const id = requestAnimationFrame(fit);                     // once more, after layout has settled
     return () => cancelAnimationFrame(id);
-  }, [inputText, isEmpty, messages.length]);
+  }, [inputText, isEmpty, messages.length, inputExpanded, expandedH, growCap]);
+  // sending, or clearing the field, closes the big editor
+  useEffect(() => { if (!inputText) setInputExpanded(false); }, [inputText]);
 
   // ── Input box (shared between empty and normal state) ──────────────────
   function renderInput() {
@@ -1208,7 +1228,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         </div>
       )}
       <div
-        className="rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
+        className="relative rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
           borderColor: isDark ? dk.border : c.inputBorder,
           boxShadow: "0px 2px 15px 0px rgba(0,0,0,0.05)",
@@ -1244,12 +1264,13 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             ref={inputRef}
             rows={1}
             className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
-            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: "220px", lineHeight: "1.5" }}
+            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: inputExpanded ? `${expandedH}px` : `${growCap}px`, lineHeight: "1.5", paddingLeft: inputLong || inputExpanded ? "28px" : undefined }}
             value={inputText}
             disabled={docLocked}
             onChange={(e) => setInputText(e.target.value)}
             // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
             onKeyDown={(e) => {
+              if (e.key === "Escape" && inputExpanded) { e.preventDefault(); setInputExpanded(false); }
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
               // Tab moves from field to field while there are any left
               if (e.key === "Tab" && !e.shiftKey && fieldsLeft.length) { e.preventDefault(); selectField(e.currentTarget.selectionEnd); }
@@ -1261,6 +1282,20 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               : draft ? "אפשר לשאול כאן כל שאלה על המסמך ועל התיק" : isEmpty ? "אפשר לשאול כאן כל שאלה בנוגע לתיק" : ""}
             autoFocus={isEmpty}
           />
+        )}
+        {/* Expand / collapse — in the field's top-left corner, once the text runs past a few lines */}
+        {!detailedOpen && !(docLocked && !inputText) && (inputLong || inputExpanded) && (
+          <button
+            onClick={() => { setInputExpanded((v) => !v); requestAnimationFrame(() => inputRef.current?.focus()); }}
+            title={inputExpanded ? "הקטנת שדה הכתיבה" : "הגדלת שדה הכתיבה"}
+            aria-label={inputExpanded ? "הקטנת שדה הכתיבה" : "הגדלת שדה הכתיבה"}
+            className="absolute size-7 flex items-center justify-center rounded transition-colors"
+            style={{ top: "8px", left: "8px", color: c.iconGray, backgroundColor: isDark ? dk.input : "white" }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = c.hoverBg; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = isDark ? dk.input : "white"; }}
+          >
+            {inputExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
         )}
         <div className="flex items-center gap-1.5" dir="ltr">
           {/* Send button — becomes a stop button while an agent run is in progress */}
@@ -1688,7 +1723,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
         {/* a detailed question grows from the middle: the greeting gives way, and past the screen's height the parts scroll */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
-            {!detailedOpen && <p
+            {!detailedOpen && !inputExpanded && <p
               className="text-right text-[22px] font-medium mb-2"
               style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
             >
