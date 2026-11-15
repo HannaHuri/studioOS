@@ -797,6 +797,13 @@ type Message = {
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
 const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that haven't started yet
 // altText/altIcon swap a step label in place instead of adding a second row.
+// A right-to-left textarea puts its scrollbar on the left. Laid out left-to-right, the bar moves to
+// the right, and plaintext lets each paragraph take its own direction from its first letter, so
+// Hebrew still reads and wraps right-to-left; text-align keeps it on the right.
+// The bar sits 8px further out, in the box's own padding, with 8px between it and the text; the text
+// itself stays where it was.
+const RTL_RIGHT_SCROLL = { direction: "ltr", unicodeBidi: "plaintext", textAlign: "right", marginRight: "-8px", paddingRight: "8px", width: "calc(100% + 8px)" } as const;
+
 const AGENT_STEPS: RunStep[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
   {
@@ -1188,7 +1195,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
-  const growCap = isEmpty ? Math.max(220, winH - 320) : Math.max(220, Math.round(winH * 0.5 / 4) * 4);
+  const growCap = Math.max(220, Math.round(winH * 0.5 / 4) * 4);
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
@@ -1261,7 +1268,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             ref={inputRef}
             rows={1}
             className="w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
-            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: `${growCap}px`, lineHeight: "1.5", paddingLeft: inputLong ? "28px" : undefined }}
+            style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: `${growCap}px`, lineHeight: "1.5", paddingLeft: inputLong ? "28px" : undefined, ...RTL_RIGHT_SCROLL }}
             value={inputText}
             disabled={docLocked}
             onChange={(e) => setInputText(e.target.value)}
@@ -1316,7 +1323,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
                 className="flex-1 w-full bg-transparent outline-none text-right text-[16px] resize-none docs-scroll"
-                style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", lineHeight: "1.5", paddingLeft: "32px" }}
+                style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", lineHeight: "1.5", paddingLeft: "32px", ...RTL_RIGHT_SCROLL }}
               />
               <button
                 onClick={() => { setInputExpanded(false); requestAnimationFrame(() => inputRef.current?.focus()); }}
