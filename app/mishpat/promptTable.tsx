@@ -27,18 +27,18 @@ import {
 // caseType reads "תחום" and matter "תת תחום" (2026-11-08); the prompt's text is a column of its own, off by default
 // The favorite and the kind are narrow icon columns at the row's start, and the author a column of its
 // own with its mark and מערכת / אני / אחרים (Hanna, 2026-11-08, after trying them as icons by the ⋯).
-type ColKey = "content" | "author" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
+type ColKey = "content" | "author" | "authorName" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
 const COL_LABELS: Record<ColKey, string> = {
-  content: "תוכן", author: "מחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב בתיק", rating: "דירוג",
+  content: "תוכן", author: "מחבר", authorName: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב בתיק", rating: "דירוג",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  content: "240px", author: "56px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
+  content: "240px", author: "56px", authorName: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
 };
 // the author after תחום and תת תחום (Hanna, 2026-11-08)
-const DEFAULT_ORDER: ColKey[] = ["content", "date", "court", "caseType", "matter", "author", "stage", "rating"];
+const DEFAULT_ORDER: ColKey[] = ["content", "date", "court", "caseType", "matter", "author", "authorName", "stage", "rating"];
 // תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
-  content: false, author: true, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
+  content: false, author: true, authorName: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
 };
 // a detailed prompt is one built of parts; the rest are plain
 const KIND_OPTS = ["פשוט", "מפורט"];
@@ -82,7 +82,13 @@ const loadCols = (width: number): ColState => {
     const raw = JSON.parse(window.localStorage.getItem(COLS_LS_KEY) ?? "null");
     if (raw) {
       const order = (raw.order as string[]).filter((k): k is ColKey => k in COL_LABELS);
-      return { order: [...order, ...DEFAULT_ORDER.filter((k) => !order.includes(k))], shown: { ...defaultShown(width), ...raw.shown } };
+      // a column added since the order was saved goes back after the one it follows by default
+      for (const k of DEFAULT_ORDER) if (!order.includes(k)) {
+        const prev = DEFAULT_ORDER[DEFAULT_ORDER.indexOf(k) - 1];
+        const at = prev ? order.indexOf(prev) : -1;
+        order.splice(at >= 0 ? at + 1 : order.length, 0, k);
+      }
+      return { order, shown: { ...defaultShown(width), ...raw.shown } };
     }
   } catch { /* fall back to the defaults */ }
   return { order: DEFAULT_ORDER, shown: defaultShown(width) };
@@ -329,7 +335,7 @@ export function PromptTablePanel({
     );
   };
   // the columns' sort: the author column sorts by source (אני, מערכת, אחרים), then by name
-  const sortKeyOf = (k: ColKey): SortKey => (k === "author" ? "source" : k);
+  const sortKeyOf = (k: ColKey): SortKey => (k === "author" ? "source" : k === "authorName" ? "author" : k);
 
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
@@ -395,6 +401,16 @@ export function PromptTablePanel({
         return (
           <div key={k} className="px-1.5 min-w-0 flex items-center" title={pr.source === "shared" ? `${n} · ${authorFull(pr)}` : n}>
             <SourceMark pr={pr} isDark={isDark} size={14} plain />
+          </div>
+        );
+      }
+      case "authorName": {
+        // who wrote it, by name (Hanna, 2026-11-15: it went missing from the columns menu with the icon column)
+        const n = authorName(pr) || "מערכת";
+        const named = n !== "מערכת" && n !== "אנונימי";
+        return (
+          <div key={k} className="px-1.5 min-w-0 text-[12.5px] truncate" style={{ color: cellCol }} title={authorFull(pr) || "מערכת"}>
+            <span style={named ? undefined : { color: subCol }}>{n}</span>
           </div>
         );
       }
