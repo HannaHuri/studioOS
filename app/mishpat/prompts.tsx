@@ -2029,7 +2029,7 @@ export function QuestionActions({ isDark, onSave, onShare }: { isDark: boolean; 
         <Save size={15} />
       </button>
       {onShare && (
-        <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף כפרומפט עם עמיתים">
+        <button className={btn} style={{ color: col }} onClick={onShare} title="שיתוף הפרומפט במאגר">
           <FolderUsers size={15} />
         </button>
       )}
