@@ -122,9 +122,11 @@ export const uid = () => Math.random().toString(36).slice(2, 9);
 export const today = () => new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 const p = (x: Partial<Prompt> & { name: string; body: string; source: PromptSource }): Prompt => ({
-  id: uid(), author: null, fav: false, tags: [], uses: 0, ratingSum: 0, ratingCount: 0,
+  id: uid(), author: null, fav: false, tags: [], ratingSum: 0, ratingCount: 0,
   myRating: null, edited: "01/02/2025", caseType: GENERAL, matter: GENERAL, stage: GENERAL, court: GENERAL,
   ...x,
+  // demo use counts for the שימושים column: a seed without one gets a few uses per rater
+  uses: x.uses || Math.round((x.ratingCount ?? 0) * 3.4),
 });
 
 // a seed פרומפט מפורט: its parts, and the body the parts produce
@@ -946,7 +948,7 @@ export function PromptsPanel({
 }
 
 // ── The library window ─────────────────────────────────────────────────────
-export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "content" | "kind" | "date" | "fav";
+export type SortKey = "relevance" | "name" | "source" | "author" | "caseType" | "matter" | "stage" | "court" | "rating" | "uses" | "content" | "kind" | "date" | "fav";
 // A user's prompt is dated by its last edit. System prompts carry no date: at launch they would all
 // share the release date, which says nothing about any one of them.
 export const dateOf = (pr: Prompt) => (pr.source === "system" ? "" : pr.edited);
@@ -1094,6 +1096,7 @@ export function PromptLibrary({
       // rating sorts on the average, but a 5.0 from two raters shouldn't outrank a 4.6 from
       // forty — the number of raters is the tie-break, and it's in the cell either way
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      uses: (a, b) => b.uses - a.uses,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
       kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0),
       date: byDate,

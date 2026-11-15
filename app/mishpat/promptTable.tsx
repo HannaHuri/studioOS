@@ -27,18 +27,20 @@ import {
 // caseType reads "תחום" and matter "תת תחום" (2026-11-08); the prompt's text is a column of its own, off by default
 // The favorite and the kind are narrow icon columns at the row's start, and the author a column of its
 // own with its mark and מערכת / אני / אחרים (Hanna, 2026-11-08, after trying them as icons by the ⋯).
-type ColKey = "content" | "author" | "authorName" | "date" | "court" | "caseType" | "matter" | "stage" | "rating";
+type ColKey = "content" | "author" | "authorName" | "date" | "court" | "caseType" | "matter" | "stage" | "rating" | "uses";
 const COL_LABELS: Record<ColKey, string> = {
-  content: "תוכן", author: "מחבר", authorName: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב בתיק", rating: "דירוג",
+  content: "תוכן", author: "מחבר", authorName: "שם המחבר", date: "תאריך", court: "ערכאה", caseType: "תחום", matter: "תת תחום", stage: "שלב בתיק", rating: "דירוג", uses: "שימושים",
 };
 const COL_TRACKS: Record<ColKey, string> = {
-  content: "240px", author: "56px", authorName: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px",
+  content: "240px", author: "56px", authorName: "128px", date: "76px", court: "96px", caseType: "76px", matter: "108px", stage: "104px", rating: "76px", uses: "76px",
 };
 // the author after תחום and תת תחום (Hanna, 2026-11-08)
-const DEFAULT_ORDER: ColKey[] = ["content", "date", "court", "caseType", "matter", "author", "authorName", "stage", "rating"];
+const DEFAULT_ORDER: ColKey[] = ["content", "date", "court", "caseType", "matter", "author", "authorName", "stage", "rating", "uses"];
 // תחום, תת תחום and דירוג fit the side panel's width with a readable name; the rest are there to add
 const DEFAULT_SHOWN: Record<ColKey, boolean> = {
   content: false, author: true, authorName: false, date: false, court: false, caseType: true, matter: true, stage: false, rating: true,
+  // back as an option (PM, 2026-11-15): how many times the prompt was put in the chat. The demo numbers are made up.
+  uses: false,
 };
 // a detailed prompt is one built of parts; the rest are plain
 const KIND_OPTS = ["פשוט", "מפורט"];
@@ -261,6 +263,7 @@ export function PromptTablePanel({
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
       rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      uses: (a, b) => b.uses - a.uses,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
       kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avgOf(b) - avgOf(a),
       date: byDate,
@@ -340,7 +343,7 @@ export function PromptTablePanel({
   // the name keeps a readable width; with many columns on, the table scrolls sideways instead
   // in the side panel the rating shows without its count (it's in the tooltip), which leaves the tags more room
   // and the tags column is a single chip ending in "...", like the documents table in /lab, so the default columns fit
-  const SIDE: Partial<Record<ColKey, string>> = { rating: "56px", content: "160px", caseType: "68px", matter: "96px" };
+  const SIDE: Partial<Record<ColKey, string>> = { rating: "56px", uses: "76px", content: "160px", caseType: "68px", matter: "96px" };
   // a width the user dragged wins over both (as in the documents table in /lab)
   const track = (k: ColKey) => (colW[k] ? `${colW[k]}px` : isFocus ? COL_TRACKS[k] : SIDE[k] ?? COL_TRACKS[k]);
   const nameMin = isFocus ? 160 : 120;
@@ -362,7 +365,7 @@ export function PromptTablePanel({
   const ICON_COL = 34; // the favorite and the detailed columns: a mark, and the header's sort arrow on hover
   // the short columns (an icon, a number) keep their width: the room they'd get sat as a gap on their
   // left, before the detailed mark (Hanna, 2026-11-08); the text columns share it out instead
-  const FIXED: ColKey[] = ["rating"];
+  const FIXED: ColKey[] = ["rating", "uses"];
   // the favorite opens the row and the detailed mark closes it, by the ⋯ (Hanna, 2026-11-08)
   // with the content column on, the name keeps its own width and the content takes the spare room,
   // so it starts right after the name instead of across a white gap (Hanna, 2026-11-08)
@@ -376,8 +379,8 @@ export function PromptTablePanel({
   const baseOf = (k: ColKey) => parseInt(track(k), 10);
   const nameBase = colW.name ?? nameW;
   // the icon and number columns keep their width, so their headers stay whole; the rest share what's left
-  const KEEP: ColKey[] = ["author", "rating"];
-  const floorOf = (k: ColKey) => (KEEP.includes(k) ? Math.min(56, baseOf(k)) : 40);
+  const KEEP: ColKey[] = ["author", "rating", "uses"];
+  const floorOf = (k: ColKey) => (KEEP.includes(k) ? Math.min(k === "uses" ? 76 : 56, baseOf(k)) : 40);
   const kept = shownCols.filter((k) => KEEP.includes(k)).reduce((sum, k) => sum + floorOf(k), 0);
   const fit = Math.min(1, Math.max(0, (width - GUTTER - EDGES - kept) / (nameBase + shownCols.filter((k) => !KEEP.includes(k)).reduce((sum, k) => sum + baseOf(k), 0))));
   const sc = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
@@ -437,6 +440,12 @@ export function PromptTablePanel({
                 {isFocus && <span style={{ color: subCol }}>({pr.ratingCount})</span>}
               </>
             ) : <span style={{ color: subCol }}>—</span>}
+          </div>
+        );
+      case "uses":
+        return (
+          <div key={k} className="px-1.5 text-[12.5px]" style={{ color: pr.uses ? cellCol : subCol }} title={pr.uses ? `${pr.uses.toLocaleString("he-IL")} שימושים` : "עדיין לא נעשה בו שימוש"}>
+            {pr.uses ? pr.uses.toLocaleString("he-IL") : "—"}
           </div>
         );
       case "content":
