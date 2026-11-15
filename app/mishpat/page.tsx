@@ -800,7 +800,9 @@ const PENDING_GRAY = "#b6c0cf"; // lighter than c.textLight — for steps that h
 // A right-to-left textarea puts its scrollbar on the left. Laid out left-to-right, the bar moves to
 // the right, and plaintext lets each paragraph take its own direction from its first letter, so
 // Hebrew still reads and wraps right-to-left; text-align keeps it on the right.
-const RTL_RIGHT_SCROLL = { direction: "ltr", unicodeBidi: "plaintext", textAlign: "right" } as const;
+// The bar sits 8px further out, in the box's own padding, with 8px between it and the text; the text
+// itself stays where it was.
+const RTL_RIGHT_SCROLL = { direction: "ltr", unicodeBidi: "plaintext", textAlign: "right", marginRight: "-8px", paddingRight: "8px", width: "calc(100% + 8px)" } as const;
 
 const AGENT_STEPS: RunStep[] = [
   { Icon: Search, text: "בודק את נתוני התיק" },
