@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Share2, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
+  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -18,13 +18,13 @@ import {
   type ProofKinds, type ProofRun, type RunStep,
 } from "./proofread";
 import {
-  PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptConfirm, QuestionActions,
+  PromptsPanel, PromptLibrary, PromptEditor, PromptShare, PromptConfirm, QuestionActions, FolderUsers,
   seedPrompts, fieldsOf, EXAMPLE_FIELD, FIELD_RE, ME, MY_ROLE, type Prompt,
 } from "./prompts";
 import { partsToText, type CaseDocOption, type PromptPart } from "./complexPrompt";
 import { DetailedInline, putDetailedDraft, hasDetailedDraft, type DetailedHandle } from "./detailedQuestion";
 import { PromptTablePanel } from "./promptTable";
-import { Bot, GripHorizontal, GripVertical, Maximize2, MessageSquare } from "lucide-react";
+import { Bot, GripHorizontal, GripVertical, Maximize2, MessageSquare, Star } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 // list-sort-descending — not yet published in our installed lucide-react version;
@@ -516,8 +516,10 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Message action bar ─────────────────────────────────────────────────────
-function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, logOpen, onToggleLog, onSaveQuestion, onShareQuestion }: {
+function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, logOpen, onToggleLog, onSaveQuestion, onShareQuestion, rate }: {
   isDark: boolean; showBadges: boolean; onToggleBadges: () => void;
+  // set when the question came from someone else's library prompt (2026-11-15, PM's idea)
+  rate?: { name: string; myRating: number | null; onRate: (n: number) => void };
   // users looked for sharing after the answer; its title says it's the question that's shared, as a prompt
   onSaveQuestion?: () => void; onShareQuestion?: () => void;
   // Set on a proofreading answer — the finished file is one of the things you can do with
@@ -567,8 +569,8 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
         />
         {/* sharing the question as a prompt, after the Word download — users looked for it here (2026-11-08) */}
         {onShareQuestion && (
-          <VibeBtn title="שיתוף השאלה כפרומפט" onClick={onShareQuestion}>
-            <Share2 size={18} />
+          <VibeBtn title="שיתוף כפרומפט עם עמיתים" onClick={onShareQuestion}>
+            <FolderUsers size={18} />
           </VibeBtn>
         )}
         {/* A check's answer cites nothing — no sources, no citation badges (for now) */}
@@ -619,9 +621,39 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
             </div>
           </>
         )}
+        {!proof && rate && <><div className="flex-1" /><RateLine isDark={isDark} {...rate} /></>}
       </div>
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </>
+  );
+}
+
+// "Rate this prompt", at the row's right end, opposite the answer's actions. Shown once per prompt:
+// after rating it thanks and keeps the stars; a prompt already rated earlier gets no line.
+function RateLine({ isDark, name, myRating, onRate }: { isDark: boolean; name: string; myRating: number | null; onRate: (n: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const [justRated, setJustRated] = useState(false);
+  if (myRating !== null && !justRated) return null;
+  const on = isDark ? dk.textMuted : c.iconGray;
+  const off = isDark ? dk.textMuted : c.textLight;
+  const shown = justRated ? myRating ?? 0 : hover;
+  return (
+    <div data-rate className="flex items-center min-w-0" dir="rtl" style={{ gap: 8, fontFamily: "Noto Sans Hebrew, sans-serif", fontSize: 13, color: off }}>
+      {justRated ? <span className="whitespace-nowrap">תודה, הדירוג נשמר</span> : (
+        <span className="flex min-w-0 whitespace-nowrap" title={name}>
+          אפשר לדרג את הפרומפט&nbsp;&quot;<span className="truncate" style={{ maxWidth: 220 }}>{name}</span>&quot;
+        </span>
+      )}
+      <span className="flex shrink-0" style={{ gap: 2 }} onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} disabled={justRated} onMouseEnter={() => !justRated && setHover(n)}
+            onClick={() => { setJustRated(true); onRate(n); }} className="p-0.5" style={{ cursor: justRated ? "default" : "pointer" }}
+            title={justRated ? undefined : `${n} מתוך 5`}>
+            <Star size={14} strokeWidth={1.8} style={{ color: n <= shown ? on : off, opacity: n <= shown ? 1 : 0.55 }} fill={n <= shown ? on : "none"} />
+          </button>
+        ))}
+      </span>
+    </div>
   );
 }
 
@@ -759,6 +791,7 @@ function AgentEllipsis({ marginInlineStart = 10 }: { marginInlineStart?: number 
 type Message = {
   q: string; isFirst: boolean; agent?: boolean; proof?: ProofRun; logSteps?: RunStep[];
   withDraft?: boolean;
+  promptId?: string; // the library prompt the question was sent from, for the rating line under its answer
 };
 
 // Agent-mode progress steps — dev team: replace the fixed timer with real step transitions from the backend
@@ -781,16 +814,19 @@ const AGENT_ANSWER: [string, number[]][] = [
   ["מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.", [4]],
 ];
 
-function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed }: {
+function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed, rateInfo, onRatePrompt }: {
   dev?: boolean; // the temporary version for development, at /mishpat/dev
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
-  insert?: { text: string; n: number };
+  insert?: { text: string; n: number; promptId?: string };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
   onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
   // a detailed prompt from the library, opened in the detailed question to be checked before it's sent
-  loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number };
+  loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number; promptId?: string };
+  // a library prompt's name and the user's rating, for the "rate this prompt" line under an answer
+  rateInfo?: (id: string) => { name: string; myRating: number | null } | null;
+  onRatePrompt?: (id: string, n: number) => void;
 }) {
   const [showBadges, setShowBadges] = useState(true);
   const [citCollapsed, setCitCollapsed] = useState(true);
@@ -978,10 +1014,16 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
 
 
   // A basic question is answered straight away; a deep or detailed one goes through the agents' steps.
+  // The library prompt that's in the question line now (set when one is put there, dropped once
+  // it's sent or the line is emptied), so its answer can ask for a rating.
+  const fromPrompt = useRef<string | null>(null);
+  useEffect(() => { if (!inputText && qKind !== "detailed") fromPrompt.current = null; }, [inputText, qKind]);
   function ask(q: string, agent: boolean) {
     // once a draft is in the conversation it is part of every question's context
     const withDraft = !!draft;
-    setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent, logSteps: agent ? AGENT_STEPS : undefined, withDraft }]);
+    const promptId = fromPrompt.current ?? undefined;
+    fromPrompt.current = null;
+    setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent, logSteps: agent ? AGENT_STEPS : undefined, withDraft, promptId }]);
     if (agent) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
 
@@ -1101,6 +1143,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     insertN.current = insert.n;
     if (docLocked) return; // the question line is closed while the document waits for a check
     setInputText(insert.text);
+    fromPrompt.current = insert.promptId ?? null;
     setHeld(null);
     setQKind(baseKind); // a prompt's text goes in the question line, so a detailed question open steps aside
     selectPending.current = true; // once the text is in, its first field is selected to type over
@@ -1126,6 +1169,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     if (!loadDetailed || loadDetailed.n === loadN.current) return;
     loadN.current = loadDetailed.n;
     putDetailedDraft(loadDetailed.parts, loadDetailed.guidelines);
+    fromPrompt.current = loadDetailed.promptId ?? null;
     setDetailedKey((k) => k + 1);
     setPicked(NO_KINDS);
     setQKind("detailed");
@@ -1695,7 +1739,6 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                       <QuestionActions
                         isDark={isDark}
                         onSave={() => onSaveQuestion?.(msg.q)}
-                        onShare={() => onShareQuestion?.(msg.q)}
                       />
                     </div>
                   </div>
@@ -1718,6 +1761,10 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                         onToggleLog={() => setOpenLog((n) => (n === i ? null : i))}
                         onSaveQuestion={onSaveQuestion ? () => onSaveQuestion(msg.q) : undefined}
                         onShareQuestion={onShareQuestion ? () => onShareQuestion(msg.q) : undefined}
+                        rate={(() => {
+                          const info = msg.promptId ? rateInfo?.(msg.promptId) : null;
+                          return info && msg.promptId ? { name: info.name, myRating: info.myRating, onRate: (n: number) => onRatePrompt?.(msg.promptId!, n) } : undefined;
+                        })()}
                       />
                     )}
                     {/* The run's own log, reopened after the fact from the actions row above */}
@@ -2964,7 +3011,7 @@ export default function MishpatPage() {
   const chatBoxRef = useRef<HTMLDivElement>(null);
   // A detailed prompt is too long for the question line, so it opens in the detailed question
   const [draftReplace, setDraftReplace] = useState<Prompt | null>(null); // a detailed prompt waiting on the draft's replacement
-  const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number }>({ parts: [], guidelines: "", n: 0 });
+  const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number; promptId?: string }>({ parts: [], guidelines: "", n: 0 });
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
   const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
@@ -3028,20 +3075,20 @@ export default function MishpatPage() {
   // A saved question needs a name — the library is searched by name — so one is proposed
   // from the opening words rather than asking for it before anything is on screen.
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
-  const insertPrompt = (text: string) => setInsert((v) => ({ text, n: v.n + 1 }));
+  const insertPrompt = (text: string, promptId?: string) => setInsert((v) => ({ text, n: v.n + 1, promptId }));
   const loadDetailed = (pr: Prompt) => {
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
-    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1 }));
+    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1, promptId: pr.id }));
     setLibraryOpen(false);
   };
   const applyPrompt = (pr: Prompt) => {
     // a detailed prompt takes the draft's place, so a draft that's there is asked about first
     // the development version has no detailed question, so a detailed prompt goes in the question line written out
-    if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines)); setLibraryOpen(false); return; }
+    if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines), pr.id); setLibraryOpen(false); return; }
     if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
     // an example already in use fills the prompt's [דוגמה]
-    insertPrompt(inUse ? pr.body.replaceAll(`[${EXAMPLE_FIELD}]`, inUse.name) : pr.body);
+    insertPrompt(inUse ? pr.body.replaceAll(`[${EXAMPLE_FIELD}]`, inUse.name) : pr.body, pr.id);
     setLibraryOpen(false);
   };
   // using a prompt puts it straight into the input, where it's checked and edited before it's sent
@@ -3285,6 +3332,8 @@ export default function MishpatPage() {
               setToast(share ? "השאלה נשמרה בספרייה שלך ושותפה" : "השאלה נשמרה בספרייה שלך");
             }}
             loadDetailed={detailedLoad}
+            rateInfo={(id) => { const pr = prompts.find((x) => x.id === id); return pr && pr.source !== "mine" ? { name: pr.name, myRating: pr.myRating } : null; }}
+            onRatePrompt={ratePrompt}
           />
 
           {/* Drawer backdrop (narrow, any panel open) — click to dismiss → back to typing */}
