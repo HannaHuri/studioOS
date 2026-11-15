@@ -569,7 +569,7 @@ function MessageActions({ isDark, showBadges, onToggleBadges, proof, hasLog, log
         />
         {/* sharing the question as a prompt, after the Word download — users looked for it here (2026-11-08) */}
         {onShareQuestion && (
-          <VibeBtn title="שיתוף כפרומפט עם עמיתים" onClick={onShareQuestion}>
+          <VibeBtn title="שיתוף הפרומפט במאגר" onClick={onShareQuestion}>
             <FolderUsers size={18} />
           </VibeBtn>
         )}
