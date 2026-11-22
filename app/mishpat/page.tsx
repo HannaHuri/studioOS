@@ -2441,7 +2441,7 @@ const NEAR_FULL = 0.8; // the bar turns amber from here up, so it warns instead 
 
 // Each text in an example has a type that tells the chat how to use it: as a model for how to
 // phrase and build the answer, or as a source of information to analyse. Texts saved before the
-// type existed read as style. A new text starts with no type: its type is picked first, then the field opens.
+// type existed read as style, which is also the default for a new text.
 type ExKind = "style" | "doc";
 type ExText = { id: string; title: string; body: string; kind?: ExKind };
 const KIND_LABEL: Record<ExKind, string> = { style: "דוגמה לסגנון", doc: "מסמך נלווה" };
@@ -2625,7 +2625,7 @@ function ExampleModal({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [texts, setTexts] = useState<ExText[]>(
-    initial?.texts.length ? initial.texts : [{ id: uid(), title: "טקסט 1", body: "" }]
+    initial?.texts.length ? initial.texts : [{ id: uid(), title: "טקסט 1", body: "", kind: "style" }]
   );
   const [active, setActive] = useState(0);
   const [renaming, setRenaming] = useState<number | null>(null);
@@ -2650,7 +2650,7 @@ function ExampleModal({
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [tabMenu]);
-  // once a type is picked the field opens with the caret in it, ready for pasting
+  // the field takes the caret when a text opens, ready for pasting
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const activeKind = texts[active]?.kind;
   useEffect(() => { fieldRef.current?.focus(); }, [active, activeKind]);
@@ -2704,7 +2704,7 @@ function ExampleModal({
 
   const addText = () => {
     if (atTextLimit) return;
-    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "" }]);
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: "style" }]);
     setActive(texts.length);
   };
   const removeText = (i: number) => {
@@ -2750,8 +2750,20 @@ function ExampleModal({
   };
 
   const cur = texts[active] ? kindOf(texts[active]) : "style";
-  // a new, empty text whose type hasn't been picked yet shows the two types instead of the field
-  const choosing = !!texts[active] && !texts[active].kind && !texts[active].body;
+  // the active tab carries its type as a tag (icon + name ▾) that opens the type choice
+  const [typeMenu, setTypeMenu] = useState(false);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!typeMenu) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (typeMenuRef.current?.contains(t as Node)) return;
+      if (t instanceof Element && t.closest("[data-type-tag]")) return;
+      setTypeMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [typeMenu]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2803,7 +2815,7 @@ function ExampleModal({
               )}
               <div
                 onClick={() => setActive(i)}
-                className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
+                className={`flex-1 min-w-0 ${on ? "max-w-[296px]" : "max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
                 style={{
                   // React-controlled, never written straight to the DOM: setting it imperatively
                   // in onMouseEnter left the grey stuck once a hovered tab became the active one
@@ -2851,8 +2863,40 @@ function ExampleModal({
                   </>
                 ) : (
                   <>
-                    {/* the type is shown by its icon; it is changed from the ⋯ menu */}
-                    {(t.kind || t.body) && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
+                    {/* inactive tabs show the type by its icon only */}
+                    {(t.kind || t.body) && !on && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
+                    {/* the active tab carries its type as a tag (icon inside) that opens the type
+                        choice; other tabs keep only the icon */}
+                    {on && (
+                      <span className="relative flex-none flex">
+                        <button
+                          data-type-tag
+                          onClick={(e) => { e.stopPropagation(); setTabMenu(false); setTypeMenu((v) => !v); }}
+                          className="flex items-center gap-1 rounded px-1.5 text-[12px] transition-colors"
+                          style={{ height: "24px", backgroundColor: typeMenu ? (isDark ? "rgba(0,115,234,0.24)" : "#d4e6fb") : (isDark ? "rgba(0,115,234,0.16)" : "#e6f0fc"), color: c.primary, fontWeight: 400 }}
+                          title="שינוי סוג הטקסט"
+                        >{(() => { const Ic = KIND_ICON[kindOf(t)]; return <Ic size={14} className="flex-none" />; })()}{kindOf(t) === "doc" ? "מסמך נלווה" : "סגנון"}<ChevronDown size={12} /></button>
+                        {typeMenu && (
+                          <div
+                            ref={typeMenuRef}
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute rounded-md overflow-hidden shadow-lg"
+                            style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "264px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                          >
+                            {(["style", "doc"] as ExKind[]).map((k, n) => { const Ic = KIND_ICON[k]; return (
+                              <button key={k} onClick={() => { setKind(i, k); setTypeMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors text-right" style={{ color: textCol, borderTop: n ? `1px solid ${line}` : undefined }}>
+                                <Ic size={16} className="flex-none mt-0.5" />
+                                <span className="flex-1">
+                                  <span className="block">{KIND_LABEL[k]}</span>
+                                  <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                                </span>
+                                <span className="flex-none w-4 mt-0.5" style={{ color: c.primary }}>{kindOf(t) === k && <Check size={16} />}</span>
+                              </button>
+                            ); })}
+                          </div>
+                        )}
+                      </span>
+                    )}
                     {/* a click on the active tab's name renames it; on any other tab it just switches */}
                     <span
                       onClick={on ? (e) => { e.stopPropagation(); setTabMenu(false); startRename(i); } : undefined}
@@ -2877,23 +2921,16 @@ function ExampleModal({
                         ref={tabMenuRef}
                         onClick={(e) => e.stopPropagation()}
                         className="absolute rounded-md overflow-hidden shadow-lg"
-                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "216px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "168px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
                       >
                         <button onClick={() => { setTabMenu(false); startRename(i); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
                           <Pencil size={16} className="flex-none" /><span className="flex-1 text-right">שינוי שם</span>
                         </button>
-                        <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>
-                        {(["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
-                          <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
-                            <Ic size={16} className="flex-none" /><span className="flex-1 text-right">{KIND_LABEL[k]}</span>
-                            <span className="flex-none w-4" style={{ color: c.primary }}>{(t.kind || t.body) && kindOf(t) === k && <Check size={16} />}</span>
-                          </button>
-                        ); })}
                         <button
                           // nothing to lose in an empty tab — only confirm when there is text
                           onClick={() => { setTabMenu(false); if (counts[i] === 0) removeText(i); else setPendingText(i); }}
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors"
-                          style={{ color: RED, borderTop: `1px solid ${line}` }}
+                          style={{ color: RED }}
                         >
                           <Trash2 size={16} className="flex-none" /><span className="flex-1 text-right">מחיקת טקסט</span>
                         </button>
@@ -2926,34 +2963,7 @@ function ExampleModal({
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
         <div className="px-6 flex-1 min-h-0 relative">
-          {choosing ? (
-            // step one of a new text: pick its type — the card itself is the "continue"
-            <div
-              className="w-full h-full flex flex-col items-center justify-center gap-4"
-              style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface }}
-            >
-              <div className="text-[14px]" style={{ color: subCol }}>יש לבחור את סוג הטקסט</div>
-              <div className="flex gap-4">
-                {(["style", "doc"] as ExKind[]).map((k) => {
-                  const Ic = KIND_ICON[k];
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => setKind(active, k)}
-                      className="flex flex-col items-start gap-2 rounded-lg p-4 text-right transition-colors hover:border-[#0073ea]"
-                      style={{ width: "240px", border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: surface }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? "rgba(0,115,234,0.12)" : "#f0f6fe")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = surface)}
-                    >
-                      <Ic size={20} style={{ color: c.primary }} />
-                      <span className="text-[14px]" style={{ color: textCol, fontWeight: 500 }}>{KIND_LABEL[k]}</span>
-                      <span className="text-[12px] leading-relaxed" style={{ color: subCol }}>{KIND_DESC[k]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
+          {/* a new text is a style example by default; its type is changed from the tag in its tab */}
           <textarea
             ref={fieldRef}
             value={texts[active]?.body ?? ""}
@@ -2966,7 +2976,6 @@ function ExampleModal({
             // name field's 4px so the two inputs read as one family
             style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
           />
-          )}
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
