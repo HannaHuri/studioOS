@@ -2878,16 +2878,20 @@ function ExampleModal({
                         ref={tabMenuRef}
                         onClick={(e) => e.stopPropagation()}
                         className="absolute rounded-md overflow-hidden shadow-lg"
-                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "216px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "240px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
                       >
                         <button onClick={() => { setTabMenu(false); startRename(i); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
                           <Pencil size={16} className="flex-none" /><span className="flex-1 text-right">שינוי שם</span>
                         </button>
                         <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>
                         {(["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
-                          <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
-                            <Ic size={16} className="flex-none" /><span className="flex-1 text-right">{KIND_LABEL[k]}</span>
-                            <span className="flex-none w-4" style={{ color: c.primary }}>{(t.kind || t.body) && kindOf(t) === k && <Check size={16} />}</span>
+                          <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
+                            <Ic size={16} className="flex-none mt-0.5" />
+                            <span className="flex-1 text-right">
+                              <span className="block">{KIND_LABEL[k]}</span>
+                              <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                            </span>
+                            <span className="flex-none w-4 mt-0.5" style={{ color: c.primary }}>{(t.kind || t.body) && kindOf(t) === k && <Check size={16} />}</span>
                           </button>
                         ); })}
                         <button
@@ -2943,12 +2947,16 @@ function ExampleModal({
                 title="סגירה"
               ><X size={14} /></button>
               {(() => { const Ic = KIND_ICON[cur]; return <Ic size={16} className="flex-none" />; })()}
-              <span>הטקסט יישמר כ{cur === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
+              <span>{cur === "doc"
+                ? "הטקסט יישמר כמסמך נלווה: הצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
+                : "הטקסט יישמר כדוגמה לסגנון: הצ׳ט ילמד ממנו כיצד לנסח ולבנות את התשובה"}</span>
               <span>·</span>
               <button
                 onClick={() => { setKind(active, cur === "doc" ? "style" : "doc"); fieldRef.current?.focus(); }}
                 className="hover:underline"
                 style={{ color: c.primary }}
+                // what the other type means, before switching to it
+                title={cur === "doc" ? "דוגמה לסגנון: כיצד לנסח ולבנות את התשובה" : "מסמך נלווה: מקור מידע לניתוח התוכן"}
               >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
             </div>
           )}
