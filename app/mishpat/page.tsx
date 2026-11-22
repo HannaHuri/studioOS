@@ -2853,7 +2853,13 @@ function ExampleModal({
                   <>
                     {/* the type is shown by its icon; it is changed from the ⋯ menu */}
                     {(t.kind || t.body) && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
-                    <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
+                    {/* a click on the active tab's name renames it; on any other tab it just switches */}
+                    <span
+                      onClick={on ? (e) => { e.stopPropagation(); setTabMenu(false); startRename(i); } : undefined}
+                      className="flex-1 min-w-0 truncate text-[14px] text-right"
+                      style={{ cursor: on ? "text" : undefined }}
+                      title={on ? `${t.title}\nלחיצה לשינוי שם` : t.title}
+                    >{t.title}</span>
                   </>
                 )}
                 {/* the text's actions sit in a ⋯ menu on the active tab, opening to its left */}
@@ -2923,7 +2929,8 @@ function ExampleModal({
           {choosing ? (
             // step one of a new text: pick its type — the card itself is the "continue"
             <div
-              className="w-full h-full flex flex-col items-center justify-center gap-4"
+              // starts where the text will start: top-right, with the field's own padding
+              className="w-full h-full flex flex-col items-start justify-start gap-4 px-4 py-3"
               style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface }}
             >
               <div className="text-[14px]" style={{ color: subCol }}>יש לבחור את סוג הטקסט</div>
