@@ -2702,9 +2702,9 @@ function ExampleModal({
   const setTitle = (i: number, v: string) =>
     setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, title: v } : t)));
 
-  const addText = (k: ExKind = "style") => {
+  const addText = () => {
     if (atTextLimit) return;
-    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: k }]);
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: "style" }]);
     setActive(texts.length);
   };
   const removeText = (i: number) => {
@@ -2750,9 +2750,7 @@ function ExampleModal({
   };
 
   const cur = texts[active] ? kindOf(texts[active]) : "style";
-  // MOCK (local only): ?typeui=bar shows the type toggle in a grey bar inside the empty field;
-  // the default shows it under the field, next to the word count
-  const [typeUi] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("typeui") : null) ?? "footer");
+  // the active tab carries its type as a tag (icon + name ▾) that opens the type choice
   const [typeMenu, setTypeMenu] = useState(false);
   const typeMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -2766,43 +2764,6 @@ function ExampleModal({
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [typeMenu]);
-  const [addMenu, setAddMenu] = useState(false);
-  const addMenuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!addMenu) return;
-    const close = (e: MouseEvent) => {
-      const t = e.target as Node | null;
-      if (addMenuRef.current?.contains(t as Node)) return;
-      if (t instanceof Element && t.closest("[data-add-menu-btn]")) return;
-      setAddMenu(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [addMenu]);
-  const showTypeBar = typeUi === "bar" && !!texts[active] && !texts[active].body;
-  const typeToggle = (
-    <div className="flex items-center rounded overflow-hidden flex-none" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, height: "28px" }}>
-      {(["style", "doc"] as ExKind[]).map((k, n) => {
-        const Ic = KIND_ICON[k];
-        const sel = cur === k;
-        return (
-          <button
-            key={k}
-            onClick={() => { setKind(active, k); fieldRef.current?.focus(); }}
-            className="h-full flex items-center gap-1.5 px-2.5 text-[13px] transition-colors"
-            style={{
-              borderInlineStart: n ? `1px solid ${isDark ? dk.border : c.border}` : undefined,
-              backgroundColor: sel ? (isDark ? "rgba(0,115,234,0.16)" : "#e6f0fc") : surface,
-              color: sel ? c.primary : textCol,
-            }}
-            title={`${KIND_LABEL[k]}: ${KIND_DESC[k]}`}
-          >
-            <Ic size={14} className="flex-none" />{KIND_LABEL[k]}
-          </button>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2854,7 +2815,7 @@ function ExampleModal({
               )}
               <div
                 onClick={() => setActive(i)}
-                className={`flex-1 min-w-0 ${on && typeUi === "tab" ? "max-w-[296px]" : "max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
+                className={`flex-1 min-w-0 ${on ? "max-w-[296px]" : "max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
                 style={{
                   // React-controlled, never written straight to the DOM: setting it imperatively
                   // in onMouseEnter left the grey stuck once a hovered tab became the active one
@@ -2902,19 +2863,19 @@ function ExampleModal({
                   </>
                 ) : (
                   <>
-                    {/* the type is shown by its icon; it is changed from the ⋯ menu */}
-                    {(t.kind || t.body) && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
-                    {/* MOCK ?typeui=tab: the active tab carries its type as a tag that opens the type
-                        choice; other tabs keep only the icon. It sits right after the icon */}
-                    {on && typeUi === "tab" && (
+                    {/* inactive tabs show the type by its icon only */}
+                    {(t.kind || t.body) && !on && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
+                    {/* the active tab carries its type as a tag (icon inside) that opens the type
+                        choice; other tabs keep only the icon */}
+                    {on && (
                       <span className="relative flex-none flex">
                         <button
                           data-type-tag
                           onClick={(e) => { e.stopPropagation(); setTabMenu(false); setTypeMenu((v) => !v); }}
-                          className="flex items-center gap-0.5 rounded px-1.5 text-[12px] transition-colors"
-                          style={{ height: "20px", backgroundColor: typeMenu ? (isDark ? "rgba(0,115,234,0.24)" : "#d4e6fb") : (isDark ? "rgba(0,115,234,0.16)" : "#e6f0fc"), color: c.primary, fontWeight: 400 }}
+                          className="flex items-center gap-1 rounded px-1.5 text-[12px] transition-colors"
+                          style={{ height: "24px", backgroundColor: typeMenu ? (isDark ? "rgba(0,115,234,0.24)" : "#d4e6fb") : (isDark ? "rgba(0,115,234,0.16)" : "#e6f0fc"), color: c.primary, fontWeight: 400 }}
                           title="שינוי סוג הטקסט"
-                        >{kindOf(t) === "doc" ? "מסמך נלווה" : "סגנון"}<ChevronDown size={12} /></button>
+                        >{(() => { const Ic = KIND_ICON[kindOf(t)]; return <Ic size={14} className="flex-none" />; })()}{kindOf(t) === "doc" ? "מסמך נלווה" : "סגנון"}<ChevronDown size={12} /></button>
                         {typeMenu && (
                           <div
                             ref={typeMenuRef}
@@ -2960,28 +2921,16 @@ function ExampleModal({
                         ref={tabMenuRef}
                         onClick={(e) => e.stopPropagation()}
                         className="absolute rounded-md overflow-hidden shadow-lg"
-                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "240px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "168px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
                       >
                         <button onClick={() => { setTabMenu(false); startRename(i); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
                           <Pencil size={16} className="flex-none" /><span className="flex-1 text-right">שינוי שם</span>
                         </button>
-                        {/* in ?typeui=tab the type is changed from the tag only */}
-                        {typeUi !== "tab" && <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>}
-                        {typeUi !== "tab" && (["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
-                          <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
-                            <Ic size={16} className="flex-none mt-0.5" />
-                            <span className="flex-1 text-right">
-                              <span className="block">{KIND_LABEL[k]}</span>
-                              <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
-                            </span>
-                            <span className="flex-none w-4 mt-0.5" style={{ color: c.primary }}>{(t.kind || t.body) && kindOf(t) === k && <Check size={16} />}</span>
-                          </button>
-                        ); })}
                         <button
                           // nothing to lose in an empty tab — only confirm when there is text
                           onClick={() => { setTabMenu(false); if (counts[i] === 0) removeText(i); else setPendingText(i); }}
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors"
-                          style={{ color: RED, borderTop: `1px solid ${line}` }}
+                          style={{ color: RED }}
                         >
                           <Trash2 size={16} className="flex-none" /><span className="flex-1 text-right">מחיקת טקסט</span>
                         </button>
@@ -2994,54 +2943,9 @@ function ExampleModal({
             );
           })}
 
-          {typeUi === "plus" ? (
-            // Split add button: the plus adds a style example (the default); the arrow beside it
-            // offers both types, each with what it does, so a companion document is one step away.
-            <div className="flex-none flex items-center px-1.5 relative">
-              <div className="flex items-center rounded" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, opacity: atTextLimit ? 0.4 : 1 }}>
-                <button
-                  onClick={() => addText("style")}
-                  disabled={atTextLimit}
-                  className="h-7 flex items-center gap-1 px-2 text-[13px] transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
-                  style={{ color: textCol }}
-                  title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת דוגמה לסגנון"}
-                ><Plus size={15} />טקסט</button>
-                <button
-                  data-add-menu-btn
-                  onClick={() => setAddMenu((v) => !v)}
-                  disabled={atTextLimit}
-                  className="h-7 w-7 flex items-center justify-center transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
-                  style={{ color: subCol, borderInlineStart: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: addMenu ? hoverBg : undefined }}
-                  title="בחירת סוג הטקסט להוספה"
-                ><ChevronDown size={14} /></button>
-              </div>
-              {addMenu && (
-                <div
-                  ref={addMenuRef}
-                  className="absolute rounded-md overflow-hidden shadow-lg"
-                  style={{ top: "calc(100% + 4px)", right: "6px", zIndex: 10, width: "264px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}` }}
-                >
-                  {(["style", "doc"] as ExKind[]).map((k, n) => { const Ic = KIND_ICON[k]; return (
-                    <button
-                      key={k}
-                      onClick={() => { setAddMenu(false); addText(k); }}
-                      className="w-full flex items-start gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors text-right"
-                      style={{ color: textCol, borderTop: n ? `1px solid ${line}` : undefined }}
-                    >
-                      <Ic size={16} className="flex-none mt-0.5" />
-                      <span className="flex-1">
-                        <span className="block">הוספת {k === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
-                        <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
-                      </span>
-                    </button>
-                  ); })}
-                </div>
-              )}
-            </div>
-          ) : (
           <div className="flex-none flex items-center px-1.5">
             <button
-              onClick={() => addText()}
+              onClick={addText}
               disabled={atTextLimit}
               className="size-7 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed"
               style={{ color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
@@ -3052,7 +2956,6 @@ function ExampleModal({
               <Plus size={15} />
             </button>
           </div>
-          )}
 
           {/* no rail past the plus — the line stops where the tabs stop */}
           <div className="flex-1" />
@@ -3060,21 +2963,7 @@ function ExampleModal({
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
         <div className="px-6 flex-1 min-h-0 relative">
-          {/* A new text is a style example by default. While the field is empty, two compact cards
-              at its top show both types with what each one does, style already picked; the paste
-              hint sits under them. They go once there is text; after that the type is changed from
-              the tab's ⋯ menu. */}
-          {/* MOCK bar variant: the toggle in a grey bar at the top of the empty field */}
-          {showTypeBar && (
-            <div
-              className="absolute flex items-center gap-2 rounded px-3 text-[13px]"
-              style={{ top: "12px", insetInlineStart: "36px", insetInlineEnd: "36px", height: "44px", zIndex: 1, backgroundColor: isDark ? dk.bg : c.hoverBg, color: isDark ? dk.textMuted : c.textGray }}
-            >
-              <span>הטקסט יישמר כ:</span>
-              {typeToggle}
-              <span className="text-[12.5px]">{KIND_DESC[cur]}</span>
-            </div>
-          )}
+          {/* a new text is a style example by default; its type is changed from the tag in its tab */}
           <textarea
             ref={fieldRef}
             value={texts[active]?.body ?? ""}
@@ -3084,29 +2973,14 @@ function ExampleModal({
               : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
             className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
             // top corners stay square where the tab strip meets it; the bottom two match the
-            // name field's 4px so the two inputs read as one family; the placeholder starts under the type cards
-            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol, paddingTop: showTypeBar ? "68px" : undefined }}
+            // name field's 4px so the two inputs read as one family
+            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
           />
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
         {/* fixed height + line-height: a min-height alone still grew when the text appeared
             (12px inheriting the body's 1.72 line-height ≈ 20.6px), which nudged the field */}
-        {typeUi === "footer" ? (
-          // The type sits under the field like any other form control, outside the writing area:
-          // a two-way toggle with what the picked type does beside it. Errors and the count stay left.
-          <div className="px-6 pt-2 text-[12px] flex items-center gap-2" style={{ height: "40px" }}>
-            <span className="text-[13px]" style={{ color: subCol }}>סוג הטקסט:</span>
-            {typeToggle}
-            <span className="text-[12.5px] truncate" style={{ color: subCol }}>{KIND_DESC[cur]}</span>
-            <span className="flex-1" />
-            <span style={{ color: RED }}>
-              {renameUnconfirmed && renaming !== null ? "יש לאשר את שם הטקסט לפני השמירה"
-                : textMissing ? "יש להדביק טקסט אחד לפחות כדי לשמור" : ""}
-            </span>
-            <span style={{ color: subCol }}>{counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}</span>
-          </div>
-        ) : (
         <div className="px-6 pt-1 text-[12px] flex items-start" style={{ height: "22px", lineHeight: "18px" }}>
           {/* the missing-text notice takes this row when there is nothing to count anywhere */}
           <span style={{ color: RED }}>
@@ -3116,7 +2990,6 @@ function ExampleModal({
           <span className="flex-1" />
           <span style={{ color: subCol }}>{counts[active] > 0 ? `${fmtNum(counts[active])} מילים` : ""}</span>
         </div>
-        )}
 
         {/* footer — quota counter pinned to the window's right edge, buttons at the left */}
         <div>
