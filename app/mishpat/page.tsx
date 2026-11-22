@@ -2750,6 +2750,9 @@ function ExampleModal({
   };
 
   const cur = texts[active] ? kindOf(texts[active]) : "style";
+  // texts whose type bar was closed with ✕
+  const [barClosed, setBarClosed] = useState<Set<string>>(() => new Set());
+  const showTypeBar = !!texts[active] && !texts[active].body && !barClosed.has(texts[active].id);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2924,37 +2927,42 @@ function ExampleModal({
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
         <div className="px-6 flex-1 min-h-0 relative">
+          {/* A new text is a style example by default. A grey bar at the top of the empty field
+              says so, with a one-click switch; it can be closed with ✕ and goes once there is
+              text. After that the type is changed from the tab's ⋯ menu. */}
+          {showTypeBar && (
+            <div
+              className="absolute flex items-center gap-1.5 rounded px-3 text-[13px]"
+              style={{ top: "12px", insetInlineStart: "36px", insetInlineEnd: "36px", height: "36px", zIndex: 1, backgroundColor: isDark ? dk.bg : c.hoverBg, color: isDark ? dk.textMuted : c.textGray }}
+            >
+              {(() => { const Ic = KIND_ICON[cur]; return <Ic size={16} className="flex-none" />; })()}
+              <span>הטקסט יישמר כ{cur === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
+              <span>·</span>
+              <button
+                onClick={() => { setKind(active, cur === "doc" ? "style" : "doc"); fieldRef.current?.focus(); }}
+                className="hover:underline"
+                style={{ color: c.primary }}
+              >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
+              <span className="flex-1" />
+              <button
+                onClick={() => { const id = texts[active].id; setBarClosed((prev) => new Set(prev).add(id)); fieldRef.current?.focus(); }}
+                className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+                title="סגירה"
+              ><X size={14} /></button>
+            </div>
+          )}
           <textarea
             ref={fieldRef}
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
-            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
+            placeholder={cur === "doc"
+              ? "לכאן ניתן להדביק מסמך שהצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
+              : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
+            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
             // top corners stay square where the tab strip meets it; the bottom two match the
-            // name field's 4px so the two inputs read as one family
-            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
+            // name field's 4px so the two inputs read as one family; the placeholder starts under the bar
+            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol, paddingTop: showTypeBar ? "60px" : undefined }}
           />
-          {/* Our own placeholder, so the type hint can sit under it: a new text is a style example
-              by default, and the hint says so with a one-click switch. Both go once there is text;
-              after that the type is changed from the tab's ⋯ menu. */}
-          {texts[active] && !texts[active].body && (
-            <div className="absolute top-0 bottom-0 mx-6 px-4 py-3 pointer-events-none" style={{ insetInline: 0, paddingTop: "13px", paddingInline: "17px" }}>
-              <div className="text-[15px] leading-relaxed" style={{ color: subCol, opacity: 0.8 }}>
-                {cur === "doc"
-                  ? "לכאן ניתן להדביק מסמך שהצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
-                  : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
-              </div>
-              <div className="text-[12.5px] mt-2 flex items-center gap-1.5" style={{ color: subCol }}>
-                {(() => { const Ic = KIND_ICON[cur]; return <Ic size={14} className="flex-none" />; })()}
-                <span>הטקסט יישמר כ{cur === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
-                <span>·</span>
-                <button
-                  onClick={() => { setKind(active, cur === "doc" ? "style" : "doc"); fieldRef.current?.focus(); }}
-                  className="pointer-events-auto hover:underline"
-                  style={{ color: c.primary }}
-                >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
