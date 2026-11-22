@@ -2815,8 +2815,8 @@ function ExampleModal({
               )}
               <div
                 onClick={() => setActive(i)}
-                // the active tab only grows as far as its name and tag need (up to 296); others share the row up to 200
-                className={`min-w-0 ${on ? "flex-initial max-w-[296px]" : "flex-1 max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
+                // the active tab only grows as far as its name and tag need (up to 296), its tag close to the right edge; others share the row up to 200
+                className={`min-w-0 ${on ? "flex-initial max-w-[296px] ps-1 pe-3" : "flex-1 max-w-[200px] px-3"} cursor-pointer flex items-center gap-1.5 transition-colors relative`}
                 style={{
                   // React-controlled, never written straight to the DOM: setting it imperatively
                   // in onMouseEnter left the grey stuck once a hovered tab became the active one
