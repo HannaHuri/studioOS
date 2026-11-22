@@ -2750,9 +2750,8 @@ function ExampleModal({
   };
 
   const cur = texts[active] ? kindOf(texts[active]) : "style";
-  // texts whose type bar was closed with ✕
-  const [barClosed, setBarClosed] = useState<Set<string>>(() => new Set());
-  const showTypeBar = !!texts[active] && !texts[active].body && !barClosed.has(texts[active].id);
+  // the type cards show while the active text is empty
+  const showTypeBar = !!texts[active] && !texts[active].body;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2931,33 +2930,35 @@ function ExampleModal({
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
         <div className="px-6 flex-1 min-h-0 relative">
-          {/* A new text is a style example by default. A grey bar at the top of the empty field
-              says so, with a one-click switch; it can be closed with ✕ and goes once there is
-              text. After that the type is changed from the tab's ⋯ menu. */}
+          {/* A new text is a style example by default. While the field is empty, two compact cards
+              at its top show both types with what each one does, style already picked; the paste
+              hint sits under them. They go once there is text; after that the type is changed from
+              the tab's ⋯ menu. */}
           {showTypeBar && (
-            <div
-              className="absolute flex items-center gap-1.5 rounded px-3 text-[13px]"
-              style={{ top: "12px", insetInlineStart: "36px", insetInlineEnd: "36px", height: "36px", zIndex: 1, backgroundColor: isDark ? dk.bg : c.hoverBg, color: isDark ? dk.textMuted : c.textGray }}
-            >
-              {/* ✕ on the right, where the eye and hand already are in RTL */}
-              <button
-                onClick={() => { const id = texts[active].id; setBarClosed((prev) => new Set(prev).add(id)); fieldRef.current?.focus(); }}
-                className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
-                style={{ marginInlineStart: "-6px" }}
-                title="סגירה"
-              ><X size={14} /></button>
-              {(() => { const Ic = KIND_ICON[cur]; return <Ic size={16} className="flex-none" />; })()}
-              <span>{cur === "doc"
-                ? "הטקסט יישמר כמסמך נלווה: הצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
-                : "הטקסט יישמר כדוגמה לסגנון: הצ׳ט ילמד ממנו כיצד לנסח ולבנות את התשובה"}</span>
-              <span>·</span>
-              <button
-                onClick={() => { setKind(active, cur === "doc" ? "style" : "doc"); fieldRef.current?.focus(); }}
-                className="hover:underline"
-                style={{ color: c.primary }}
-                // what the other type means, before switching to it
-                title={cur === "doc" ? "דוגמה לסגנון: כיצד לנסח ולבנות את התשובה" : "מסמך נלווה: מקור מידע לניתוח התוכן"}
-              >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
+            <div className="absolute flex gap-3" style={{ top: "12px", insetInlineStart: "36px", zIndex: 1 }}>
+              {(["style", "doc"] as ExKind[]).map((k) => {
+                const Ic = KIND_ICON[k];
+                const sel = cur === k;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => { setKind(active, k); fieldRef.current?.focus(); }}
+                    className="relative flex items-start gap-2.5 rounded-lg px-3 text-right transition-colors hover:border-[#0073ea]"
+                    style={{
+                      width: "264px", height: "64px", paddingTop: "12px",
+                      border: `1px solid ${sel ? c.primary : isDark ? dk.border : c.border}`,
+                      backgroundColor: sel ? (isDark ? "rgba(0,115,234,0.12)" : "#f0f6fe") : surface,
+                    }}
+                  >
+                    <Ic size={16} className="flex-none mt-0.5" style={{ color: c.primary }} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[14px]" style={{ color: textCol, fontWeight: 500 }}>{KIND_LABEL[k]}</span>
+                      <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                    </span>
+                    {sel && <Check size={16} className="flex-none mt-0.5" style={{ color: c.primary }} />}
+                  </button>
+                );
+              })}
             </div>
           )}
           <textarea
@@ -2969,8 +2970,8 @@ function ExampleModal({
               : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
             className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
             // top corners stay square where the tab strip meets it; the bottom two match the
-            // name field's 4px so the two inputs read as one family; the placeholder starts under the bar
-            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol, paddingTop: showTypeBar ? "60px" : undefined }}
+            // name field's 4px so the two inputs read as one family; the placeholder starts under the type cards
+            style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol, paddingTop: showTypeBar ? "88px" : undefined }}
           />
         </div>
 
