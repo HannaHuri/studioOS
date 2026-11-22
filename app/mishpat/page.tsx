@@ -2815,7 +2815,8 @@ function ExampleModal({
               )}
               <div
                 onClick={() => setActive(i)}
-                className={`flex-1 min-w-0 ${on ? "max-w-[296px]" : "max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
+                // the active tab only grows as far as its name and tag need (up to 296); others share the row up to 200
+                className={`min-w-0 ${on ? "flex-initial max-w-[296px]" : "flex-1 max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
                 style={{
                   // React-controlled, never written straight to the DOM: setting it imperatively
                   // in onMouseEnter left the grey stuck once a hovered tab became the active one
@@ -2883,6 +2884,7 @@ function ExampleModal({
                             className="absolute rounded-md overflow-hidden shadow-lg"
                             style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "264px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
                           >
+                            <div className="px-3 pt-2.5 pb-1 text-[12px]" style={{ color: subCol }}>סוג הטקסט</div>
                             {(["style", "doc"] as ExKind[]).map((k, n) => { const Ic = KIND_ICON[k]; return (
                               <button key={k} onClick={() => { setKind(i, k); setTypeMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors text-right" style={{ color: textCol, borderTop: n ? `1px solid ${line}` : undefined }}>
                                 <Ic size={16} className="flex-none mt-0.5" />
