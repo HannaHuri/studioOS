@@ -2935,6 +2935,13 @@ function ExampleModal({
               className="absolute flex items-center gap-1.5 rounded px-3 text-[13px]"
               style={{ top: "12px", insetInlineStart: "36px", insetInlineEnd: "36px", height: "36px", zIndex: 1, backgroundColor: isDark ? dk.bg : c.hoverBg, color: isDark ? dk.textMuted : c.textGray }}
             >
+              {/* ✕ on the right, where the eye and hand already are in RTL */}
+              <button
+                onClick={() => { const id = texts[active].id; setBarClosed((prev) => new Set(prev).add(id)); fieldRef.current?.focus(); }}
+                className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
+                style={{ marginInlineStart: "-6px" }}
+                title="סגירה"
+              ><X size={14} /></button>
               {(() => { const Ic = KIND_ICON[cur]; return <Ic size={16} className="flex-none" />; })()}
               <span>הטקסט יישמר כ{cur === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
               <span>·</span>
@@ -2943,12 +2950,6 @@ function ExampleModal({
                 className="hover:underline"
                 style={{ color: c.primary }}
               >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
-              <span className="flex-1" />
-              <button
-                onClick={() => { const id = texts[active].id; setBarClosed((prev) => new Set(prev).add(id)); fieldRef.current?.focus(); }}
-                className="size-6 flex-none flex items-center justify-center rounded hover:bg-black/5 transition-colors"
-                title="סגירה"
-              ><X size={14} /></button>
             </div>
           )}
           <textarea
