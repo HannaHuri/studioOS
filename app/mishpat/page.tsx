@@ -2904,15 +2904,8 @@ function ExampleModal({
                   <>
                     {/* the type is shown by its icon; it is changed from the ⋯ menu */}
                     {(t.kind || t.body) && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
-                    {/* a click on the active tab's name renames it; on any other tab it just switches */}
-                    <span
-                      onClick={on ? (e) => { e.stopPropagation(); setTabMenu(false); startRename(i); } : undefined}
-                      className="flex-1 min-w-0 truncate text-[14px] text-right"
-                      style={{ cursor: on ? "text" : undefined }}
-                      title={on ? `${t.title}\nלחיצה לשינוי שם` : t.title}
-                    >{t.title}</span>
                     {/* MOCK ?typeui=tab: the active tab carries its type as a tag that opens the type
-                        choice; other tabs keep only the icon */}
+                        choice; other tabs keep only the icon. It sits right after the icon */}
                     {on && typeUi === "tab" && (
                       <span className="relative flex-none flex">
                         <button
@@ -2943,6 +2936,13 @@ function ExampleModal({
                         )}
                       </span>
                     )}
+                    {/* a click on the active tab's name renames it; on any other tab it just switches */}
+                    <span
+                      onClick={on ? (e) => { e.stopPropagation(); setTabMenu(false); startRename(i); } : undefined}
+                      className="flex-1 min-w-0 truncate text-[14px] text-right"
+                      style={{ cursor: on ? "text" : undefined }}
+                      title={on ? `${t.title}\nלחיצה לשינוי שם` : t.title}
+                    >{t.title}</span>
                   </>
                 )}
                 {/* the text's actions sit in a ⋯ menu on the active tab, opening to its left */}
@@ -2965,8 +2965,9 @@ function ExampleModal({
                         <button onClick={() => { setTabMenu(false); startRename(i); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
                           <Pencil size={16} className="flex-none" /><span className="flex-1 text-right">שינוי שם</span>
                         </button>
-                        <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>
-                        {(["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
+                        {/* in ?typeui=tab the type is changed from the tag only */}
+                        {typeUi !== "tab" && <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>}
+                        {typeUi !== "tab" && (["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
                           <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
                             <Ic size={16} className="flex-none mt-0.5" />
                             <span className="flex-1 text-right">
