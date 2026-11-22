@@ -7,7 +7,7 @@ import {
   HelpCircle, Info, Layers, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
-  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock,
+  Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock, TextQuote, BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { c, dk, RED } from "./theme";
@@ -2439,7 +2439,15 @@ const MAX_WORDS = 50000;
 const AMBER = "#fdab3d";
 const NEAR_FULL = 0.8; // the bar turns amber from here up, so it warns instead of only mirroring
 
-type ExText = { id: string; title: string; body: string };
+// Each text in an example has a type that tells the chat how to use it: as a model for how to
+// phrase and build the answer, or as a source of information to analyse. Texts saved before the
+// type existed read as style, which is also the default for a new text.
+type ExKind = "style" | "doc";
+type ExText = { id: string; title: string; body: string; kind?: ExKind };
+const KIND_LABEL: Record<ExKind, string> = { style: "דוגמה לסגנון", doc: "מסמך נלווה" };
+const KIND_DESC: Record<ExKind, string> = { style: "כיצד לנסח ולבנות את התשובה", doc: "מקור מידע לניתוח התוכן" };
+const KIND_ICON: Record<ExKind, LucideIcon> = { style: TextQuote, doc: BookOpen };
+const kindOf = (t: ExText): ExKind => t.kind ?? "style";
 type Example = { id: string; name: string; texts: ExText[]; edited: string };
 
 const countWords = (s: string) => {
@@ -2460,7 +2468,7 @@ const SEED_EXAMPLES: Example[] = [
         title: "פס״ד שמעוני נ׳ טשרניחובסקי",
         body: "בית המשפט דן בתביעת נזקי גוף שהוגשה בגין תאונת דרכים מיום 14.2.2023. התובעת, ילידת 1978, נפגעה בעת שנהגה ברכבה בצומת מרומזר. הנתבעת לא הגישה כתב הגנה במועד, ובקשתה להארכת מועד נדחתה בהחלטה מיום 3.5.2023.\n\nלאחר שעיינתי בחוות דעת המומחה הרפואי מטעם בית המשפט, ובשים לב לנכות התפקודית שנקבעה בשיעור 19%, מצאתי כי יש לקבל את התביעה בחלקה.",
       },
-      { id: "t2", title: "טקסט 2", body: "" },
+      { id: "t2", title: "חוות דעת רפואית", kind: "doc", body: "חוות דעת מומחה רפואי מטעם בית המשפט. הנפגעת סובלת מהגבלה בתנועות עמוד שדרה צווארי. נכות צמיתה בשיעור 10% לפי סעיף 37(5)(א)." },
     ],
   },
   {
@@ -2628,6 +2636,23 @@ function ExampleModal({
   const [showRule, setShowRule] = useState(false);
   const [hoveredTab, setHoveredTab] = useState<number | null>(null);
   const [attempted, setAttempted] = useState(false);
+  // the active tab's ⋯ menu: rename, type, delete
+  const [tabMenu, setTabMenu] = useState(false);
+  const tabMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!tabMenu) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (tabMenuRef.current?.contains(t as Node)) return;
+      if (t instanceof Element && t.closest("[data-tab-menu-btn]")) return;
+      setTabMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [tabMenu]);
+  // an empty text waits with the caret in the field, so pasting needs no extra step
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { fieldRef.current?.focus(); }, [active]);
   const ruleRef = useRef<HTMLDivElement>(null);
   const ruleBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -2671,12 +2696,14 @@ function ExampleModal({
 
   const setBody = (i: number, v: string) =>
     setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, body: v } : t)));
+  const setKind = (i: number, k: ExKind) =>
+    setTexts((prev) => prev.map((t, n) => (n === i ? { ...t, kind: k } : t)));
   const setTitle = (i: number, v: string) =>
     setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, title: v } : t)));
 
   const addText = () => {
     if (atTextLimit) return;
-    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "" }]);
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: "style" }]);
     setActive(texts.length);
   };
   const removeText = (i: number) => {
@@ -2720,6 +2747,8 @@ function ExampleModal({
       edited: new Date().toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }),
     });
   };
+
+  const cur = texts[active] ? kindOf(texts[active]) : "style";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2818,25 +2847,50 @@ function ExampleModal({
                     ><X size={13} /></button>
                   </>
                 ) : (
-                  <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
-                )}
-                {/* the two actions belong to the text you are editing — hidden on the rest */}
-                {on && renaming !== i && (
                   <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); startRename(i); }}
-                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
-                      style={{ color: subCol }}
-                      title="שינוי שם"
-                    ><Pencil size={13} /></button>
-                    <button
-                      // nothing to lose in an empty tab — only confirm when there is text
-                      onClick={(e) => { e.stopPropagation(); if (counts[i] === 0) removeText(i); else setPendingText(i); }}
-                      className="flex-none opacity-60 hover:opacity-100 transition-opacity"
-                      style={{ color: subCol }}
-                      title="מחיקת טקסט"
-                    ><Trash2 size={13} /></button>
+                    {/* the type is shown by its icon; it is changed from the ⋯ menu */}
+                    {(() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
+                    <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
                   </>
+                )}
+                {/* the text's actions sit in a ⋯ menu on the active tab, opening to its left */}
+                {on && renaming !== i && (
+                  <span className="relative flex-none flex">
+                    <button
+                      data-tab-menu-btn
+                      onClick={(e) => { e.stopPropagation(); setTabMenu((v) => !v); }}
+                      className="flex rounded transition-colors hover:bg-black/5"
+                      style={{ color: subCol, backgroundColor: tabMenu ? hoverBg : undefined }}
+                      title="פעולות"
+                    ><MoreHorizontal size={16} /></button>
+                    {tabMenu && (
+                      <div
+                        ref={tabMenuRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute rounded-md overflow-hidden shadow-lg"
+                        style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "216px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                      >
+                        <button onClick={() => { setTabMenu(false); startRename(i); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
+                          <Pencil size={16} className="flex-none" /><span className="flex-1 text-right">שינוי שם</span>
+                        </button>
+                        <div className="px-3 pt-2 pb-1 text-[12px]" style={{ color: subCol, borderTop: `1px solid ${line}` }}>סוג הטקסט</div>
+                        {(["style", "doc"] as ExKind[]).map((k) => { const Ic = KIND_ICON[k]; return (
+                          <button key={k} onClick={() => { setKind(i, k); setTabMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-black/5 transition-colors" style={{ color: textCol }}>
+                            <Ic size={16} className="flex-none" /><span className="flex-1 text-right">{KIND_LABEL[k]}</span>
+                            <span className="flex-none w-4" style={{ color: c.primary }}>{kindOf(t) === k && <Check size={16} />}</span>
+                          </button>
+                        ); })}
+                        <button
+                          // nothing to lose in an empty tab — only confirm when there is text
+                          onClick={() => { setTabMenu(false); if (counts[i] === 0) removeText(i); else setPendingText(i); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors"
+                          style={{ color: RED, borderTop: `1px solid ${line}` }}
+                        >
+                          <Trash2 size={16} className="flex-none" /><span className="flex-1 text-right">מחיקת טקסט</span>
+                        </button>
+                      </div>
+                    )}
+                  </span>
                 )}
               </div>
               </Fragment>
@@ -2862,16 +2916,43 @@ function ExampleModal({
         </div>
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
-        <div className="px-6 flex-1 min-h-0">
+        <div className="px-6 flex-1 min-h-0 relative">
           <textarea
+            ref={fieldRef}
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
-            placeholder="לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"
             className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
             // top corners stay square where the tab strip meets it; the bottom two match the
             // name field's 4px so the two inputs read as one family
             style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
           />
+          {/* An empty text offers its two types in the empty space, style already picked, with the
+              caret waiting in the field behind — pasting is the "continue". The cards leave once
+              there is text; the type then shows as the tab's icon. */}
+          {texts[active] && counts[active] === 0 && (
+            <div className="absolute inset-0 mx-6 flex flex-col items-center justify-center gap-4 pointer-events-none">
+              <div className="text-[14px]" style={{ color: subCol }}>סוג הטקסט</div>
+              <div className="flex gap-4 pointer-events-auto">
+                {(["style", "doc"] as ExKind[]).map((k) => {
+                  const Ic = KIND_ICON[k];
+                  const on = cur === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => { setKind(active, k); fieldRef.current?.focus(); }}
+                      className="relative flex flex-col items-start gap-2 rounded-lg p-4 text-right transition-colors hover:border-[#0073ea]"
+                      style={{ width: "240px", border: `1px solid ${on ? c.primary : isDark ? dk.border : c.border}`, backgroundColor: on ? (isDark ? "rgba(0,115,234,0.12)" : "#f0f6fe") : surface }}
+                    >
+                      {on && <Check size={16} className="absolute" style={{ top: "16px", left: "16px", color: c.primary }} />}
+                      <Ic size={20} style={{ color: c.primary }} />
+                      <span className="text-[14px]" style={{ color: textCol, fontWeight: 500 }}>{KIND_LABEL[k]}</span>
+                      <span className="text-[12px] leading-relaxed" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* per-text count — bottom-left, outside the field */}
