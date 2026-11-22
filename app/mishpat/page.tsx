@@ -2929,8 +2929,7 @@ function ExampleModal({
           {choosing ? (
             // step one of a new text: pick its type — the card itself is the "continue"
             <div
-              // starts where the text will start: top-right, with the field's own padding
-              className="w-full h-full flex flex-col items-start justify-start gap-4 px-4 py-3"
+              className="w-full h-full flex flex-col items-center justify-center gap-4"
               style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface }}
             >
               <div className="text-[14px]" style={{ color: subCol }}>יש לבחור את סוג הטקסט</div>
