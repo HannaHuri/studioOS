@@ -2853,7 +2853,13 @@ function ExampleModal({
                   <>
                     {/* the type is shown by its icon; it is changed from the ⋯ menu */}
                     {(t.kind || t.body) && (() => { const Ic = KIND_ICON[kindOf(t)]; return <span title={KIND_LABEL[kindOf(t)]} className="flex-none flex"><Ic size={16} /></span>; })()}
-                    <span className="flex-1 min-w-0 truncate text-[14px] text-right" title={t.title}>{t.title}</span>
+                    {/* a click on the active tab's name renames it; on any other tab it just switches */}
+                    <span
+                      onClick={on ? (e) => { e.stopPropagation(); setTabMenu(false); startRename(i); } : undefined}
+                      className="flex-1 min-w-0 truncate text-[14px] text-right"
+                      style={{ cursor: on ? "text" : undefined }}
+                      title={on ? `${t.title}\nלחיצה לשינוי שם` : t.title}
+                    >{t.title}</span>
                   </>
                 )}
                 {/* the text's actions sit in a ⋯ menu on the active tab, opening to its left */}
