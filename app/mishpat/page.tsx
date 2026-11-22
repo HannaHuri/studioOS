@@ -2702,9 +2702,9 @@ function ExampleModal({
   const setTitle = (i: number, v: string) =>
     setTexts((prev) => prev.map((t, k) => (k === i ? { ...t, title: v } : t)));
 
-  const addText = () => {
+  const addText = (k: ExKind = "style") => {
     if (atTextLimit) return;
-    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: "style" }]);
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: k }]);
     setActive(texts.length);
   };
   const removeText = (i: number) => {
@@ -2753,6 +2753,19 @@ function ExampleModal({
   // MOCK (local only): ?typeui=bar shows the type toggle in a grey bar inside the empty field;
   // the default shows it under the field, next to the word count
   const [typeUi] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("typeui") : null) ?? "footer");
+  const [addMenu, setAddMenu] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!addMenu) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (addMenuRef.current?.contains(t as Node)) return;
+      if (t instanceof Element && t.closest("[data-add-menu-btn]")) return;
+      setAddMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [addMenu]);
   const showTypeBar = typeUi === "bar" && !!texts[active] && !texts[active].body;
   const typeToggle = (
     <div className="flex items-center rounded overflow-hidden flex-none" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, height: "28px" }}>
@@ -2935,9 +2948,54 @@ function ExampleModal({
             );
           })}
 
+          {typeUi === "plus" ? (
+            // Split add button: the plus adds a style example (the default); the arrow beside it
+            // offers both types, each with what it does, so a companion document is one step away.
+            <div className="flex-none flex items-center px-1.5 relative">
+              <div className="flex items-center rounded" style={{ border: `1px solid ${isDark ? dk.border : c.border}`, opacity: atTextLimit ? 0.4 : 1 }}>
+                <button
+                  onClick={() => addText("style")}
+                  disabled={atTextLimit}
+                  className="h-7 flex items-center gap-1 px-2 text-[13px] transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
+                  style={{ color: textCol }}
+                  title={atTextLimit ? `לא ניתן להוסיף יותר מ־${MAX_TEXTS} טקסטים לדוגמה. כדי להוסיף טקסט חדש, יש למחוק אחד מהקיימים.` : "הוספת דוגמה לסגנון"}
+                ><Plus size={15} />טקסט</button>
+                <button
+                  data-add-menu-btn
+                  onClick={() => setAddMenu((v) => !v)}
+                  disabled={atTextLimit}
+                  className="h-7 w-7 flex items-center justify-center transition-colors hover:bg-black/5 disabled:cursor-not-allowed"
+                  style={{ color: subCol, borderInlineStart: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: addMenu ? hoverBg : undefined }}
+                  title="בחירת סוג הטקסט להוספה"
+                ><ChevronDown size={14} /></button>
+              </div>
+              {addMenu && (
+                <div
+                  ref={addMenuRef}
+                  className="absolute rounded-md overflow-hidden shadow-lg"
+                  style={{ top: "calc(100% + 4px)", right: "6px", zIndex: 10, width: "264px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}` }}
+                >
+                  {(["style", "doc"] as ExKind[]).map((k, n) => { const Ic = KIND_ICON[k]; return (
+                    <button
+                      key={k}
+                      onClick={() => { setAddMenu(false); addText(k); }}
+                      className="w-full flex items-start gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors text-right"
+                      style={{ color: textCol, borderTop: n ? `1px solid ${line}` : undefined }}
+                    >
+                      <Ic size={16} className="flex-none mt-0.5" />
+                      <span className="flex-1">
+                        <span className="block">הוספת {k === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
+                        <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                      </span>
+                    </button>
+                  ); })}
+                </div>
+              )}
+            </div>
+          ) : (
           <div className="flex-none flex items-center px-1.5">
             <button
-              onClick={addText}
+              onClick={() => addText()}
               disabled={atTextLimit}
               className="size-7 flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed"
               style={{ color: subCol, opacity: atTextLimit ? 0.4 : 1 }}
@@ -2948,6 +3006,7 @@ function ExampleModal({
               <Plus size={15} />
             </button>
           </div>
+          )}
 
           {/* no rail past the plus — the line stops where the tabs stop */}
           <div className="flex-1" />
