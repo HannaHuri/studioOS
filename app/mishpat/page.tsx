@@ -2753,6 +2753,19 @@ function ExampleModal({
   // MOCK (local only): ?typeui=bar shows the type toggle in a grey bar inside the empty field;
   // the default shows it under the field, next to the word count
   const [typeUi] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("typeui") : null) ?? "footer");
+  const [typeMenu, setTypeMenu] = useState(false);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!typeMenu) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (typeMenuRef.current?.contains(t as Node)) return;
+      if (t instanceof Element && t.closest("[data-type-tag]")) return;
+      setTypeMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [typeMenu]);
   const [addMenu, setAddMenu] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -2841,7 +2854,7 @@ function ExampleModal({
               )}
               <div
                 onClick={() => setActive(i)}
-                className="flex-1 min-w-0 max-w-[200px] cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative"
+                className={`flex-1 min-w-0 ${on && typeUi === "tab" ? "max-w-[296px]" : "max-w-[200px]"} cursor-pointer flex items-center gap-1.5 px-3 transition-colors relative`}
                 style={{
                   // React-controlled, never written straight to the DOM: setting it imperatively
                   // in onMouseEnter left the grey stuck once a hovered tab became the active one
@@ -2898,6 +2911,38 @@ function ExampleModal({
                       style={{ cursor: on ? "text" : undefined }}
                       title={on ? `${t.title}\nלחיצה לשינוי שם` : t.title}
                     >{t.title}</span>
+                    {/* MOCK ?typeui=tab: the active tab carries its type as a tag that opens the type
+                        choice; other tabs keep only the icon */}
+                    {on && typeUi === "tab" && (
+                      <span className="relative flex-none flex">
+                        <button
+                          data-type-tag
+                          onClick={(e) => { e.stopPropagation(); setTabMenu(false); setTypeMenu((v) => !v); }}
+                          className="flex items-center gap-0.5 rounded px-1.5 text-[12px] transition-colors"
+                          style={{ height: "20px", backgroundColor: typeMenu ? (isDark ? "rgba(0,115,234,0.24)" : "#d4e6fb") : (isDark ? "rgba(0,115,234,0.16)" : "#e6f0fc"), color: c.primary, fontWeight: 400 }}
+                          title="שינוי סוג הטקסט"
+                        >{kindOf(t) === "doc" ? "מסמך נלווה" : "סגנון"}<ChevronDown size={12} /></button>
+                        {typeMenu && (
+                          <div
+                            ref={typeMenuRef}
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute rounded-md overflow-hidden shadow-lg"
+                            style={{ top: "calc(100% + 12px)", right: "-8px", zIndex: 10, width: "264px", backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, fontWeight: 400 }}
+                          >
+                            {(["style", "doc"] as ExKind[]).map((k, n) => { const Ic = KIND_ICON[k]; return (
+                              <button key={k} onClick={() => { setKind(i, k); setTypeMenu(false); }} className="w-full flex items-start gap-2.5 px-3 py-2.5 text-[13px] hover:bg-black/5 transition-colors text-right" style={{ color: textCol, borderTop: n ? `1px solid ${line}` : undefined }}>
+                                <Ic size={16} className="flex-none mt-0.5" />
+                                <span className="flex-1">
+                                  <span className="block">{KIND_LABEL[k]}</span>
+                                  <span className="block text-[12px] mt-0.5" style={{ color: subCol }}>{KIND_DESC[k]}</span>
+                                </span>
+                                <span className="flex-none w-4 mt-0.5" style={{ color: c.primary }}>{kindOf(t) === k && <Check size={16} />}</span>
+                              </button>
+                            ); })}
+                          </div>
+                        )}
+                      </span>
+                    )}
                   </>
                 )}
                 {/* the text's actions sit in a ⋯ menu on the active tab, opening to its left */}
