@@ -2441,7 +2441,7 @@ const NEAR_FULL = 0.8; // the bar turns amber from here up, so it warns instead 
 
 // Each text in an example has a type that tells the chat how to use it: as a model for how to
 // phrase and build the answer, or as a source of information to analyse. Texts saved before the
-// type existed read as style. A new text starts with no type: its type is picked first, then the field opens.
+// type existed read as style, which is also the default for a new text.
 type ExKind = "style" | "doc";
 type ExText = { id: string; title: string; body: string; kind?: ExKind };
 const KIND_LABEL: Record<ExKind, string> = { style: "דוגמה לסגנון", doc: "מסמך נלווה" };
@@ -2625,7 +2625,7 @@ function ExampleModal({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [texts, setTexts] = useState<ExText[]>(
-    initial?.texts.length ? initial.texts : [{ id: uid(), title: "טקסט 1", body: "" }]
+    initial?.texts.length ? initial.texts : [{ id: uid(), title: "טקסט 1", body: "", kind: "style" }]
   );
   const [active, setActive] = useState(0);
   const [renaming, setRenaming] = useState<number | null>(null);
@@ -2650,7 +2650,7 @@ function ExampleModal({
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [tabMenu]);
-  // once a type is picked the field opens with the caret in it, ready for pasting
+  // the field takes the caret when a text opens, ready for pasting
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const activeKind = texts[active]?.kind;
   useEffect(() => { fieldRef.current?.focus(); }, [active, activeKind]);
@@ -2704,7 +2704,7 @@ function ExampleModal({
 
   const addText = () => {
     if (atTextLimit) return;
-    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "" }]);
+    setTexts((prev) => [...prev, { id: uid(), title: `טקסט ${prev.length + 1}`, body: "", kind: "style" }]);
     setActive(texts.length);
   };
   const removeText = (i: number) => {
@@ -2750,8 +2750,6 @@ function ExampleModal({
   };
 
   const cur = texts[active] ? kindOf(texts[active]) : "style";
-  // a new, empty text whose type hasn't been picked yet shows the two types instead of the field
-  const choosing = !!texts[active] && !texts[active].kind && !texts[active].body;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.35)" }}>
@@ -2926,46 +2924,36 @@ function ExampleModal({
 
         {/* the field — the guidance lives inside it as a placeholder while it is empty */}
         <div className="px-6 flex-1 min-h-0 relative">
-          {choosing ? (
-            // step one of a new text: pick its type — the card itself is the "continue"
-            <div
-              className="w-full h-full flex flex-col items-center justify-center gap-4"
-              style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface }}
-            >
-              <div className="text-[14px]" style={{ color: subCol }}>יש לבחור את סוג הטקסט</div>
-              <div className="flex gap-4">
-                {(["style", "doc"] as ExKind[]).map((k) => {
-                  const Ic = KIND_ICON[k];
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => setKind(active, k)}
-                      className="flex flex-col items-start gap-2 rounded-lg p-4 text-right transition-colors hover:border-[#0073ea]"
-                      style={{ width: "240px", border: `1px solid ${isDark ? dk.border : c.border}`, backgroundColor: surface }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? "rgba(0,115,234,0.12)" : "#f0f6fe")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = surface)}
-                    >
-                      <Ic size={20} style={{ color: c.primary }} />
-                      <span className="text-[14px]" style={{ color: textCol, fontWeight: 500 }}>{KIND_LABEL[k]}</span>
-                      <span className="text-[12px] leading-relaxed" style={{ color: subCol }}>{KIND_DESC[k]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
           <textarea
             ref={fieldRef}
             value={texts[active]?.body ?? ""}
             onChange={(e) => setBody(active, e.target.value)}
-            placeholder={cur === "doc"
-              ? "לכאן ניתן להדביק מסמך שהצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
-              : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
-            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea] placeholder:text-[15px]"
+            className="w-full h-full resize-none px-4 py-3 text-[14px] leading-relaxed outline-none transition-colors focus:border-[#0073ea]"
             // top corners stay square where the tab strip meets it; the bottom two match the
             // name field's 4px so the two inputs read as one family
             style={{ border: `1px solid ${textMissing ? RED : line}`, borderRadius: "0 0 4px 4px", backgroundColor: surface, color: textCol }}
           />
+          {/* Our own placeholder, so the type hint can sit under it: a new text is a style example
+              by default, and the hint says so with a one-click switch. Both go once there is text;
+              after that the type is changed from the tab's ⋯ menu. */}
+          {texts[active] && !texts[active].body && (
+            <div className="absolute top-0 bottom-0 mx-6 px-4 py-3 pointer-events-none" style={{ insetInline: 0, paddingTop: "13px", paddingInline: "17px" }}>
+              <div className="text-[15px] leading-relaxed" style={{ color: subCol, opacity: 0.8 }}>
+                {cur === "doc"
+                  ? "לכאן ניתן להדביק מסמך שהצ׳ט ישתמש בו כמקור מידע לניתוח התוכן"
+                  : "לכאן ניתן להדביק את הנוסח עליו תרצו שהצ׳ט יתבסס בבניית הדוגמה (ככל שתוסיפו יותר טקסטים, יש יותר סיכוי שהצ׳ט יקלע למה שאתם מחפשים)"}
+              </div>
+              <div className="text-[12.5px] mt-2 flex items-center gap-1.5" style={{ color: subCol }}>
+                {(() => { const Ic = KIND_ICON[cur]; return <Ic size={14} className="flex-none" />; })()}
+                <span>הטקסט יישמר כ{cur === "doc" ? "מסמך נלווה" : "דוגמה לסגנון"}</span>
+                <span>·</span>
+                <button
+                  onClick={() => { setKind(active, cur === "doc" ? "style" : "doc"); fieldRef.current?.focus(); }}
+                  className="pointer-events-auto hover:underline"
+                  style={{ color: c.primary }}
+                >שינוי ל{cur === "doc" ? "דוגמה לסגנון" : "מסמך נלווה"}</button>
+              </div>
+            </div>
           )}
         </div>
 
