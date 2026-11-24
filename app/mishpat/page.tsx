@@ -1528,12 +1528,6 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           </div>
         </div>
       </div>
-      {notesShown && (
-        <div className="px-3 flex items-start gap-1.5 text-[12.5px] leading-[1.45]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-          <Info size={13} style={{ flexShrink: 0, marginTop: "2px" }} />
-          <span><span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}</span>
-        </div>
-      )}
       {/* the [fields] note sits under the input, outside it */}
       {fieldsLeft.length > 0 && (
         <div className="px-3 text-[12.5px]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
@@ -1544,6 +1538,14 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               <button onClick={() => handleSend(true)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>שליחה בכל זאת</button>
             </>
           ) : fieldsLeft.length === 1 ? "שדה אחד למילוי" : `${fieldsLeft.length} שדות למילוי · Tab למעבר`}
+        </div>
+      )}
+      {/* a shared prompt's notes, in a light grey box under the [fields] note: the fields line is about
+          the input, the box is the author's word on using the prompt */}
+      {notesShown && (
+        <div className="mx-3 mt-1 rounded-[4px] px-3 py-2 text-[13px] leading-[1.5]" dir="rtl"
+          style={{ backgroundColor: isDark ? dk.surface : "#f3f4f7", color: isDark ? dk.text : c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+          <span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}
         </div>
       )}
       </div>
