@@ -9,6 +9,7 @@
    A detailed prompt used from the library opens here too, its parts in place of the draft.
    ────────────────────────────────────────────────────────────────────────── */
 
+import { useReveal } from "./reveal";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Check, ChevronDown, WandSparkles, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -93,7 +94,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
   maxHeight: string; // past it the sections scroll, so the input never pushes the page away
   onSend: (parts: PromptPart[], guidelines: string) => void;
   onFieldsLeft: (fields: string[]) => void; // a send held back because [fields] are still in the text
-  onSaveToLibrary: (pr: Prompt, share?: { anon: boolean }) => void;
+  onSaveToLibrary: (pr: Prompt, share?: { anon: boolean; copy: Prompt }) => void;
   onClose: () => void;
 }) {
   // What's written is kept as a draft while working: closing, switching to a basic question or
@@ -110,6 +111,11 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
   const [attempted, setAttempted] = useState(false);
   const [keep, setKeep] = useState(false); // שמירה בספרייה שלי
   const [share, setShare] = useState(false); // שיתוף עם כל המשתמשים, only on top of keeping
+  // my copy also gets case details swapped for fields, so it works in any case; a link keeps them
+  // (e.g. a check rerun on this same case). The shared copy is always swapped.
+  const [keepDetails, setKeepDetails] = useState(false);
+  const saveRef = useReveal<HTMLDivElement>(keep);
+  const shareRef = useReveal<HTMLDivElement>(share);
   const [anon, setAnon] = useState(false);
   const [name, setName] = useState("");
   const [court, setCourt] = useState(CASE_CONTEXT.court);
@@ -132,17 +138,20 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
     const left = fieldsOf(partsToText(done, guidelines.trim()));
     if (left.length && !force) { onFieldsLeft(left); return; }
     if (keep) {
-      // The shared copy goes out with identifying details swapped for fields, as the library
-      // editor does; my own copy and the question sent here keep them.
-      const scrubText = (t: string) => (share ? scrub(t, findIdentifiers(t), new Set()) : t);
-      const general = generalize(done, caseDocs).map((p) => ({ ...p, task: scrubText(p.task), how: scrubText(p.how) }));
-      const g = scrubText(guidelines.trim());
-      onSaveToLibrary({
-        id: uid(), name: scrubText(name.trim()), body: partsToText(general, g), parts: general,
-        guidelines: g || undefined,
-        source: "mine", author: null, fav: false, court, caseType, matter, stage, tags: [],
-        uses: 1, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
-      }, share ? { anon } : undefined);
+      // Identifying details become fields: always in the shared copy, and in mine unless I kept them.
+      // The question sent here keeps them.
+      const build = (swap: boolean): Prompt => {
+        const t = (x: string) => (swap ? scrub(x, findIdentifiers(x), new Set()) : x);
+        const general = generalize(done, caseDocs).map((p) => ({ ...p, task: t(p.task), how: t(p.how) }));
+        const g = t(guidelines.trim());
+        return {
+          id: uid(), name: t(name.trim()), body: partsToText(general, g), parts: general,
+          guidelines: g || undefined,
+          source: "mine", author: null, fav: false, court, caseType, matter, stage, tags: [],
+          uses: 1, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
+        };
+      };
+      onSaveToLibrary(build(!keepDetails), share ? { anon, copy: build(true) } : undefined);
     }
     saveDraft(null);
     onSend(done, guidelines.trim());
@@ -188,9 +197,16 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
           <PartsEditor ref={partsRef} key={editorKey} parts={parts} onChange={setParts} attempted={attempted} isDark={isDark} caseDocs={caseDocs} collapsible />
 
           <div>
-            <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
+            <CheckRow on={keep} onToggle={() => { setKeep((v) => !v); setShare(false); setKeepDetails(false); }} label="שמירה בספרייה שלי" isDark={isDark} />
             {keep && (
-              <div className="mt-3 flex flex-col gap-3">
+              <div ref={saveRef} className="mt-3 flex flex-col gap-3">
+                <div className="px-3 py-2.5 rounded-[4px] text-[12.5px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
+                  {keepDetails ? "הפרטים המקוריים מהתיק יישמרו בעותק שלך." : "פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי, כדי שאפשר יהיה להשתמש בפרומפט בכל תיק."}
+                  <span className="mx-1.5">·</span>
+                  <button onClick={() => setKeepDetails((v) => !v)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>
+                    {keepDetails ? "החלפה בשדות" : "השארת הפרטים המקוריים"}
+                  </button>
+                </div>
                 <div>
                   <input
                     value={name} onChange={(e) => setName(e.target.value)} autoFocus
@@ -224,11 +240,14 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
                 )}
                 <CheckRow on={share} onToggle={() => setShare((v) => !v)} label="שיתוף עם כל המשתמשים" isDark={isDark} />
                 {share && (
-                  <div className="px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
-                    <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
-                      בעותק המשותף, פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי. העותק שלך נשאר כפי שהוא.
-                    </div>
-                    <div className="text-[12.5px] mt-2 mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
+                  <div ref={shareRef} className="px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+                    {/* only when my copy kept the details; otherwise the swap was already said above */}
+                    {keepDetails && (
+                      <div className="text-[12.5px] leading-relaxed mb-2" style={{ color: isDark ? dk.text : c.darkBlue }}>
+                        בעותק המשותף, פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי.
+                      </div>
+                    )}
+                    <div className="text-[12.5px] mb-1.5" style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
                     <div className="flex items-center gap-2">
                       {[{ k: false, t: "בשמי" }, { k: true, t: "אנונימי" }].map(({ k, t }) => (
                         <button
