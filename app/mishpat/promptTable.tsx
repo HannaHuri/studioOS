@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { Bookmark, Pin, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { Bookmark, Pin, ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, ShieldAlert, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
 import {
@@ -511,7 +511,7 @@ export function PromptTablePanel({
             <input
               value={f.q}
               onChange={(e) => set("q", e.target.value)}
-              placeholder="חיפוש לפי שם הפרומפט או מחבר"
+              placeholder="חיפוש לפי שם הפרומפט או תוכן"
               className="w-full h-8 rounded-md text-[13px] outline-none"
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
@@ -672,7 +672,7 @@ export function PromptTablePanel({
 
           {/* the count, with the platform's disclaimer behind the i — the chat carries its own
               disclaimer, and two of them side by side read as one too many */}
-          <div className="pt-3 px-2 flex items-center gap-1.5 text-[12.5px]" style={{ color: subCol }}>
+          <div className="pt-3 px-2 flex items-center justify-between gap-1.5 text-[12.5px]" style={{ color: subCol }}>
             <span>{list.length} פרומפטים</span>
             <button
               onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setInfo((v) => (v ? null : rect)); }}
@@ -680,7 +680,7 @@ export function PromptTablePanel({
               style={{ color: info ? c.primary : c.iconGray }}
               title="על מאגר הפרומפטים"
             >
-              <Info size={16} />
+              <ShieldAlert size={16} />
             </button>
           </div>
         </div>
@@ -703,7 +703,7 @@ export function PromptTablePanel({
             dir="rtl"
             className="fixed z-[200] rounded-[8px] px-4 py-3 text-[13px] leading-relaxed"
             style={{
-              bottom: window.innerHeight - info.top + 6, right: Math.max(8, window.innerWidth - info.right - 8), width: "320px",
+              bottom: window.innerHeight - info.top + 6, left: Math.max(8, info.left - 8), width: "320px",
               backgroundColor: surface, color: textCol, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
             }}
           >
