@@ -15,6 +15,7 @@
    an ordinary prompt carrying its parts.
    ────────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from "./reveal";
 import { useImperativeHandle, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Folder, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
@@ -452,7 +453,8 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               )}
             </div>
 
-            {!folded && <>
+            {/* opened by a click, the part scrolls into view if it fell below the fold */}
+            {!folded && <Reveal>
             <div className="text-[13px] mb-1" style={{ color: textCol }}>הנחיות</div>
             <textarea
               value={p.task}
@@ -498,7 +500,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
               className={area}
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : surface, color: textCol }}
             />
-            </>}
+            </Reveal>}
           </div>
         );
       })}

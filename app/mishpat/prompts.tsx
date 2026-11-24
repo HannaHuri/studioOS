@@ -16,6 +16,7 @@
    out of the model rather than needing a rule.
    ────────────────────────────────────────────────────────────────────────── */
 
+import { useReveal } from "./reveal";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -1447,6 +1448,8 @@ export function PromptEditor({
     setShare(true);
   };
 
+  // ticking שיתוף opens the author choice under it; scrolled into view if it opened below the fold
+  const shareRef = useReveal<HTMLDivElement>(share);
   const toggleHit = (i: number) => {
     if (preShare === null) return;
     const next = new Set(kept);
@@ -1674,7 +1677,7 @@ export function PromptEditor({
           </button>
 
           {share && (
-            <div className="mt-2 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+            <div ref={shareRef} className="mt-2 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
               {hits.length > 0 && (
                 <>
                   <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
@@ -1765,7 +1768,8 @@ export function PromptEditor({
     return (
       <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
         {/* ltr outside, rtl inside: the scrollbar sits on the right, by where the reading starts (Hanna, 2026-11-08) */}
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
+        {/* room at the end, so the chat bar floating over the pane's bottom never sits on the last field */}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl" style={{ paddingBottom: "64px" }}>{form}</div></div>
         {footer}
       </div>
     );
