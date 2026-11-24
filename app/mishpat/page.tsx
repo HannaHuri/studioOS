@@ -848,13 +848,13 @@ const AGENT_ANSWER: [string, number[]][] = [
 function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed, rateInfo, onRatePrompt }: {
   dev?: boolean; // the temporary version for development, at /mishpat/dev
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
-  insert?: { text: string; n: number; promptId?: string };
+  insert?: { text: string; n: number; promptId?: string; userNotes?: string };
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
   onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
   // a detailed prompt from the library, opened in the detailed question to be checked before it's sent
-  loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number; promptId?: string };
+  loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number; promptId?: string; userNotes?: string };
   // a library prompt's name and the user's rating, for the "rate this prompt" line under an answer
   rateInfo?: (id: string) => { name: string; myRating: number | null } | null;
   onRatePrompt?: (id: string, n: number) => void;
@@ -1048,12 +1048,18 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   // The library prompt that's in the question line now (set when one is put there, dropped once
   // it's sent or the line is emptied), so its answer can ask for a rating.
   const fromPrompt = useRef<string | null>(null);
+  // a shared prompt's notes for its users: a grey line under the input while the prompt is there,
+  // never sent — and never in the table's hover, which stays for the prompt itself
+  const [promptNotes, setPromptNotes] = useState<string | null>(null);
   useEffect(() => { if (!inputText && qKind !== "detailed") fromPrompt.current = null; }, [inputText, qKind]);
+  // emptied, the line goes with the prompt (read here rather than cleared in the effect above)
+  const notesShown = promptNotes && (inputText || qKind === "detailed") ? promptNotes : null;
   function ask(q: string, agent: boolean) {
     // once a draft is in the conversation it is part of every question's context
     const withDraft = !!draft;
     const promptId = fromPrompt.current ?? undefined;
     fromPrompt.current = null;
+    setPromptNotes(null);
     setMessages((prev) => [...prev, { q, isFirst: prev.length === 0, agent, logSteps: agent ? AGENT_STEPS : undefined, withDraft, promptId }]);
     if (agent) { setAgentStep(0); setAgentSub(false); setRevealedSteps(0); setAgentIntro(true); setAgentRunning(true); }
   }
@@ -1175,6 +1181,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     if (docLocked) return; // the question line is closed while the document waits for a check
     setInputText(insert.text);
     fromPrompt.current = insert.promptId ?? null;
+    setPromptNotes(insert.userNotes ?? null);
     setHeld(null);
     setQKind(baseKind); // a prompt's text goes in the question line, so a detailed question open steps aside
     selectPending.current = true; // once the text is in, its first field is selected to type over
@@ -1201,6 +1208,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
     loadN.current = loadDetailed.n;
     putDetailedDraft(loadDetailed.parts, loadDetailed.guidelines);
     fromPrompt.current = loadDetailed.promptId ?? null;
+    setPromptNotes(loadDetailed.userNotes ?? null);
     setDetailedKey((k) => k + 1);
     setPicked(NO_KINDS);
     setQKind("detailed");
@@ -1285,7 +1293,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             onSend={sendDetailed}
             onFieldsLeft={(fields) => setHeld({ detailed: true, fields })}
             onSaveToLibrary={(pr, share) => onSaveDetailed?.(pr, share)}
-            onClose={() => setQKind(baseKind)}
+            onClose={() => { setQKind(baseKind); setPromptNotes(null); }}
           />
         ) : (
           <textarea
@@ -1295,7 +1303,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
             style={{ color: isDark ? dk.text : c.text, fontFamily: "Noto Sans Hebrew, sans-serif", minHeight: "24px", maxHeight: `${growCap}px`, lineHeight: "1.5", paddingLeft: inputLong ? "28px" : undefined, ...RTL_RIGHT_SCROLL }}
             value={inputText}
             disabled={docLocked}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={(e) => { setInputText(e.target.value); if (!e.target.value) setPromptNotes(null); }}
             // Enter still sends — Shift+Enter is the way to a new line, as it is everywhere else
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -1520,6 +1528,12 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           </div>
         </div>
       </div>
+      {notesShown && (
+        <div className="px-3 flex items-start gap-1.5 text-[12.5px] leading-[1.45]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+          <Info size={13} style={{ flexShrink: 0, marginTop: "2px" }} />
+          <span><span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}</span>
+        </div>
+      )}
       {/* the [fields] note sits under the input, outside it */}
       {fieldsLeft.length > 0 && (
         <div className="px-3 text-[12.5px]" dir="rtl" style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
@@ -3235,10 +3249,10 @@ export default function MishpatPage() {
   const chatBoxRef = useRef<HTMLDivElement>(null);
   // A detailed prompt is too long for the question line, so it opens in the detailed question
   const [draftReplace, setDraftReplace] = useState<Prompt | null>(null); // a detailed prompt waiting on the draft's replacement
-  const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number; promptId?: string }>({ parts: [], guidelines: "", n: 0 });
+  const [detailedLoad, setDetailedLoad] = useState<{ parts: PromptPart[]; guidelines: string; n: number; promptId?: string; userNotes?: string }>({ parts: [], guidelines: "", n: 0 });
   // The question line lives inside ChatArea, so an insert is passed down as a bumped counter
   // rather than as lifted state — the chat keeps owning what the user has typed.
-  const [insert, setInsert] = useState<{ text: string; n: number }>({ text: "", n: 0 });
+  const [insert, setInsert] = useState<{ text: string; n: number; promptId?: string; userNotes?: string }>({ text: "", n: 0 });
   const [toast, setToast] = useState("");
   useEffect(() => {
     if (!toast) return;
@@ -3299,20 +3313,20 @@ export default function MishpatPage() {
   // A saved question needs a name — the library is searched by name — so one is proposed
   // from the opening words rather than asking for it before anything is on screen.
   const autoName = (q: string) => { const w = q.trim().split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? "…" : ""); };
-  const insertPrompt = (text: string, promptId?: string) => setInsert((v) => ({ text, n: v.n + 1, promptId }));
+  const insertPrompt = (text: string, promptId?: string, userNotes?: string) => setInsert((v) => ({ text, n: v.n + 1, promptId, userNotes }));
   const loadDetailed = (pr: Prompt) => {
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
-    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1, promptId: pr.id }));
+    setDetailedLoad((v) => ({ parts: pr.parts!, guidelines: pr.guidelines ?? "", n: v.n + 1, promptId: pr.id, userNotes: pr.userNotes }));
     setLibraryOpen(false);
   };
   const applyPrompt = (pr: Prompt) => {
     // a detailed prompt takes the draft's place, so a draft that's there is asked about first
     // the development version has no detailed question, so a detailed prompt goes in the question line written out
-    if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines), pr.id); setLibraryOpen(false); return; }
+    if (pr.parts && dev) { setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x))); insertPrompt(partsToText(pr.parts, pr.guidelines), pr.id, pr.userNotes); setLibraryOpen(false); return; }
     if (pr.parts) { if (hasDetailedDraft()) setDraftReplace(pr); else loadDetailed(pr); return; }
     setPrompts((prev) => prev.map((x) => (x.id === pr.id ? { ...x, uses: x.uses + 1 } : x)));
     // an example already in use fills the prompt's [דוגמה]
-    insertPrompt(inUse ? pr.body.replaceAll(`[${EXAMPLE_FIELD}]`, inUse.name) : pr.body, pr.id);
+    insertPrompt(inUse ? pr.body.replaceAll(`[${EXAMPLE_FIELD}]`, inUse.name) : pr.body, pr.id, pr.userNotes);
     setLibraryOpen(false);
   };
   // using a prompt puts it straight into the input, where it's checked and edited before it's sent
