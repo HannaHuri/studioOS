@@ -201,7 +201,7 @@ export function DetailedInline({ ref, isDark, caseDocs, maxHeight, onSend, onFie
             {keep && (
               <div ref={saveRef} className="mt-3 flex flex-col gap-3">
                 <div className="px-3 py-2.5 rounded-[4px] text-[12.5px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
-                  {keepDetails ? "הפרטים המקוריים מהתיק יישמרו בעותק שלך." : "פרטים שעשויים לזהות את התיק יוחלפו בשדות למילוי, כדי שאפשר יהיה להשתמש בפרומפט בכל תיק."}
+                  {keepDetails ? "הפרטים המקוריים מהתיק יישמרו בעותק שלך." : "פרטים שקשורים לתיק הספציפי יוחלפו בשדות למילוי, כדי שאפשר יהיה להשתמש בפרומפט בכל תיק."}
                   <span className="mx-1.5">·</span>
                   <button onClick={() => setKeepDetails((v) => !v)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>
                     {keepDetails ? "החלפה בשדות" : "השארת הפרטים המקוריים"}
