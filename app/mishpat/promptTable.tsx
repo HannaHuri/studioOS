@@ -75,13 +75,13 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
 };
 const MIN_PANEL = 480; // the narrowest the prompts panel may be dragged
 const MORE_W = 72; // the "עוד N" button
-const COLS_LS_KEY = "mishpat-promptCols-v9"; // v5: tags gone, content in; v8: the author column on by default; v9: it moved after תת תחום
+const COLS_LS_KEY = "mishpat-promptCols-v10"; // v5: tags gone, content in; v8: the author column on by default; v9: it moved after תת תחום; v10: content on at every width
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
 // The panel only mounts once the library is opened, after hydration, so it can read storage up front
 // the content column is on by default only where the table is wide enough to show it (Hanna, 2026-11-08)
-const defaultShown = (width: number): Record<ColKey, boolean> => ({ ...DEFAULT_SHOWN, content: width >= 900 });
-const loadCols = (width: number): ColState => {
+const defaultShown = (): Record<ColKey, boolean> => ({ ...DEFAULT_SHOWN, content: true }); // the content shows on small screens too (Hanna, 2026-11-24)
+const loadCols = (): ColState => {
   try {
     const raw = JSON.parse(window.localStorage.getItem(COLS_LS_KEY) ?? "null");
     if (raw) {
@@ -92,10 +92,10 @@ const loadCols = (width: number): ColState => {
         const at = prev ? order.indexOf(prev) : -1;
         order.splice(at >= 0 ? at + 1 : order.length, 0, k);
       }
-      return { order, shown: { ...defaultShown(width), ...raw.shown } };
+      return { order, shown: { ...defaultShown(), ...raw.shown } };
     }
   } catch { /* fall back to the defaults */ }
-  return { order: DEFAULT_ORDER, shown: defaultShown(width) };
+  return { order: DEFAULT_ORDER, shown: defaultShown() };
 };
 
 // /lab's text-wrap glyph (Google's format_text_wrap, Material Symbols, Apache-2.0), the one its תקציר uses
@@ -124,7 +124,7 @@ export function PromptTablePanel({
   // replaced it. One click on the chip takes it back to the whole מאגר.
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
 
-  const [colState, setColState] = useState<ColState>(() => loadCols(width));
+  const [colState, setColState] = useState<ColState>(() => loadCols());
   // The filters no longer set the panel's floor: the ones that don't fit go into "עוד" (team meeting,
   // 2026-11-24). The floor is what the top row and the squeezed columns still read well at.
   const filtersRef = useRef<HTMLDivElement>(null);
@@ -239,7 +239,7 @@ export function PromptTablePanel({
   };
   const resetCols = () => {
     setM((prev) => ({ ...prev, court: [], stage: [] })); // their columns go back to hidden
-    setColState({ order: DEFAULT_ORDER, shown: defaultShown(width) });
+    setColState({ order: DEFAULT_ORDER, shown: defaultShown() });
     setColW({}); // dragged widths too
     try { window.localStorage.removeItem(COLS_LS_KEY); window.localStorage.removeItem(COLW_LS_KEY); } catch { /* ignore */ }
     setColsMenu(null);
