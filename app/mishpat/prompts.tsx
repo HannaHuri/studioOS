@@ -1634,8 +1634,7 @@ export function PromptEditor({
           {autoHits.length > 0 && !share && body === swapText && (
             <div className="mt-2 px-3 py-2.5 rounded-[4px] text-[12.5px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
               {detailsSwapped ? "פרטים שקשורים לתיק הספציפי הוחלפו בשדות למילוי, כדי שאפשר יהיה להשתמש בפרומפט בכל תיק." : "הפרטים המקוריים מהתיק יישמרו בעותק שלך."}
-              <span className="mx-1.5">·</span>
-              <button onClick={toggleDetails} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>
+              <button onClick={toggleDetails} className="hover:underline ms-2" style={{ color: isDark ? dk.blue : c.primary }}>
                 {detailsSwapped ? "השארת הפרטים המקוריים" : "החלפה בשדות"}
               </button>
             </div>
