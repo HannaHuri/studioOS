@@ -178,13 +178,14 @@ export function PromptTablePanel({
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
   const shownCols = colState.order.filter((k) => colState.shown[k] && !(lite && k === "rating"));
-  // The floor is the default filters' line, up to סוג פרומפט (Hanna, 2026-11-24): narrower, the table
-  // cut too much to read. Filters added with more columns go into "עוד" instead of raising it.
+  // The floor is the whole filters' line, up to סוג פרומפט (Hanna, 2026-11-24): narrower, the table
+  // cut too much to read. "עוד" is left for the clear button's extra room.
   useEffect(() => {
     const el = filtersRef.current;
     if (!el || !onMinWidth) return;
-    const keys = lite ? ["fav", "caseType", "matter", "source"] : ["fav", "caseType", "matter", "source", "kind"];
-    const line = filterList().filter((x) => keys.includes(x.key)).reduce((sum, x) => sum + x.w, 0) + 6 * (keys.length - 1);
+    // every filter shown, up to סוג פרומפט, stays on the line (Hanna, 2026-11-24: narrower read badly)
+    const on = filterList().filter((x) => x.on);
+    const line = on.reduce((sum, x) => sum + x.w, 0) + 6 * (on.length - 1);
     const need = Math.max(MIN_PANEL, Math.ceil(line + (width - el.clientWidth)));
     if (need !== lastMin.current) { lastMin.current = need; onMinWidth(need); }
   });
