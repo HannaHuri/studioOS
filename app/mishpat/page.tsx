@@ -3738,7 +3738,7 @@ export default function MishpatPage() {
             <PromptTablePanel
               isDark={isDark}
               lite={lite}
-              prompts={lite ? prompts.filter((x) => !x.parts) : prompts}
+              prompts={lite ? prompts.filter((x) => !x.parts && !/\[[^\]]+\]/.test(x.body)) : prompts} // the reduced version has no fields to fill (Hanna, 2026-11-24)
               width={promptsFocus ? vw - 55 : promptsW}
               isFocus={promptsFocus}
               onToggleFocus={() => setPromptsFocus((v) => !v)}
