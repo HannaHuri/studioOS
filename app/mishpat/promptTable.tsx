@@ -129,6 +129,7 @@ export function PromptTablePanel({
   // 2026-11-24). The floor is what the top row and the squeezed columns still read well at.
   const filtersRef = useRef<HTMLDivElement>(null);
   const [rowW, setRowW] = useState(0);
+  const lastMin = useRef(0);
   useEffect(() => {
     const el = filtersRef.current;
     if (!el) return;
@@ -177,10 +178,16 @@ export function PromptTablePanel({
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
   const shownCols = colState.order.filter((k) => colState.shown[k] && !(lite && k === "rating"));
-  // a fixed, low floor: the reader decides how narrow, whatever the columns (Hanna, 2026-11-24: small
-  // screens are common), and cells cut with "..." past their width
-  const minPanel = MIN_PANEL;
-  useEffect(() => { onMinWidth?.(minPanel); }, [onMinWidth, minPanel]);
+  // The floor is the default filters' line, up to סוג פרומפט (Hanna, 2026-11-24): narrower, the table
+  // cut too much to read. Filters added with more columns go into "עוד" instead of raising it.
+  useEffect(() => {
+    const el = filtersRef.current;
+    if (!el || !onMinWidth) return;
+    const keys = lite ? ["fav", "caseType", "matter", "source"] : ["fav", "caseType", "matter", "source", "kind"];
+    const line = filterList().filter((x) => keys.includes(x.key)).reduce((sum, x) => sum + x.w, 0) + 6 * (keys.length - 1);
+    const need = Math.max(MIN_PANEL, Math.ceil(line + (width - el.clientWidth)));
+    if (need !== lastMin.current) { lastMin.current = need; onMinWidth(need); }
+  });
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null);
 
@@ -742,7 +749,7 @@ export function PromptTablePanel({
               style={{ color: info ? c.primary : c.iconGray }}
               title="על מאגר הפרומפטים"
             >
-              <ShieldAlert size={16} />
+              <ShieldAlert size={14} />
             </button>
             <span>{list.length} פרומפטים</span>
           </div>
@@ -766,7 +773,7 @@ export function PromptTablePanel({
             dir="rtl"
             className="fixed z-[200] rounded-[8px] px-4 py-3 text-[13px] leading-relaxed"
             style={{
-              bottom: window.innerHeight - info.top + 6, right: Math.max(8, window.innerWidth - info.right - 8), width: "320px",
+              bottom: window.innerHeight - info.top + 6, right: Math.max(8, window.innerWidth - info.right - 8), width: "344px",
               backgroundColor: surface, color: textCol, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
             }}
           >
