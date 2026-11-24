@@ -12,7 +12,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { Bookmark, Pin, ChevronDown, GripVertical, Info, Maximize2, Minimize2, MoreVertical, Plus, Search, WandSparkles, X } from "lucide-react";
+import { Bookmark, Pin, ChevronDown, GripVertical, Info, LayoutGrid, List, Maximize2, Minimize2, MoreVertical, Plus, Search, Star, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
 import {
@@ -58,6 +58,7 @@ const VALUE_OF: Record<MKey, (pr: Prompt) => string | string[]> = {
 // the filter picks are kept between visits, like the columns — a judge who works in one area
 // shouldn't have to pick it again each time
 const FILTERS_LS_KEY = "mishpat-promptFilters-v1";
+const VIEW_LS_KEY = "mishpat-promptView-v1";
 const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   try {
     const raw = JSON.parse(window.localStorage.getItem(FILTERS_LS_KEY) ?? "null");
@@ -146,6 +147,11 @@ export function PromptTablePanel({
   // the content cell's tooltip: larger than the native one, as on the documents table in /lab
   // over a name it opens with the name itself, since a long one is cut
   const [contentWrap, setContentWrap] = useState(false); // the תוכן column: wrap to several lines, or one line cut
+  // list or cards (2026-11-19), kept per user like the columns
+  const [view, setView] = useState<"list" | "cards">(() => {
+    try { return window.localStorage.getItem(VIEW_LS_KEY) === "cards" ? "cards" : "list"; } catch { return "list"; }
+  });
+  const pickView = (v: "list" | "cards") => { setView(v); try { window.localStorage.setItem(VIEW_LS_KEY, v); } catch { /* ignore */ } };
   const [tip, setTip] = useState<{ title?: string; text: string; x: number; y: number } | null>(null);
   // Reorder by dragging a row in the menu; a plain click still toggles the column
   const colRowRefs = useRef<Partial<Record<ColKey, HTMLDivElement | null>>>({});
@@ -383,7 +389,13 @@ export function PromptTablePanel({
   const floorOf = (k: ColKey) => (KEEP.includes(k) ? Math.min(k === "uses" ? 76 : 56, baseOf(k)) : 40);
   const kept = shownCols.filter((k) => KEEP.includes(k)).reduce((sum, k) => sum + floorOf(k), 0);
   const fit = Math.min(1, Math.max(0, (width - GUTTER - EDGES - kept) / (nameBase + shownCols.filter((k) => !KEEP.includes(k)).reduce((sum, k) => sum + baseOf(k), 0))));
-  const sc = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
+  const sc0 = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
+  // When even the floors don't fit, everything narrows further and cuts with "...", rather than the
+  // table scrolling sideways and hiding the detailed-prompt column at its far end (Hanna, 2026-11-19)
+  const room = width - GUTTER - EDGES;
+  const atFloors = sc0(nameBase, 100) + shownCols.reduce((sum, k) => sum + sc0(baseOf(k), floorOf(k)), 0);
+  const squeeze = atFloors > room && room > 0 ? room / atFloors : 1;
+  const sc = (v: number, floor: number) => Math.max(20, Math.floor(sc0(v, floor) * squeeze));
   const flexCol = (k: ColKey) => {
     const w = sc(baseOf(k), floorOf(k));
     return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
@@ -422,7 +434,7 @@ export function PromptTablePanel({
         const d = dateOf(pr);
         const [dd, mm, yy] = d.split("/");
         return d
-          ? <div key={k} className="px-1.5 text-[12.5px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
+          ? <div key={k} className="px-1.5 text-[12.5px] truncate min-w-0" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
           : <div key={k} className="px-1.5 text-[12.5px]" style={{ color: subCol }}>—</div>;
       }
       case "court": case "caseType": case "matter": case "stage":
@@ -520,6 +532,16 @@ export function PromptTablePanel({
             <Plus size={15} />
             חדש
           </button>
+          {/* list or cards: one control, two halves, the current one blue */}
+          <div className="h-8 flex items-center rounded-md flex-shrink-0 overflow-hidden" style={{ border: `1px solid ${isDark ? dk.border : c.border}` }}>
+            {([["list", List, "תצוגת רשימה"], ["cards", LayoutGrid, "תצוגת כרטיסיות"]] as const).map(([v, Icon, t]) => (
+              <button key={v} onClick={() => pickView(v)} title={t} aria-pressed={view === v}
+                className="w-8 h-full flex items-center justify-center transition-colors"
+                style={{ color: view === v ? c.primary : (isDark ? dk.textMuted : c.iconGray), backgroundColor: view === v ? (isDark ? "#22304a" : "#eaf2fd") : (isDark ? dk.input : "white") }}>
+                <Icon size={15} />
+              </button>
+            ))}
+          </div>
           <button onClick={onToggleFocus} className="size-8 flex items-center justify-center rounded-md flex-shrink-0 transition-opacity hover:opacity-85" style={lightBlueBtn} title={isFocus ? "חזרה לתצוגה הרגילה" : "הרחבה למסך מלא"}>
             {isFocus ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
@@ -558,8 +580,78 @@ export function PromptTablePanel({
         </div>
       </div>
 
+      {view === "cards" && (
+        <div className="flex-1 min-h-0 overflow-auto docs-scroll" style={{ scrollbarGutter: "stable" }}>
+          <div dir="rtl" className="px-3 pb-4 pt-1 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))" }}>
+            {list.map((pr) => {
+              const active = openId === pr.id;
+              const n = authorName(pr) || "מערכת";
+              const border = active ? c.primary : lastId === pr.id ? "#bcd3f1" : (isDark ? dk.border : "#e3e9f1");
+              return (
+                <div
+                  key={pr.id}
+                  onClick={() => onUse(pr)}
+                  onContextMenu={(e) => { e.preventDefault(); setCtxMenu((v) => ({ id: pr.id, x: e.clientX, y: e.clientY, n: (v?.n ?? 0) + 1 })); }}
+                  title="לחיצה מכניסה את הפרומפט לצ'אט"
+                  className="group relative flex flex-col rounded-[8px] cursor-pointer transition-colors"
+                  style={{ border: `1px solid ${border}`, backgroundColor: lastId === pr.id && !active ? lastBg : surface, padding: "12px 12px 10px", minHeight: "164px" }}
+                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.borderColor = isDark ? "#3a5680" : "#bcd3f1"; }}
+                  onMouseLeave={(e) => { if (!active) e.currentTarget.style.borderColor = border; }}
+                >
+                  {/* the name, with the favorite before it and the row's ⋯ after */}
+                  <div className="flex items-start gap-1.5">
+                    <div className="flex-none" style={{ marginTop: "2px" }}><FavMark on={pr.fav} onToggle={() => onFav(pr.id)} isDark={isDark} small faint /></div>
+                    <div className="flex-1 min-w-0 text-[14px] leading-snug" style={{ color: active ? c.primary : textCol, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {pr.name}
+                      {pr.pinned && <span className="inline-flex align-middle ms-1" style={{ color: subCol }} title="נעוץ למעלה"><Pin size={12} fill="currentColor" /></span>}
+                    </div>
+                    {pr.parts && (
+                      <span className="flex-none" style={{ color: subCol, marginTop: "3px" }} title={`פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}`}>
+                        <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />
+                      </span>
+                    )}
+                    <div className="flex-none -mt-1 -ml-1">
+                      <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} openAt={ctxMenu?.id === pr.id ? ctxMenu : null} />
+                    </div>
+                  </div>
+                  {/* the text, three lines; all of it on hover */}
+                  <div className="mt-1.5 text-[12.5px] leading-[1.55]" style={{ color: subCol, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                    onMouseEnter={(e) => setTip({ title: pr.name, text: pr.body, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}>
+                    {pr.parts ? pr.parts.map((x) => x.task).join(" · ") : pr.body}
+                  </div>
+                  <div className="flex-1" />
+                  {/* תחום and תת תחום */}
+                  <div className="mt-2.5 flex items-center gap-1 min-w-0">
+                    {[pr.caseType, ...(pr.matter !== GENERAL ? [pr.matter] : [])].map((t, i) => (
+                      <span key={i} className="text-[11.5px] rounded px-1.5 py-px truncate" style={{ backgroundColor: isDark ? "#22304a" : "#f1f4f8", color: isDark ? dk.textMuted : c.textGray }} title={t}>{t}</span>
+                    ))}
+                  </div>
+                  {/* who, how it's rated, how much it's used */}
+                  <div className="mt-2 pt-2 flex items-center gap-3 text-[12px]" style={{ borderTop: `1px solid ${rowLine}`, color: subCol }}>
+                    <span className="flex items-center gap-1 min-w-0" title={pr.source === "shared" ? `${srcName(pr)} · ${authorFull(pr)}` : srcName(pr)}>
+                      <SourceMark pr={pr} isDark={isDark} size={13} plain />
+                      <span className="truncate">{n}</span>
+                    </span>
+                    <div className="flex-1" />
+                    <span className="flex items-center gap-1 flex-none" title={pr.ratingCount ? `${avgOf(pr).toFixed(1)} מתוך 5 · ${pr.ratingCount} מדרגים` : "עדיין לא דורג"}>
+                      <Star size={12} strokeWidth={1.8} />{pr.ratingCount ? avgOf(pr).toFixed(1) : "—"}
+                    </span>
+                    {colState.shown.uses && (
+                      <span className="flex-none" title={`${pr.uses.toLocaleString("he-IL")} שימושים`}>{pr.uses ? `${pr.uses.toLocaleString("he-IL")} שימושים` : "—"}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {list.length === 0 && (
+            <div className="py-16 text-center text-[13.5px]" style={{ color: subCol }}>לא נמצאו פרומפטים התואמים לחיפוש.</div>
+          )}
+          <div dir="rtl" className="px-5 pb-4 text-[12.5px]" style={{ color: subCol }}>{list.length} פרומפטים</div>
+        </div>
+      )}
       {/* Header row + rows */}
-      <div ref={scroller} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="ltr" style={{ scrollbarGutter: "stable" }}>
+      <div ref={scroller} className="flex-1 min-h-0 overflow-auto docs-scroll" dir="ltr" style={{ scrollbarGutter: "stable", display: view === "cards" ? "none" : undefined }}>
         <div dir="rtl" className="px-3 pb-4" style={{ minWidth: `${minW}px` }}>
           <div
             className="sticky top-0 z-10 grid items-stretch h-8"
