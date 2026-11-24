@@ -852,7 +852,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   onSaveQuestion?: (q: string) => void;
   onShareQuestion?: (q: string) => void;
   onProofDone: (title: string) => void;
-  onSaveDetailed?: (pr: Prompt, share?: { anon: boolean }) => void; // a detailed question kept with "שמירה בספרייה שלי"
+  onSaveDetailed?: (pr: Prompt, share?: { anon: boolean; copy: Prompt }) => void; // a detailed question kept with "שמירה בספרייה שלי"
   // a detailed prompt from the library, opened in the detailed question to be checked before it's sent
   loadDetailed?: { parts: PromptPart[]; guidelines: string; n: number; promptId?: string; userNotes?: string };
   // a library prompt's name and the user's rating, for the "rate this prompt" line under an answer
@@ -3571,7 +3571,7 @@ export default function MishpatPage() {
             onSaveDetailed={(pr, share) => {
               setPrompts((prev) => [
                 ...(share ? [{
-                  ...pr, id: Math.random().toString(36).slice(2, 9), source: "shared" as const,
+                  ...share.copy, id: Math.random().toString(36).slice(2, 9), source: "shared" as const,
                   author: share.anon ? "אנונימי" : ME, authorRole: share.anon ? undefined : MY_ROLE, uses: 0,
                 }] : []),
                 pr, ...prev,

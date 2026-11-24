@@ -1362,8 +1362,23 @@ export function PromptEditor({
   expanded?: boolean;
   onToggleExpand?: () => void;
 }) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [body, setBody] = useState(initial?.body ?? "");
+  // A question saved from the chat has its case details swapped for fields from the start, so the
+  // prompt works in any case; a link puts the originals back (a check rerun on this same case).
+  const [origBody] = useState(initial?.body ?? "");
+  const [autoHits] = useState(() => (mode === "fromMessage" ? findIdentifiers(initial?.body ?? "") : []));
+  const [detailsSwapped, setDetailsSwapped] = useState(autoHits.length > 0);
+  // the name is proposed from the question's opening words, so it carries the same details
+  const [origName] = useState(initial?.name ?? "");
+  const cleanName = () => scrub(origName, findIdentifiers(origName), new Set());
+  const [name, setName] = useState(() => (autoHits.length ? cleanName() : origName));
+  const [body, setBody] = useState(() => (autoHits.length ? scrub(origBody, autoHits, new Set()) : origBody));
+  const toggleDetails = () => {
+    // only while the text is still the one the swap made; after edits the link has gone
+    setBody(detailsSwapped ? origBody : scrub(origBody, autoHits, new Set()));
+    setName(detailsSwapped ? origName : cleanName());
+    setDetailsSwapped((v) => !v);
+  };
+  const swapText = detailsSwapped ? scrub(origBody, autoHits, new Set()) : origBody;
   // set = a פרומפט מפורט (was "מורכב"). Its text is generated from the parts, so the parts are what's edited;
   // a basic prompt becomes one through "מעבר לפרומפט מפורט", its text turning into the first part's מה.
   const [parts, setParts] = useState<PromptPart[] | null>(initial?.parts ?? null);
@@ -1420,7 +1435,6 @@ export function PromptEditor({
   const snapshot = JSON.stringify({ name, body, parts, guidelines, caseType, matter, stage, court, share, anon, favNew, userNotes });
   const [startSnapshot] = useState(snapshot);
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
-  const labels = hitLabels(hits, kept);
 
   const toggleShare = () => {
     if (parts) {
@@ -1450,13 +1464,6 @@ export function PromptEditor({
 
   // ticking שיתוף opens the author choice under it; scrolled into view if it opened below the fold
   const shareRef = useReveal<HTMLDivElement>(share);
-  const toggleHit = (i: number) => {
-    if (preShare === null) return;
-    const next = new Set(kept);
-    if (next.has(i)) next.delete(i); else next.add(i);
-    setKept(next);
-    setBody(scrub(preShare, hits, next));
-  };
 
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
@@ -1624,6 +1631,15 @@ export function PromptEditor({
               />
             </>
           )}
+          {autoHits.length > 0 && !share && body === swapText && (
+            <div className="mt-2 px-3 py-2.5 rounded-[4px] text-[12.5px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
+              {detailsSwapped ? "פרטים שקשורים לתיק הספציפי הוחלפו בשדות למילוי, כדי שאפשר יהיה להשתמש בפרומפט בכל תיק." : "הפרטים המקוריים מהתיק יישמרו בעותק שלך."}
+              <span className="mx-1.5">·</span>
+              <button onClick={toggleDetails} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>
+                {detailsSwapped ? "השארת הפרטים המקוריים" : "החלפה בשדות"}
+              </button>
+            </div>
+          )}
           {/* Both lines report what the text already produced, so neither appears until there is
               something to report — the placeholder inside the field is what explains the brackets,
               and saying it twice made an empty editor look like it had a problem. */}
@@ -1678,31 +1694,11 @@ export function PromptEditor({
 
           {share && (
             <div ref={shareRef} className="mt-2 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
+              {/* a sentence, not the list of what was swapped: the text itself shows it (Hanna, 2026-11-24) */}
               {hits.length > 0 && (
-                <>
-                  <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
-                    {hits.length - kept.size > 0
-                      ? `${hits.length - kept.size} פרטים שעשויים לזהות את התיק הוחלפו בשדות למילוי, כדי שהפרומפט יישאר שמיש למי שיפעיל אותו.`
-                      : "כל הפרטים שזוהו הוחזרו לנוסח."}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    {hits.map((h, i) => (
-                      <button
-                        key={i}
-                        onClick={() => toggleHit(i)}
-                        className="px-2 h-[22px] rounded-[3px] text-[12px] transition-colors"
-                        style={{
-                          backgroundColor: kept.has(i) ? (isDark ? "#3a2530" : "#fdeaec") : (isDark ? dk.surface : "white"),
-                          color: kept.has(i) ? RED : c.primary,
-                          border: `1px solid ${kept.has(i) ? RED : c.primary}`,
-                        }}
-                        title={kept.has(i) ? "החלפה בשדה" : "השארת הפרט המקורי"}
-                      >
-                        <bdi>{h.text}</bdi> {kept.has(i) ? "— נשאר בנוסח" : `→ [${labels[i]}]`}
-                      </button>
-                    ))}
-                  </div>
-                </>
+                <div className="text-[12.5px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
+                  בעותק המשותף, פרטים שעשויים לזהות את התיק הוחלפו בשדות למילוי.
+                </div>
               )}
               <div className={`text-[12.5px] mb-1.5 ${hits.length ? "mt-2" : ""}`} style={{ color: isDark ? dk.text : c.darkBlue }}>מי מופיע כמחבר</div>
               <div className="flex items-center gap-2">
@@ -1806,11 +1802,8 @@ export function PromptShare({
   const fromChat = !initial.id;
   const [keepMine, setKeepMine] = useState(true);
   const hits = useMemo(() => findIdentifiers(raw), [raw]);
-  // Identifiers are swapped out on arrival, not on request: the safe state is the default,
-  // and each swap can be undone if the detector was wrong.
-  const [kept, setKept] = useState<Set<number>>(new Set());
+  // Identifiers are swapped out on arrival, not on request: the safe state is the default.
   const [body, setBody] = useState(() => scrub(raw, hits, new Set()));
-  const [edited, setEdited] = useState(false);
   // The name is scrubbed too — a name proposed from the question's opening words carries the
   // same party names the body does, and it's the part that shows in every list.
   const [name, setName] = useState(() => {
@@ -1826,20 +1819,10 @@ export function PromptShare({
   const [userNotes, setUserNotes] = useState(initial.userNotes ?? "");
   const [attempted, setAttempted] = useState(false);
 
-  // While the text hasn't been hand-edited, toggling a detection re-derives it.
-  const toggleHit = (i: number) => {
-    const next = new Set(kept);
-    if (next.has(i)) next.delete(i); else next.add(i);
-    setKept(next);
-    if (!edited) setBody(scrub(raw, hits, next));
-  };
-
   const surface = isDark ? dk.surface : "white";
   const textCol = isDark ? dk.text : c.text;
   const subCol = isDark ? dk.textMuted : c.textLight;
   const line = isDark ? dk.border : c.inputBorder;
-  const replaced = hits.length - kept.size;
-  const labels = hitLabels(hits, kept);
 
   const share = () => {
     if (!name.trim() || !body.trim()) { setAttempted(true); return; }
@@ -1850,8 +1833,8 @@ export function PromptShare({
       tags: initial.tags ?? [], uses: 0, ratingSum: 0, ratingCount: 0, myRating: null, edited: today(),
       userNotes: userNotes.trim() || undefined,
     };
-    // my copy is the text as I asked it, not the scrubbed one the others get
-    onShare(pr, fromChat && keepMine ? { ...pr, id: uid(), source: "mine", author: ME, authorRole: MY_ROLE, body: raw.trim(), name: name.trim() } : undefined);
+    // my copy gets the fields too, so it works in any case (Hanna, 2026-11-24)
+    onShare(pr, fromChat && keepMine ? { ...pr, id: uid(), source: "mine", author: ME, authorRole: MY_ROLE } : undefined);
   };
 
   return (
@@ -1880,40 +1863,16 @@ export function PromptShare({
             style={{ border: `1px solid ${attempted && !name.trim() ? RED : line}`, backgroundColor: surface, color: textCol }}
           />
 
+          {/* a sentence, not the list of what was swapped: the text below shows it (Hanna, 2026-11-24) */}
           {hits.length > 0 && (
-            <div className="mt-3 px-3 py-2.5 rounded-[4px]" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff" }}>
-              <div className="text-[13px] leading-relaxed" style={{ color: isDark ? dk.text : c.darkBlue }}>
-                {replaced > 0
-                  ? `${replaced} פרטים שעשויים לזהות את התיק הוחלפו בשדות למילוי, כדי שהפרומפט יישאר שמיש למי שיפעיל אותו.`
-                  : "כל הפרטים שזוהו הוחזרו לנוסח."}
-              </div>
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {hits.map((h, i) => (
-                  <button
-                    key={i}
-                    onClick={() => toggleHit(i)}
-                    disabled={edited}
-                    className="px-2 h-[22px] rounded-[3px] text-[12px] transition-colors"
-                    style={{
-                      backgroundColor: kept.has(i) ? (isDark ? "#3a2530" : "#fdeaec") : (isDark ? dk.surface : "white"),
-                      color: kept.has(i) ? RED : c.primary,
-                      border: `1px solid ${kept.has(i) ? RED : c.primary}`,
-                      opacity: edited ? 0.45 : 1, cursor: edited ? "default" : "pointer",
-                    }}
-                    title={kept.has(i) ? "החלפה בשדה" : "השארת הפרט המקורי"}
-                  >
-                    {/* bdi so a case number or date keeps its own direction inside the RTL line */}
-                    <bdi>{h.text}</bdi> {kept.has(i) ? "— נשאר בנוסח" : `→ [${labels[i]}]`}
-                  </button>
-                ))}
-              </div>
-              {edited && <div className="text-[12px] mt-2" style={{ color: subCol }}>הנוסח נערך ידנית — הסימון מוקפא.</div>}
+            <div className="mt-3 px-3 py-2.5 rounded-[4px] text-[13px] leading-relaxed" style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue }}>
+              פרטים שעשויים לזהות את התיק הוחלפו בשדות למילוי.
             </div>
           )}
 
           <textarea
             value={body}
-            onChange={(e) => { setBody(e.target.value); setEdited(true); }}
+            onChange={(e) => setBody(e.target.value)}
             className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none mt-3"
             style={{ border: `1px solid ${attempted && !body.trim() ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: "150px" }}
           />
