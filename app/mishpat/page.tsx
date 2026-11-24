@@ -845,8 +845,9 @@ const AGENT_ANSWER: [string, number[]][] = [
   ["מומלץ להשלים בירור לגבי הפער בין חוות הדעת לפני הדיון.", [4]],
 ];
 
-function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed, rateInfo, onRatePrompt }: {
+function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse, insert, onSaveQuestion, onShareQuestion, onProofDone, onSaveDetailed, loadDetailed, rateInfo, onRatePrompt }: {
   dev?: boolean; // the temporary version for development, at /mishpat/dev
+  lite?: boolean; // the reduced first version for development, at /mishpat/v1: no detailed question
   isDark: boolean; conversationKey: number; inUseName?: string | null; onClearInUse?: () => void;
   insert?: { text: string; n: number; promptId?: string; userNotes?: string };
   onSaveQuestion?: (q: string) => void;
@@ -883,7 +884,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
   // above never disappears behind the input.
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // What sending does: a basic question, the detailed one built in the input, or the ticked checks on the document.
-  const kinds = dev ? DEV_KINDS : QUESTION_KINDS;
+  const kinds = dev ? DEV_KINDS : lite ? QUESTION_KINDS.filter((k) => k.key !== "detailed") : QUESTION_KINDS;
   const actions = dev ? DRAFT_ACTIONS.filter((a) => a.key !== "anon") : DRAFT_ACTIONS;
   const baseKind: QuestionKind = dev ? "agents" : "basic"; // what the menu falls back to
   const [qKind, setQKind] = useState<QuestionKind>(baseKind);
@@ -1482,7 +1483,8 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                 Blue while checks are ticked with no document yet: that is the next thing to click.
                 Its tooltip is drawn here rather than by the browser: Windows lays native tooltips out
                 left-to-right and wraps them on its own, which scrambled the Hebrew line with "Word" in it. */}
-            <span className="relative flex-shrink-0">
+            {/* the reduced version has no document checks yet, and a document is only for them (Hanna, 2026-11-24) */}
+            {!lite && <span className="relative flex-shrink-0">
               <button
                 onClick={draft || uploading ? undefined : () => { setUploadTip(false); fileRef.current?.click(); }}
                 aria-disabled={!!draft || !!uploading}
@@ -1512,7 +1514,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
                   <span className="block" style={{ opacity: 0.8 }}>קובץ Word עד {WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-{pagesOf(WORD_LIMIT)} עמודים</span>
                 </span>
               )}
-            </span>
+            </span>}
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
@@ -1746,6 +1748,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               </button>
             );
           })}
+          {!lite && <>
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
           <div className="flex items-center gap-1 px-4 pt-1 pb-0.5 text-[12.5px]" style={{ color: subCol }}>
             פעולות על מסמך
@@ -1792,6 +1795,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               </div>
             );
           })}
+          </>}
         </div>
 
         {checksHelp && (
@@ -3199,11 +3203,16 @@ function ConfirmDelete({ isDark, kind, name, onConfirm, onClose }: { isDark: boo
 
 export default function MishpatPage() {
   // /mishpat/dev shows the same page with the development version's input menu
-  const dev = usePathname()?.endsWith("/dev") ?? false;
+  const path = usePathname() ?? "";
+  const dev = path.endsWith("/dev");
+  // /mishpat/v1: the reduced first version for development (Hanna, 2026-11-24): no detailed prompts
+  // or question, no ratings, no swapping case details for fields, search by content only, and the
+  // prompt editor opens as a window instead of the wide layout beside the table
+  const lite = path.endsWith("/v1");
   const [isPanelOpen, setIsPanelOpen] = useState(false);     // documents
   // The case documents and their selection — held here so the selection survives closing the panel.
   const [docs, setDocs] = useState(initialDocs);
-  const [histData, setHistData] = useState<HistGroup[]>(HISTORY_GROUPS);
+  const [histData, setHistData] = useState<HistGroup[]>(() => (lite ? HISTORY_GROUPS.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i, detailed: false })) })) : HISTORY_GROUPS));
   // A finished check joins the conversations of היום, marked so it reads as a run, not a chat.
   const addProofToHistory = (title: string) =>
     setHistData((d) => d.map((g) => (g.label === "היום"
@@ -3373,6 +3382,7 @@ export default function MishpatPage() {
     setPromptPane({ initial: pr, mode: "edit" });
   };
   const openPromptPane = (pr: Prompt) => {
+    if (lite) { setPromptEdit({ initial: pr, mode: pr.source === "mine" ? "edit" : "fork" }); return; }
     setPromptsFocus(false);
     // the chat waits as a one-line bar over the editor, so it doesn't cover the form (Hanna, 2026-11-08)
     setChatMin(true); setChatPos(null);
@@ -3559,7 +3569,8 @@ export default function MishpatPage() {
           )}
         <div className="flex-1 flex min-w-0 min-h-0 relative" style={{ paddingBottom: chatFloat ? 0 : FOOTER_HEIGHT, display: chatFloat && chatMin ? "none" : undefined }}>
           <ChatArea
-            dev={dev}
+            dev={dev || lite} // the reduced version has the modes the users have today (Hanna, 2026-11-24)
+            lite={lite}
             isDark={isDark}
             conversationKey={convKey}
             onProofDone={addProofToHistory}
@@ -3579,7 +3590,7 @@ export default function MishpatPage() {
               setToast(share ? "השאלה נשמרה בספרייה שלך ושותפה" : "השאלה נשמרה בספרייה שלך");
             }}
             loadDetailed={detailedLoad}
-            rateInfo={(id) => { const pr = prompts.find((x) => x.id === id); return pr && pr.source !== "mine" ? { name: pr.name, myRating: pr.myRating } : null; }}
+            rateInfo={lite ? undefined : (id) => { const pr = prompts.find((x) => x.id === id); return pr && pr.source !== "mine" ? { name: pr.name, myRating: pr.myRating } : null; }}
             onRatePrompt={ratePrompt}
           />
 
@@ -3726,7 +3737,8 @@ export default function MishpatPage() {
           >
             <PromptTablePanel
               isDark={isDark}
-              prompts={prompts}
+              lite={lite}
+              prompts={lite ? prompts.filter((x) => !x.parts) : prompts}
               width={promptsFocus ? vw - 55 : promptsW}
               isFocus={promptsFocus}
               onToggleFocus={() => setPromptsFocus((v) => !v)}
@@ -3734,7 +3746,7 @@ export default function MishpatPage() {
               openId={promptPane?.initial?.id ?? null}
               lastId={promptPane ? null : lastPromptId}
               onOpen={openPromptPane}
-              onNew={() => { setPromptsFocus(false); setChatMin(true); setChatPos(null); setPromptPane({ initial: null, mode: "new" }); }}
+              onNew={() => { if (lite) { setPromptEdit({ initial: null, mode: "new" }); return; } setPromptsFocus(false); setChatMin(true); setChatPos(null); setPromptPane({ initial: null, mode: "new" }); }}
               onUse={openUse}
               onFav={toggleFav}
               onPin={togglePin}
@@ -3842,6 +3854,7 @@ export default function MishpatPage() {
         <PromptEditor
           key={promptEdit.initial?.id ?? promptEdit.mode}
           isDark={isDark}
+          lite={lite}
           initial={promptEdit.initial}
           mode={promptEdit.mode}
           onSave={savePrompt}
@@ -3851,6 +3864,7 @@ export default function MishpatPage() {
       {promptShare && (
         <PromptShare
           isDark={isDark}
+          lite={lite}
           initial={promptShare}
           onShare={doShare}
           onClose={() => setPromptShare(null)}

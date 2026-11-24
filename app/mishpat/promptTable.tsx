@@ -11,7 +11,7 @@
    classification columns start switched off, at any width.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Bookmark, Pin, ChevronDown, GripVertical, Maximize2, Minimize2, MoreVertical, Plus, Search, ShieldAlert, WandSparkles, X } from "lucide-react";
 import { c, dk, FONT } from "./theme";
 import { Tick } from "./proofread";
@@ -73,6 +73,8 @@ const loadMulti = (shown: Record<ColKey, boolean>): Multi => {
   } catch { /* fall back to nothing picked */ }
   return EMPTY_MULTI;
 };
+const MIN_PANEL = 480; // the narrowest the prompts panel may be dragged
+const MORE_W = 72; // the "עוד N" button
 const COLS_LS_KEY = "mishpat-promptCols-v9"; // v5: tags gone, content in; v8: the author column on by default; v9: it moved after תת תחום
 const COLW_LS_KEY = "mishpat-promptColW-v1";
 type ColState = { order: ColKey[]; shown: Record<ColKey, boolean> };
@@ -106,9 +108,10 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, lastId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
+  isDark, lite, prompts, width, isFocus, onToggleFocus, onClose, openId, lastId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
+  lite?: boolean; // the reduced first version (/mishpat/v1): no ratings, no detailed prompts, search by content only
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
   openId: string | null;              // the prompt open in the editor — its row is marked
   lastId?: string | null;             // the prompt last open, once the editor closed: a faint mark of where the reader left off
@@ -122,24 +125,62 @@ export function PromptTablePanel({
   const [f, setF] = useState<Filters>(EMPTY_FILTERS);
 
   const [colState, setColState] = useState<ColState>(() => loadCols(width));
-  // the filters' full line, plus the panel's padding, is the narrowest the panel may be dragged
-  // (Hanna, 2026-11-08: no filter cut off)
+  // The filters no longer set the panel's floor: the ones that don't fit go into "עוד" (team meeting,
+  // 2026-11-24). The floor is what the top row and the squeezed columns still read well at.
   const filtersRef = useRef<HTMLDivElement>(null);
-  const lastMin = useRef(0);
+  const [rowW, setRowW] = useState(0);
   useEffect(() => {
     const el = filtersRef.current;
-    if (!el || !onMinWidth) return;
-    // the line's own width (its filters and the gaps between them), not the room it was given
-    const kids = [...el.children] as HTMLElement[];
-    const line = kids.reduce((sum, k) => sum + k.offsetWidth, 0) + 6 * Math.max(0, kids.length - 1);
-    const need = Math.ceil(line + (width - el.clientWidth));
-    if (need !== lastMin.current) { lastMin.current = need; onMinWidth(need); }
-  });
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRowW(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const [more, setMore] = useState<DOMRect | null>(null);
+  const moreBtn = useRef<HTMLButtonElement>(null);
+  const morePop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!more) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!moreBtn.current?.contains(t) && !morePop.current?.contains(t)) setMore(null);
+    };
+    const off = () => setMore(null);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("resize", off);
+    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("resize", off); };
+  }, [more]);
+  // the filters, in their order, with the width each takes on the line
+  const filterList = (): { key: string; w: number; on: boolean; set: boolean; el: ReactNode }[] => [
+    { key: "fav", w: 88, on: true, set: f.favOnly, el: (
+      <button
+        onClick={() => set("favOnly", !f.favOnly)}
+        className="h-8 px-2.5 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
+        style={{ border: `1px solid ${f.favOnly ? c.primary : (isDark ? dk.border : c.border)}`, color: f.favOnly ? c.primary : textCol, backgroundColor: isDark ? dk.input : "white" }}
+        title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים בלבד"}
+        aria-pressed={f.favOnly}
+      >
+        <Bookmark size={13} fill={f.favOnly ? "currentColor" : "none"} />
+        מועדפים
+      </button>
+    ) },
+    { key: "caseType", w: 100, on: !!colState.shown.caseType, set: m.caseType.length > 0, el: <MultiDropdown label="תחום" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} /> },
+    { key: "matter", w: 150, on: !!colState.shown.matter, set: m.matter.length > 0, el: <MultiDropdown label="תת תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable /> },
+    { key: "source", w: 96, on: true, set: m.source.length > 0, el: <MultiDropdown label="מחבר" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source}
+      icons={Object.fromEntries(SOURCE_OPTS.map((o) => [o, <SourceNameMark key={o} name={o} isDark={isDark} size={14} />]))} /> },
+    { key: "court", w: 100, on: !!colState.shown.court, set: m.court.length > 0, el: <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} /> },
+    { key: "stage", w: 110, on: !!colState.shown.stage, set: m.stage.length > 0, el: <MultiDropdown label="שלב בתיק" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} /> },
+    { key: "kind", w: 112, on: !lite, set: m.kind.length > 0, el: <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} /> },
+  ];
   const saveCols = (next: ColState) => {
     setColState(next);
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
-  const shownCols = colState.order.filter((k) => colState.shown[k]);
+  const shownCols = colState.order.filter((k) => colState.shown[k] && !(lite && k === "rating"));
+  // a fixed, low floor: the reader decides how narrow, whatever the columns (Hanna, 2026-11-24: small
+  // screens are common), and cells cut with "..." past their width
+  const minPanel = MIN_PANEL;
+  useEffect(() => { onMinWidth?.(minPanel); }, [onMinWidth, minPanel]);
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null);
 
@@ -243,8 +284,10 @@ export function PromptTablePanel({
   const sortBy = (key: SortKey) =>
     setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
+  // the reduced version searches the prompt's text only, for a phrase in it
+  const inBody = (pr: Prompt, q: string) => !q.trim() || pr.body.includes(q.trim());
   const pass = (pr: Prompt, ff: Filters, mm: Multi) =>
-    matches(pr, ff) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v)));
+    (lite ? inBody(pr, ff.q) && matches(pr, { ...ff, q: "" }) : matches(pr, ff)) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v)));
 
   const list = useMemo(() => {
     const out = prompts.filter((pr) => pass(pr, f, m));
@@ -253,8 +296,9 @@ export function PromptTablePanel({
     // before there are ratings), then name. The case type header sorts the same way.
     const ctKey = (pr: Prompt) => (pr.caseType === GENERAL ? "" : pr.caseType);
     const byCaseType = (a: Prompt, b: Prompt) => ctKey(a).localeCompare(ctKey(b), "he");
+    const avg = (pr: Prompt) => (lite ? 0 : avgOf(pr));
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a) || byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
+      relevance: (a, b) => saved(a) - saved(b) || avg(b) - avg(a) || byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       author: (a, b) => (authorName(a) ? 0 : 1) - (authorName(b) ? 0 : 1) || authorName(a).localeCompare(authorName(b), "he"),
@@ -262,19 +306,20 @@ export function PromptTablePanel({
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
-      rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      rating: (a, b) => avg(b) - avg(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
-      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avgOf(b) - avgOf(a),
+      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avg(b) - avg(a),
       date: byDate,
-      fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
+      fav: (a, b) => saved(a) - saved(b) || avg(b) - avg(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     const ordered = f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
     // pinned prompts head the table under any sort, the last pinned first; filters still apply to them
     const pinned = ordered.filter((pr) => pr.pinned).sort((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
     return [...pinned, ...ordered.filter((pr) => !pr.pinned)];
-  }, [prompts, f, m]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `pass` only reads f, m and lite
+  }, [prompts, f, m, lite]);
 
   const facets = useMemo(() => {
     // each count leaves out its own filter's picks, so it says what ticking that value would add
@@ -374,7 +419,7 @@ export function PromptTablePanel({
   // When the panel is narrower than the columns' widths, every column (the name and dragged widths
   // included) shrinks by the same factor instead of the table scrolling the first ones out of view
   // (Hanna, 2026-11-08); it scrolls only below each column's floor.
-  const EDGES = 20 + 2 * ICON_COL + 32 + 24; // the ⋮ and icon columns, the ⋯ and the padding
+  const EDGES = 20 + (lite ? 1 : 2) * ICON_COL + 32 + 24; // the ⋮ and icon columns, the ⋯ and the padding
   const GUTTER = 14; // the panel's border and the scrollbar's gutter, outside the table's own width
   const baseOf = (k: ColKey) => parseInt(track(k), 10);
   const nameBase = colW.name ?? nameW;
@@ -395,11 +440,22 @@ export function PromptTablePanel({
     return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
   };
   const nameTrack = colW.name || hasContent ? `${sc(nameBase, 100)}px` : `minmax(${sc(nameBase, 100)}px,3fr)`;
-  const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), `${ICON_COL}px`, "32px"].join(" ");
+  const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), ...(lite ? [] : [`${ICON_COL}px`]), "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
   const minW = EDGES + sc(nameBase, 100) + shownCols.reduce((sum, k) => sum + sc(baseOf(k), floorOf(k)), 0);
+  // as many filters as fit, in order; the rest open from "עוד"
+  const shownFilters = filterList().filter((x) => x.on);
+  const GAP = 6;
+  const clearW = filtered ? 52 + GAP : 0;
+  const lineW = (n: number) => shownFilters.slice(0, n).reduce((sum, x) => sum + x.w, 0) + GAP * Math.max(0, n - 1);
+  let fitCount = shownFilters.length;
+  if (rowW > 0 && lineW(fitCount) + clearW > rowW) {
+    while (fitCount > 1 && lineW(fitCount) + GAP + MORE_W + clearW > rowW) fitCount--;
+    if (lineW(fitCount) + GAP + MORE_W + clearW > rowW) fitCount = 0;
+  }
+  const moreSet = shownFilters.slice(fitCount).some((x) => x.set);
   const CENTERED: ColKey[] = [];
   const cell = (k: ColKey, pr: Prompt) => {
     switch (k) {
@@ -480,7 +536,7 @@ export function PromptTablePanel({
               עמודות בטבלה <span className="font-normal" style={{ color: subCol }}>· גררו לשינוי סדר</span>
             </div>
             <div className="py-1">
-              {colState.order.map((k, i) => (
+              {colState.order.map((k, i) => (lite && k === "rating") ? null : (
                 <div
                   key={k}
                   ref={(el) => { colRowRefs.current[k] = el; }}
@@ -511,7 +567,7 @@ export function PromptTablePanel({
             <input
               value={f.q}
               onChange={(e) => set("q", e.target.value)}
-              placeholder="חיפוש לפי שם הפרומפט או תוכן"
+              placeholder={lite ? "חיפוש מילים מתוך נוסח הפרומפט" : "חיפוש לפי שם הפרומפט או תוכן"}
               className="w-full h-8 rounded-md text-[13px] outline-none"
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
@@ -534,34 +590,41 @@ export function PromptTablePanel({
           </button>
         </div>
 
-        {/* Row B: the case chip, then the filters — one line; past the panel's edge they're cut, and widening shows them */}
+        {/* Row B: the filters on one line. The ones that don't fit move into "עוד", so the panel can
+            narrow past them (team meeting, 2026-11-24) instead of the filters setting its floor */}
         <div ref={filtersRef} className="flex items-center gap-1.5 overflow-hidden *:shrink-0">
           {/* a column's filter shows only while the column does */}
           {/* the favorites first, as their column opens the row, and the kind last, as its column closes it
               (Hanna, 2026-11-08). The favorites, the author and the kind are always there */}
-          <button
-            onClick={() => set("favOnly", !f.favOnly)}
-            className="h-8 px-2.5 flex items-center gap-1.5 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
-            style={{ border: `1px solid ${f.favOnly ? c.primary : (isDark ? dk.border : c.border)}`, color: f.favOnly ? c.primary : textCol, backgroundColor: isDark ? dk.input : "white" }}
-            title={f.favOnly ? "הצגת כל הפרומפטים" : "הצגת המועדפים בלבד"}
-            aria-pressed={f.favOnly}
-          >
-            <Bookmark size={13} fill={f.favOnly ? "currentColor" : "none"} />
-            מועדפים
-          </button>
-          {colState.shown.caseType && <MultiDropdown label="תחום" value={m.caseType} options={CASE_TYPES} onChange={(v) => setMulti("caseType", v)} isDark={isDark} width={100} counts={facets.caseType} />}
-          {colState.shown.matter && <MultiDropdown label="תת תחום" value={m.matter} options={subs.matters} groups={subs.matterGroups} onChange={(v) => setMulti("matter", v)} isDark={isDark} width={150} counts={facets.matter} searchable />}
-          <MultiDropdown label="מחבר" value={m.source} options={SOURCE_OPTS} onChange={(v) => setMulti("source", v)} isDark={isDark} width={96} counts={facets.source}
-            icons={Object.fromEntries(SOURCE_OPTS.map((o) => [o, <SourceNameMark key={o} name={o} isDark={isDark} size={14} />]))} />
-          {colState.shown.court && <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} />}
-          {colState.shown.stage && <MultiDropdown label="שלב בתיק" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} />}
-          <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} />
+          {shownFilters.slice(0, fitCount).map((x) => <Fragment key={x.key}>{x.el}</Fragment>)}
+          {fitCount < shownFilters.length && (
+            <button
+              ref={moreBtn}
+              onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMore((v) => (v ? null : r)); }}
+              className="h-8 px-2.5 flex items-center gap-1 rounded-[4px] text-[13px] transition-colors hover:bg-black/[0.03]"
+              style={{ width: `${MORE_W}px`, border: `1px solid ${moreSet ? c.primary : (isDark ? dk.border : c.border)}`, color: moreSet ? c.primary : textCol, backgroundColor: isDark ? dk.input : "white" }}
+              title="סינונים נוספים"
+            >
+              עוד {shownFilters.length - fitCount}
+              <ChevronDown size={14} className="ms-auto" />
+            </button>
+          )}
           {filtered && (
             <button onClick={clearFilters} className="h-8 px-2 text-[13px] rounded-md hover:bg-black/5 transition-colors" style={{ color: subCol }}>
               ניקוי
             </button>
           )}
         </div>
+        {more && fitCount < shownFilters.length && (
+          <div
+            ref={morePop}
+            dir="rtl"
+            className="fixed z-[80] rounded-[8px] p-2 flex flex-col items-stretch gap-2"
+            style={{ top: more.bottom + 4, right: Math.max(8, window.innerWidth - more.right), backgroundColor: surface, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.14)" }}
+          >
+            {shownFilters.slice(fitCount).map((x) => <Fragment key={x.key}>{x.el}</Fragment>)}
+          </div>
+        )}
       </div>
 
       {/* Header row + rows */}
@@ -618,7 +681,7 @@ export function PromptTablePanel({
                 </div>
               </div>
             ))}
-            {iconTh("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />, "פרומפטים מפורטים")}
+            {!lite && iconTh("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />, "פרומפטים מפורטים")}
             {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
             <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
@@ -658,10 +721,10 @@ export function PromptTablePanel({
 
                 {shownCols.map((k) => cell(k, pr))}
                 {/* detailed: an empty grey wand, only on a detailed prompt */}
-                <div className="flex justify-center" style={{ color: subCol }}
+                {!lite && <div className="flex justify-center" style={{ color: subCol }}
                   title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : undefined}>
                   {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
-                </div>
+                </div>}
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
                   <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} openAt={ctxMenu?.id === pr.id ? ctxMenu : null} />
@@ -672,8 +735,7 @@ export function PromptTablePanel({
 
           {/* the count, with the platform's disclaimer behind the i — the chat carries its own
               disclaimer, and two of them side by side read as one too many */}
-          <div className="pt-3 px-2 flex items-center justify-between gap-1.5 text-[12.5px]" style={{ color: subCol }}>
-            <span>{list.length} פרומפטים</span>
+          <div className="pt-3 px-2 flex items-center gap-1 text-[12.5px]" style={{ color: subCol }}>
             <button
               onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setInfo((v) => (v ? null : rect)); }}
               className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5"
@@ -682,6 +744,7 @@ export function PromptTablePanel({
             >
               <ShieldAlert size={16} />
             </button>
+            <span>{list.length} פרומפטים</span>
           </div>
         </div>
       </div>
@@ -703,7 +766,7 @@ export function PromptTablePanel({
             dir="rtl"
             className="fixed z-[200] rounded-[8px] px-4 py-3 text-[13px] leading-relaxed"
             style={{
-              bottom: window.innerHeight - info.top + 6, left: Math.max(8, info.left - 8), width: "320px",
+              bottom: window.innerHeight - info.top + 6, right: Math.max(8, window.innerWidth - info.right - 8), width: "320px",
               backgroundColor: surface, color: textCol, border: `1px solid ${isDark ? dk.border : c.border}`, boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
             }}
           >
