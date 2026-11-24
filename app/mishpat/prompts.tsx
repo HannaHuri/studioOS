@@ -1626,7 +1626,7 @@ export function PromptEditor({
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="נוסח הפרומפט. אפשר להשאיר שדות למילוי בסוגריים מרובעים, למשל [שם העד]"
+                placeholder="נוסח הפרומפט"
                 className="w-full outline-none text-[14.5px] leading-relaxed rounded-[4px] px-3 py-2.5 resize-none"
                 style={{ border: `1px solid ${bodyMissing ? RED : line}`, backgroundColor: isDark ? dk.input : surface, color: textCol, minHeight: expanded ? "50vh" : pane ? "260px" : "180px" }}
               />
