@@ -1767,7 +1767,8 @@ export function PromptEditor({
     return (
       <div dir="rtl" className="h-full flex flex-col" style={{ backgroundColor: surface, fontFamily: FONT }}>
         {/* ltr outside, rtl inside: the scrollbar sits on the right, by where the reading starts (Hanna, 2026-11-08) */}
-        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl">{form}</div></div>
+        {/* room at the end, so the chat bar floating over the pane's bottom never sits on the last field */}
+        <div className="flex-1 min-h-0 overflow-y-auto docs-scroll" dir="ltr"><div dir="rtl" style={{ paddingBottom: "64px" }}>{form}</div></div>
         {footer}
       </div>
     );
