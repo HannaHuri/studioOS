@@ -318,7 +318,8 @@ export function PromptTablePanel({
     // pinned prompts head the table under any sort, the last pinned first; filters still apply to them
     const pinned = ordered.filter((pr) => pr.pinned).sort((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
     return [...pinned, ...ordered.filter((pr) => !pr.pinned)];
-  }, [prompts, f, m]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `pass` only reads f, m and lite
+  }, [prompts, f, m, lite]);
 
   const facets = useMemo(() => {
     // each count leaves out its own filter's picks, so it says what ticking that value would add
