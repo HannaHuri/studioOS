@@ -136,7 +136,6 @@ export function PromptTablePanel({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useEffect(() => { onMinWidth?.(MIN_PANEL); }, [onMinWidth]);
   const [more, setMore] = useState<DOMRect | null>(null);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const morePop = useRef<HTMLDivElement>(null);
@@ -178,6 +177,10 @@ export function PromptTablePanel({
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
   const shownCols = colState.order.filter((k) => colState.shown[k] && !(lite && k === "rating"));
+  // with more columns the floor rises, so the cells still read (Hanna, 2026-11-24): 480 with the
+  // default four, 600 with every column
+  const minPanel = Math.min(600, MIN_PANEL + 20 * Math.max(0, shownCols.length - 4));
+  useEffect(() => { onMinWidth?.(minPanel); }, [onMinWidth, minPanel]);
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null);
 
