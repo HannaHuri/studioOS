@@ -3566,7 +3566,7 @@ export default function MishpatPage() {
           )}
         <div className="flex-1 flex min-w-0 min-h-0 relative" style={{ paddingBottom: chatFloat ? 0 : FOOTER_HEIGHT, display: chatFloat && chatMin ? "none" : undefined }}>
           <ChatArea
-            dev={dev}
+            dev={dev || lite} // the reduced version has the modes the users have today (Hanna, 2026-11-24)
             lite={lite}
             isDark={isDark}
             conversationKey={convKey}
