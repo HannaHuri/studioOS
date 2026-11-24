@@ -2022,7 +2022,7 @@ function AppHeader({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: ()
 // Every conversation carries the case it ran on as a tag above its title; a conversation
 // that spans several cases hides them behind a "N תיקים" chip that opens in place.
 type HistCase = { name: string; num: string; kind: string };
-type HistConv = { id: string; title: string; cases: HistCase[]; proof?: boolean };
+type HistConv = { id: string; title: string; cases: HistCase[]; proof?: boolean; detailed?: boolean };
 type HistGroup = { label: string; items: HistConv[] };
 
 // The width the panel actually ships at in production. The title had to shorten to fit the scope
@@ -2069,6 +2069,8 @@ const HISTORY_GROUPS: HistGroup[] = [
       // two of its five are cases the chat is open on — this is the row the bold is for
       { id: "h2", title: "השווה בין גרסאות התצהיר של העדים", cases: [...CURRENT_CASES, ...manyCases(3)] },
       { id: "h3", title: "סכם את החלטת הביניים מיום 12.6", cases: [CASE_POOL[0]] },
+      // a conversation that holds a detailed question is marked with the same wand as the prompt table
+      { id: "h4", title: "טיוטת גזר דין מפורט", cases: [CURRENT_CASE], detailed: true },
     ],
   },
   {
@@ -2085,7 +2087,7 @@ const HISTORY_GROUPS: HistGroup[] = [
     items: [
       // five cases, one of them the open one — the needle the bold has to find
       { id: "o1", title: "הכן רשימת כל האזכורים בסיכומי התובע", cases: manyCases(5, true) },
-      { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CURRENT_CASE] },
+      { id: "o2", title: "בדוק טענת התיישנות בכתב התביעה", cases: [CURRENT_CASE], detailed: true },
       { id: "o3", title: "סכם את חוות דעת המומחה מטעם בית המשפט", cases: [CASE_POOL[4]] },
     ],
   },
@@ -2385,6 +2387,11 @@ function HistoryPanel({ isDark, caseOnly, onCaseOnly, data, setData }: {
                             style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}
                           >
                             {it.proof && <span className="inline-block align-middle ml-1"><ProofHistoryIcon color={c.primary} /></span>}
+                            {it.detailed && (
+                              <span className="inline-block align-middle ml-1" title="כוללת שאלה מפורטת">
+                                <WandSparkles size={13} style={{ color: subCol, transform: "scaleX(-1)" }} />
+                              </span>
+                            )}
                             {it.title}
                           </span>
                         </button>
