@@ -746,7 +746,7 @@ export function PromptTablePanel({
             <button
               onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setInfo((v) => (v ? null : rect)); }}
               className="size-6 flex items-center justify-center rounded transition-colors hover:bg-black/5"
-              style={{ color: info ? c.primary : c.iconGray }}
+              style={{ color: info ? c.primary : subCol }}
               title="על מאגר הפרומפטים"
             >
               <ShieldAlert size={14} />
