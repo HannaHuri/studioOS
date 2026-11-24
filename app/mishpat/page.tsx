@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import {
   ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   Check, Clock, Copy, Eye, EyeClosed, FileText, FolderOpen, Globe,
-  HelpCircle, Info, Layers, Link, Microscope, Minimize2,
+  HelpCircle, Info, Layers, ShieldAlert, Link, Microscope, Minimize2,
   FileDown, FilePlus, Moon, MoreHorizontal, PanelRightClose, Paperclip, Plus, RotateCw, Search, Shield,
   LibraryBig, Split, Sun, ThumbsDown, ThumbsUp, X, Zap, ExternalLink,
   Activity, Folder, ListCheck, Terminal, Send, Equal, Pencil, Trash2, WandSparkles, TriangleAlert, Lock, TextQuote, BookOpen,
@@ -1263,6 +1263,14 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
           </div>
         </div>
       )}
+      {/* a shared prompt's notes for its users, above the input where they're read before typing
+          (team meeting 2026-11-24); light blue, since grey read as disabled */}
+      {notesShown && (
+        <div className="rounded-[4px] px-3 py-2 text-[13px] leading-[1.5]" dir="rtl"
+          style={{ backgroundColor: isDark ? "#243354" : "#f0f5ff", color: isDark ? dk.text : c.darkBlue, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
+          <span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}
+        </div>
+      )}
       <div
         className="relative rounded-lg border flex flex-col gap-2 px-3 pt-3 pb-2"
         style={{
@@ -1538,14 +1546,6 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
               <button onClick={() => handleSend(true)} className="hover:underline" style={{ color: isDark ? dk.blue : c.primary }}>שליחה בכל זאת</button>
             </>
           ) : fieldsLeft.length === 1 ? "שדה אחד למילוי" : `${fieldsLeft.length} שדות למילוי · Tab למעבר`}
-        </div>
-      )}
-      {/* a shared prompt's notes, in a light grey box under the [fields] note: the fields line is about
-          the input, the box is the author's word on using the prompt */}
-      {notesShown && (
-        <div className="mt-1 rounded-[4px] px-3 py-2 text-[13px] leading-[1.5]" dir="rtl"
-          style={{ backgroundColor: isDark ? dk.surface : "#f3f4f7", color: isDark ? dk.text : c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
-          <span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}
         </div>
       )}
       </div>
@@ -3652,13 +3652,17 @@ export default function MishpatPage() {
           >
             <div className="w-full max-w-[768px] flex flex-col items-center justify-end" style={{ paddingBottom: "20px" }}>
               <p
-                className="text-[14px] text-center"
+                className="text-[14px] text-center text-pretty"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", lineHeight: 1.3 }}
               >
+                {/* the shield hangs outside the sentence, so it doesn't push a word to a second line */}
+                <span className="relative">
+                  <ShieldAlert size={14} className="absolute top-[2px]" style={{ insetInlineStart: "-20px" }} />
+                </span>
                 תוכנה זו מבוססת AI, ועלולה שלא לדייק ואף להטעות; היא אינה תחליף לשיקול דעת שיפוטי ומחייבת בחינה עצמאית.
               </p>
               <p
-                className="text-[14px] text-center"
+                className="text-[14px] text-center text-pretty"
                 style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif", direction: "rtl", lineHeight: 1.3 }}
               >
                 הכלי משמש כאמצעי עזר בלבד לביצוע משימות טכניות. על המשתמש חובה להפעיל שיקול דעת בעת עיון או שימוש בתוכן המופק. הכלי אינו מתחייב לכסות את מלוא הפרטים, העובדות והטענות.

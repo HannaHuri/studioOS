@@ -974,9 +974,8 @@ const GUTTER = "calc(1.5rem + 8px)";
 
 export const matches = (pr: Prompt, ff: Filters) => {
   const q = ff.q.trim();
-  // name or author: with no author filter left, typing a name is how you find one person's
-  // prompts in a מאגר the whole court writes into.
-  return (!q || pr.name.includes(q) || authorFull(pr).includes(q)) &&
+  // name or content (team meeting 2026-11-24): the words a judge remembers are in the prompt itself
+  return (!q || pr.name.includes(q) || pr.body.includes(q) || (pr.guidelines ?? "").includes(q)) &&
     (ff.source === ANY || srcName(pr) === ff.source) &&
     (ff.caseType === ANY || pr.caseType === ff.caseType) &&
     (ff.matter === ANY || pr.matter === ff.matter) &&
@@ -1178,7 +1177,7 @@ export function PromptLibrary({
               <input
                 value={f.q}
                 onChange={(e) => set("q", e.target.value)}
-                placeholder="חיפוש לפי שם הפרומפט או מחבר"
+                placeholder="חיפוש לפי שם הפרומפט או תוכן"
                 className="w-full h-8 rounded-[4px] pr-7 pl-3 outline-none text-[13px] text-right"
                 style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol }}
               />
