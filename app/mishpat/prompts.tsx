@@ -1343,9 +1343,10 @@ export function PromptLibrary({
 
 // ── Editor — new prompt, editing mine, forking someone else's, saving a sent question ──
 export function PromptEditor({
-  isDark, initial, mode, onSave, onClose, pane, live, onUse, onRate, expanded, onToggleExpand,
+  isDark, lite, initial, mode, onSave, onClose, pane, live, onUse, onRate, expanded, onToggleExpand,
 }: {
   isDark: boolean;
+  lite?: boolean; // the reduced first version (/mishpat/v1): basic prompts only, case details stay as written
   initial: Partial<Prompt> | null;
   mode: "new" | "edit" | "fork" | "fromMessage";
   onSave: (pr: Prompt, share?: { anon: boolean }) => void;
@@ -1364,7 +1365,7 @@ export function PromptEditor({
   // A question saved from the chat has its case details swapped for fields from the start, so the
   // prompt works in any case; a link puts the originals back (a check rerun on this same case).
   const [origBody] = useState(initial?.body ?? "");
-  const [autoHits] = useState(() => (mode === "fromMessage" ? findIdentifiers(initial?.body ?? "") : []));
+  const [autoHits] = useState(() => (mode === "fromMessage" && !lite ? findIdentifiers(initial?.body ?? "") : []));
   const [detailsSwapped, setDetailsSwapped] = useState(autoHits.length > 0);
   // the name is proposed from the question's opening words, so it carries the same details
   const [origName] = useState(initial?.name ?? "");
@@ -1436,6 +1437,7 @@ export function PromptEditor({
   const untouched = mode !== "fromMessage" && snapshot === startSnapshot;
 
   const toggleShare = () => {
+    if (lite) { setShare((v) => !v); return; }
     if (parts) {
       // A complex prompt is scrubbed field by field, quietly: there's no single text to show the
       // swaps in, and the parts themselves show what changed. Unticking puts them back.
@@ -1518,7 +1520,7 @@ export function PromptEditor({
         </div>
 
         {/* Basic or detailed — a switch at the top, so which kind this is shows before anything else */}
-        <div className="px-6 pb-3">
+        {!lite && <div className="px-6 pb-3">
           <div className="inline-flex rounded-[5px] p-0.5" style={{ backgroundColor: isDark ? dk.input : "#e6e9ef" }} role="radiogroup" aria-label="סוג הפרומפט">
             {([
               { k: "basic" as const, label: "פרומפט בסיסי", Icon: MessageCircle, mirror: false },
@@ -1553,7 +1555,7 @@ export function PromptEditor({
               );
             })}
           </div>
-        </div>
+        </div>}
 
         {/* In the pane the editor is also where a prompt is read before it's used, so what the
             table row said about it — whose it is, how it's rated — comes along, with the way to use it. */}
@@ -1791,22 +1793,22 @@ export function PromptEditor({
 // gives it somewhere to go. There is also no route yet from משותף to מאושר ע״י הלשכה, and a
 // well-rated shared prompt is the obvious candidate for one.
 export function PromptShare({
-  isDark, initial, onShare, onClose,
+  isDark, lite, initial, onShare, onClose,
 }: {
-  isDark: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt, mine?: Prompt) => void; onClose: () => void;
+  isDark: boolean; lite?: boolean; initial: Partial<Prompt> & { body: string }; onShare: (pr: Prompt, mine?: Prompt) => void; onClose: () => void;
 }) {
   const raw = initial.body;
   // shared from the chat (no prompt behind it yet): keep a copy of my own too, unless unticked (Hanna, 2026-11-08)
   const fromChat = !initial.id;
   const [keepMine, setKeepMine] = useState(true);
-  const hits = useMemo(() => findIdentifiers(raw), [raw]);
+  const hits = useMemo(() => (lite ? [] : findIdentifiers(raw)), [raw, lite]);
   // Identifiers are swapped out on arrival, not on request: the safe state is the default.
   const [body, setBody] = useState(() => scrub(raw, hits, new Set()));
   // The name is scrubbed too — a name proposed from the question's opening words carries the
   // same party names the body does, and it's the part that shows in every list.
   const [name, setName] = useState(() => {
     const n = initial.name ?? "";
-    return scrub(n, findIdentifiers(n), new Set());
+    return lite ? n : scrub(n, findIdentifiers(n), new Set());
   });
   const [caseType, setCaseType] = useState(initial.caseType ?? GENERAL);
   const [matter, setMatter] = useState(initial.matter ?? GENERAL);

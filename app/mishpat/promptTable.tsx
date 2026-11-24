@@ -108,9 +108,10 @@ function WrapIcon({ size = 18 }: { size?: number }) {
 }
 
 export function PromptTablePanel({
-  isDark, prompts, width, isFocus, onToggleFocus, onClose, openId, lastId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
+  isDark, lite, prompts, width, isFocus, onToggleFocus, onClose, openId, lastId, onOpen, onNew, onUse, onFav, onPin, onEdit, onShare, onDelete, onMinWidth,
 }: {
   isDark: boolean; prompts: Prompt[]; width: number;
+  lite?: boolean; // the reduced first version (/mishpat/v1): no ratings, no detailed prompts, search by content only
   isFocus: boolean; onToggleFocus: () => void; onClose: () => void;
   openId: string | null;              // the prompt open in the editor — its row is marked
   lastId?: string | null;             // the prompt last open, once the editor closed: a faint mark of where the reader left off
@@ -170,13 +171,13 @@ export function PromptTablePanel({
       icons={Object.fromEntries(SOURCE_OPTS.map((o) => [o, <SourceNameMark key={o} name={o} isDark={isDark} size={14} />]))} /> },
     { key: "court", w: 100, on: !!colState.shown.court, set: m.court.length > 0, el: <MultiDropdown label="ערכאה" value={m.court} options={COURTS} onChange={(v) => setMulti("court", v)} isDark={isDark} width={100} counts={facets.court} /> },
     { key: "stage", w: 110, on: !!colState.shown.stage, set: m.stage.length > 0, el: <MultiDropdown label="שלב בתיק" value={m.stage} options={STAGES} onChange={(v) => setMulti("stage", v)} isDark={isDark} width={110} counts={facets.stage} /> },
-    { key: "kind", w: 112, on: true, set: m.kind.length > 0, el: <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} /> },
+    { key: "kind", w: 112, on: !lite, set: m.kind.length > 0, el: <MultiDropdown label="סוג פרומפט" value={m.kind} options={KIND_OPTS} onChange={(v) => setMulti("kind", v)} isDark={isDark} width={112} counts={facets.kind} /> },
   ];
   const saveCols = (next: ColState) => {
     setColState(next);
     try { window.localStorage.setItem(COLS_LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
-  const shownCols = colState.order.filter((k) => colState.shown[k]);
+  const shownCols = colState.order.filter((k) => colState.shown[k] && !(lite && k === "rating"));
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null);
   const [info, setInfo] = useState<DOMRect | null>(null);
 
@@ -280,8 +281,10 @@ export function PromptTablePanel({
   const sortBy = (key: SortKey) =>
     setF((prev) => ({ ...prev, sort: key, dir: prev.sort === key && prev.dir === "desc" ? "asc" : "desc" }));
 
+  // the reduced version searches the prompt's text only, for a phrase in it
+  const inBody = (pr: Prompt, q: string) => !q.trim() || pr.body.includes(q.trim());
   const pass = (pr: Prompt, ff: Filters, mm: Multi) =>
-    matches(pr, ff) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v)));
+    (lite ? inBody(pr, ff.q) && matches(pr, { ...ff, q: "" }) : matches(pr, ff)) && M_KEYS.every((k) => !mm[k].length || [VALUE_OF[k](pr)].flat().some((v) => mm[k].includes(v)));
 
   const list = useMemo(() => {
     const out = prompts.filter((pr) => pass(pr, f, m));
@@ -290,8 +293,9 @@ export function PromptTablePanel({
     // before there are ratings), then name. The case type header sorts the same way.
     const ctKey = (pr: Prompt) => (pr.caseType === GENERAL ? "" : pr.caseType);
     const byCaseType = (a: Prompt, b: Prompt) => ctKey(a).localeCompare(ctKey(b), "he");
+    const avg = (pr: Prompt) => (lite ? 0 : avgOf(pr));
     const cmp: Record<SortKey, (a: Prompt, b: Prompt) => number> = {
-      relevance: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a) || byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
+      relevance: (a, b) => saved(a) - saved(b) || avg(b) - avg(a) || byCaseType(a, b) || a.name.localeCompare(b.name, "he"),
       name: (a, b) => b.name.localeCompare(a.name, "he"),
       source: (a, b) => SOURCE_RANK[srcName(a)] - SOURCE_RANK[srcName(b)] || authorName(a).localeCompare(authorName(b), "he"),
       author: (a, b) => (authorName(a) ? 0 : 1) - (authorName(b) ? 0 : 1) || authorName(a).localeCompare(authorName(b), "he"),
@@ -299,12 +303,12 @@ export function PromptTablePanel({
       matter: (a, b) => b.matter.localeCompare(a.matter, "he"),
       stage: (a, b) => b.stage.localeCompare(a.stage, "he"),
       court: (a, b) => b.court.localeCompare(a.court, "he"),
-      rating: (a, b) => avgOf(b) - avgOf(a) || b.ratingCount - a.ratingCount,
+      rating: (a, b) => avg(b) - avg(a) || b.ratingCount - a.ratingCount,
       uses: (a, b) => b.uses - a.uses,
       content: (a, b) => b.body.localeCompare(a.body, "he"),
-      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avgOf(b) - avgOf(a),
+      kind: (a, b) => (b.parts ? 1 : 0) - (a.parts ? 1 : 0) || saved(a) - saved(b) || avg(b) - avg(a),
       date: byDate,
-      fav: (a, b) => saved(a) - saved(b) || avgOf(b) - avgOf(a),
+      fav: (a, b) => saved(a) - saved(b) || avg(b) - avg(a),
     };
     const sorted = out.sort(cmp[f.sort] ?? cmp.relevance);
     const ordered = f.dir === "asc" && f.sort !== "relevance" ? sorted.reverse() : sorted;
@@ -411,7 +415,7 @@ export function PromptTablePanel({
   // When the panel is narrower than the columns' widths, every column (the name and dragged widths
   // included) shrinks by the same factor instead of the table scrolling the first ones out of view
   // (Hanna, 2026-11-08); it scrolls only below each column's floor.
-  const EDGES = 20 + 2 * ICON_COL + 32 + 24; // the ⋮ and icon columns, the ⋯ and the padding
+  const EDGES = 20 + (lite ? 1 : 2) * ICON_COL + 32 + 24; // the ⋮ and icon columns, the ⋯ and the padding
   const GUTTER = 14; // the panel's border and the scrollbar's gutter, outside the table's own width
   const baseOf = (k: ColKey) => parseInt(track(k), 10);
   const nameBase = colW.name ?? nameW;
@@ -432,7 +436,7 @@ export function PromptTablePanel({
     return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
   };
   const nameTrack = colW.name || hasContent ? `${sc(nameBase, 100)}px` : `minmax(${sc(nameBase, 100)}px,3fr)`;
-  const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), `${ICON_COL}px`, "32px"].join(" ");
+  const cols = ["20px", `${ICON_COL}px`, nameTrack, ...shownCols.map(flexCol), ...(lite ? [] : [`${ICON_COL}px`]), "32px"].join(" ");
   // the scroller is ltr (for its scrollbar's side), so a sideways scroll opens at the name's end
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [cols]);
@@ -528,7 +532,7 @@ export function PromptTablePanel({
               עמודות בטבלה <span className="font-normal" style={{ color: subCol }}>· גררו לשינוי סדר</span>
             </div>
             <div className="py-1">
-              {colState.order.map((k, i) => (
+              {colState.order.map((k, i) => (lite && k === "rating") ? null : (
                 <div
                   key={k}
                   ref={(el) => { colRowRefs.current[k] = el; }}
@@ -559,7 +563,7 @@ export function PromptTablePanel({
             <input
               value={f.q}
               onChange={(e) => set("q", e.target.value)}
-              placeholder="חיפוש לפי שם הפרומפט או תוכן"
+              placeholder={lite ? "חיפוש מילים מתוך נוסח הפרומפט" : "חיפוש לפי שם הפרומפט או תוכן"}
               className="w-full h-8 rounded-md text-[13px] outline-none"
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
@@ -673,7 +677,7 @@ export function PromptTablePanel({
                 </div>
               </div>
             ))}
-            {iconTh("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />, "פרומפטים מפורטים")}
+            {!lite && iconTh("kind", <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />, "פרומפטים מפורטים")}
             {/* the row actions stay in view when the table is wider than the panel; the last column is what gets cut */}
             <div className="sticky left-0 z-[1]" style={{ backgroundColor: surface }} />
           </div>
@@ -713,10 +717,10 @@ export function PromptTablePanel({
 
                 {shownCols.map((k) => cell(k, pr))}
                 {/* detailed: an empty grey wand, only on a detailed prompt */}
-                <div className="flex justify-center" style={{ color: subCol }}
+                {!lite && <div className="flex justify-center" style={{ color: subCol }}
                   title={pr.parts ? `פרומפט מפורט · ${pr.parts.length === 1 ? "חלק אחד" : `${pr.parts.length} חלקים`}` : undefined}>
                   {pr.parts && <WandSparkles size={14} style={{ transform: "scaleX(-1)" }} />}
-                </div>
+                </div>}
                 {/* a click on the row puts the prompt in the chat; viewing and editing are in the ⋯ menu */}
                 <div className="self-stretch sticky left-0 flex items-center justify-center" style={{ backgroundColor: "inherit" }}>
                   <RowMenu isDark={isDark} items={menuFor(pr, onUse, onEdit, onShare, onDelete, onFav, onOpen, onPin)} openAt={ctxMenu?.id === pr.id ? ctxMenu : null} />
