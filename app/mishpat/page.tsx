@@ -1543,7 +1543,7 @@ function ChatArea({ dev, isDark, conversationKey, inUseName, onClearInUse, inser
       {/* a shared prompt's notes, in a light grey box under the [fields] note: the fields line is about
           the input, the box is the author's word on using the prompt */}
       {notesShown && (
-        <div className="mx-3 mt-1 rounded-[4px] px-3 py-2 text-[13px] leading-[1.5]" dir="rtl"
+        <div className="mt-1 rounded-[4px] px-3 py-2 text-[13px] leading-[1.5]" dir="rtl"
           style={{ backgroundColor: isDark ? dk.surface : "#f3f4f7", color: isDark ? dk.text : c.textGray, fontFamily: "Noto Sans Hebrew, Noto Sans, sans-serif" }}>
           <span style={{ fontWeight: 600 }}>הנחיות למשתמשים:</span> {notesShown}
         </div>
