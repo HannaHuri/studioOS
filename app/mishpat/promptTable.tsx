@@ -692,8 +692,8 @@ export function PromptTablePanel({
           style={{ left: Math.min(tip.x + 14, window.innerWidth - 336), top: Math.min(tip.y + 18, window.innerHeight - 320), maxWidth: "320px", maxHeight: "300px", padding: "9px 12px", borderRadius: "8px", backgroundColor: isDark ? "#0d1424" : "#1e2732", color: "#fff", fontSize: "14.5px", lineHeight: 1.5, fontFamily: "Noto Sans Hebrew, sans-serif", boxShadow: "0 8px 26px rgba(0,0,0,0.28)", direction: "rtl" }}
         >
           {tip.title && <div className="font-semibold mb-1">{tip.title}</div>}
-          {/* a long prompt is cut at 300 characters: the hover is a glance, the pane has the whole of it */}
-          {tip.text.length > 300 ? tip.text.slice(0, 300).trimEnd() + "..." : tip.text}
+          {/* a long prompt is cut at 260 characters: the hover is a glance, the pane has the whole of it */}
+          {tip.text.length > 260 ? tip.text.slice(0, 260).trimEnd() + "..." : tip.text}
         </div>
       )}
       {info && (
