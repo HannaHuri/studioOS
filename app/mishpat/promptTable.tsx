@@ -383,7 +383,13 @@ export function PromptTablePanel({
   const floorOf = (k: ColKey) => (KEEP.includes(k) ? Math.min(k === "uses" ? 76 : 56, baseOf(k)) : 40);
   const kept = shownCols.filter((k) => KEEP.includes(k)).reduce((sum, k) => sum + floorOf(k), 0);
   const fit = Math.min(1, Math.max(0, (width - GUTTER - EDGES - kept) / (nameBase + shownCols.filter((k) => !KEEP.includes(k)).reduce((sum, k) => sum + baseOf(k), 0))));
-  const sc = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
+  const sc0 = (v: number, floor: number) => Math.max(floor, Math.round(v * fit));
+  // When even the floors don't fit, everything narrows further and cuts with "...", rather than the
+  // table scrolling sideways and hiding the detailed-prompt column at its far end (Hanna, 2026-11-19)
+  const room = width - GUTTER - EDGES;
+  const atFloors = sc0(nameBase, 100) + shownCols.reduce((sum, k) => sum + sc0(baseOf(k), floorOf(k)), 0);
+  const squeeze = atFloors > room && room > 0 ? room / atFloors : 1;
+  const sc = (v: number, floor: number) => Math.max(20, Math.floor(sc0(v, floor) * squeeze));
   const flexCol = (k: ColKey) => {
     const w = sc(baseOf(k), floorOf(k));
     return colW[k] || FIXED.includes(k) ? `${w}px` : `minmax(${w}px,${k === "content" ? 4 : 1}fr)`;
@@ -422,7 +428,7 @@ export function PromptTablePanel({
         const d = dateOf(pr);
         const [dd, mm, yy] = d.split("/");
         return d
-          ? <div key={k} className="px-1.5 text-[12.5px]" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
+          ? <div key={k} className="px-1.5 text-[12.5px] truncate min-w-0" style={{ color: cellCol, fontFamily: "Figtree, sans-serif" }} title={d}>{`${dd}.${mm}.${yy.slice(2)}`}</div>
           : <div key={k} className="px-1.5 text-[12.5px]" style={{ color: subCol }}>—</div>;
       }
       case "court": case "caseType": case "matter": case "stage":
