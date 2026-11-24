@@ -575,7 +575,7 @@ export function PromptTablePanel({
             <input
               value={f.q}
               onChange={(e) => set("q", e.target.value)}
-              placeholder={lite ? "חיפוש מילים מתוך נוסח הפרומפט" : "חיפוש לפי שם הפרומפט או תוכן"}
+              placeholder={lite ? "חיפוש מילים מתוך תוכן הפרומפט" : "חיפוש לפי שם הפרומפט או תוכן"}
               className="w-full h-8 rounded-md text-[13px] outline-none"
               style={{ border: `1px solid ${line}`, backgroundColor: isDark ? dk.input : "white", color: textCol, paddingRight: "32px", paddingLeft: "10px" }}
             />
