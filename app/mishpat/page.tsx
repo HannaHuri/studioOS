@@ -1483,7 +1483,8 @@ function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse,
                 Blue while checks are ticked with no document yet: that is the next thing to click.
                 Its tooltip is drawn here rather than by the browser: Windows lays native tooltips out
                 left-to-right and wraps them on its own, which scrambled the Hebrew line with "Word" in it. */}
-            <span className="relative flex-shrink-0">
+            {/* the reduced version has no document checks yet, and a document is only for them (Hanna, 2026-11-24) */}
+            {!lite && <span className="relative flex-shrink-0">
               <button
                 onClick={draft || uploading ? undefined : () => { setUploadTip(false); fileRef.current?.click(); }}
                 aria-disabled={!!draft || !!uploading}
@@ -1513,7 +1514,7 @@ function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse,
                   <span className="block" style={{ opacity: 0.8 }}>קובץ Word עד {WORD_LIMIT.toLocaleString("he-IL")} מילים, כ-{pagesOf(WORD_LIMIT)} עמודים</span>
                 </span>
               )}
-            </span>
+            </span>}
             {/* Case info — aligned to the right, hoverable */}
             <button
               className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-[380px] h-8 px-2 rounded transition-colors"
@@ -1747,6 +1748,7 @@ function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse,
               </button>
             );
           })}
+          {!lite && <>
           <div className="mx-4 my-1.5" style={{ borderTop: `1px solid ${isDark ? dk.border : c.border}` }} />
           <div className="flex items-center gap-1 px-4 pt-1 pb-0.5 text-[12.5px]" style={{ color: subCol }}>
             פעולות על מסמך
@@ -1793,6 +1795,7 @@ function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse,
               </div>
             );
           })}
+          </>}
         </div>
 
         {checksHelp && (
