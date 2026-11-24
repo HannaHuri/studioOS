@@ -16,7 +16,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import { useImperativeHandle, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Copy, FileText, Folder, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
 import { c, dk, RED, FONT } from "./theme";
 import { PromptConfirm } from "./prompts";
 
@@ -35,7 +35,10 @@ export const scopeOf = (p: PromptPart): SourceScope => p.scope ?? (p.docs?.lengt
 export const partIncomplete = (p: PromptPart) => !p.task.trim()
   || (scopeOf(p) === "types" && !p.sources.length) || (scopeOf(p) === "docs" && !p.docs?.length);
 // A case document the sources field offers, under its document type.
-export type CaseDocOption = { type: string; name: string; pages: number };
+// iso: the filing date, which orders the picker as the documents screen does; title: the AI's title,
+// shown under the short name; caseNum: which case it's from, when the chat is open on several (2026-11-24)
+export type CaseDocOption = { type: string; name: string; pages: number; iso?: string; title?: string; caseNum?: string; caseName?: string };
+const shortDate = (iso?: string) => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return `${d}.${m}.${y.slice(2)}`; };
 
 // Document types as נט המשפט files them — the list the sources field completes from
 export const DOC_TYPES = [
@@ -65,13 +68,21 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, on
   const line = isDark ? dk.border : c.inputBorder;
   const surface = isDark ? dk.surface : "white";
 
+  const caseNums = Array.from(new Set((caseDocs ?? []).map((d) => d.caseNum).filter(Boolean)));
+  const caseRank = (d: CaseDocOption) => caseNums.indexOf(d.caseNum);
+  const manyCases = caseNums.length > 1;
   // one list for the keyboard to walk: the types first, then the case's documents
   type Opt = { kind: "type"; label: string } | { kind: "doc"; label: string; doc: CaseDocOption };
   const options: Opt[] = [
     // inside a case, the types are the ones this case has, so the list stays short
     ...(only === "docs" ? [] : caseDocs ? Array.from(new Set(caseDocs.map((d) => d.type))) : DOC_TYPES)
       .filter((t) => !value.includes(t) && t.includes(q.trim())).map((t) => ({ kind: "type" as const, label: t })),
-    ...(only === "types" ? [] : caseDocs ?? []).filter((d) => !docs.some((x) => x.name === d.name) && (d.name.includes(q.trim()) || d.type.includes(q.trim())))
+    // by case (in the order the cases come), and in each case newest first, as the documents screen lists them
+    ...[...(only === "types" ? [] : caseDocs ?? [])]
+      .map((d, i) => ({ d, i }))
+      .sort((a, b) => caseRank(a.d) - caseRank(b.d) || (b.d.iso ?? "").localeCompare(a.d.iso ?? "") || a.i - b.i)
+      .map(({ d }) => d)
+      .filter((d) => !docs.some((x) => x.name === d.name) && (d.name.includes(q.trim()) || d.type.includes(q.trim()) || (d.title ?? "").includes(q.trim())))
       .map((d) => ({ kind: "doc" as const, label: d.name, doc: d })),
   ];
   // the list closes after each pick so it never sits over the fields below; typing or a click reopens it
@@ -125,20 +136,38 @@ function SourcesInput({ value, onChange, isDark, caseDocs, docs = [], onDocs, on
         >
           {options.map((o, i) => (
             <div key={o.kind + o.label}>
-              {caseDocs && !only && (i === 0 || i === firstDoc) && (
+              {caseDocs && !only && (i === 0 || i === firstDoc) && !(o.kind === "doc" && manyCases) && (
                 <div className="px-3 pt-1.5 pb-0.5 text-[12px]" style={{ color: subCol, borderTop: i > 0 ? `1px solid ${line}` : "none", marginTop: i > 0 ? "4px" : 0 }}>
                   {o.kind === "type" ? "סוגי מסמכים" : "מסמכים מהתיק"}
+                </div>
+              )}
+              {/* with the chat on several cases, each case's documents under its own heading, as folders */}
+              {o.kind === "doc" && manyCases && (i === firstDoc || (options[i - 1].kind === "doc" && (options[i - 1] as { doc: CaseDocOption }).doc.caseNum !== o.doc.caseNum)) && (
+                <div className="px-3 pt-1.5 pb-0.5 text-[12px] flex items-center gap-1.5 min-w-0" style={{ color: subCol, borderTop: i > 0 ? `1px solid ${line}` : "none", marginTop: i > 0 ? "4px" : 0 }}>
+                  <Folder size={12} style={{ flexShrink: 0 }} />
+                  <span className="flex-shrink-0" style={{ fontFamily: "Figtree, sans-serif" }}>{o.doc.caseNum}</span>
+                  {o.doc.caseName && <span className="truncate">· {o.doc.caseName}</span>}
                 </div>
               )}
               <button
                 onMouseDown={(e) => { e.preventDefault(); add(o); }}
                 onMouseEnter={() => setHi(i)}
-                className="w-full flex items-center gap-2 text-right px-3 py-1.5 text-[13.5px]"
+                className={`w-full flex ${o.kind === "doc" && o.doc.title ? "items-start" : "items-center"} gap-2 text-right px-3 py-1.5 text-[13.5px]`}
                 style={{ color: textCol, backgroundColor: i === hi ? (isDark ? dk.input : c.hoverBg) : "transparent" }}
               >
-                {o.kind === "doc" && <FileText size={14} style={{ color: c.iconGray, flexShrink: 0 }} />}
-                <span className="truncate">{o.label}</span>
-                {o.kind === "doc" && <span className="text-[12px] flex-shrink-0" style={{ color: subCol }}>{o.doc.type} · {o.doc.pages} עמ׳</span>}
+                {o.kind === "doc" && <FileText size={14} style={{ color: c.iconGray, flexShrink: 0, marginTop: o.doc.title ? "3px" : 0 }} />}
+                {o.kind === "doc" ? (
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="truncate">{o.label}</span>
+                    {o.doc.title && <span className="truncate text-[12px]" style={{ color: subCol }} title={o.doc.title}>{o.doc.title}</span>}
+                  </span>
+                ) : <span className="truncate">{o.label}</span>}
+                {/* no page count: the system can't yet hold to pages precisely (2026-11-24) */}
+                {o.kind === "doc" && (
+                  <span className="text-[12px] flex-shrink-0" style={{ color: subCol, marginTop: o.doc.title ? "2px" : 0 }}>
+                    {o.doc.type}{o.doc.iso && <> · <span style={{ fontFamily: "Figtree, sans-serif", unicodeBidi: "isolate" }}>{shortDate(o.doc.iso)}</span></>}
+                  </span>
+                )}
               </button>
             </div>
           ))}
@@ -176,22 +205,25 @@ function DocRows({ docs, onDocs, isDark, caseDocs, className = "mt-2" }: {
     <div className={`${className} flex flex-col gap-1.5`}>
       {docs.map((v) => {
         const d = caseDocs?.find((x) => x.name === v.name);
-        const pages = d?.pages ?? v.pages;
-        const max = pages ?? 9999;
+        const max = 9999; // the ranges stay, but no page count is shown or enforced (2026-11-24)
+        const several = new Set((caseDocs ?? []).map((x) => x.caseNum).filter(Boolean)).size > 1;
         const num = "w-[56px] h-7 px-1.5 text-center text-[13px] outline-none rounded-[3px]";
         return (
           <div key={v.name} className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px]" style={{ border: `1px solid ${line}`, backgroundColor: surface }}>
             <FileText size={14} style={{ color: c.primary, flexShrink: 0 }} />
             <span className="flex-1 min-w-0 truncate text-[13.5px]" style={{ color: textCol }}>
-              {v.name}{d ? <span className="text-[12px]" style={{ color: subCol }}> · {d.type}</span>
-                : pages && <span className="text-[12px]" style={{ color: subCol }}> · {pages} עמ׳</span>}
+              <span title={d?.title}>{v.name}</span>
+              {d && <span className="text-[12px]" style={{ color: subCol }}> · {d.type}{d.iso && <> · <span style={{ fontFamily: "Figtree, sans-serif", unicodeBidi: "isolate" }}>{shortDate(d.iso)}</span></>}</span>}
+              {d && several && d.caseNum && (
+                <span className="text-[11.5px] rounded px-1.5 py-px ms-1.5" style={{ backgroundColor: isDark ? "#22304a" : "#f1f4f8", color: subCol, fontFamily: "Figtree, sans-serif", unicodeBidi: "isolate", display: "inline-block" }} title={d.caseName}>{d.caseNum}</span>
+              )}
             </span>
             <span className="flex items-center gap-1 text-[12.5px] flex-shrink-0" style={{ color: subCol }}>
               עמודים
               <input type="number" min={1} max={max} value={v.from ?? ""} placeholder="1" onChange={(e) => setRange(v.name, "from", e.target.value, max)}
                 className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="מעמוד" />
               עד
-              <input type="number" min={1} max={max} value={v.to ?? ""} placeholder={pages ? String(pages) : ""} onChange={(e) => setRange(v.name, "to", e.target.value, max)}
+              <input type="number" min={1} max={max} value={v.to ?? ""} placeholder="" onChange={(e) => setRange(v.name, "to", e.target.value, max)}
                 className={num} style={{ border: `1px solid ${line}`, color: textCol, backgroundColor: isDark ? dk.input : "white" }} aria-label="עד עמוד" />
             </span>
             <button onClick={() => onDocs(docs.filter((x) => x.name !== v.name))} className="size-6 flex items-center justify-center rounded hover:bg-black/5" style={{ color: subCol }} title="הסרה">
@@ -255,7 +287,6 @@ function HowUpload({ uploaded, onPick, isDark, more }: {
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
               <FileText size={14} style={{ color: c.iconGray, flexShrink: 0 }} />
               <span className="flex-1 min-w-0 truncate">{d.name}</span>
-              {d.pages && <span className="text-[12px] flex-shrink-0" style={{ color: subCol }}>{d.pages} עמ׳</span>}
             </button>
           ))}
           <div className="my-1 h-px" style={{ backgroundColor: line }} />
@@ -449,7 +480,7 @@ export function PartsEditor({ ref, parts, onChange, attempted, isDark, caseDocs,
             })()}
 
             <div className="flex items-center justify-between mt-3 mb-1">
-              <span className="text-[13px]" style={{ color: textCol }}>תבנית <span style={{ color: subCol }}>(לא חובה)</span></span>
+              <span className="text-[13px]" style={{ color: textCol }}>דוגמה <span style={{ color: subCol }}>(לא חובה)</span></span>
               <HowUpload
                 isDark={isDark}
                 more={!!p.howDocs?.length}
@@ -600,6 +631,6 @@ export const sourcesText = (p: PromptPart) => {
 export const partsToText = (parts: PromptPart[], guidelines?: string) =>
   (guidelines?.trim() ? `הנחיות כלליות: ${guidelines.trim()}\n\n` : "") +
   parts.map((p, i) =>
-    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nתבנית: ${p.how}` : ""}` +
-    (p.howDocs?.length ? `\nדוגמה: ${p.howDocs.map((d) => d.name + pagesText(d)).join(", ")}` : ""),
+    `חלק ${i + 1} — ${p.task}\nמקורות: ${sourcesText(p)}${p.how ? `\nדוגמה: ${p.how}` : ""}` +
+    (p.howDocs?.length ? `\nמסמכי דוגמה: ${p.howDocs.map((d) => d.name + pagesText(d)).join(", ")}` : ""),
   ).join("\n\n");

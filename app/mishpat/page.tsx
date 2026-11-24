@@ -151,8 +151,32 @@ const initialDocs: CaseDocType[] = [
 // The case's documents as the detailed question's picker offers them, with a page count
 // estimated from their length.
 const wordsOf = (w: string) => (w.endsWith("K") ? parseFloat(w) * 1000 : parseFloat(w));
-const CASE_DOC_OPTIONS: CaseDocOption[] = initialDocs.flatMap((t) =>
-  t.items.map((d) => ({ type: t.name, name: d.name, pages: pagesOf(wordsOf(d.words)) })));
+// Each also carries its filing date, the AI's title and its case (demo values), so the picker can sort
+// by date, show the title under the short name and group by case when the chat is on several.
+const DOC_META: Record<string, { iso: string; title: string }> = {
+  "כתב תביעה מקורי": { iso: "2024-02-11", title: "תביעה לפיצויים בגין רשלנות רפואית בניתוח ברך" },
+  "כתב הגנה מקורי": { iso: "2024-04-02", title: "הכחשת טענות התביעה וטענות מקדמיות להתיישנות" },
+  "כתב תביעה מתוקן": { iso: "2024-09-15", title: "תביעה מתוקנת: הוספת ראש נזק של הפסד השתכרות לעתיד" },
+  "כתב הגנה מתוקן": { iso: "2024-11-03", title: "הגנה מתוקנת: כפירה בקשר הסיבתי וטענת אשם תורם" },
+  "פרוטוקול קדם משפט": { iso: "2025-01-20", title: "קדם משפט: גיבוש הפלוגתאות ומינוי מומחה מטעם בית המשפט" },
+  "בקשה לגילוי מסמכים": { iso: "2025-03-08", title: "בקשת התובע לגילוי רשומות רפואיות ויומני ניתוח" },
+  "חוות דעת מומחה מטעם בית המשפט": { iso: "2025-06-24", title: "נכות צמיתה של 20% וקשר סיבתי חלקי לניתוח" },
+  "חוות דעת אקטוארית": { iso: "2025-08-10", title: "חישוב הפסדי השתכרות ופנסיה לעבר ולעתיד" },
+  "תצהיר עדות ראשית — התובע": { iso: "2025-10-05", title: "עדות התובע על הטיפול, הניתוח והשלכותיו" },
+  "תצהיר עדות — עד מומחה": { iso: "2025-10-05", title: "עדות מומחה התובע על חריגה מסטנדרט הטיפול" },
+  "עתירה מנהלית": { iso: "2025-12-14", title: "עתירה לביטול החלטת הוועדה בשל פגמים בהליך" },
+  "בקשה לדחיית מועד דיון": { iso: "2026-05-27", title: "בקשת הנתבע לדחות את הדיון בשל היעדרות מומחה" },
+};
+const CASE_DOC_OPTIONS: CaseDocOption[] = [
+  ...initialDocs.flatMap((t) =>
+    t.items.map((d) => ({ type: t.name, name: d.name, pages: pagesOf(wordsOf(d.words)), ...DOC_META[d.name], caseNum: "12345-67-89", caseName: 'יעקב אברמוב נ׳ המרכז הרפואי קדם בע"מ' }))),
+  // the second case the chat is open on
+  ...[
+    { type: "כתב תביעה", name: "כתב תביעה — עזבון", iso: "2025-02-17", title: "תביעת העזבון לתגמולי ביטוח חיים לאחר פטירת המבוטח" },
+    { type: "כתב הגנה", name: "כתב הגנה — מגדל", iso: "2025-04-22", title: "דחיית התביעה בטענת אי גילוי מצב רפואי קודם" },
+    { type: "בקשה", name: "בקשה לאיחוד דיון", iso: "2025-11-30", title: "בקשה לאחד את הדיון עם תביעת הרשלנות נגד המרכז הרפואי" },
+  ].map((d) => ({ ...d, pages: 0, caseNum: "45210-03-24", caseName: 'עזבון אברמוב נ׳ מגדל חברה לביטוח בע"מ' })),
+];
 
 // Inner document row (inside an expanded type folder) — hover shows a summary bubble + open-in-new-tab
 function DocItemRow({ item, isDark }: { item: DocItem; isDark: boolean }) {
