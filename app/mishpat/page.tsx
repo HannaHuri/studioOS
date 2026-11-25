@@ -1826,12 +1826,32 @@ function ChatArea({ dev, lite, isDark, conversationKey, inUseName, onClearInUse,
         {/* a detailed question grows from the middle: the greeting gives way, and past the screen's height the parts scroll */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 min-w-0" style={{ backgroundColor: bg }}>
           <div className="w-full max-w-[768px] flex flex-col gap-4">
-            {!detailedOpen && <p
-              className="text-right text-[22px] font-medium mb-2"
-              style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
-            >
-              שלום, כבוד השופט/ת. במה אוכל לעזור?
-            </p>}
+            {/* Once the question runs long (4+ lines, where the expand button shows), the greeting
+                fades and folds away so the field has the room; it comes back when the text shortens. */}
+            {!detailedOpen && (() => {
+              const hideGreeting = inputLong || inputExpanded;
+              return (
+                <div
+                  aria-hidden={hideGreeting}
+                  style={{
+                    display: "grid",
+                    gridTemplateRows: hideGreeting ? "0fr" : "1fr",
+                    opacity: hideGreeting ? 0 : 1,
+                    marginBottom: hideGreeting ? "-16px" : "0px",     // fold the column's gap too
+                    transition: "grid-template-rows 240ms ease, opacity 160ms ease, margin-bottom 240ms ease",
+                  }}
+                >
+                  <div style={{ overflow: "hidden", minHeight: 0 }}>
+                    <p
+                      className="text-right text-[22px] font-medium mb-2"
+                      style={{ color: isDark ? dk.textMuted : c.textLight, fontFamily: "Noto Sans Hebrew, sans-serif", direction: "rtl" }}
+                    >
+                      שלום, כבוד השופט/ת. במה אוכל לעזור?
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
             {draft && <div className="flex" dir="rtl"><DraftStrip name={draft.name} isDark={isDark} onRemove={draftRemovable ? () => setDraft(null) : undefined} downloadUrl={draft.url} /></div>}
             {renderInput()}
           </div>
